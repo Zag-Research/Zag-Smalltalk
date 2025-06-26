@@ -13,7 +13,7 @@ const HeapHeader = heap.HeapHeader;
 const HeapObjectPtr = heap.HeapObjectPtr;
 const HeapObjectConstPtr = heap.HeapObjectConstPtr;
 const Process = zag.Process;
-const InMemory = @import("inMemory.zig");
+const InMemory = zag.InMemory;
 pub const Object = packed struct(u64) {
     tag: Group,
     class: ClassIndex.Compact,
@@ -45,11 +45,11 @@ pub const Object = packed struct(u64) {
     }
     pub const tagged0: i64 = @bitCast(oImm(.SmallInteger, 0));
     pub const LowTagType = TagAndClassType;
-    pub const LowTagSmallInteger = makeImmediate(.SmallInteger, 0).tagbits();
+    pub const lowTagSmallInteger = makeImmediate(.SmallInteger, 0).tagbits();
     pub const HighTagType = void;
-    pub const HighTagSmallInteger = {};
+    pub const highTagSmallInteger = {};
     pub const PackedTagType = u8;
-    pub const PackedTagSmallInteger = oImm(.SmallInteger, 0).tagbits();
+    pub const packedTagSmallInteger = oImm(.SmallInteger, 0).tagbits();
     const TagAndClassType = u8;
     const tagAndClassBits = enumBits(Group) + enumBits(ClassIndex.Compact);
     comptime {

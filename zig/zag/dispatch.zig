@@ -499,6 +499,7 @@ pub fn dispatchPIC(pc: PC, sp: SP, process: *Process, context: *Context, extra: 
 }
 const PICObject = struct {
     header: HeapHeader,
+    signature: Signature,
     elements: [DispatchElement.matchSize]DispatchElement,
     inline fn match(self: *PICObject, signature: Signature) ?*const CompiledMethod {
         inline for (&self.elements) |*element| {
@@ -506,6 +507,9 @@ const PICObject = struct {
                 return method;
         }
         return null;
+    }
+    comptime {
+        std.debug.assert(@sizeOf(PICObject) == 8 * @sizeOf(Object));
     }
 };
 const DispatchMatch = struct {
@@ -532,7 +536,7 @@ const DispatchMethod = struct {
     comptime {
         std.debug.assert(@sizeOf(Self) == @sizeOf(IntSelf));
     }
-    const matchSize: usize = 7;
+    const matchSize: usize = 6;
     fn initUpdateable(self: *Self) void {
         self.method = null;
     }

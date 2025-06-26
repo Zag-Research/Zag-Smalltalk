@@ -150,7 +150,8 @@ pub const PointedObject = packed struct {
         boolean: void,
         nil: void,
         character: void,
-        object: ?[*]Object,
+        object: Object,
+        objects: ?[*]Object,
     },
     const staticCacheSize = 20;
     var staticCacheUsed: usize = 0;
@@ -164,17 +165,20 @@ pub const PointedObject = packed struct {
         if (staticCacheUsed < staticCacheSize) {
             const p = &staticCache[staticCacheUsed];
             staticCacheUsed += 1;
-            p.header = .{
-                .classIndex = self.header.classIndex,
-                .hash = self.header.hash,
-                .format = .notIndexable,
-                .age = .static,
-                .length = 1,
-            };
+            p.setHeader(self.header.classIndex, self.header.hash);
             p.data = self.data;
             return p;
         }
         return null;
+    }
+    pub fn setHeader(self: *PointedObject, classIndex: object.ClassIndex, hash: u24) void {
+        self.header = .{
+            .classIndex = classIndex,
+            .hash = hash,
+            .format = .notIndexable,
+            .age = .static,
+            .length = 1,
+        };
     }
 };
 pub const PointedObjectRef = packed struct {

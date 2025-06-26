@@ -8,6 +8,7 @@ const utilities = zag.utilities;
 const object = zag.object;
 const Object = object.Object;
 const Nil = object.Nil;
+const PointedObject = zag.InMemory.PointedObject;
 const heap = zag.heap;
 const HeapHeader = heap.HeapHeader;
 const Treap = zag.utilities.Treap;
@@ -27,7 +28,7 @@ inline fn hash_of(index: u24, arity: u4) u32 {
 }
 
 const SymbolsEnum = enum(u16) {
-    @"=" = 0x200 + 1,
+    @"=" = 0x100 + 1,
     value = 2,
     @"value:" = 0x100 + 3,
     @"cull:" = 0x100 + 4,
@@ -41,7 +42,7 @@ const SymbolsEnum = enum(u16) {
     @"ifNil:",
     @"ifNotNil:",
     @"perform:",
-    @"+" = 0x200 + 15,
+    @"+" = 0x100 + 15,
     @"-",
     @"*",
     @"~=",
@@ -51,7 +52,7 @@ const SymbolsEnum = enum(u16) {
     @"<=",
     @",>=",
     @">",
-    @"at:put:",
+    @"at:put:" = 0x200 + 25,
     @"value:value:",
     @"cull:cull:",
     @"ifTrue:ifFalse",
@@ -82,7 +83,7 @@ const SymbolsEnum = enum(u16) {
     Object,
     _,
     const staticSymbols = blk: {
-        var symbolArray = [_]object.inMemory.PointedObject{undefined} ** lastPredefinedSymbol;
+        var symbolArray = [_]PointedObject{undefined} ** lastPredefinedSymbol;
         const arities = [_]u4{
             1, 0, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1,
             1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2,
@@ -93,7 +94,7 @@ const SymbolsEnum = enum(u16) {
             initSymbol(sym, i, arity);
         break :blk symbolArray;
     };
-    fn initSymbol(sym: *object.inMemory.PointedObject, symbolNumber: u24, arity: u4) void {
+    fn initSymbol(sym: *PointedObject, symbolNumber: u24, arity: u4) void {
         const hash: u64 = hash_of(symbolNumber, arity);
         sym.header = HeapHeader{ .classIndex = .Symbol, .hash = @truncate(hash), .format = .notIndexable, .age = .static, .length = 1 };
         sym.data.unsigned = (hash << 8) + 1;
@@ -108,7 +109,7 @@ const SymbolsEnum = enum(u16) {
         return .Symbol;
     }
     pub fn asObject(self: SymbolsEnum) Object {
-        const O = packed struct { sym: *const object.inMemory.PointedObject };
+        const O = packed struct { sym: *const PointedObject };
         return @bitCast(O{ .sym = &staticSymbols[@as(u8, @truncate(@intFromEnum(self))) - 1] });
     }
     inline fn symbol_of(index: u24, _: u4) Object {
@@ -221,7 +222,7 @@ pub inline fn lookup(string: Object) Object {
 pub inline fn intern(string: Object) Object {
     return symbolTable.intern(string);
 }
-const SymbolTreap = if (Object.inMemorySymbols) Treap(Object, u32, Object) else Treap(Object, u32, u0);
+const SymbolTreap = if (Object.inMemorySymbols) Treap(Object, u32, *PointedObject) else Treap(Object, u32, u0);
 fn numArgs(obj: Object) u4 {
     const string = obj.arrayAsSlice(u8) catch return 0;
     if (string.len == 0) return 0;
@@ -277,7 +278,7 @@ pub const SymbolTable = struct {
         const index = trp.lookup(string);
         if (index > 0) {
             const nArgs = numArgs(string);
-            return symbols.symbol_of(@truncate(index), nArgs);
+            return if (Object.inMemorySymbols) @bitCast(@intFromPtr(trp.getValue(index))) else symbols.symbol_of(@truncate(index), nArgs);
         }
         return Nil();
     }
@@ -286,19 +287,25 @@ pub const SymbolTable = struct {
         while (true) {
             const lu = lookupDirect(trp, string);
             if (!lu.isNil()) return lu;
-            const result = internDirect(trp, string);
+            const result = internDirect(self, trp, string);
             if (!result.isNil()) return result;
             unreachable; // out of space
         }
         unreachable;
     }
-    fn internDirect(trp: *SymbolTreap, string: Object) Object {
+    fn internDirect(self: *Self, trp: *SymbolTreap, string: Object) Object {
         const result = lookupDirect(trp, string);
         if (!result.isNil()) return result;
-        const str = string.promoteTo() catch return Nil();
+        const str = string.promoteToUnmovable() catch return Nil();
         const index = trp.insert(str) catch unreachable;
         const nArgs = numArgs(string);
-        return symbols.symbol_of(
+        return if (Object.inMemorySymbols) blk: {
+            const obj: *PointedObject = @ptrCast(self.allocator.alloc(PointedObject, 1) catch @panic("can't alloc"));
+            obj.setHeader(.Symbol, string.hash24());
+            obj.data.object = string;
+            trp.setValue(index, obj);
+            break :blk @bitCast(@intFromPtr(obj));
+        } else symbols.symbol_of(
             @truncate(index),
             nArgs,
         );
@@ -306,7 +313,7 @@ pub const SymbolTable = struct {
     fn loadSymbols(self: *Self, strings: []const heap.HeapObjectConstPtr) void {
         const trp = self.theTreap(strings.len);
         for (strings) |string|
-            _ = internDirect(trp, string.asObject());
+            _ = internDirect(self, trp, string.asObject());
     }
     fn verify(self: *Self, symbol: Object) !void {
         const string = initialSymbolStrings[symbolIndex(symbol) - 1].asObject();

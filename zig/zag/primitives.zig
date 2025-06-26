@@ -55,7 +55,7 @@ const Module = struct {
         for (decls) |decl| {
             const ds = @field(M, decl.name);
             switch (@typeInfo(@TypeOf(ds))) {
-                .comptime_int, .int, .@"fn", .pointer => {},
+                .comptime_int, .int, .@"fn", .pointer, .bool => {},
                 else => {
                     if (std.meta.hasFn(ds, "primitive") or std.meta.hasFn(ds, "primitiveError"))
                         n += 1;
@@ -72,7 +72,7 @@ const Module = struct {
             for (decls) |decl| {
                 const ds = @field(M, decl.name);
                 switch (@typeInfo(@TypeOf(ds))) {
-                    .comptime_int, .int, .@"fn", .pointer => {},
+                    .comptime_int, .int, .@"fn", .pointer, .bool => {},
                     else => {
                         if (std.meta.hasFn(ds, "primitive") or std.meta.hasFn(ds, "primitiveError")) {
                             mm[n] = Primitive{

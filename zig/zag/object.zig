@@ -7,7 +7,6 @@ const config = zag.config;
 const assert = std.debug.assert;
 const debugError = false;
 const Process = zag.Process;
-pub const inMemory = @import("object/inMemory.zig");
 const symbol = if (debugError) struct {
     const inversePhi24 = @import("utilities.zig").inversePhi(u24);
     const undoPhi24 = @import("utilities.zig").undoPhi(u24);
@@ -95,6 +94,8 @@ pub const ClassIndex = enum(u16) {
     SelectorException,
     PrimitiveFailed,
     BlockClosureValue,
+    LLVMPrimitives,
+    LLVMGenerator,
     testClass = config.max_classes - 1,
     replace7 = 0xffff - 7,
     replace6,
@@ -280,7 +281,7 @@ pub const ObjectFunctions = struct {
     pub inline fn get_class(self: Object) ClassIndex {
         return self.which_class(true);
     }
-    pub inline fn promoteTo(self: Object) !Object {
+    pub inline fn promoteToUnmovable(self: Object) !Object {
         if (self.isUnmoving()) return self;
         return error.PromoteUnimplemented;
         //        return arenas.GlobalArena.promote(self);
@@ -310,10 +311,9 @@ pub const ObjectFunctions = struct {
         if (fmt.len == 1 and fmt[0] == 'x') try writer.print("(0x{x:0>16})", .{@as(u64, @bitCast(self))});
     }
     pub const alignment = @alignOf(u64);
-    pub const intFromPackedObject = PackedObject.intFromPackedObject;
 };
 pub const PackedObject = packed struct {
-    tag: Object.PackedTagType = Object.PackedTagSmallInteger,
+    tag: Object.PackedTagType = Object.packedTagSmallInteger,
     f1: u14,
     f2: u14 = 0,
     f3: u14 = 0,
@@ -321,7 +321,7 @@ pub const PackedObject = packed struct {
     pub inline fn from3(f1: u14, f2: u14, f3: u14) PackedObject {
         return .{ .tag = Object.from(0).tagbits(), .f1 = f1, .f2 = f2, .f3 = f3 };
     }
-    fn intFromPackedObject(self: Object) u64 {
+    pub fn asU64(self: PackedObject) u64 {
         return @as(u64, @bitCast(self)) >> @bitSizeOf(Object.PackedTagType);
     }
     fn combine(size: type, tup: anytype) comptime_int {
@@ -339,8 +339,9 @@ pub const PackedObject = packed struct {
     pub fn combine14(tup: anytype) comptime_int {
         return combine(u14, tup);
     }
-    pub fn object14(tup: anytype) Object {
-        return @bitCast((@as(u64, combine(u14, tup)) << @bitSizeOf(Object.PackedTagType)) + Object.PackedTagSmallInteger);
+    pub fn object14(tup: anytype) PackedObject {
+
+        return @bitCast((@as(u64, combine(u14, tup)) << @bitSizeOf(Object.PackedTagType)) + Object.packedTagSmallInteger);
     }
     test "combiners" {
         std.debug.print("Test: combiners\n", .{});

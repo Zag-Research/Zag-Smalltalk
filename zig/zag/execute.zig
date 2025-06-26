@@ -8,6 +8,7 @@ const Process = zag.Process;
 const ProcessPtr = *Process;
 const object = zag.object;
 const Object = object.Object;
+const PackedObject = object.PackedObject;
 const ClassIndex = object.ClassIndex;
 const Nil = object.Nil;
 const True = object.True;
@@ -217,15 +218,32 @@ pub const PC = packed struct {
         return .{ .code = code };
     }
     pub //inline
+    fn packedObject(self: PC) PackedObject {
+        if (logging) {
+            @setRuntimeSafety(false);
+            std.debug.print("PC_packed:      {x:0>16}: {}\n", .{ @intFromPtr(self.code), self.code.packedObject });
+            return self.code.packedObject;
+        }
+        return self.code.packedObject;
+}
+    pub //inline
     fn method(self: PC) *CompiledMethod {
-        if (logging) std.debug.print("PC_method:      {x:0>16}: {}\n", .{ @intFromPtr(self.code), self.code.method });
+        if (logging) {
+            @setRuntimeSafety(false);
+            std.debug.print("PC_method:      {x:0>16}: {}\n", .{ @intFromPtr(self.code), self.code.method });
+            return self.code.method;
+        }
         return self.code.method;
-    }
+}
     pub //inline
     fn codeAddress(self: PC) *const Code {
-        if (logging) std.debug.print("PC_codeAddress: {x:0>16}: {}\n", .{ @intFromPtr(self.code), self.code.codePtr });
+        if (logging) {
+            @setRuntimeSafety(false);
+            std.debug.print("PC_codeAddress: {x:0>16}: {}\n", .{ @intFromPtr(self.code), self.code.codePtr });
+            return self.code.codePtr;
+        }
         return self.code.codePtr;
-    }
+}
     pub //inline
     fn targetPC(self: PC) PC {
         return .{ .code = self.codeAddress() };
@@ -235,12 +253,20 @@ pub const PC = packed struct {
     }
     pub //inline
     fn prim(self: PC) ThreadedFn.Fn {
-        if (logging) std.debug.print("PC_prim:        {x:0>16}: {}\n", .{ @intFromPtr(self.code), @import("threadedFn.zig").find(self.code.threadedFn) });
+        if (logging) {
+            @setRuntimeSafety(false);
+            std.debug.print("PC_prim:        {x:0>16}: {}\n", .{ @intFromPtr(self.code), @import("threadedFn.zig").find(self.code.threadedFn) });
+            return self.code.threadedFn;
+        }
         return self.code.threadedFn;
     }
     pub //inline
     fn object(self: PC) Object {
-        if (logging) std.debug.print("PC_object:      {x:0>16}: {}\n", .{ @intFromPtr(self.code), self.code.object });
+        if (logging) {
+            @setRuntimeSafety(false);
+            std.debug.print("PC_object:      {x:0>16}: {}\n", .{ @intFromPtr(self.code), self.code.object });
+            return self.code.object;
+        }
         return self.code.object;
     }
     pub inline fn asCode(self: PC) Code {
@@ -254,12 +280,20 @@ pub const PC = packed struct {
     }
     pub //inline
     fn uint(self: PC) u64 {
-        if (logging) std.debug.print("PC_uint:        {x:0>16}: {}\n", .{ @intFromPtr(self.code), self.code.object });
+        if (logging) {
+            @setRuntimeSafety(false);
+            std.debug.print("PC_uint:        {x:0>16}: {}\n", .{ @intFromPtr(self.code), self.code.object });
+            return self.code.object.to(u64);
+        }
         return self.code.object.to(u64);
-    }
+}
     pub //inline
     fn int(self: PC) i64 {
-        if (logging) std.debug.print("PC_int:         {x:0>16}: {}\n", .{ @intFromPtr(self.code), self.code.object });
+        if (logging) {
+            @setRuntimeSafety(false);
+            std.debug.print("PC_int:         {x:0>16}: {}\n", .{ @intFromPtr(self.code), self.code.object });
+            return self.code.object.to(i64);
+        }
         return self.code.object.to(i64);
     }
     pub inline fn next(self: PC) PC {
@@ -311,6 +345,7 @@ pub const Code = union {
     method: *CompiledMethod,
     codePtr: *Code,
     offset: i64,
+    packedObject: PackedObject,
     structure: StackStructure,
     pub inline fn primOf(pp: ThreadedFn.Fn) Code {
         //@compileLog(pp);
@@ -324,6 +359,9 @@ pub const Code = union {
     }
     pub inline fn objectOf(o: anytype) Code {
         return Code{ .object = Object.from(o, null) };
+    }
+    pub inline fn packedObjectOf(po: PackedObject) Code {
+        return Code{ .packedObject = po };
     }
     pub inline fn methodOf(method: *CompiledMethod) Code {
         return Code{ .method = method };
@@ -370,19 +408,19 @@ pub const Code = union {
     }
 };
 pub const StackStructure = packed struct {
-    tag: object.Object.LowTagType = object.Object.LowTagSmallInteger,
+    tag: object.Object.LowTagType = object.Object.lowTagSmallInteger,
     locals: u11 = 0,
     selfOffset: u11 = 0,
     reserve: u11 = 0,
     _filler: std.meta.Int(.unsigned, 64 - 33 - @bitSizeOf(Object.LowTagType) - @bitSizeOf(Object.HighTagType)) = 0,
-    hightTag: object.Object.HighTagType = object.Object.HighTagSmallInteger,
+    hightTag: object.Object.HighTagType = object.Object.highTagSmallInteger,
 };
 pub const StackAndContext = struct { sp: SP, context: *Context };
 pub const endMethod = CompiledMethod.init(Nil(), Code.end);
 pub const CompiledMethod = struct {
     header: HeapHeader,
-    stackStructure: StackStructure,
     signature: Signature,
+    stackStructure: StackStructure,
     executeFn: ThreadedFn.Fn,
     jitted: ?ThreadedFn.Fn,
     code: [codeSize]Code, // the threaded version of the method
@@ -422,7 +460,9 @@ pub const CompiledMethod = struct {
     pub fn execute(self: *Self, sp: SP, process: *Process, context: *Context) Result {
         const new = reserve(self.stackStructure.reserve, sp, process, context);
         const pc = PC.init(&self.code[0]);
-        trace("\nexecute: {} {} {}\n", .{ pc, new.sp, self.signature });
+        trace("\nexecute: {}", .{ pc });
+//        trace(" {}", .{ new.sp });
+        trace(" {x}\n", .{ @as(u64,@bitCast(self.signature)) });
         return pc.prim()(pc.next(), new.sp, process, new.context, .{ .method = self });
     }
     // pub fn forDispatch(self: *Self, class: ClassIndex) void {
@@ -530,8 +570,8 @@ fn CompileTimeMethod(comptime counts: usize) type {
     const codes = counts + (if (config.is_test) 1 else 0);
     return struct { // structure must exactly match CompiledMethod
         header: HeapHeader,
-        stackStructure: StackStructure, // f1 - locals, f2 - maxStackNeeded, f3 - selfOffset
         signature: Signature,
+        stackStructure: StackStructure, // f1 - locals, f2 - maxStackNeeded, f3 - selfOffset
         executeFn: ThreadedFn.Fn,
         jitted: ThreadedFn.Fn,
         code: [codes]Code,
@@ -572,6 +612,10 @@ fn CompileTimeMethod(comptime counts: usize) type {
                     },
                     Object, bool, @TypeOf(null), comptime_int => {
                         code[n] = Code.objectOf(field);
+                        n = n + 1;
+                    },
+                    PackedObject => {
+                        code[n] = Code.packedObjectOf(field);
                         n = n + 1;
                     },
                     ClassIndex => {
@@ -732,7 +776,7 @@ test "compiling method" {
         @setRuntimeSafety(false);
         trace("\nm: 0x{x:0>16}", .{@intFromPtr(&m)});
         for (t, 0..) |tv, idx|
-            trace("\nt[{}]: 0x{x:0>16}", .{ idx, tv.object.testU() });
+            trace("\nt[{}]: 0x{x:0>16}", .{ idx, @as(u64,@bitCast(tv.object)) });
     }
     try m.resolve(&.{True()});
     if (config.debugging) {
@@ -1021,13 +1065,13 @@ pub const Execution = struct {
         if (config.debugging) {
             @setRuntimeSafety(false);
             for (t, 0..) |tv, idx|
-                trace("t[{}]: 0x{x:0>16}\n", .{ idx, tv.object.testU() });
+                trace("t[{}]: 0x{x:0>16}\n", .{ idx, @as(u64,@bitCast(tv.object)) });
         }
         try exe.resolve(objects);
         if (config.debugging) {
             @setRuntimeSafety(false);
             for (t, 0..) |*tv, idx|
-                trace("t[{}]=0x{x:0>8}: 0x{x:0>16}\n", .{ idx, @intFromPtr(tv), tv.object.testU() });
+                trace("t[{}]=0x{x:0>8}: 0x{x:0>16}\n", .{ idx, @intFromPtr(tv), @as(u64,@bitCast(tv.object)) });
         }
         try exe.execute(source);
         try std.testing.expect(exe.getContext() == &exe.ctxt);

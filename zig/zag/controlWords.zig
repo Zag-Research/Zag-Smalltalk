@@ -73,7 +73,8 @@ pub const classCase = struct {
         const match = @intFromEnum(top.get_class());
         const newSp = sp.drop();
         while (true) {
-            var classes = pc.object().intFromPackedObject();
+            var classes = pc.packedObject().asU64();
+            trace("\nclassCase: {x}",.{ classes });
             newPc = newPc.next();
             for (0..4) |_| {
                 const currentClass: u14 = @truncate(classes);
@@ -309,7 +310,7 @@ pub const pushLiteral = struct {
 };
 pub const pushClosure = struct {
     pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
-        const structure: PackedObject = @bitCast(pc.object());
+        const structure: PackedObject = pc.packedObject();
         const stackedFields = structure.f1;
         const stackOffset = structure.f2;
         const stackReserve = structure.f3;

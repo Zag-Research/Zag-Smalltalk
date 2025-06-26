@@ -6,7 +6,7 @@ const zag = @import("../zag.zig");
 const config = zag.config;
 const assert = std.debug.assert;
 const debugError = false;
-const InMemory = @import("inMemory.zig");
+const InMemory = zag.InMemory;
 const object = zag.object;
 const ClassIndex = object.ClassIndex;
 const heap = zag.heap;
@@ -30,11 +30,11 @@ pub const Object = packed struct(u64) {
     }
     pub const tagged0: i64 = 0;
     pub const LowTagType = void;
-    pub const LowTagSmallInteger = {};
+    pub const lowTagSmallInteger = {};
     pub const HighTagType = void;
-    pub const HighTagSmallInteger = {};
+    pub const highTagSmallInteger = {};
     pub const PackedTagType = u3;
-    pub const PackedTagSmallInteger = 1;
+    pub const packedTagSmallInteger = 1;
     pub inline fn untaggedI(self: Object) i64 {
         _ = .{ self, unreachable };
     }
@@ -50,7 +50,8 @@ pub const Object = packed struct(u64) {
     pub inline fn symbol40(self: object.Object) u40 {
         return @truncate(self.ref.data.unsigned);
     }
-    pub inline fn nativeI(self: object.Object) ?i64 {
+    pub //inline
+        fn nativeI(self: object.Object) ?i64 {
         if (self.isInt()) return self.rawI();
         return null;
     }
@@ -104,7 +105,8 @@ pub const Object = packed struct(u64) {
     pub inline fn isHeap(_: Object) bool {
         return true;
     }
-    pub inline fn isInt(self: Object) bool {
+    pub //inline
+        fn isInt(self: Object) bool {
         return self.ref.header.classIndex == .SmallInteger;
     }
     pub inline fn isNat(self: Object) bool {
@@ -120,10 +122,10 @@ pub const Object = packed struct(u64) {
         return true;
     }
     pub inline fn highPointer(self: Object, T: type) ?T {
-        return @ptrCast(self.ref.data.object);
+        return @ptrCast(self.ref.data.objects);
     }
     pub inline fn pointer(self: Object, T: type) ?T {
-        return @ptrCast(self.ref.data.object);
+        return @ptrCast(self.ref.data.objects);
     }
     pub inline fn toBoolNoCheck(self: Object) bool {
         return self == Object.True();
@@ -251,6 +253,3 @@ pub const Object = packed struct(u64) {
     }
     pub usingnamespace object.ObjectFunctions;
 };
-test "ping2" {
-    _ = InMemory;
-}

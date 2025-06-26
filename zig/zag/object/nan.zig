@@ -53,11 +53,11 @@ pub const Object = packed struct(u64) {
     pub const Nil = oImm(.UndefinedObject, 0);
     pub const tagged0: i64 = 0;
     pub const LowTagType = void;
-    pub const LowTagSmallInteger = {};
+    pub const lowTagSmallInteger = {};
     pub const HighTagType = u14;
-    pub const HighTagSmallInteger: HighTagType = Group.u(.smallInteger) >> 2;
+    pub const highTagSmallInteger: HighTagType = Group.u(.smallInteger) >> 2;
     pub const PackedTagType = u3;
-    pub const PackedTagSmallInteger = 1;
+    pub const packedTagSmallInteger = 1;
     const TagAndClassType = u32;
     const tagAndClassBits = enumBits(Group) + enumBits(ClassIndex);
     comptime {

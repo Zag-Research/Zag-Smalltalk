@@ -7,7 +7,7 @@ const heap = zag.heap;
 const HeapHeader = heap.HeapHeader;
 const HeapObjectPtr = heap.HeapObjectPtr;
 const HeapObjectConstPtr = heap.HeapObjectConstPtr;
-const InMemory = @import("inMemory.zig");
+const InMemory = zag.InMemory;
 
 pub const Object = packed union {
     ref: *InMemory.PointedObject,
@@ -39,11 +39,11 @@ pub const Object = packed union {
     pub const True = Object.from(&InMemory.True, null);
     pub const Nil = Object.from(&InMemory.Nil, null);
     pub const LowTagType = TagAndClassType;
-    pub const LowTagSmallInteger = makeImmediate(.smallInteger, 0).tagbits();
+    pub const lowTagSmallInteger = makeImmediate(.smallInteger, 0).tagbits();
     pub const HighTagType = void;
-    pub const HighTagSmallInteger = {};
+    pub const highTagSmallInteger = {};
     pub const PackedTagType = u3;
-    pub const PackedTagSmallInteger = @intFromEnum(Group.smallInteger);
+    pub const packedTagSmallInteger = @intFromEnum(Group.smallInteger);
     const TagAndClassType = u3;
 
     pub inline fn tagbits(self: Self) TagAndClassType {

@@ -105,7 +105,7 @@ pub fn init(origin: *align(alignment) Self, process: Object) void {
     while (true) {
         self.h.next = allProcesses;
         self.h.id = if (allProcesses) |p| p.header().id + 1 else 1;
-        trace("\nprocess.init {}", .{self.h.id});
+        trace("\nprocess.init {x}", .{self.h.id});
         if (@cmpxchgWeak(?*Self, &allProcesses, self.h.next, origin, SeqCst, SeqCst) == null) break;
     }
     self.h.trapContextNumber = 0;
