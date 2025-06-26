@@ -2,127 +2,127 @@
 I encode the API needed from the LLVM generator interface.
 "
 Trait {
-	#name : 'JITDispatcherTrait',
+	#name : 'ZagJITDispatcherTrait',
 	#category : 'Zag-LLVM',
 	#package : 'Zag-LLVM'
 }
 
 { #category : 'API' }
-JITDispatcherTrait >> add: aNumber to: selfValue [
+ZagJITDispatcherTrait >> add: aNumber to: selfValue [
 
 	^ self subclassResponsibility
 ]
 
 { #category : 'API' }
-JITDispatcherTrait >> and: valueRef1 with: valueRef2 [
+ZagJITDispatcherTrait >> and: valueRef1 with: valueRef2 [
 
 	^ self subclassResponsibility
 ]
 
 { #category : 'API' }
-JITDispatcherTrait >> compare: valueRef1 is: comparison to: valueRef2 [
+ZagJITDispatcherTrait >> compare: valueRef1 is: comparison to: valueRef2 [
 
 	^ self subclassResponsibility
 ]
 
 { #category : 'API' }
-JITDispatcherTrait >> defineLabel: aLabel [
+ZagJITDispatcherTrait >> defineLabel: aLabel [
 
 	^ self subclassResponsibility
 ]
 
 { #category : 'API' }
-JITDispatcherTrait >> getContextRegister [
+ZagJITDispatcherTrait >> getContextRegister [
 
 	^ self subclassResponsibility
 ]
 
 { #category : 'API' }
-JITDispatcherTrait >> getExtraRegister [
+ZagJITDispatcherTrait >> getExtraRegister [
 
 	^ self subclassResponsibility
 ]
 
 { #category : 'API' }
-JITDispatcherTrait >> getPCRegister [
+ZagJITDispatcherTrait >> getPCRegister [
 
 	^ self subclassResponsibility
 ]
 
 { #category : 'API' }
-JITDispatcherTrait >> getProcessRegister [
+ZagJITDispatcherTrait >> getProcessRegister [
 
 	^ self subclassResponsibility
 ]
 
 { #category : 'API' }
-JITDispatcherTrait >> getSPRegister [
+ZagJITDispatcherTrait >> getSPRegister [
 
 	^ self subclassResponsibility
 ]
 
 { #category : 'API' }
-JITDispatcherTrait >> if: condition isFalseThen: falseLabel isTrueThen: trueLabel [
+ZagJITDispatcherTrait >> if: condition isFalseThen: falseLabel isTrueThen: trueLabel [
 
 	^ self subclassResponsibility
 ]
 
 { #category : 'API' }
-JITDispatcherTrait >> newLabel [
+ZagJITDispatcherTrait >> newLabel [
 
 	^ self subclassResponsibility
 ]
 
 { #category : 'API' }
-JITDispatcherTrait >> newRegister [
+ZagJITDispatcherTrait >> newRegister [
 
 	^ self subclassResponsibility
 ]
 
 { #category : 'API' }
-JITDispatcherTrait >> or: int1 with: int2 [
+ZagJITDispatcherTrait >> or: int1 with: int2 [
 
 	^ self subclassResponsibility
 ]
 
 { #category : 'API' }
-JITDispatcherTrait >> register: register plus: offset [
+ZagJITDispatcherTrait >> register: register plus: offset [
 
 	^ self subclassResponsibility
 ]
 
 { #category : 'API' }
-JITDispatcherTrait >> returnWith: addressOfValue [
+ZagJITDispatcherTrait >> returnWith: addressOfValue [
 
 	^ self subclassResponsibility
 ]
 
 { #category : 'API' }
-JITDispatcherTrait >> shiftLeftArithmeticly: num1 by: num2 [
+ZagJITDispatcherTrait >> shiftLeftArithmeticly: num1 by: num2 [
 
 	^ self subclassResponsibility
 ]
 
 { #category : 'API' }
-JITDispatcherTrait >> shiftRightArithmeticly: num1 by: num2 [
+ZagJITDispatcherTrait >> shiftRightArithmeticly: num1 by: num2 [
 
 	^ self subclassResponsibility
 ]
 
 { #category : 'API' }
-JITDispatcherTrait >> store: result at: addressOfSelf [
+ZagJITDispatcherTrait >> store: result at: addressOfSelf [
 
 	^ self subclassResponsibility
 ]
 
 { #category : 'API' }
-JITDispatcherTrait >> tagSmallInteger: untaggedInt [
+ZagJITDispatcherTrait >> tagSmallInteger: untaggedInt [
 
 	^ self subclassResponsibility
 ]
 
 { #category : 'API' }
-JITDispatcherTrait >> valueAt: aString [
+ZagJITDispatcherTrait >> valueAt: aString [
 
 	^ self subclassResponsibility
 ]

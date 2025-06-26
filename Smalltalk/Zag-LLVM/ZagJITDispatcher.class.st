@@ -6,10 +6,10 @@ I call methods in an LLVM generator object stored in the instance variabe `gen`.
 My subclasses simply set `gen` to an appropriate value.
 "
 Class {
-	#name : 'JITDispatcher',
+	#name : 'ZagJITDispatcher',
 	#superclass : 'Object',
-	#traits : 'JITDispatcherTrait',
-	#classTraits : 'JITDispatcherTrait classTrait',
+	#traits : 'ZagJITDispatcherTrait',
+	#classTraits : 'ZagJITDispatcherTrait classTrait',
 	#instVars : [
 		'sp',
 		'driver',
@@ -20,31 +20,31 @@ Class {
 }
 
 { #category : 'accessing' }
-JITDispatcher >> driver [
+ZagJITDispatcher >> driver [
 
 	^ driver
 ]
 
 { #category : 'accessing' }
-JITDispatcher >> driver: driverSource [ 
+ZagJITDispatcher >> driver: driverSource [ 
 	
 	driver := driverSource.
 ]
 
 { #category : 'private - processing' }
-JITDispatcher >> generateLabel [
+ZagJITDispatcher >> generateLabel [
 
 	^ gen newLabel
 ]
 
 { #category : 'accessing' }
-JITDispatcher >> generator: aGenerator [
+ZagJITDispatcher >> generator: aGenerator [
 
 	gen := aGenerator.
 ]
 
 { #category : 'testing' }
-JITDispatcher >> if: condition isFalseThen: falseLabel [
+ZagJITDispatcher >> if: condition isFalseThen: falseLabel [
 
 	| otherewise |
 	otherewise :=  self generateLabel.
@@ -54,13 +54,13 @@ JITDispatcher >> if: condition isFalseThen: falseLabel [
 ]
 
 { #category : 'testing' }
-JITDispatcher >> if: condition isFalseThen: falseLabel isTrueThen: trueLabel [ 
+ZagJITDispatcher >> if: condition isFalseThen: falseLabel isTrueThen: trueLabel [ 
 	
 	gen if: condition isFalseThen: falseLabel isTrueThen: trueLabel.
 ]
 
 { #category : 'testing' }
-JITDispatcher >> if: condition isTrueThen: trueLabel [
+ZagJITDispatcher >> if: condition isTrueThen: trueLabel [
 
 	| otherewise |
 	otherewise :=  self generateLabel.
@@ -70,7 +70,7 @@ JITDispatcher >> if: condition isTrueThen: trueLabel [
 ]
 
 { #category : 'threaded words' }
-JITDispatcher >> label [
+ZagJITDispatcher >> label [
 
 	| address |
 	address := driver thatAddress.
@@ -78,7 +78,7 @@ JITDispatcher >> label [
 ]
 
 { #category : 'threaded words' }
-JITDispatcher >> makeImmediateClosure [
+ZagJITDispatcher >> makeImmediateClosure [
 
 	| value |
 	value := driver nextObject
@@ -86,7 +86,7 @@ JITDispatcher >> makeImmediateClosure [
 ]
 
 { #category : 'primitives' }
-JITDispatcher >> primitiveSmallIntegerBinaryOp: aBlock [
+ZagJITDispatcher >> primitiveSmallIntegerBinaryOp: aBlock [
 
 	| aNumber aNumberIsSmallInteger primitiveFail addressOfSelf selfValue nativeANumber nativeSelf nativeResult overflow result |
 	"add code to set up builder, main function, entry label"
@@ -115,21 +115,21 @@ JITDispatcher >> primitiveSmallIntegerBinaryOp: aBlock [
 ]
 
 { #category : 'primitives' }
-JITDispatcher >> primitiveSmallIntegerMinus [
+ZagJITDispatcher >> primitiveSmallIntegerMinus [
 
 	^ self primitiveSmallIntegerBinaryOp: [ :aNumber :selfValue |
 		  gen subtract: aNumber from: selfValue ]
 ]
 
 { #category : 'primitives' }
-JITDispatcher >> primitiveSmallIntegerPlus [
+ZagJITDispatcher >> primitiveSmallIntegerPlus [
 
 	^ self primitiveSmallIntegerBinaryOp: [ :aNumber :selfValue |
 		  gen add: aNumber to: selfValue ]
 ]
 
 { #category : 'primitives' }
-JITDispatcher >> primitiveSmallIntegerPlusOld [
+ZagJITDispatcher >> primitiveSmallIntegerPlusOld [
 
 	| aNumber aNumberIsSmallInteger primitiveFail addressOfSelf selfValue nativeANumber nativeSelf nativeResult overflow result |
 	aNumber := gen valueAt: #sp.
@@ -151,7 +151,7 @@ JITDispatcher >> primitiveSmallIntegerPlusOld [
 ]
 
 { #category : 'threaded words' }
-JITDispatcher >> pushBlockNonlocalReturning [
+ZagJITDispatcher >> pushBlockNonlocalReturning [
 
 	| value |
 	value := driver nextObject.
@@ -159,14 +159,14 @@ JITDispatcher >> pushBlockNonlocalReturning [
 ]
 
 { #category : 'threaded words' }
-JITDispatcher >> pushContext [
+ZagJITDispatcher >> pushContext [
 
 	driver nextObject. " this is the address of the CompiledMethod that we are compiling for - use it to set up the context "
 
 ]
 
 { #category : 'threaded words' }
-JITDispatcher >> pushLiteral [
+ZagJITDispatcher >> pushLiteral [
 
 	| literal name |
 	literal := driver nextObject.
@@ -176,7 +176,7 @@ JITDispatcher >> pushLiteral [
 ]
 
 { #category : 'threaded words' }
-JITDispatcher >> pushLocal [
+ZagJITDispatcher >> pushLocal [
 
 	| localNumber |
 	localNumber := driver nextObject.
@@ -184,13 +184,13 @@ JITDispatcher >> pushLocal [
 ]
 
 { #category : 'threaded words' }
-JITDispatcher >> returnTop [
+ZagJITDispatcher >> returnTop [
 
 	"generate the code to return TOS"
 ]
 
 { #category : 'threaded words' }
-JITDispatcher >> send [
+ZagJITDispatcher >> send [
 	" the same as send0 and send1 except it uses the arity of the selector to find the target"
 
 	| selector threadedReturnPoint |
@@ -201,14 +201,14 @@ JITDispatcher >> send [
 ]
 
 { #category : 'converting' }
-JITDispatcher >> tagSmallInteger: untaggedInt [
+ZagJITDispatcher >> tagSmallInteger: untaggedInt [
 
 	^ gen tagSmallInteger: untaggedInt.
 	
 ]
 
 { #category : 'converting' }
-JITDispatcher >> validSmallInteger: nativeInt [ 
+ZagJITDispatcher >> validSmallInteger: nativeInt [ 
 	
 	| temp res1 res2 |
 	temp := nativeInt.
@@ -218,7 +218,7 @@ JITDispatcher >> validSmallInteger: nativeInt [
 ]
 
 { #category : 'private - processing' }
-JITDispatcher >> verifySmallInteger: valueRef [
+ZagJITDispatcher >> verifySmallInteger: valueRef [
 	
 	"valueRef is a Zag smallInteger"
 	| andResult |
@@ -227,7 +227,7 @@ JITDispatcher >> verifySmallInteger: valueRef [
 ]
 
 { #category : 'instance creation' }
-JITDispatcher >> with: aZagOutputLLVMAPI [
+ZagJITDispatcher >> with: aZagOutputLLVMAPI [
 
 	gen := aZagOutputLLVMAPI
 ]

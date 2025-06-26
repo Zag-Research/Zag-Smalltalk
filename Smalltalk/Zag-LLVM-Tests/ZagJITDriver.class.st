@@ -7,7 +7,7 @@ That is, I send messages to the generator for each of the threaded codes in the 
 I also implement several helper functions required by such a generator.
 "
 Class {
-	#name : 'JITDriver',
+	#name : 'ZagJITDriver',
 	#superclass : 'ZagOutputSourceAPI',
 	#instVars : [
 		'index',
@@ -24,19 +24,19 @@ Class {
 }
 
 { #category : 'class initialization' }
-JITDriver class >> initialize [
+ZagJITDriver class >> initialize [
 
 	HeaderSize := 40
 ]
 
 { #category : 'private' }
-JITDriver >> addressOf: offset [
+ZagJITDriver >> addressOf: offset [
 
 	^ address + HeaderSize + (offset - 1 * 8)
 ]
 
 { #category : 'private' }
-JITDriver >> addressOfLabel: anInteger [
+ZagJITDriver >> addressOfLabel: anInteger [
 
 	| target offset element |
 	offset := anInteger.
@@ -51,21 +51,21 @@ JITDriver >> addressOfLabel: anInteger [
 ]
 
 { #category : 'API' }
-JITDriver >> codeGen: anObject [
+ZagJITDriver >> codeGen: anObject [
 
 	dispatcher := anObject.
 	anObject source: self
 ]
 
 { #category : 'API' }
-JITDriver >> dispatcher: anObject [
+ZagJITDriver >> dispatcher: anObject [
 
 	dispatcher := anObject.
 	anObject driver: self
 ]
 
 { #category : 'API' }
-JITDriver >> genFrom: collection [
+ZagJITDriver >> genFrom: collection [
 
 	index := 1.
 	array := collection.
@@ -73,7 +73,7 @@ JITDriver >> genFrom: collection [
 ]
 
 { #category : 'private' }
-JITDriver >> iterate [
+ZagJITDriver >> iterate [
 
 	| selector |
 	index > array size ifTrue: [ ^ nil ].
@@ -84,13 +84,13 @@ JITDriver >> iterate [
 ]
 
 { #category : 'API' }
-JITDriver >> methodAddress: anObject [
+ZagJITDriver >> methodAddress: anObject [
 
 	address := anObject
 ]
 
 { #category : 'API' }
-JITDriver >> nextAddress [
+ZagJITDriver >> nextAddress [
 " returns the next word as a Code address "
 
 	| object |
@@ -100,7 +100,7 @@ JITDriver >> nextAddress [
 ]
 
 { #category : 'API' }
-JITDriver >> nextObject [
+ZagJITDriver >> nextObject [
 
 	| object |
 	object := self valueOf.
@@ -109,13 +109,13 @@ JITDriver >> nextObject [
 ]
 
 { #category : 'API' }
-JITDriver >> thatAddress [
+ZagJITDriver >> thatAddress [
 
 	^ self addressOf: index - 1
 ]
 
 { #category : 'private' }
-JITDriver >> valueOf [
+ZagJITDriver >> valueOf [
 
 	| object |
 	object := array at: index.

@@ -13,20 +13,20 @@ Class {
 ManifestZagLLVMTests class >> ruleBadMessageRule2V1FalsePositive [
 
 	<ignoreForCoverage>
-	^ #(#(#(#RGMethodDefinition #(#JITDriver #iterate #false)) #'2025-01-09T19:06:50.440792-05:00') )
+	^ #(#(#(#RGMethodDefinition #(#ZagJITDriver #iterate #false)) #'2025-01-09T19:06:50.440792-05:00') )
 ]
 
 { #category : 'code-critics' }
 ManifestZagLLVMTests class >> ruleCodeCruftLeftInMethodsRuleV1FalsePositive [
 
 	<ignoreForCoverage>
-	^ #(#(#(#RGClassDefinition #(#JITTest)) #'2024-12-17T12:17:10.726734-05:00') )
+	^ #(#(#(#RGClassDefinition #(#ZagJITTest)) #'2024-12-17T12:17:10.726734-05:00') )
 ]
 
 { #category : 'code-critics' }
 ManifestZagLLVMTests class >> rulePrecedenceRuleV1FalsePositive [
 
 	<ignoreForCoverage>
-	^ #( #( #( #RGClassDefinition #( #JITDriver ) )
+	^ #( #( #( #RGClassDefinition #( #ZagJITDriver ) )
 	        #'2025-01-09T19:10:32.346021-05:00' ) )
 ]

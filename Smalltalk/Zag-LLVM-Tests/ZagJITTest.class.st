@@ -2,7 +2,7 @@
 A ZagOutputLLVMTest is a test class for testing the behavior of ZagOutputLLVM
 "
 Class {
-	#name : 'JITTest',
+	#name : 'ZagJITTest',
 	#superclass : 'TestCase',
 	#instVars : [
 		'driver',
@@ -14,7 +14,7 @@ Class {
 }
 
 { #category : 'tests' }
-JITTest class >> fibWithPIC [
+ZagJITTest class >> fibWithPIC [
 
 	^ #( pushContext 16r0 pushLocal 0 pushLiteral 2 sendPIC2 #'<=' nil
 	     nil nil nil pushThisContext makeImmediateClosure
@@ -25,7 +25,7 @@ JITTest class >> fibWithPIC [
 ]
 
 { #category : 'tests' }
-JITTest class >> fibWithoutPIC [
+ZagJITTest class >> fibWithoutPIC [
 
 	^ #( pushContext #( method ) pushLocal 0 pushLiteral 2 send #'<='
 	     pushThisContext makeImmediateClosure 16r119 send ifTrue:
@@ -34,48 +34,48 @@ JITTest class >> fibWithoutPIC [
 ]
 
 { #category : 'tests' }
-JITTest class >> return42 [
+ZagJITTest class >> return42 [
 
 	^ #( pushLiteral 42 returnTop )
 ]
 
 { #category : 'tests' }
-JITTest class >> returnAdd42 [
+ZagJITTest class >> returnAdd42 [
 
 	^ #( pushContext #( method ) pushLiteral 25 pushLiteral 7 send #+ returnTop )
 ]
 
 { #category : 'tests' }
-JITTest class >> returnAdd42Tail [
+ZagJITTest class >> returnAdd42Tail [
 
 	^ #( pushLiteral 25 pushLiteral 7 tailSend #+ )
 ]
 
 { #category : 'running' }
-JITTest >> setUp [
+ZagJITTest >> setUp [
 
 	super setUp.
-	generator := JITPrimitiveGenerator new.
-	driver := JITDriver new
+	generator := ZagJITPrimitiveGenerator new.
+	driver := ZagJITDriver new
 		          methodAddress: 16r10000; "address of the compiledMethod"
-		          dispatcher: (JITDispatcher new generator: generator).
+		          dispatcher: (ZagJITDispatcher new generator: generator).
 ]
 
 { #category : 'tests' }
-JITTest >> testAdd [
+ZagJITTest >> testAdd [
 
 	driver primitiveSmallIntegerPlus.
 	generator contents inspect
 ]
 
 { #category : 'tests' }
-JITTest >> testFibFromArray [
+ZagJITTest >> testFibFromArray [
 
 	driver genFrom: self class fibWithoutPIC
 ]
 
 { #category : 'tests' }
-JITTest >> testFromArray [
+ZagJITTest >> testFromArray [
 
    "JIT compile the #return42 compiledMethod"
 	driver genFrom: self class return42.

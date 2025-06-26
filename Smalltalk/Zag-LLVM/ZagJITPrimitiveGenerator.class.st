@@ -4,7 +4,7 @@ I am a connector to the Zag runtime code.
 The instance variables are referenced by Zig code in the LLVM module, so must not be re-ordered
 "
 Class {
-	#name : 'JITPrimitiveGenerator',
+	#name : 'ZagJITPrimitiveGenerator',
 	#superclass : 'Object',
 	#instVars : [
 		'builder',
@@ -16,7 +16,7 @@ Class {
 }
 
 { #category : 'API' }
-JITPrimitiveGenerator >> add: aNumber to: selfValue [
+ZagJITPrimitiveGenerator >> add: aNumber to: selfValue [
 
 	<primitive: 'add:to:' module: 'llvm'> 
 	Transcript show: 'LLVMBuildAdd, ('
@@ -25,7 +25,7 @@ JITPrimitiveGenerator >> add: aNumber to: selfValue [
 ]
 
 { #category : 'API' }
-JITPrimitiveGenerator >> and: valueRef1 with: valueRef2 [
+ZagJITPrimitiveGenerator >> and: valueRef1 with: valueRef2 [
 	
 	<primitive: 'and:with:' module: 'llvm'> 
 	Transcript show: 'LLVMBuildAnd, ('
@@ -36,7 +36,7 @@ JITPrimitiveGenerator >> and: valueRef1 with: valueRef2 [
 ]
 
 { #category : 'API' }
-JITPrimitiveGenerator >> compare: valueRef1 is: comparison to: valueRef2 [
+ZagJITPrimitiveGenerator >> compare: valueRef1 is: comparison to: valueRef2 [
 
 	<primitive: 'compare:is:to:' module: 'llvm'>
 	Transcript show: 'LLVMBuildICmp, ('
@@ -46,7 +46,7 @@ JITPrimitiveGenerator >> compare: valueRef1 is: comparison to: valueRef2 [
 ]
 
 { #category : 'initialization' }
-JITPrimitiveGenerator >> initialize [
+ZagJITPrimitiveGenerator >> initialize [
 
 	super initialize.
 	builder := self makeBuilder.
@@ -55,25 +55,25 @@ JITPrimitiveGenerator >> initialize [
 ]
 
 { #category : 'initialization' }
-JITPrimitiveGenerator >> makeBuilder [
+ZagJITPrimitiveGenerator >> makeBuilder [
 
 		<primitive: 'makeBuilder' module: 'llvm'> 
 ]
 
 { #category : 'initialization' }
-JITPrimitiveGenerator >> makeContext [
+ZagJITPrimitiveGenerator >> makeContext [
 
 		<primitive: 'makeContext' module: 'llvm'> 
 ]
 
 { #category : 'initialization' }
-JITPrimitiveGenerator >> makeModule [
+ZagJITPrimitiveGenerator >> makeModule [
 
 		<primitive: 'makeModule' module: 'llvm'> 
 ]
 
 { #category : 'API' }
-JITPrimitiveGenerator >> newLabel [
+ZagJITPrimitiveGenerator >> newLabel [
 
 	<primitive: 'newLabel' module: 'llvm'>
 	"Creating a new label is like creating a new basic block (BB)"
@@ -82,7 +82,7 @@ JITPrimitiveGenerator >> newLabel [
 ]
 
 { #category : 'API' }
-JITPrimitiveGenerator >> or: int1 with: int2 [
+ZagJITPrimitiveGenerator >> or: int1 with: int2 [
 	
 	<primitive: 'or:with:' module: 'llvm'> 
 	Transcript show: 'LLVMBuildOr, ('
@@ -91,7 +91,7 @@ JITPrimitiveGenerator >> or: int1 with: int2 [
 ]
 
 { #category : 'as yet unclassified' }
-JITPrimitiveGenerator >> register: oldReg plus: offset asName: newName [
+ZagJITPrimitiveGenerator >> register: oldReg plus: offset asName: newName [
 
 	<primitive: 'register:plus:asName:' module: 'llvm'>
 	"Different than add:to: because we want to move the register by 
@@ -104,7 +104,7 @@ JITPrimitiveGenerator >> register: oldReg plus: offset asName: newName [
 ]
 
 { #category : 'API' }
-JITPrimitiveGenerator >> returnWith: addressOfValue [
+ZagJITPrimitiveGenerator >> returnWith: addressOfValue [
 	
 	<primitive: 'returnWith:' module: 'llvm'> 
 	Transcript show: 'LLVMBuildRet, ('
@@ -113,7 +113,7 @@ JITPrimitiveGenerator >> returnWith: addressOfValue [
 ]
 
 { #category : 'API' }
-JITPrimitiveGenerator >> shiftLeftArithmeticly: num1 by: num2 [
+ZagJITPrimitiveGenerator >> shiftLeftArithmeticly: num1 by: num2 [
 	
 	<primitive: 'shiftLeftArithmeticly:by:' module: 'llvm'> 
 	Transcript show: 'LLVMBuildShl, ('
@@ -123,7 +123,7 @@ JITPrimitiveGenerator >> shiftLeftArithmeticly: num1 by: num2 [
 ]
 
 { #category : 'API' }
-JITPrimitiveGenerator >> shiftRightArithmeticly: num1 by: num2 [
+ZagJITPrimitiveGenerator >> shiftRightArithmeticly: num1 by: num2 [
 	
 	<primitive: 'shiftLeftArithmeticly:by:' module: 'llvm'> 
 	Transcript show: 'LLVMBuildAShr, ('
@@ -133,7 +133,7 @@ JITPrimitiveGenerator >> shiftRightArithmeticly: num1 by: num2 [
 ]
 
 { #category : 'API' }
-JITPrimitiveGenerator >> store: result at: addressOfSelf [ 
+ZagJITPrimitiveGenerator >> store: result at: addressOfSelf [ 
 
 	<primitive: 'store:at:' module: 'llvm'>
 	Transcript 
@@ -143,7 +143,7 @@ JITPrimitiveGenerator >> store: result at: addressOfSelf [
 ]
 
 { #category : 'API' }
-JITPrimitiveGenerator >> valueAt: aString [ 
+ZagJITPrimitiveGenerator >> valueAt: aString [ 
 
 	<primitive: 'valueAt:' module: 'llvm'>
 	Transcript show: 'LLVMBuildLoad2, ('
