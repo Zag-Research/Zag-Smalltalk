@@ -150,6 +150,9 @@ fn noPrimWithError(pc: PC, sp: SP, process: *Process, context: *Context, extra: 
     const newSp = sp.push(Nil());
     return @call(tailCall, Extra.primitiveFailed, .{ pc, newSp, process, context, extra });
 }
+fn failedInlinePrim(_: PC, _: SP, _: *Process, _: *Context, _: Extra) Result {
+    @panic("failed inlinePrimitive");
+}
 
 pub const threadedFunctions = struct {
     pub const primitive = struct {
@@ -218,6 +221,76 @@ pub const threadedFunctions = struct {
                     999,
                     tf.pushLiteral,
                     99,
+                },
+                &[_]Object{
+                    Object.from(42, null),
+                    Object.from(17, null),
+                },
+                &[_]Object{
+                    Object.from(99, null),
+                    Object.from(42, null),
+                    Object.from(17, null),
+                },
+            );
+        }
+    };
+    pub const inlinePrimitive = struct {
+        pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
+            if (extra.isEncoded()) @panic("inlinePrimitive may have failed");
+            const primNumber = pc.uint();
+            const method = extra.method;
+            method.executeFn = &failedInlinePrim;
+            method.jitted = &failedInlinePrim;
+            if (Module.findNumberedPrimitive(primNumber)) |prim| {
+                if (prim.primitive) |p|
+                    return @call(tailCall, p, .{ pc, sp, process, context, extra });
+            }
+            @panic("found primitive:error: need primitive:");
+        }
+        test "primitive found" {
+            try Execution.runTest(
+                "inlinePrimitive: found",
+                .{
+                    tf.inlinePrimitive,
+                    998,
+                    tf.pushLiteral,
+                    99,
+                },
+                &[_]Object{
+                    Object.from(42, null),
+                    Object.from(17, null),
+                },
+                &[_]Object{
+                    False(),
+                },
+            );
+        }
+        test "inlinePrimitive with error" {
+            if (true) return error.SkipZigTest;
+            try Execution.runTest(
+                "inlinePrimitive: with error",
+                .{
+                    tf.inlinePrimitive,
+                    998,
+                },
+                &[_]Object{
+                    True(),
+                    Object.from(17, null),
+                },
+                &[_]Object{
+                    Object.from(99, null),
+                    True(),
+                    Object.from(17, null),
+                },
+            );
+        }
+        test "inlinePrimitive not found" {
+            if (true) return error.SkipZigTest;
+            try Execution.runTest(
+                "inlinePrimitive: not found",
+                .{
+                    tf.inlinePrimitive,
+                    999,
                 },
                 &[_]Object{
                     Object.from(42, null),
