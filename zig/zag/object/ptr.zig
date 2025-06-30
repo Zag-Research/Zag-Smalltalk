@@ -28,6 +28,7 @@ pub const Object = packed struct(u64) {
     pub fn Nil() Object {
         return Object.from(&InMemory.Nil, null);
     }
+    pub const maxInt = 0x7fff_ffff_ffff_ffff;
     pub const tagged0: i64 = 0;
     pub const LowTagType = void;
     pub const lowTagSmallInteger = {};
@@ -35,16 +36,17 @@ pub const Object = packed struct(u64) {
     pub const highTagSmallInteger = {};
     pub const PackedTagType = u3;
     pub const packedTagSmallInteger = 1;
-    pub inline fn untaggedI(self: Object) i64 {
-        _ = .{ self, unreachable };
+    pub inline fn untaggedI(self: object.Object) ?i64 {
+        if (self.isInt()) return self.untaggedI_noCheck();
+        return null;
     }
     pub inline fn untaggedI_noCheck(self: object.Object) i64 {
         return self.ref.data.int;
     }
     pub const taggedI = untaggedI;
     pub const taggedI_noCheck = untaggedI_noCheck;
-    pub inline fn fromTaggedI(i: i64) object.Object {
-        _ = .{ i, unreachable };
+    pub inline fn fromTaggedI(i: i64, maybeProcess: ?*Process) object.Object {
+        return InMemory.int(i, maybeProcess);
     }
     pub const fromUntaggedI = fromTaggedI;
     pub inline fn symbol40(self: object.Object) u40 {

@@ -138,12 +138,13 @@ const SmallIntegerCache = compileRaw(.{
 const SICacheMin = -5;
 const SICacheMax = 100;
 const SICache = switch (objectEncoding) {
-    .cachedPtr, .taggedPtr => true,
+    .ptr, .cachedPtr, .taggedPtr => true,
     else => false,
 };
 pub const PointedObject = packed struct {
     header: HeapHeader,
-    data: packed union {
+    data: PointedObjectUnion,
+    const PointedObjectUnion = packed union {
         int: i64,
         unsigned: u64,
         float: f64,
@@ -152,7 +153,7 @@ pub const PointedObject = packed struct {
         character: void,
         object: Object,
         objects: ?[*]Object,
-    },
+    };
     const staticCacheSize = 20;
     var staticCacheUsed: usize = 0;
     var staticCache = [_]PointedObject{.{ .header = .{}, .data = undefined }} ** staticCacheSize;
@@ -186,7 +187,7 @@ pub const PointedObjectRef = packed struct {
 };
 pub inline fn int(i: i64, maybeProcess: ?*Process) Object {
     if (SICache and SICacheMin <= i and i <= SICacheMax)
-        return Object.from(&SmallIntegerCache.objects[(i - SICacheMin) << 1], null);
+        return Object.from(&SmallIntegerCache.objects[(@as(usize, @bitCast(i - SICacheMin))) << 1], null);
     if (maybeProcess) |process| {
         if (process.alloc(.SmallInteger, 1, null, Object, false)) |allocReturn| {
             allocReturn.allocated.array(i64)[1] = i;
@@ -205,9 +206,14 @@ test "inMemory int()" {
     std.debug.print("inMemory int()\n", .{});
     var process: Process align(Process.alignment) = Process.new();
     process.init(Object.Nil());
-    const one: PointedObjectRef = @bitCast(int(1, &process));
+    const one_ = int(1, &process);
+    const one: PointedObjectRef = @bitCast(one_);
+    std.debug.print("one: {}\n", .{one});
+    for (&SmallIntegerCache.objects, 0 ..) |*o,i| std.debug.print("[{}](0x{x:0>4}): 0x{x:0>16}\n", .{i, @intFromPtr(o), @as(u64, @bitCast(o.*))});
     try ee(.SmallInteger, one.ref.header.classIndex);
     try ee(1, one.ref.data.int);
+    try ee(one_, int(1, null));
+    try ee(int(42, &process), int(42, null));
 }
 
 pub const MemoryFloat = struct {

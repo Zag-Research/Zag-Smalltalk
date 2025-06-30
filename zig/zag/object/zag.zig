@@ -33,6 +33,7 @@ pub const Object = packed struct(u64) {
     };
     const Self = @This();
     pub const inMemorySymbols = false;
+    pub const maxInt = 0x7f_ffff_ffff_ffff;
     pub const ZERO = of(0);
     pub inline fn False() Object {
         return oImm(.False, 0);
@@ -81,10 +82,10 @@ pub const Object = packed struct(u64) {
     pub inline fn taggedI_noCheck(self: object.Object) i64 {
         return @bitCast(self);
     }
-    pub inline fn fromTaggedI(i: i64) object.Object {
+    pub inline fn fromTaggedI(i: i64, _: anytype) object.Object {
         return @bitCast(i);
     }
-    pub inline fn fromUntaggedI(i: i64) object.Object {
+    pub inline fn fromUntaggedI(i: i64, _: anytype) object.Object {
         return @bitCast(i + oImm(.SmallInteger, 0).tagbits());
     }
     // pub inline fn cast(v: anytype) object.Object {

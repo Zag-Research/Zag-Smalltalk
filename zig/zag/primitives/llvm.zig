@@ -124,16 +124,13 @@ const ValueMetadataEntry = Converter(LLVMValueMetadataEntry);
 const ValueRef = Converter(LLVMValueRef);
 const PrimitiveGeneratorRef = Converter(JitPrimitiveGeneratorRef);
 
-comptime {
-    std.debug.assert(config.objectEncoding == .zag);
-}
 const JitPrimitiveGeneratorRef = *JitPrimitiveGenerator;
 const JitPrimitiveGenerator = struct {
     module: LLVMModuleRef,
     context: LLVMContextRef,
     builder: LLVMBuilderRef,
 };
-pub const makeJITPrimitiveGenerator = struct {
+pub const makeJITPrimitiveGenerator = if (config.objectEncoding != .zag) struct{} else struct {
     pub const number = 900;
     pub fn primitive(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
         // const jitPrimitiveGenerate: JitPrimitiveGeneratorRef = @ptrCast(allocator.alloc(JitPrimitiveGenerator, 1));
@@ -159,7 +156,7 @@ pub const makeJITPrimitiveGenerator = struct {
         try expectEqual(Object.from(42, null), result);
     }
 };
-pub const makeBuilder = struct {
+pub const makeBuilder = if (config.objectEncoding != .zag) struct{} else struct {
     pub const number = 901;
     pub fn primitive(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
         if (isTestMode) return @call(tailCall, Extra.primitiveFailed, .{ pc, sp, process, context, extra });
@@ -195,7 +192,7 @@ inline fn singleIndexGEP(builder: LLVMBuilderRef, elementType: LLVMTypeRef, base
     return llvm.core.LLVMBuildGEP2(builder, elementType, base, idx_ptr, 1, @ptrCast(name));
 }
 
-pub const @"register:plus:asName:" = struct {
+pub const @"register:plus:asName:" = if (config.objectEncoding != .zag) struct{} else struct {
     pub fn primitive(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
         if (isTestMode) return @call(tailCall, Extra.primitiveFailed, .{ pc, sp, process, context, extra });
         const self = sp.at(4);
@@ -219,7 +216,7 @@ pub const newLabel = struct {
     }
 };
 
-pub const @"literalToRegister:" = struct {
+pub const @"literalToRegister:" = if (config.objectEncoding != .zag) struct{} else struct {
     pub fn primitive(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
         // const valueToPush = sp.top;
         if (isTestMode) return @call(tailCall, Extra.primitiveFailed, .{ pc, sp, process, context, extra });
@@ -227,7 +224,7 @@ pub const @"literalToRegister:" = struct {
     }
 };
 
-pub const @"add:to:" = struct {
+pub const @"add:to:" = if (config.objectEncoding != .zag) struct{} else struct {
     pub fn primitive(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
         if (isTestMode) return @call(tailCall, Extra.primitiveFailed, .{ pc, sp, process, context, extra });
         return @call(tailCall, process.check(context.npc.f), .{ context.tpc, sp, process, context, undefined });

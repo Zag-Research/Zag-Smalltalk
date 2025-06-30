@@ -752,7 +752,7 @@ pub const HeapHeader = packed struct(u64) {
         return self.format.isIndexable();
     }
     pub inline fn o(self: HeapHeader) Object {
-        return @as(Object, @bitCast(self));
+        return @bitCast(self);
     }
 };
 pub const HeapObjectArray = [*]align(@alignOf(u64)) HeapObject;

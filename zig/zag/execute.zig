@@ -800,7 +800,7 @@ fn CompileTimeObject(comptime counts: usize) type {
         objects: [codes]Object align(8),
         offsets: [codes]bool align(8),
         const Self = @This();
-        pub fn init(comptime tup: anytype, raw: bool) Self {
+        pub fn init(comptime tup: anytype, comptime raw: bool) Self {
             var obj = Self{
                 .objects = undefined,
                 .offsets = [_]bool{false} ** codes,
@@ -838,7 +838,7 @@ fn CompileTimeObject(comptime counts: usize) type {
                         } else continue;
                     },
                 };
-                objects[n] = o;
+                objects[n] = o;//  if (raw) @compileLog(o);
                 n += 1;
             }
             if (last >= 0)
@@ -958,7 +958,7 @@ test "compileRaw" {
         42,
         42.0,
     });
-    const debugging = false;
+    const debugging = true;
     if (debugging) {
         @setRuntimeSafety(false);
         for (&o.objects, 0..) |*ob, idx|

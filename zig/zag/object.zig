@@ -166,7 +166,8 @@ pub const ObjectFunctions = struct {
     pub inline fn numArgs(self: Object) u4 {
         return symbol.symbolArity(self);
     }
-    pub inline fn setField(self: Object, field: usize, value: Object) void {
+    pub //inline
+    fn setField(self: Object, field: usize, value: Object) void {
         if (self.asObjectArray()) |ptr| ptr[field] = value;
     }
     pub inline fn getField(self: Object, field: usize) Object {
@@ -374,6 +375,7 @@ test "to conversion" {
     const p = &process;
     const ee = std.testing.expectEqual;
     try ee((Object.from(3.14, p)).to(f64), 3.14);
+    std.debug.print("value: {}\n", .{@as(zag.InMemory.PointedObjectRef, @bitCast(Object.from(42, p)))});
     try ee((Object.from(42, p)).to(u64), 42);
     try std.testing.expect((Object.from(42, p)).isInt());
     try ee((Object.from(true, p)).to(bool), true);

@@ -10,3 +10,6 @@ pub const symbol = @import("symbol.zig");
 pub const utilities = @import("utilities.zig");
 pub const threadedFn = @import("threadedFn.zig");
 pub const llvm = @import("libs/zig-llvm/src/llvm.zig");
+test {
+    _ = InMemory;
+}

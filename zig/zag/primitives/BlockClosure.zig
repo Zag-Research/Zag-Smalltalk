@@ -108,7 +108,7 @@ pub const threadedFns = struct {
             // return null;
         }
         test "asThunk int" {
-            if (false) return error.SkipZigTest;
+            if (config.notZag) return error.SkipZigTest;
             try Execution.runTestWithValidator(
                 "asThunk int",
                 .{tf.asThunk},
@@ -125,6 +125,7 @@ pub const threadedFns = struct {
         }
 
         test "asThunk ptr" {
+            if (config.notZag) return error.SkipZigTest;
             const obj = Object.from(&ThunkReturnSmallInteger.method, null);
             try Execution.runTestWithValidator(
                 "asThunk ptr",
@@ -143,6 +144,7 @@ pub const threadedFns = struct {
         }
 
         test "asThunk True" {
+            if (config.notZag) return error.SkipZigTest;
             try Execution.runTestWithValidator(
                 "asThunk True",
                 .{tf.asThunk},
@@ -159,6 +161,7 @@ pub const threadedFns = struct {
         }
 
         test "asThunk float" {
+            if (config.notZag) return error.SkipZigTest;
             try Execution.runTestWithValidator(
                 "asThunk float",
                 .{tf.asThunk},
@@ -175,6 +178,7 @@ pub const threadedFns = struct {
         }
 
         test "asThunk doesn't fit" {
+            if (config.notZag) return error.SkipZigTest;
             const obj = Object.from(1.0 / 5.0, null);
             try Execution.runTestWithValidator(
                 "asThunk doesn't fit",
