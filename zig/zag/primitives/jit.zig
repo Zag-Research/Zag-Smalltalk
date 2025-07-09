@@ -142,6 +142,56 @@ pub const freeJITResources = if (config.objectEncoding != .zag) struct {} else s
     }
 };
 
+pub const makeJITPrimitiveGenerator = struct {
+    pub const number = 900;
+    pub fn primitive(_: PC, _: SP, _: *Process, _: *Context, _: Extra) Result {
+        const primitiveGenerator: JITPrimitiveGeneratorRef = @ptrCast(allocator.alloc(JITPrimitiveGenerator, 1));
+        primitiveGenerator.context = llvm.core.LLVMContextCreate();
+        primitiveGenerator.module = llvm.core.LLVMModuleCreateWithNameInContext("jit_module", primitiveGenerator.context);
+        primitiveGenerator.builder = llvm.core.LLVMCreateBuilderInContext(primitiveGenerator.context);
+        return PrimitiveGeneratorRef.asObject(primitiveGenerator);
+    }
+    test "foo" {
+        var exe = Execution.initTest("llvm foo", .{
+            tf.inlinePrimitive, 900,
+            // tf.inlinePrimitive, 905,
+            // tf.inlinePrimitive, 902,
+            // tf.inlinePrimitive, 901,
+        });
+        //try exe.resolve(&[_]Object{ name, llvmString.asObject() });
+        try exe.execute(&[_]Object{});
+        const result = exe.stack()[0];
+        try expectEqual(Object.from(42), result);
+    }
+};
+
+pub const makeBuilder = if (config.objectEncoding != .zag) struct {} else struct {
+    pub const number = 901;
+    pub fn primitive(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
+        if (isTestMode) return @call(tailCall, Extra.primitiveFailed, .{ pc, sp, process, context, extra });
+        const builder: LLVMBuilderRef = llvm.core.LLVMCreateBuilder();
+        if (builder == null) return @call(tailCall, Extra.primitiveFailed, .{ pc, sp, process, context, extra });
+        sp.top = BuilderRef.asObject(builder);
+        return @call(tailCall, process.check(context.nPc()), .{ context.tPc(), sp, process, context, undefined });
+    }
+    // TODO: Refactor. The builder cannot be created in isolation without a module and context
+    test "makeBuilder" {
+        if (isTestMode) return error.SkipZigTest;
+        const name = stringOf("makeBuilder").init().asObject();
+        var exe = Execution.initTest("llvm makeBuilder", .{
+            tf.@"primitive:module:",
+            "0name",
+            "1llvm",
+            tf.pushLocal,
+            42,
+        });
+        try exe.resolve(&[_]Object{ name, llvmString.asObject() });
+        try exe.execute(&[_]Object{Object.from(17)});
+        const result = exe.stack()[0];
+        try expectEqual(Object.from(42), result);
+    }
+};
+
 pub const @"register:plus:asName:" = if (config.objectEncoding != .zag) struct {} else struct {
     pub fn primitive(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
         if (isTestMode) return @call(tailCall, Extra.primitiveFailed, .{ pc, sp, process, context, extra });
