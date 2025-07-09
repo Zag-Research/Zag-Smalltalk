@@ -1,6 +1,7 @@
 const std = @import("std");
 const zag = @import("../zag.zig");
-const objectEncoding = zag.config.objectEncoding;
+const config = zag.config;
+const objectEncoding = config.objectEncoding;
 const Process = zag.Process;
 const object = zag.object;
 const Object = object.Object;
@@ -27,7 +28,7 @@ pub const Nil = PointedObject{
     .header = .{ .classIndex = .UndefinedObject },
     .data = .{ .int = 0 },
 };
-const SmallIntegerCache = compileRaw(.{
+const SmallIntegerCache = if (config.immediateIntegers) {} else compileRaw(.{
     si, -5,
     si, -4,
     si, -3,
@@ -138,7 +139,7 @@ const SmallIntegerCache = compileRaw(.{
 const SICacheMin = -5;
 const SICacheMax = 100;
 const SICache = switch (objectEncoding) {
-    .ptr, .cachedPtr, .taggedPtr => true,
+    .cachedPtr, .taggedPtr => true,
     else => false,
 };
 pub const PointedObject = packed struct {
@@ -148,9 +149,9 @@ pub const PointedObject = packed struct {
         int: i64,
         unsigned: u64,
         float: f64,
-        boolean: void,
+        boolean: bool,
         nil: void,
-        character: void,
+        character: u24,
         object: Object,
         objects: ?[*]Object,
     };
@@ -202,18 +203,20 @@ pub inline fn int(i: i64, maybeProcess: ?*Process) Object {
     unreachable;
 }
 test "inMemory int()" {
-    const ee = std.testing.expectEqual;
-    std.debug.print("inMemory int()\n", .{});
-    var process: Process align(Process.alignment) = Process.new();
-    process.init(Object.Nil());
-    const one_ = int(1, &process);
-    const one: PointedObjectRef = @bitCast(one_);
-    std.debug.print("one: {}\n", .{one});
-    for (&SmallIntegerCache.objects, 0 ..) |*o,i| std.debug.print("[{}](0x{x:0>4}): 0x{x:0>16}\n", .{i, @intFromPtr(o), @as(u64, @bitCast(o.*))});
-    try ee(.SmallInteger, one.ref.header.classIndex);
-    try ee(1, one.ref.data.int);
-    try ee(one_, int(1, null));
-    try ee(int(42, &process), int(42, null));
+    if (!config.immediateIntegers) {
+        const ee = std.testing.expectEqual;
+        std.debug.print("inMemory int()\n", .{});
+        var process: Process align(Process.alignment) = Process.new();
+        process.init(Object.Nil());
+        const one_ = int(1, &process);
+        const one: PointedObjectRef = @bitCast(one_);
+        std.debug.print("one: {}\n", .{one});
+        for (&SmallIntegerCache.objects, 0 ..) |*o,i| std.debug.print("[{}](0x{x:0>4}): 0x{x:0>16}\n", .{i, @intFromPtr(o), @as(u64, @bitCast(o.*))});
+        try ee(.SmallInteger, one.ref.header.classIndex);
+        try ee(1, one.ref.data.int);
+        try ee(one_, int(1, &process));
+        try ee(int(42, &process), int(42, null));
+    }
 }
 
 pub const MemoryFloat = struct {

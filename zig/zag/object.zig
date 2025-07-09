@@ -375,7 +375,7 @@ test "to conversion" {
     const p = &process;
     const ee = std.testing.expectEqual;
     try ee((Object.from(3.14, p)).to(f64), 3.14);
-    std.debug.print("value: {}\n", .{@as(zag.InMemory.PointedObjectRef, @bitCast(Object.from(42, p)))});
+//    std.debug.print("value: {}\n", .{@as(zag.InMemory.PointedObjectRef, @bitCast(Object.from(42, p)))});
     try ee((Object.from(42, p)).to(u64), 42);
     try std.testing.expect((Object.from(42, p)).isInt());
     try ee((Object.from(true, p)).to(bool), true);

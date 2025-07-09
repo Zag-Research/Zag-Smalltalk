@@ -6,6 +6,14 @@ pub const tailCall: std.builtin.CallModifier = if (show_error_stack) .never_inli
 pub fn trace(comptime format: anytype, values: anytype) void {
     if (show_trace) std.debug.print(format, values);
 }
+pub const immediateIntegers = switch (objectEncoding) {
+    .zag, .nan, .spur => true,
+    else => false,
+};
+pub const immediateSymbols = switch (objectEncoding) {
+    .zag, .nan => true,
+    else => false,
+};
 pub const notZag = objectEncoding != .zag;
 pub const objectEncoding: Encoding = .zag;
 
