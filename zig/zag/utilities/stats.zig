@@ -2,26 +2,36 @@ const std = @import("std");
 const math = std.math;
 const Order = math.Order;
 const Units = enum {
+    units,
     seconds,
     milliseconds,
     microseconds,
     nanoseconds,
     pub fn name(self: Units) []u8 {
         return switch (self) {
-            .seconds,
-            => "seconds",
+            .units        => "units",
+            .seconds      => "seconds",
             .milliseconds => "milliseconds",
             .microseconds => "microseconds",
-            .nanoseconds => "nanoseconds",
+            .nanoseconds  => "nanoseconds",
         };
     }
     pub fn shortName(self: Units) []u8 {
         return switch (self) {
-            .seconds,
-            => "s",
+            .units        => "un",
+            .seconds      => "s ",
             .milliseconds => "ms",
             .microseconds => "us",
-            .nanoseconds => "ns",
+            .nanoseconds  => "ns",
+        };
+    }
+    pub fn scale(self: Units) u64 {
+        return switch (self) {
+            .units        => 1,
+            .seconds      => 1_000_000_000,
+            .milliseconds => 1_000_000,
+            .microseconds => 1_000,
+            .nanoseconds  => 1,
         };
     }
 };
@@ -36,17 +46,11 @@ pub fn Stats(comptime K: type, comptime runs: comptime_int, comptime units: Unit
         sumsq: T = 0,
         const Self = @This();
         const isInt = switch (@typeInfo(T)) {
-            .Int => true,
+            .int => true,
             else => false,
         };
         const warmups = @min(3, @max(1, (runs + 1) / 3));
-        const scale: u64 = switch (units) {
-            .seconds,
-            => 1_000_000_000,
-            .milliseconds => 1_000_000,
-            .microseconds => 1_000,
-            .nanoseconds => 1,
-        };
+        const scale = units.scale();
         pub fn init() Self {
             return .{};
         }
@@ -61,12 +65,12 @@ pub fn Stats(comptime K: type, comptime runs: comptime_int, comptime units: Unit
                 self.addData(runner(runNumber));
             }
         }
-        pub fn time(self: *Self, runner: *const fn (usize) void) void {
+        pub fn time(self: *Self, runner: *const fn (usize) K) void {
             for (0..warmups) |_| @call(.never_inline, runner, .{0});
             var timer = std.time.Timer.start() catch @panic("no timer available");
             for (1..runs + 1) |runNumber| {
                 timer.reset();
-                @call(.never_inline, runner, .{runNumber});
+                _ = @call(.never_inline, runner, .{runNumber});
                 const diff = timer.read() / scale;
                 self.addData(diff);
             }
@@ -124,6 +128,7 @@ pub fn Stats(comptime K: type, comptime runs: comptime_int, comptime units: Unit
                 const opts: []const u8 = comptime if (isInt) "{}" else flOpts;
                 inline for (if (fmt.len == 0) "nmxs" else fmt) |f| {
                     try writer.print("{s}", .{sep});
+                    sep = "--";
                     switch (f) {
                         'n' => try writer.print(opts, .{self.minValue}),
                         'm' => try writer.print(opts, .{self.mean()}),
@@ -137,7 +142,6 @@ pub fn Stats(comptime K: type, comptime runs: comptime_int, comptime units: Unit
                         ' ' => sep = " ",
                         else => {},
                     }
-                    sep = "--";
                 }
             }
         }
@@ -146,7 +150,7 @@ pub fn Stats(comptime K: type, comptime runs: comptime_int, comptime units: Unit
 test "simple int stats" {
     const expectEqual = @import("std").testing.expectEqual;
     const expect = @import("std").testing.expect;
-    var stat = Stats(usize, 0).init();
+    var stat = Stats(usize, 0, .units).init();
     stat.addData(2);
     stat.addData(4);
     try expectEqual(stat.min(), 2);
@@ -154,15 +158,15 @@ test "simple int stats" {
     try expectEqual(stat.mean(), 3);
     try expectEqual(stat.median(), null);
     try expectEqual(stat.stdDev(), 1.0);
-    const buf: [200]u8 = undefined;
-    const buf2: [200]u8 = undefined;
-    //    const ebuf: []const u8 = "2.0--3.0--4.0--1.0";
-    //    std.debug.print("\nstats {<FOO>nmxs}",.{stat});
-    _ = .{ expect, buf, buf2 }; //    try expect(std.mem.eql(u8,try std.fmt.bufPrint(buf2[0..],"2--3--4--1",.{}),try std.fmt.bufPrint(buf[0..], "{}",.{stat})));
+    var buf: [200]u8 = undefined;
+    var buf2: [200]u8 = undefined;
+    try expect(std.mem.eql(u8,
+        try std.fmt.bufPrint(&buf2 ,"2--3--4--1",.{}),
+        try std.fmt.bufPrint(&buf, "{}",.{stat})));
 }
 test "simple int stats with values" {
     const expectEqual = @import("std").testing.expectEqual;
-    var stat = Stats(usize, 10).init();
+    var stat = Stats(usize, 10, .units).init();
     stat.addData(2);
     stat.addData(4);
     try expectEqual(stat.min(), 2);
@@ -180,7 +184,7 @@ fn testRunner(run: usize) usize {
 }
 test "simple int stats with runner" {
     const expectEqual = @import("std").testing.expectEqual;
-    var stat = Stats(usize, 3).init();
+    var stat = Stats(usize, 3, .units).init();
     stat.run(testRunner);
     try expectEqual(stat.min(), 2);
     try expectEqual(stat.max(), 4);
@@ -190,7 +194,7 @@ test "simple int stats with runner" {
 }
 test "larger int stats with runner" {
     const expectEqual = @import("std").testing.expectEqual;
-    var stat = Stats(usize, 10).init();
+    var stat = Stats(usize, 10, .units).init();
     stat.run(testRunner);
     try expectEqual(stat.min(), 2);
     try expectEqual(stat.max(), 16);
@@ -202,7 +206,7 @@ test "larger int stats with runner" {
 test "simple float stats" {
     const expectEqual = @import("std").testing.expectEqual;
     const expect = @import("std").testing.expect;
-    var stat = Stats(f64, 0).init();
+    var stat = Stats(f64, 0, .units).init();
     stat.addData(2.0);
     stat.addData(4.0);
     try expectEqual(stat.min(), 2.0);
@@ -214,4 +218,12 @@ test "simple float stats" {
     //    const ebuf: []const u8 = "2.0--3.0--4.0--1.0";
     //    std.debug.print("\nstats {<FOO>nmxs}",.{stat});
     _ = .{ expect, buf, buf2 }; //    try expect(std.mem.eql(u8,try std.fmt.bufPrint(buf2[0..],"2--3--4--1",.{}),try std.fmt.bufPrint(buf[0..], "{}",.{stat})));
+}
+fn timeRunner(_: usize) void {}
+test "simple timed stats" {
+    const expect = @import("std").testing.expect;
+    var stat = Stats(void, 3, .nanoseconds).init();
+    stat.time(timeRunner);
+    try expect(stat.max() > 0);
+    try expect(stat.mean() > 0);
 }
