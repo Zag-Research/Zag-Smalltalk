@@ -33,6 +33,7 @@ const builtin = @import("builtin");
 pub const isTestMode = builtin.is_test;
 pub const moduleName = "llvm";
 pub const llvmString = stringOf("llvm").init().obj();
+const allocator = std.heap.page_allocator;
 
 const LLVMAttributeRef = LLVMtype.LLVMAttributeRef;
 const LLVMBasicBlockRef = LLVMtype.LLVMBasicBlockRef;
@@ -82,7 +83,7 @@ fn Converter(T: type) type {
         LLVMUseRef => 19,
         LLVMValueMetadataEntry => 20,
         LLVMValueRef => 21,
-        PrimitiveGeneratorRef => 255,
+        JITPrimitiveGeneratorRef => 255,
         else => @compileError("Converter needs extansion for type: " ++ @typeName(T)),
     };
     const llvmClass = @intFromEnum(object.ClassIndex.LLVM);
@@ -122,41 +123,49 @@ const TypeRef = Converter(LLVMTypeRef);
 const UseRef = Converter(LLVMUseRef);
 const ValueMetadataEntry = Converter(LLVMValueMetadataEntry);
 const ValueRef = Converter(LLVMValueRef);
-const PrimitiveGeneratorRef = Converter(JitPrimitiveGeneratorRef);
+const PrimitiveGeneratorRef = Converter(JITPrimitiveGeneratorRef);
 
-const JitPrimitiveGeneratorRef = *JitPrimitiveGenerator;
-const JitPrimitiveGenerator = struct {
+const JITPrimitiveGeneratorRef = *JITPrimitiveGenerator;
+const JITPrimitiveGenerator = struct {
     module: LLVMModuleRef,
     context: LLVMContextRef,
     builder: LLVMBuilderRef,
 };
-pub const makeJITPrimitiveGenerator = if (config.objectEncoding != .zag) struct{} else struct {
-    pub const number = 900;
+
+pub const freeJITResources = if (config.objectEncoding != .zag) struct {} else struct {
+    pub const number = 454;
     pub fn primitive(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
-        // const jitPrimitiveGenerate: JitPrimitiveGeneratorRef = @ptrCast(allocator.alloc(JitPrimitiveGenerator, 1));
-        // jitPrimitiveGenerate.module = 42;
-        // jitPrimitiveGenerate.context = 42;
-        // const builder: LLVMBuilderRef = llvm.core.LLVMCreateBuilder();
-        // jitPrimitiveGenerate.builder = builder;
-        // return PrimitiveGeneratorRef.asObject(jitPrimitiveGenerate);
+        // TODO: Free allocator, LLVM JIT instance, module
+        // context and builder become invalid after being passed to the JIT instance
         _ = .{ pc, sp, process, context, extra };
         @panic("not implemented");
     }
+};
+
+pub const makeJITPrimitiveGenerator = struct {
+    pub const number = 900;
+    pub fn primitive(_: PC, _: SP, _: *Process, _: *Context, _: Extra) Result {
+        const primitiveGenerator: JITPrimitiveGeneratorRef = @ptrCast(allocator.alloc(JITPrimitiveGenerator, 1));
+        primitiveGenerator.context = llvm.core.LLVMContextCreate();
+        primitiveGenerator.module = llvm.core.LLVMModuleCreateWithNameInContext("jit_module", primitiveGenerator.context);
+        primitiveGenerator.builder = llvm.core.LLVMCreateBuilderInContext(primitiveGenerator.context);
+        return PrimitiveGeneratorRef.asObject(primitiveGenerator);
+    }
     test "foo" {
-        if (true) return error.SkipZigTest;
         var exe = Execution.initTest("llvm foo", .{
             tf.inlinePrimitive, 900,
-            tf.inlinePrimitive, 905,
-            tf.inlinePrimitive, 902,
-            tf.inlinePrimitive, 901,
+            // tf.inlinePrimitive, 905,
+            // tf.inlinePrimitive, 902,
+            // tf.inlinePrimitive, 901,
         });
         //try exe.resolve(&[_]Object{ name, llvmString.asObject() });
         try exe.execute(&[_]Object{});
         const result = exe.stack()[0];
-        try expectEqual(Object.from(42, null), result);
+        try expectEqual(Object.from(42), result);
     }
 };
-pub const makeBuilder = if (config.objectEncoding != .zag) struct{} else struct {
+
+pub const makeBuilder = if (config.objectEncoding != .zag) struct {} else struct {
     pub const number = 901;
     pub fn primitive(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
         if (isTestMode) return @call(tailCall, Extra.primitiveFailed, .{ pc, sp, process, context, extra });
@@ -183,20 +192,11 @@ pub const makeBuilder = if (config.objectEncoding != .zag) struct{} else struct 
     }
 };
 
-inline fn singleIndexGEP(builder: LLVMBuilderRef, elementType: LLVMTypeRef, base: LLVMValueRef, offset: i64, name: []const u8) LLVMValueRef {
-    // singleIndex - for pointer and integer offsets
-    const offset_bits: u64 = @bitCast(offset);
-    const signExtend = offset < 0;
-    const idx = [_]LLVMValueRef{llvm.core.LLVMConstInt(elementType, offset_bits, @intFromBool(signExtend))};
-    const idx_ptr: [*c]LLVMValueRef = @constCast(@ptrCast(&idx[0]));
-    return llvm.core.LLVMBuildGEP2(builder, elementType, base, idx_ptr, 1, @ptrCast(name));
-}
-
-pub const @"register:plus:asName:" = if (config.objectEncoding != .zag) struct{} else struct {
+pub const @"register:plus:asName:" = if (config.objectEncoding != .zag) struct {} else struct {
     pub fn primitive(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
         if (isTestMode) return @call(tailCall, Extra.primitiveFailed, .{ pc, sp, process, context, extra });
         const self = sp.at(4);
-        const jitPrimitiveGenerate: JitPrimitiveGeneratorRef = PrimitiveGeneratorRef.asLLVM(self);
+        const jitPrimitiveGenerate: JITPrimitiveGeneratorRef = PrimitiveGeneratorRef.asLLVM(self);
         const builder = BuilderRef.asLLVM(jitPrimitiveGenerate.module) catch return @call(tailCall, Extra.primitiveFailed, .{ pc, sp, process, context, extra });
         const registerToModify = ValueRef.asLLVM(sp.third) catch return @call(tailCall, Extra.primitiveFailed, .{ pc, sp, process, context, extra });
         const offset = sp.next.to(i64);
@@ -216,7 +216,7 @@ pub const newLabel = struct {
     }
 };
 
-pub const @"literalToRegister:" = if (config.objectEncoding != .zag) struct{} else struct {
+pub const @"literalToRegister:" = if (config.objectEncoding != .zag) struct {} else struct {
     pub fn primitive(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
         // const valueToPush = sp.top;
         if (isTestMode) return @call(tailCall, Extra.primitiveFailed, .{ pc, sp, process, context, extra });
@@ -224,14 +224,25 @@ pub const @"literalToRegister:" = if (config.objectEncoding != .zag) struct{} el
     }
 };
 
-pub const @"add:to:" = if (config.objectEncoding != .zag) struct{} else struct {
+pub const @"add:to:" = if (config.objectEncoding != .zag) struct {} else struct {
     pub fn primitive(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
         if (isTestMode) return @call(tailCall, Extra.primitiveFailed, .{ pc, sp, process, context, extra });
         return @call(tailCall, process.check(context.npc.f), .{ context.tpc, sp, process, context, undefined });
     }
 };
 
-test "primitives" {}
+test "primitives" {
+    std.debug.print("Running a test from jit.zig\n", .{});
+}
+
+inline fn singleIndexGEP(builder: LLVMBuilderRef, elementType: LLVMTypeRef, base: LLVMValueRef, offset: i64, name: []const u8) LLVMValueRef {
+    // singleIndex - for pointer and integer offsets
+    const offset_bits: u64 = @bitCast(offset);
+    const signExtend = offset < 0;
+    const idx = [_]LLVMValueRef{llvm.type.LLVMConstInt(elementType, offset_bits, @intFromBool(signExtend))};
+    const idx_ptr: [*c]llvm.types.LLVMValueRef = @constCast(@ptrCast(&idx[0]));
+    return llvm.core.LLVMBuildGEP2(builder, elementType, base, idx_ptr, 1, @ptrCast(name));
+}
 
 extern fn llvmPL(_: *anyopaque, _: *anyopaque, _: *anyopaque, _: *anyopaque, c_int) *anyopaque;
 const llvmPLCM = CompiledMethod.init(Sym.yourself, @ptrCast(&llvmPL));
