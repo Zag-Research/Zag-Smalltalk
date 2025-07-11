@@ -7,7 +7,7 @@ const Units = enum {
     milliseconds,
     microseconds,
     nanoseconds,
-    pub fn name(self: Units) []u8 {
+    fn name(self: Units) []u8 {
         return switch (self) {
             .units        => "units",
             .seconds      => "seconds",
@@ -16,7 +16,7 @@ const Units = enum {
             .nanoseconds  => "nanoseconds",
         };
     }
-    pub fn shortName(self: Units) []u8 {
+    fn shortName(self: Units) []u8 {
         return switch (self) {
             .units        => "un",
             .seconds      => "s ",
@@ -25,7 +25,7 @@ const Units = enum {
             .nanoseconds  => "ns",
         };
     }
-    pub fn scale(self: Units) u64 {
+    fn scale(self: Units) u64 {
         return switch (self) {
             .units        => 1,
             .seconds      => 1_000_000_000,
