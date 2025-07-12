@@ -63,5 +63,3 @@ zig-cache/
 zig-out/
 *.ll
 .zed/tasks.json
-fibonacci
-mainZag
