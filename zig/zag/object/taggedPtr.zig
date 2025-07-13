@@ -208,5 +208,5 @@ pub const TaggedPtrObject = packed struct(u64) {
     pub inline fn isHeapObject(self: Object) bool {
         return self.tag == .heap;
     }
-    pub usingnamespace object.ObjectFunctions;
+    const OF = object.ObjectFunctions;
 };

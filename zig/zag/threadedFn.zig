@@ -31,22 +31,25 @@ const symbol = zag.symbol;
 // contain any support fn/const/var declarations as well as tests.
 // Any other public declarations in the import will be ignored.
 
-const structures = struct {
-    pub usingnamespace @import("controlWords.zig");
-    pub usingnamespace @import("controlWords.zig").testFunctions;
-    pub usingnamespace @import("dispatch.zig").threadedFunctions;
-    pub usingnamespace @import("primitives.zig").threadedFunctions;
-    pub usingnamespace @import("context.zig").threadedFunctions;
-    pub usingnamespace @import("process.zig").threadedFunctions;
-    pub usingnamespace if (is_test) struct {
+const structures = .{
+    @import("controlWords.zig"),
+    @import("dispatch.zig"),
+    @import("primitives.zig"),
+    @import("context.zig"),
+    @import("process.zig"),
+    if (is_test) struct {
         // these are just for testing to  verify that we can filter them out
         // pub const T = u32; // don't know how to filter these out
-        pub const ignoreCTInt = 42;
-        pub const ignoreInt: usize = 42;
-        pub fn ignore() void {}
-    } else struct {};
+        const ignoreCTInt = 42;
+        const ignoreInt: usize = 42;
+        fn ignore() void {}
+    } else struct {},
 };
-
+fn declsCount() usize {
+    comptime var count = 0;
+    for (structures) |structure| count += @typeInfo(structure).@"struct".decls;
+    return count;
+}
 fn enumLessThan(_: void, lhs: EnumSort, rhs: EnumSort) bool {
     switch (std.math.order(lhs.order, rhs.order)) {
         .eq => return std.mem.lessThan(u8, lhs.field.name, rhs.field.name),
@@ -62,21 +65,23 @@ const addUnrecognized = true;
 pub const Enum =
     blk: {
         @setEvalBranchQuota(100000);
-        const decls = @typeInfo(structures).@"struct".decls;
-        var array: [decls.len]EnumSort = undefined;
+        var array: [declsCount()]EnumSort = undefined;
         var n = 0;
-        for (decls) |decl| {
-            const ds = @field(structures, decl.name);
-            switch (@typeInfo(@TypeOf(ds))) {
-                .comptime_int, .int, .@"fn", .array => {},
-                else => {
-                    if (@hasDecl(ds, "threadedFn")) {
-                        if (@hasDecl(ds, "order")) {
-                            array[n] = .{ .field = &decl, .order = @field(ds, "order") };
-                        } else array[n] = .{ .field = &decl, .order = 0 };
-                        n += 1;
-                    }
-                },
+        for (structures) |structure| {
+            const decls = @typeInfo(structure).@"struct".decls;
+            for (decls) |decl| {
+                const ds = @field(structure, decl.name);
+                switch (@typeInfo(@TypeOf(ds))) {
+                    .comptime_int, .int, .@"fn", .array => {},
+                    else => {
+                        if (@hasDecl(ds, "threadedFn")) {
+                            if (@hasDecl(ds, "order")) {
+                                array[n] = .{ .field = &decl, .order = @field(ds, "order") };
+                            } else array[n] = .{ .field = &decl, .order = 0 };
+                            n += 1;
+                        }
+                    },
+                }
             }
         }
         const enums = array[0..n];

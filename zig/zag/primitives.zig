@@ -30,7 +30,7 @@ const modules = [_]Module{
     // Module.init(@import("primitives/Behavior.zig").module),
     Module.init(@import("primitives/BlockClosure.zig")),
     // Module.init(@import("primitives/Boolean.zig").module),
-    Module.init(@import("primitives/llvm.zig")),
+    // Module.init(@import("primitives/llvm.zig")),
     // Module.init(@import("dispatch.zig")),
     Module.init(@import("controlWords.zig").module),
 };
@@ -556,7 +556,10 @@ pub const threadedFunctions = struct {
     // pub usingnamespace @import("primitives/Object.zig").threadedFns;
     // pub usingnamespace @import("primitives/Smallinteger.zig").threadedFns;
     // pub usingnamespace @import("primitives/Behavior.zig").threadedFns;
-    pub usingnamespace @import("primitives/BlockClosure.zig").threadedFns;
+    const BlockClosure = @import("primitives/BlockClosure.zig").threadedFns;
+    pub const asThunk = BlockClosure.asThunk;
+    pub const value = BlockClosure.value;
+    pub const valueColon = BlockClosure.valueColon;
     // pub usingnamespace @import("primitives/Boolean.zig").threadedFns;
 };
 pub fn init() void {

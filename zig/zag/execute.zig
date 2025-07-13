@@ -225,7 +225,7 @@ pub const PC = packed struct {
             return self.code.packedObject;
         }
         return self.code.packedObject;
-}
+    }
     pub //inline
     fn method(self: PC) *CompiledMethod {
         if (logging) {
@@ -234,7 +234,7 @@ pub const PC = packed struct {
             return self.code.method;
         }
         return self.code.method;
-}
+    }
     pub //inline
     fn codeAddress(self: PC) *const Code {
         if (logging) {
@@ -243,7 +243,7 @@ pub const PC = packed struct {
             return self.code.codePtr;
         }
         return self.code.codePtr;
-}
+    }
     pub //inline
     fn targetPC(self: PC) PC {
         return .{ .code = self.codeAddress() };
@@ -286,7 +286,7 @@ pub const PC = packed struct {
             return self.code.object.to(u64);
         }
         return self.code.object.to(u64);
-}
+    }
     pub //inline
     fn int(self: PC) i64 {
         if (logging) {
@@ -460,9 +460,9 @@ pub const CompiledMethod = struct {
     pub fn execute(self: *Self, sp: SP, process: *Process, context: *Context) Result {
         const new = reserve(self.stackStructure.reserve, sp, process, context);
         const pc = PC.init(&self.code[0]);
-        trace("\nexecute: {}", .{ pc });
-//        trace(" {}", .{ new.sp });
-        trace(" {x}\n", .{ @as(u64,@bitCast(self.signature)) });
+        trace("\nexecute: {}", .{pc});
+        //        trace(" {}", .{ new.sp });
+        trace(" {x}\n", .{@as(u64, @bitCast(self.signature))});
         return pc.prim()(pc.next(), new.sp, process, new.context, .{ .method = self });
     }
     // pub fn forDispatch(self: *Self, class: ClassIndex) void {
@@ -776,7 +776,7 @@ test "compiling method" {
         @setRuntimeSafety(false);
         trace("\nm: 0x{x:0>16}", .{@intFromPtr(&m)});
         for (t, 0..) |tv, idx|
-            trace("\nt[{}]: 0x{x:0>16}", .{ idx, @as(u64,@bitCast(tv.object)) });
+            trace("\nt[{}]: 0x{x:0>16}", .{ idx, @as(u64, @bitCast(tv.object)) });
     }
     try m.resolve(&.{True()});
     if (config.debugging) {
@@ -838,7 +838,7 @@ fn CompileTimeObject(comptime counts: usize) type {
                         } else continue;
                     },
                 };
-                objects[n] = o;//  if (raw) @compileLog(o);
+                objects[n] = o; //  if (raw) @compileLog(o);
                 n += 1;
             }
             if (last >= 0)
@@ -1065,13 +1065,13 @@ pub const Execution = struct {
         if (config.debugging) {
             @setRuntimeSafety(false);
             for (t, 0..) |tv, idx|
-                trace("t[{}]: 0x{x:0>16}\n", .{ idx, @as(u64,@bitCast(tv.object)) });
+                trace("t[{}]: 0x{x:0>16}\n", .{ idx, @as(u64, @bitCast(tv.object)) });
         }
         try exe.resolve(objects);
         if (config.debugging) {
             @setRuntimeSafety(false);
             for (t, 0..) |*tv, idx|
-                trace("t[{}]=0x{x:0>8}: 0x{x:0>16}\n", .{ idx, @intFromPtr(tv), @as(u64,@bitCast(tv.object)) });
+                trace("t[{}]=0x{x:0>8}: 0x{x:0>16}\n", .{ idx, @intFromPtr(tv), @as(u64, @bitCast(tv.object)) });
         }
         try exe.execute(source);
         try std.testing.expect(exe.getContext() == &exe.ctxt);

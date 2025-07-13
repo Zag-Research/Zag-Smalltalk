@@ -1,5 +1,5 @@
 const std = @import("std");
-const zag = @import("../zag.zig");
+const zag = @import("zag.zig");
 const config = zag.config;
 const objectEncoding = config.objectEncoding;
 const tailCall = config.tailCall;
@@ -202,6 +202,85 @@ pub const threadedFns = struct {
             }
         }
     };
+    pub const value = struct {
+        pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
+            const val = sp.top;
+            trace("\nvalue: {x}", .{val});
+            var result: Object = undefined;
+            if (val.isImmediate()) {
+                sw: switch (val.class) {
+                    .ThunkReturnSmallInteger => {
+                        result = Object.from(@as(i64, @bitCast(val.rawU() << 48)) >> 56);
+                        continue :sw .reserved;
+                    },
+                    .ThunkReturnImmediate => {
+                        result = @bitCast(val.rawU() << 48 >> 56);
+                        continue :sw .reserved;
+                    },
+                    .ThunkReturnCharacter => {
+                        result = Object.makeImmediate(.Character, val.rawU() << 48 >> 56);
+                        continue :sw .reserved;
+                    },
+                    .ThunkReturnFloat => {
+                        const sign_exponent = (val.rawU() & 0xc000) << 48;
+                        const exponent_mantissa = @as(u64, @bitCast(@as(i64, @bitCast((val.rawU() & 0x3f00) << 50)) >> 6)) >> 2;
+                        result = Object.from(@as(f64, @bitCast(sign_exponent | exponent_mantissa)));
+                        continue :sw .reserved;
+                    },
+                    .ThunkReturnLocal, .ThunkReturnInstance, .reserved => { // this is the common part for ThunkReturns
+                        const targetContext: Context = @ptrFromInt(val >> 16);
+                        switch (val.class) {
+                            .ThunkReturnLocal => {
+                                result = targetContext.getLocal((val.rawU() >> 8) and 0xFF);
+                            },
+                            .ThunkReturnInstance => {
+                                result = targetContext.getSelfInstVar((val.rawU() >> 8) and 0xFF);
+                            },
+                            else => {},
+                        }
+                        const newSp, const callerContext = context.popTargetContext(sp, targetContext, process, result);
+                        return @call(tailCall, process.check(callerContext.getNPc()), .{ callerContext.getTPc(), newSp, process, callerContext, undefined });
+                    },
+                    .ThunkHeap => {
+                        result = @bitCast(val.rawI() >> 16);
+                        continue :sw .none;
+                    },
+                    .ThunkLocal, .ThunkInstance, .ThunkFloat, .none => { // this is the common part for other immediate BlockClosures
+                        sp.top = result;
+                        return @call(tailCall, process.check(pc.prim()), .{ pc.next(), sp, process, context, extra });
+                    },
+                    .BlockAssignLocal, .BlockAssignInstance => {
+                        unreachable;
+                    },
+                    else => {
+                        unreachable;
+                    },
+                }
+            }
+            @panic("fallback");
+        }
+    };
+    pub const valueColon = struct {
+        fn threadedFn(pc: PC, sp: SP, process: *Process, context: Context, _: Extra) Result {
+            const val = sp.next;
+            if (val.isImmediate()) {
+                switch (val.class) {
+                    .BlockAssignLocal, .BlockAssignInstance => {
+                        const closure = val.to(heap.HeapObjectPtr);
+                        const method = closure.prev().to(*CompiledMethod);
+                        //                if (!Sym.@"value:".selectorEquals(method.selector)) @panic("wrong selector"); //return @call(tailCall,eprocess.check(.dnu),.{pc,sp,process,context,selector});
+                        const newPc = method.codePtr();
+                        context.setReturn(pc);
+                        if (true) @panic("unfinished");
+                        return @call(tailCall, process.check(newPc[0].prim), .{ newPc + 1, sp, process, context, Sym.value });
+                    },
+                    .ThunkReturnSmallInteger, .ThunkReturnImmediate, .ThunkReturnCharacter, .ThunkReturnFloat, .ThunkReturnLocal, .ThunkReturnInstance, .ThunkImmediate, .ThunkHeap, .ThunkLocal, .ThunkInstance, .ThunkFloat => @panic("wrong # arguments"),
+                    else => @panic("not closure"),
+                }
+            }
+            return @call(tailCall, process.check(pc[0].prim), .{ pc + 1, sp, process, context, undefined, undefined });
+        }
+    };
 };
 pub const ThunkImmediate = struct {
     pub fn primitive(_: PC, sp: SP, process: *Process, context: *Context, _: Extra) Result {
@@ -305,85 +384,6 @@ pub const inlines = struct {
     }
 };
 const fallback = execute.fallback;
-pub const value = struct {
-    pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
-        const val = sp.top;
-        trace("\nvalue: {x}", .{val});
-        var result: Object = undefined;
-        if (val.isImmediate()) {
-            sw: switch (val.class) {
-                .ThunkReturnSmallInteger => {
-                    result = Object.from(@as(i64, @bitCast(val.rawU() << 48)) >> 56);
-                    continue :sw .reserved;
-                },
-                .ThunkReturnImmediate => {
-                    result = @bitCast(val.rawU() << 48 >> 56);
-                    continue :sw .reserved;
-                },
-                .ThunkReturnCharacter => {
-                    result = Object.makeImmediate(.Character, val.rawU() << 48 >> 56);
-                    continue :sw .reserved;
-                },
-                .ThunkReturnFloat => {
-                    const sign_exponent = (val.rawU() & 0xc000) << 48;
-                    const exponent_mantissa = @as(u64, @bitCast(@as(i64, @bitCast((val.rawU() & 0x3f00) << 50)) >> 6)) >> 2;
-                    result = Object.from(@as(f64, @bitCast(sign_exponent | exponent_mantissa)));
-                    continue :sw .reserved;
-                },
-                .ThunkReturnLocal, .ThunkReturnInstance, .reserved => { // this is the common part for ThunkReturns
-                    const targetContext: Context = @ptrFromInt(val >> 16);
-                    switch (val.class) {
-                        .ThunkReturnLocal => {
-                            result = targetContext.getLocal((val.rawU() >> 8) and 0xFF);
-                        },
-                        .ThunkReturnInstance => {
-                            result = targetContext.getSelfInstVar((val.rawU() >> 8) and 0xFF);
-                        },
-                        else => {},
-                    }
-                    const newSp, const callerContext = context.popTargetContext(sp, targetContext, process, result);
-                    return @call(tailCall, process.check(callerContext.getNPc()), .{ callerContext.getTPc(), newSp, process, callerContext, undefined });
-                },
-                .ThunkHeap => {
-                    result = @bitCast(val.rawI() >> 16);
-                    continue :sw .none;
-                },
-                .ThunkLocal, .ThunkInstance, .ThunkFloat, .none => { // this is the common part for other immediate BlockClosures
-                    sp.top = result;
-                    return @call(tailCall, process.check(pc.prim()), .{ pc.next(), sp, process, context, extra });
-                },
-                .BlockAssignLocal, .BlockAssignInstance => {
-                    unreachable;
-                },
-                else => {
-                    unreachable;
-                },
-            }
-        }
-        @panic("fallback");
-    }
-};
-pub const valueColon = struct {
-    fn threadedFn(pc: PC, sp: SP, process: *Process, context: Context, _: Extra) Result {
-        const val = sp.next;
-        if (val.isImmediate()) {
-            switch (val.class) {
-                .BlockAssignLocal, .BlockAssignInstance => {
-                    const closure = val.to(heap.HeapObjectPtr);
-                    const method = closure.prev().to(*CompiledMethod);
-                    //                if (!Sym.@"value:".selectorEquals(method.selector)) @panic("wrong selector"); //return @call(tailCall,eprocess.check(.dnu),.{pc,sp,process,context,selector});
-                    const newPc = method.codePtr();
-                    context.setReturn(pc);
-                    if (true) @panic("unfinished");
-                    return @call(tailCall, process.check(newPc[0].prim), .{ newPc + 1, sp, process, context, Sym.value });
-                },
-                .ThunkReturnSmallInteger, .ThunkReturnImmediate, .ThunkReturnCharacter, .ThunkReturnFloat, .ThunkReturnLocal, .ThunkReturnInstance, .ThunkImmediate, .ThunkHeap, .ThunkLocal, .ThunkInstance, .ThunkFloat => @panic("wrong # arguments"),
-                else => @panic("not closure"),
-            }
-        }
-        return @call(tailCall, process.check(pc[0].prim), .{ pc + 1, sp, process, context, undefined, undefined });
-    }
-};
 pub fn immutableClosure(pc: PC, sp: SP, process: *Process, context: *Context, _: Extra) Result {
     const newSp = inlines.immutableClosure(sp, process);
     return @call(tailCall, process.check(pc.prim()), .{ pc.next(), newSp, process, context, undefined });

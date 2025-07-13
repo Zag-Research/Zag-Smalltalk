@@ -1,13 +1,17 @@
 const std = @import("std");
 const assert = std.debug.assert;
-const zag = @import("zag.zig");
-const object = zag.object;
-const Object = object.Object;
-const execute = zag.execute;
-const ThreadedFn = execute.ThreadedFn;
-const primitives = zag.primitives;
-const globalArena = zag.globalArena;
-const symbol = zag.symbol;
+pub const config = @import("config.zig");
+pub const InMemory = @import("object/inMemory.zig");
+pub const object = @import("object.zig");
+pub const execute = @import("execute.zig");
+pub const Context = @import("context.zig");
+pub const Process = @import("process.zig");
+pub const heap = @import("heap.zig");
+pub const globalArena = @import("globalArena.zig");
+pub const symbol = @import("symbol.zig");
+pub const utilities = @import("utilities.zig");
+pub const threadedFn = @import("threadedFn.zig");
+pub const llvm = @import("libs/zig-llvm/src/llvm.zig");
 
 const references = execute.ebmedded.references;
 fn format_timestamp(seconds: u64, out_buffer: []u8) void {

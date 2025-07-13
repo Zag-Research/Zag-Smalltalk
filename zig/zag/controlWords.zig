@@ -74,7 +74,7 @@ pub const classCase = struct {
         const newSp = sp.drop();
         while (true) {
             var classes = pc.packedObject().asU64();
-            trace("\nclassCase: {x}",.{ classes });
+            trace("\nclassCase: {x}", .{classes});
             newPc = newPc.next();
             for (0..4) |_| {
                 const currentClass: u14 = @truncate(classes);

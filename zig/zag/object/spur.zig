@@ -312,7 +312,7 @@ pub const Object = packed union {
         return if (self.isHeap()) true else false;
     }
 
-    pub usingnamespace object.ObjectFunctions;
+    const OF = object.ObjectFunctions;
 };
 
 test "float conversions" {

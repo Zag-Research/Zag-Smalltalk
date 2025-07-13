@@ -53,7 +53,7 @@ pub const Object = packed struct(u64) {
         return @truncate(self.ref.data.unsigned);
     }
     pub //inline
-        fn nativeI(self: object.Object) ?i64 {
+    fn nativeI(self: object.Object) ?i64 {
         if (self.isInt()) return self.rawI();
         return null;
     }
@@ -108,7 +108,7 @@ pub const Object = packed struct(u64) {
         return true;
     }
     pub //inline
-        fn isInt(self: Object) bool {
+    fn isInt(self: Object) bool {
         return self.ref.header.classIndex == .SmallInteger;
     }
     pub inline fn isNat(self: Object) bool {
@@ -253,5 +253,5 @@ pub const Object = packed struct(u64) {
     pub inline fn isHeapObject(_: Object) bool {
         return true;
     }
-    pub usingnamespace object.ObjectFunctions;
+    const OF = object.ObjectFunctions;
 };

@@ -6,6 +6,15 @@ pub const tailCall: std.builtin.CallModifier = if (show_error_stack) .never_inli
 pub fn trace(comptime format: anytype, values: anytype) void {
     if (show_trace) std.debug.print(format, values);
 }
+pub const objectEncoding: Encoding = .zag;
+
+pub const debugging = false;
+pub const logThreadExecution = debugging;
+const show_error_stack = debugging;
+const show_trace = debugging;
+pub const picSize = 0;
+pub const max_classes = 256;
+
 pub const immediateIntegers = switch (objectEncoding) {
     .zag, .nan, .spur => true,
     else => false,
@@ -15,8 +24,6 @@ pub const immediateSymbols = switch (objectEncoding) {
     else => false,
 };
 pub const notZag = objectEncoding != .zag;
-pub const objectEncoding: Encoding = .zag;
-
 const Encoding = enum {
     zag,
     nan,
@@ -26,12 +33,6 @@ const Encoding = enum {
     ptr,
 };
 
-pub const debugging = false;
-pub const logThreadExecution = debugging;
-const show_error_stack = debugging;
-const show_trace = debugging;
-pub const picSize = 0;
-pub const max_classes = 256;
 test "config" {
     std.debug.print(
         \\Config:

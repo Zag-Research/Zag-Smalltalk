@@ -368,5 +368,5 @@ pub const Object = packed struct(u64) {
     pub inline fn isHeapObject(self: object.Object) bool {
         return self.tag == .heap;
     }
-    pub usingnamespace object.ObjectFunctions;
+    const OF = object.ObjectFunctions;
 };

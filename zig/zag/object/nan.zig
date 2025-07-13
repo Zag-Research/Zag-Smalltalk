@@ -356,7 +356,7 @@ pub const Object = packed struct(u64) {
     pub inline fn isHeapObject(self: object.Object) bool {
         return self.tag == .heap;
     }
-    pub usingnamespace object.ObjectFunctions;
+    const OF = object.ObjectFunctions;
 };
 test "all generated NaNs are positive" {
     // test that all things that generate NaN generate positive ones

@@ -9,29 +9,29 @@ const Units = enum {
     nanoseconds,
     fn name(self: Units) []const u8 {
         return switch (self) {
-            .units        => "units",
-            .seconds      => "seconds",
+            .units => "units",
+            .seconds => "seconds",
             .milliseconds => "milliseconds",
             .microseconds => "microseconds",
-            .nanoseconds  => "nanoseconds",
+            .nanoseconds => "nanoseconds",
         };
     }
     fn shortName(self: Units) []const u8 {
         return switch (self) {
-            .units        => "un",
-            .seconds      => "s ",
+            .units => "un",
+            .seconds => "s ",
             .milliseconds => "ms",
             .microseconds => "us",
-            .nanoseconds  => "ns",
+            .nanoseconds => "ns",
         };
     }
     fn scale(self: Units) u64 {
         return switch (self) {
-            .units        => 1,
-            .seconds      => 1_000_000_000,
+            .units => 1,
+            .seconds => 1_000_000_000,
             .milliseconds => 1_000_000,
             .microseconds => 1_000,
-            .nanoseconds  => 1,
+            .nanoseconds => 1,
         };
     }
 };
@@ -69,12 +69,12 @@ pub fn Stats(comptime Arg: type, comptime K: type, comptime runs: comptime_int, 
         }
         pub fn time(self: *Self, runner: *const fn (comptime A, usize) usize, comptime param: anytype) void {
             for (0..warmups) |_| {
-                self.proof = @call(.never_inline, runner, .{if (A == u64) 0 else param, self.proof});
+                self.proof = @call(.never_inline, runner, .{ if (A == u64) 0 else param, self.proof });
             }
             var timer = std.time.Timer.start() catch @panic("no timer available");
             var diff: usize = 0;
             for (0..runs) |runNumber| {
-                self.proof = @call(.never_inline, runner, .{if (A == u64) runNumber + 1 else param, self.proof});
+                self.proof = @call(.never_inline, runner, .{ if (A == u64) runNumber + 1 else param, self.proof });
                 diff = timer.lap() / scale;
                 self.addData(diff);
             }
@@ -175,9 +175,7 @@ test "simple int stats" {
     try expectEqual(stat.stdDev(), 1.0);
     var buf: [200]u8 = undefined;
     var buf2: [200]u8 = undefined;
-    try expect(std.mem.eql(u8,
-        try std.fmt.bufPrint(&buf2 ,"2--3--4--1",.{}),
-        try std.fmt.bufPrint(&buf, "{}",.{stat})));
+    try expect(std.mem.eql(u8, try std.fmt.bufPrint(&buf2, "2--3--4--1", .{}), try std.fmt.bufPrint(&buf, "{}", .{stat})));
 }
 test "simple int stats with values" {
     const expectEqual = @import("std").testing.expectEqual;
@@ -234,7 +232,9 @@ test "simple float stats" {
     //    std.debug.print("\nstats {<FOO>nmxs}",.{stat});
     _ = .{ expect, buf, buf2 }; //    try expect(std.mem.eql(u8,try std.fmt.bufPrint(buf2[0..],"2--3--4--1",.{}),try std.fmt.bufPrint(buf[0..], "{}",.{stat})));
 }
-fn timeRunner(comptime _: usize, proof: usize) usize {return proof;}
+fn timeRunner(comptime _: usize, proof: usize) usize {
+    return proof;
+}
 test "simple timed stats" {
     const expect = @import("std").testing.expect;
     var stat = Stats(usize, void, 3, .nanoseconds).init();

@@ -39,9 +39,7 @@ const HeapHeader = heap.HeapHeader;
 const HeapObjectPtr = heap.HeapObjectPtr;
 const HeapObjectConstPtr = heap.HeapObjectConstPtr;
 const largerPowerOf2 = @import("utilities.zig").largerPowerOf2;
-pub usingnamespace if (!builtin.is_test) struct {} else struct {
-    pub const SelfObject: Object = Object.oImm(.Symbol, 0xf0000ff);
-};
+pub const SelfObject = if (!builtin.is_test) struct {} else Object.oImm(.Symbol, 0xf0000ff);
 pub const False = Object.False;
 pub const True = Object.True;
 pub const Nil = Object.Nil;
@@ -341,7 +339,6 @@ pub const PackedObject = packed struct {
         return combine(u14, tup);
     }
     pub fn object14(tup: anytype) PackedObject {
-
         return @bitCast((@as(u64, combine(u14, tup)) << @bitSizeOf(Object.PackedTagType)) + Object.packedTagSmallInteger);
     }
     test "combiners" {
@@ -375,7 +372,7 @@ test "to conversion" {
     const p = &process;
     const ee = std.testing.expectEqual;
     try ee((Object.from(3.14, p)).to(f64), 3.14);
-//    std.debug.print("value: {}\n", .{@as(zag.InMemory.PointedObjectRef, @bitCast(Object.from(42, p)))});
+    //    std.debug.print("value: {}\n", .{@as(zag.InMemory.PointedObjectRef, @bitCast(Object.from(42, p)))});
     try ee((Object.from(42, p)).to(u64), 42);
     try std.testing.expect((Object.from(42, p)).isInt());
     try ee((Object.from(true, p)).to(bool), true);
