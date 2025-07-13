@@ -1,5 +1,5 @@
 const std = @import("std");
-const zag = @import("zag.zig");
+const zag = @import("../zag.zig");
 const config = zag.config;
 const objectEncoding = config.objectEncoding;
 const tailCall = config.tailCall;
