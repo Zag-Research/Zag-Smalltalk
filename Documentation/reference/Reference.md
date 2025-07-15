@@ -32,6 +32,11 @@ $ make install
 - [HydraVM](http://www.hydravm.org/hydra)
 - [GraalVM](https://www.graalvm.org)
 
+### WUFFS
+- [wuffs](https://github.com/google/wuffs/tree/main/doc/std) is a buffer-safe library for transcoding arbitrary input, including:
+	- [Compression Decoders](https://github.com/google/wuffs/blob/main/doc/std/compression-decoders.md).
+	- [Hashers](https://github.com/google/wuffs/blob/main/doc/std/hashers.md).
+	- [Image Decoders](https://github.com/google/wuffs/blob/main/doc/std/image-decoders.md).
 ### Memory Management
 #### mimalloc
 - [on github](https://github.com/microsoft/mimalloc)

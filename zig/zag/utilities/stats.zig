@@ -121,14 +121,13 @@ pub fn Stats(comptime Arg: type, comptime K: type, comptime runs: comptime_int, 
         pub fn format(
             self: *const Self,
             comptime fmt: []const u8,
-            comptime options: std.fmt.FormatOptions,
+            options: std.fmt.FormatOptions,
             writer: anytype,
         ) !void {
             if (self.noData()) {
                 try writer.print("?", .{});
             } else {
-                const flOpts: []const u8 = comptime if (options.precision == null) "{d}" else "{d:.2}";
-                const opts: []const u8 = comptime if (isInt) "{}" else flOpts;
+                const opts: []const u8 = comptime if (isInt) "{}" else "{d:.2}";
                 var percent = false;
                 inline for (if (fmt.len == 0) "n--m--x--s" else fmt) |f| {
                     switch (f) {
@@ -147,9 +146,11 @@ pub fn Stats(comptime Arg: type, comptime K: type, comptime runs: comptime_int, 
                                 } else {
                                     try writer.print("{d:.1}%", .{self.stdDev() * 100 / divisor});
                                 }
-                            } else {
-                                try writer.print(flOpts, .{self.stdDev()});
-                            }
+                            } else if (options.precision == null) {
+                                try writer.print("{d}", .{self.stdDev()});
+                            } else
+                                try writer.print("{d:.2}", .{self.stdDev()});
+
                         },
                         // change % to give a percentile or express stdDev as a percentage
                         '+' => try writer.print("±", .{}),

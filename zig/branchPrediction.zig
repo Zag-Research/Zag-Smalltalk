@@ -6,13 +6,14 @@ const Tests = enum {
     F_repeated,
     TF,
     T2F2,
-    TFFF,
     T4F4,
-    TFTFFFFF,
     T8F8,
     T16F16,
     T32F32,
     T64F64,
+    ThalfFhalf,
+    TFFF,
+    TFTFFFFF,
 };
 fn compute(comptime test_type: Tests, proof: usize) usize {
     const max: usize = 0x40000009; // a prime number just over a billion - non-primes produce very different timings
@@ -34,10 +35,11 @@ fn compute(comptime test_type: Tests, proof: usize) usize {
             .T16F16 => i & 16 == 0,
             .T32F32 => i & 32 == 0,
             .T64F64 => i & 64 == 0,
+            .ThalfFhalf => i & 0x20000000 == 0,
         }) {
-            proof1 = proof1 ^ i;
+            proof1 ^= i;
         } else {
-            proof2 = proof2 ^ i;
+            proof2 ^= i;
         }
     }
     return proof1 ^ proof2;
