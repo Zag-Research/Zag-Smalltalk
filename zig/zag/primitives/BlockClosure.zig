@@ -207,10 +207,10 @@ pub const threadedFns = struct {
             const val = sp.top;
             trace("\nvalue: {x}", .{val});
             var result: Object = undefined;
-            if (val.isImmediate()) {
+            if (false and val.isImmediate()) {
                 sw: switch (val.class) {
                     .ThunkReturnSmallInteger => {
-                        result = Object.from(@as(i64, @bitCast(val.rawU() << 48)) >> 56);
+                        result = Object.from(@as(i64, @bitCast(val.rawU() << 48)) >> 56, process);
                         continue :sw .reserved;
                     },
                     .ThunkReturnImmediate => {
@@ -227,7 +227,7 @@ pub const threadedFns = struct {
                         result = Object.from(@as(f64, @bitCast(sign_exponent | exponent_mantissa)));
                         continue :sw .reserved;
                     },
-                    .ThunkReturnLocal, .ThunkReturnInstance, .reserved => { // this is the common part for ThunkReturns
+                    .ThunkReturnLocal, .ThunkReturnInstance, => { // this is the common part for ThunkReturns
                         const targetContext: Context = @ptrFromInt(val >> 16);
                         switch (val.class) {
                             .ThunkReturnLocal => {

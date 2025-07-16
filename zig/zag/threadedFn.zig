@@ -61,9 +61,10 @@ fn enumLessThan(_: void, lhs: EnumSort, rhs: EnumSort) bool {
 const EnumSort = struct {
     field: *const std.builtin.Type.Declaration,
     order: usize,
+    threadedFn: ThreadedFn.Fn,
 };
 const addUnrecognized = true;
-pub const Enum =
+const enumAndFunctions =
     blk: {
         @setEvalBranchQuota(100000);
         var array: [declsCount()]EnumSort = undefined;
@@ -72,14 +73,13 @@ pub const Enum =
             const decls = @typeInfo(structure).@"struct".decls;
             for (decls) |decl| {
                 const ds = @field(structure, decl.name);
-                @compileLog(ds);
                 switch (@typeInfo(@TypeOf(ds))) {
                     .comptime_int, .int, .@"fn", .array => {},
                     else => {
                         if (@hasDecl(ds, "threadedFn")) {
                             if (@hasDecl(ds, "order")) {
-                                array[n] = .{ .field = &decl, .order = @field(ds, "order") };
-                            } else array[n] = .{ .field = &decl, .order = 0 };
+                                array[n] = .{ .field = &decl, .order = @field(ds, "order"), .threadedFn = @field(ds, "threadedFn") };
+                            } else array[n] = .{ .field = &decl, .order = 0, .threadedFn = @field(ds, "threadedFn") };
                             n += 1;
                         }
                     },
@@ -97,7 +97,7 @@ pub const Enum =
         }
         if (addUnrecognized) {
             fields = fields ++ [_]std.builtin.Type.EnumField{.{
-                .name = "Code.end",
+                .name = "_end",
                 .value = fields.len,
             }};
             fields = fields ++ [_]std.builtin.Type.EnumField{.{
@@ -106,30 +106,25 @@ pub const Enum =
             }};
         }
         //@compileLog(fields);
-        break :blk @Type(.{ .@"enum" = .{
+        const arraySize = enums.len + if (addUnrecognized) 1 else 0;
+        var arrayFns: [arraySize]ThreadedFn.Fn = undefined;
+        for (enums, 0..) |eb, index| {
+            arrayFns[index] = eb.threadedFn;
+        }
+        if (addUnrecognized) {
+            arrayFns[arraySize - 1] = &execute.Code.end;
+        }
+
+        break :blk .{@Type(.{ .@"enum" = .{
             .tag_type = usize,
             .is_exhaustive = false,
             .fields = fields,
             .decls = &.{},
-        } });
+        } }), arrayFns};
     };
 
-pub const functions =
-    blk: {
-        const arraySize = @typeInfo(Enum).@"enum".fields.len - if (addUnrecognized) 1 else 0;
-        var array: [arraySize]ThreadedFn.Fn = undefined;
-        for (@typeInfo(Enum).@"enum".fields) |d| {
-            if (d.value < arraySize) {
-                if (d.value == arraySize - 1) {
-                    array[d.value] = &execute.Code.end;
-                } else {
-                    const ds = @field(structures, d.name);
-                    array[d.value] = &@field(ds, "threadedFn");
-                }
-            }
-        }
-        break :blk array;
-    };
+pub const Enum = enumAndFunctions[0];
+pub const functions = enumAndFunctions[1];
 
 pub fn initialize() void {}
 pub fn threadedFn(key: Enum) ThreadedFn.Fn {
