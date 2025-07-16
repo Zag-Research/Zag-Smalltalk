@@ -357,6 +357,22 @@ pub const Object = packed struct(u64) {
         return self.tag == .heap;
     }
     const OF = object.ObjectFunctions;
+    pub const arrayAsSlice = OF.arrayAsSlice;
+    pub const asMemoryObject = OF.asMemoryObject;
+    pub const asZeroTerminatedString = OF.asZeroTerminatedString;
+    pub const compare = OF.compare;
+    pub const empty = OF.empty;
+    pub const equals = OF.equals;
+    pub const immediate_class = OF.immediate_class;
+    pub const isBool = OF.isBool;
+    pub const isIndexable = OF.isIndexable;
+    pub const isNil = OF.isNil;
+    pub const isUnmoving = OF.isUnmoving;
+    pub const numArgs = OF.numArgs;
+    pub const promoteToUnmovable = OF.promoteToUnmovable;
+    pub const rawFromU = OF.rawFromU;
+    pub const to  = OF.to;
+    pub const toUnchecked = OF.toUnchecked;
 };
 test "all generated NaNs are positive" {
     // test that all things that generate NaN generate positive ones

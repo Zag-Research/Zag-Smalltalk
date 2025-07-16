@@ -33,10 +33,10 @@ const symbol = zag.symbol;
 
 const structures = .{
     @import("controlWords.zig"),
-    @import("dispatch.zig"),
-    @import("primitives.zig"),
-    @import("context.zig"),
-    @import("process.zig"),
+    @import("dispatch.zig").threadedFunctions,
+    @import("primitives.zig").threadedFunctions,
+    @import("context.zig").threadedFunctions,
+    @import("process.zig").threadedFunctions,
     if (is_test) struct {
         // these are just for testing to  verify that we can filter them out
         // pub const T = u32; // don't know how to filter these out
@@ -44,10 +44,11 @@ const structures = .{
         const ignoreInt: usize = 42;
         fn ignore() void {}
     } else struct {},
-};
+} ++ @import("primitives.zig").primitiveThreadedFunctions;
+//comptime {@compileLog(structures[6].asThunk);}
 fn declsCount() usize {
     comptime var count = 0;
-    for (structures) |structure| count += @typeInfo(structure).@"struct".decls;
+    for (structures) |structure| count += @typeInfo(structure).@"struct".decls.len;
     return count;
 }
 fn enumLessThan(_: void, lhs: EnumSort, rhs: EnumSort) bool {
@@ -71,6 +72,7 @@ pub const Enum =
             const decls = @typeInfo(structure).@"struct".decls;
             for (decls) |decl| {
                 const ds = @field(structure, decl.name);
+                @compileLog(ds);
                 switch (@typeInfo(@TypeOf(ds))) {
                     .comptime_int, .int, .@"fn", .array => {},
                     else => {
@@ -140,7 +142,7 @@ pub fn find(f: ThreadedFn.Fn) Enum {
     return .Unrecognized;
 }
 comptime {
-    assert(structures.branch.threadedFn == threadedFn(.branch));
+    assert(@import("controlWords.zig").branch.threadedFn == threadedFn(.branch));
 }
 test "number of threaded functions" {
     if (true) return error.SkipZigTest;

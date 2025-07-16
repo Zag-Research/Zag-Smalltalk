@@ -11,5 +11,5 @@ pub const utilities = @import("zag/utilities.zig");
 pub const threadedFn = @import("zag/threadedFn.zig");
 pub const llvm = @import("zag/libs/zig-llvm/src/llvm.zig");
 test "default" {
-    _ = InMemory;
+    _ = threadedFn;
 }

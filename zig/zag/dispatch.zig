@@ -468,7 +468,7 @@ const symbols = symbol.symbols;
 const smallestPrimeAtLeast = @import("utilities.zig").smallestPrimeAtLeast;
 // // note that self and other could become invalid after any method call if they are heap objects, so will need to be re-loaded from context.fields if needed thereafter
 
-pub const forTest = Dispatch.forTest;
+// pub const forTest = Dispatch.forTest;
 const noArgs = ([0]Object{})[0..];
 pub const dump = Dispatch.dump;
 pub fn init() void {

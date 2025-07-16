@@ -552,15 +552,13 @@ pub const threadedFunctions = struct {
             }, exe.stack());
         }
     };
-
-    // pub usingnamespace @import("primitives/Object.zig").threadedFns;
-    // pub usingnamespace @import("primitives/Smallinteger.zig").threadedFns;
-    // pub usingnamespace @import("primitives/Behavior.zig").threadedFns;
-    const BlockClosure = @import("primitives/BlockClosure.zig").threadedFns;
-    pub const asThunk = BlockClosure.asThunk;
-    pub const value = BlockClosure.value;
-    pub const valueColon = BlockClosure.valueColon;
-    // pub usingnamespace @import("primitives/Boolean.zig").threadedFns;
+};
+pub const primitiveThreadedFunctions = .{
+    // @import("primitives/Object.zig").threadedFns,
+    // @import("primitives/Smallinteger.zig").threadedFns,
+    // @import("primitives/Behavior.zig").threadedFns,
+    @import("primitives/BlockClosure.zig").threadedFns,
+    // @import("primitives/Boolean.zig").threadedFns,
 };
 pub fn init() void {
     @import("primitives/Object.zig").init();
