@@ -216,7 +216,7 @@ When we dispatch to a method, we execute the `executeFn` function, with the `pc`
 Experience has shown that 90% of message sending locations dispatch to a single class and 9% to a small set of classes. Thus a significant speedup is achieved by trying previously found methods before going to a generalized dispatch. While Zag dispatch is much more efficient than most, it is certainly slower than a comparison.
 
 ### Current version
-Noticing that a full dispatch (with dispatch table hit) is 5 memory accesses (most of which will be in cache) and a direct dispatch is 3 (for threaded execution; 2 for JITted) there is little point in having an elaborate PIC. So the current version uses a single element PIC, which captures the monomorphic case in 3 accesses, and falls back to 7 for a missed cache.
+Noticing that a full dispatch (with dispatch table hit) is 5 memory accesses and a direct dispatch is 3, there is little point in having an elaborate PIC. So the current version uses a single element PIC, which captures the monomorphic case in 3 accesses, and falls back to 7 for a missed cache.
 
 The code for a send looks like:
 ```
@@ -224,16 +224,18 @@ send/tailSend/tailSendContext
 selector
 initialDispatch
 ```
-The `send` looks at the arity of the selector, gets the class from the appropriate object on the stack (offset by the arity) and combines the class and the selector to create a `Signature` that is passed in the `Extra` parameter. It then loads the next word, which will be a `CompiledMethod` and executes its `executeFn`. Before this `send`, but not `tailSend` or tailSendContext save the return `tpc` and `npc`. (There are also unary, binary, and ternary versions that can load the receiver at a fixed offset on the stack without having to wait for the selector to load to get the arity.)
-`initialDispatch` is a `CompiledMethod` whose signature is zero, so will never match the sending signature. to get a `Compiled Method` and then replaces the `initialDispatch` reference with the address of the found `CompiledMethod`. The next time this send is executed, we will dispatch to that method, which handles the monomorphic case.
-The `extra` parameter can be either a `Signature` or a pointer to a `CompiledMethod`.
-- If `extra` is a signature, this is the monomorphic method and we must check if it matches the signature for this method.
-	- If it does match, we proceed to execute the body of the method.
-		- In the threaded case, we load the `CompiledMethod` pointer from the sending location (which the `pc` still points to). If we are in JITted code, we can just compare with an immediate value.
-	- If the signature doesn't match  
-- If `extra` is a pointer, then we don't have to check, we proceed directly to execute the body of the method.
+- The `send` looks at the arity of the selector, gets the class from the appropriate object on the stack (offset by the arity) and combines the class and the selector to create a `Signature`. (There are also unary, binary, and ternary versions that can load the receiver at a fixed offset on the stack without having to wait for the selector to load to get the arity.)
+- For `send`, but not `tailSend` or `tailSendContext`, save the return `tpc` and `npc`.
+- then load the next word, which will be a `CompiledMethod` and and compares its signature with the current one.
+	1. if they match, it's the monomorphic case, so this is the correct `CompiledMethod`
+	2. otherwise if the `CompiledMethod` has a zero signature, then it is the initialDispatch, so we need to look up the `Compiled Method` for this signature and replace the `initialDispatch` reference with the address of the found `CompiledMethod`. The next time this send is executed, we will match that method, which handles the monomorphic case. Note that this replacement doesn't have to be multi-processor safe, because any match we found is valid.
+	3. otherwise this is a polymorphic send, so look up the `CompiledMethod` for the current signature
+		- other implementations would use a PIC in this case with a list of possible alternate methods
+		- our lookup is so fast that's what we simply do. This requires 2 memory accesses more than accessing a PIC would, but is actually faster if the PIC would have more than 2 or 3 entries
+		- one possible variant would be to always replace the pointer with the discovered `CompiledMethod` (like in case 2) so that methods that have phases would perform better (and case 2 and 3 would become the same), however this would do cache invalidations on every change, which might not be advantageous
+- transfer to the `executeFn` for the method with the `extra` parameter set to the `CompiledMethod` pointer, and the `pc` set to the second `Code` word.
 #### Possible enhancement
-The pointer to the `CompiledMethod` is preceded by the address of the execute function. So we jump directly to the execute function and all the testing happens in the function. This way, the JITted case could be reduced to 1 memory access, while the threaded case would remain at 3.
+The pointer to the `CompiledMethod` is preceded by the address of the execute function. So we jump directly to the execute function and all the testing happens in the function. This way, the JITted case could be reduced to 1 memory access, plus use of immediate values - which may or may not be faster. The threaded case would remain at 3.
 
 In this version, `initialDispatch` is a `CompiledMethod` whose `executeFn` is a threadedFn that looks up the signature to get a `Compiled Method` and then replaces the `initialDispatch` reference with the address of the found `CompiledMethod`. The next time this send is executed, we will dispatch to that method, which handles the monomorphic case.
 
