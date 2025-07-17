@@ -113,7 +113,8 @@ pub const Extra = union {
     signature: Signature,
     contextData: *Context.ContextData,
     pub fn encoded(self: Extra) Extra {
-        if (Object.from(self.method, null).tagMethod()) |obj| {
+        @setRuntimeSafety(false);
+        if (self.object.tagMethod()) |obj| {
             return .{ .object = obj };
         } else {
             std.debug.print("encoded: {} {x:0>16}\n", .{ self, @intFromPtr(self.method) });
@@ -125,7 +126,11 @@ pub const Extra = union {
     }
     pub fn isEncoded(self: Extra) bool {
         @setRuntimeSafety(false);
-        return Object.from(self.method, null).isTaggedMethod();
+        return self.object.isTaggedMethod();
+    }
+    pub fn isSignature(self: Extra) bool {
+        @setRuntimeSafety(false);
+        return self.object.isSymbol();
     }
     pub fn primitiveFailed(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
         if (config.logThreadExecution)
@@ -958,7 +963,7 @@ test "compileRaw" {
         42,
         42.0,
     });
-    const debugging = true;
+    const debugging = false;
     if (debugging) {
         @setRuntimeSafety(false);
         for (&o.objects, 0..) |*ob, idx|

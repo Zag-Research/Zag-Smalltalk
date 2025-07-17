@@ -214,6 +214,37 @@ When we dispatch to a method, we execute the `executeFn` function, with the `pc`
 
 ## Sends and Polymorphic Inline Caches
 Experience has shown that 90% of message sending locations dispatch to a single class and 9% to a small set of classes. Thus a significant speedup is achieved by trying previously found methods before going to a generalized dispatch. While Zag dispatch is much more efficient than most, it is certainly slower than a comparison.
+
+### Current version
+Noticing that a full dispatch (with dispatch table hit) is 5 memory accesses (most of which will be in cache) and a direct dispatch is 3 (for threaded execution; 2 for JITted) there is little point in having an elaborate PIC. So the current version uses a single element PIC, which captures the monomorphic case in 3 accesses, and falls back to 7 for a missed cache.
+
+The code for a send looks like:
+```
+send/tailSend/tailSendContext
+selector
+initialDispatch
+```
+The `send` looks at the arity of the selector, gets the class from the appropriate object on the stack (offset by the arity) and combines the class and the selector to create a `Signature` that is passed in the `Extra` parameter. It then loads the next word, which will be a `CompiledMethod` and executes its `executeFn`. Before this `send`, but not `tailSend` or tailSendContext save the return `tpc` and `npc`. (There are also unary, binary, and ternary versions that can load the receiver at a fixed offset on the stack without having to wait for the selector to load to get the arity.)
+`initialDispatch` is a `CompiledMethod` whose signature is zero, so will never match the sending signature. to get a `Compiled Method` and then replaces the `initialDispatch` reference with the address of the found `CompiledMethod`. The next time this send is executed, we will dispatch to that method, which handles the monomorphic case.
+The `extra` parameter can be either a `Signature` or a pointer to a `CompiledMethod`.
+- If `extra` is a signature, this is the monomorphic method and we must check if it matches the signature for this method.
+	- If it does match, we proceed to execute the body of the method.
+		- In the threaded case, we load the `CompiledMethod` pointer from the sending location (which the `pc` still points to). If we are in JITted code, we can just compare with an immediate value.
+	- If the signature doesn't match  
+- If `extra` is a pointer, then we don't have to check, we proceed directly to execute the body of the method.
+#### Possible enhancement
+The pointer to the `CompiledMethod` is preceded by the address of the execute function. So we jump directly to the execute function and all the testing happens in the function. This way, the JITted case could be reduced to 1 memory access, while the threaded case would remain at 3.
+
+In this version, `initialDispatch` is a `CompiledMethod` whose `executeFn` is a threadedFn that looks up the signature to get a `Compiled Method` and then replaces the `initialDispatch` reference with the address of the found `CompiledMethod`. The next time this send is executed, we will dispatch to that method, which handles the monomorphic case.
+
+For all other cases, we are executing the `executeFn` of the actual method (which is a special verify function for threaded execution). Here the `extra` parameter can be either a `Signature` or a pointer to a `CompiledMethod`.
+- If `extra` is a signature, this is the monomorphic method and we must check if it matches the signature for this method.
+	- If it does match, we proceed to execute the body of the method, passing the `CompiledMethod` pointer in the `extra` parameter.
+		- In the threaded case, we load the `CompiledMethod` pointer from the sending location (which the `pc` still points to).
+		- In JITted code, we can just compare with an immediate value.
+	- If the signature doesn't match , this is a polymorphic case so we branch to common code to use the signature to look up the correct method and branch to it.
+- If `extra` is a pointer, then we don't have to check (a dispatch lookup was done so we are the proper method), we proceed directly to execute the body of the method.
+### Previous version
 A message send is followed by a selector and a PIC. The selector (which is a  [[Symbol]]) is augmented with the class of the receiver to create a target signature.
 
 The Polymorphic Inline Cache (PIC) is a single reference object. It either is a reference to a `CompiledMethod` or to a `PICCache`. Both have a Signature field in as the first field, so the target signature is compared with that signature. If they match, then this is the correct `CompiledMethod` and we start executing it. This is the case of a monomorphic dispatch which covers 90% of sends.

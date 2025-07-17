@@ -360,7 +360,7 @@ pub const Object = packed struct(u64) {
         }
     };
     pub inline fn isSymbol(self: object.Object) bool {
-        return self.tagbits() == comptime object.Object.makeImmediate(.Symbol, 0).tagbits();
+        return self.tagbits() == comptime makeImmediate(.Symbol, 0).tagbits();
     }
     pub inline fn isImmediate(self: object.Object) bool {
         return self.tag == .immediates;
@@ -376,6 +376,7 @@ pub const Object = packed struct(u64) {
     pub const compare = OF.compare;
     pub const empty = OF.empty;
     pub const equals = OF.equals;
+    pub const format = OF.format;
     pub const getField = OF.getField;
     pub const get_class = OF.get_class;
     pub const immediate_class = OF.immediate_class;

@@ -393,7 +393,7 @@ test "immediate_class" {
     try ee(symbol.symbols.yourself.immediate_class(), .Symbol);
 }
 test "printing" {
-    var buf: [255]u8 = undefined;
+    var buf: [80]u8 = undefined;
     var fbs = std.io.fixedBufferStream(&buf);
     const stream = fbs.writer();
     try stream.print("{}\n", .{Object.from(42, null)});

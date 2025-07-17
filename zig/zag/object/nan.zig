@@ -47,10 +47,17 @@ pub const Object = packed struct(u64) {
         }
     };
     pub const inMemorySymbols = false;
+    pub const maxInt = 0x7f_ffff_ffff_ffff;
     pub const ZERO = of(0);
-    pub const False = oImm(.False, 0);
-    pub const True = oImm(.True, 0);
-    pub const Nil = oImm(.UndefinedObject, 0);
+    pub inline fn False() Object {
+        return oImm(.False, 0);
+    }
+    pub inline fn True() Object {
+        return oImm(.True, 0);
+    }
+    pub inline fn Nil() Object {
+        return oImm(.UndefinedObject, 0);
+    }
     pub const tagged0: i64 = 0;
     pub const LowTagType = void;
     pub const lowTagSmallInteger = {};
@@ -70,6 +77,9 @@ pub const Object = packed struct(u64) {
     }
     fn rawI(self: Object) i64 {
         return @bitCast(self);
+    }
+    pub inline fn asObject(self: Object) Object {
+        return self;
     }
     pub inline fn tagbits(self: object.Object) TagAndClassType {
         return @truncate(self.rawU() >> (64 - tagAndClassBits));
@@ -159,7 +169,7 @@ pub const Object = packed struct(u64) {
     }
     pub const taggedI_noCheck = untaggedI_noCheck;
     pub const fromTaggedI = fromUntaggedI;
-    pub inline fn fromUntaggedI(i: i64) object.Object {
+    pub inline fn fromUntaggedI(i: i64, _: anytype) object.Object {
         var o = cast(@as(u64, @bitCast(i)) >> 14);
         o.tag = .smallInteger;
         return o;
@@ -260,7 +270,7 @@ pub const Object = packed struct(u64) {
         };
     }
     pub inline fn toBoolNoCheck(self: object.Object) bool {
-        return self == True;
+        return self == True();
     }
     pub inline fn rawWordAddress(self: object.Object) u64 {
         return self.rawU() & 0xffff_ffff_fff8;
@@ -278,8 +288,8 @@ pub const Object = packed struct(u64) {
             .int, .comptime_int => return cast(@as(u50, @bitCast(@as(i50, @truncate(value)))) +% u64_ZERO),
             .float => return cast(value),
             .comptime_float => return cast(@as(f64, value)),
-            .bool => return if (value) object.Object.True else object.Object.False,
-            .null => return object.Object.Nil,
+            .bool => return if (value) object.Object.True() else object.Object.False(),
+            .null => return object.Object.Nil(),
             .pointer => |ptr_info| {
                 switch (ptr_info.size) {
                     .one, .many => {
@@ -359,10 +369,14 @@ pub const Object = packed struct(u64) {
     const OF = object.ObjectFunctions;
     pub const arrayAsSlice = OF.arrayAsSlice;
     pub const asMemoryObject = OF.asMemoryObject;
+    pub const asObjectArray = OF.asObjectArray;
     pub const asZeroTerminatedString = OF.asZeroTerminatedString;
     pub const compare = OF.compare;
     pub const empty = OF.empty;
     pub const equals = OF.equals;
+    pub const format = OF.format;
+    pub const getField = OF.getField;
+    pub const get_class = OF.get_class;
     pub const immediate_class = OF.immediate_class;
     pub const isBool = OF.isBool;
     pub const isIndexable = OF.isIndexable;
@@ -371,6 +385,7 @@ pub const Object = packed struct(u64) {
     pub const numArgs = OF.numArgs;
     pub const promoteToUnmovable = OF.promoteToUnmovable;
     pub const rawFromU = OF.rawFromU;
+    pub const setField = OF.setField;
     pub const to  = OF.to;
     pub const toUnchecked = OF.toUnchecked;
 };
