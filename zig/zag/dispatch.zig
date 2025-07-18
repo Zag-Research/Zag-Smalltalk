@@ -25,6 +25,7 @@ const globalArena = zag.globalArena;
 const symbol = zag.symbol;
 const Sym = symbol.symbols;
 const HeapHeader = zag.heap.HeapHeader;
+pub const lookupMethodForClass = Dispatch.lookupMethodForClass;
 
 const Dispatch = struct {
     header: HeapHeader,
@@ -35,7 +36,6 @@ const Dispatch = struct {
         // @compileLog(@sizeOf(Self));
         // std.debug.assert(@as(usize, 1) << @ctz(@as(u62, @sizeOf(Self))) == @sizeOf(Self));
         std.debug.assert(@offsetOf(Self, "header") == 0);
-        std.debug.assert(numberOfFixed == 0);
         //        std.debug.assert(@offsetOf(Self, "methods") & 0xf == 0);
     }
     fn init(array: []Object) *Self {
@@ -47,23 +47,8 @@ const Dispatch = struct {
         return self;
     }
     const Self = @This();
-    const Fixed = enum {
-        // value,
-        // valueColon,
-        // cullColon,
-        // equal,
-        // hash,
-    };
-    const fixedSelectors = [_]Object{
-        symbols.value,
-        symbols.@"value:",
-        symbols.@"cull:",
-        symbols.@"=",
-        symbols.hash,
-    };
-    const numberOfFixed = @typeInfo(Fixed).@"enum".fields.len;
-    const matchSize = DispatchElement.metchSize;
-    const overAllocate = numberOfFixed + (matchSize - 1) - 1; // extra -1 is for space used by start
+    const matchSize = DispatchMatch.metchSize;
+    const overAllocate = matchSize - 1;
     const loadFactor = 70; // hashing load factor
     const DispatchState = enum(u64) { clean, beingUpdated, dead };
     var empty = Self{
@@ -75,14 +60,12 @@ const Dispatch = struct {
     };
     fn allocationSize(nMethods: usize) usize { // includes the header, so may need to subtract 1
         return @divExact(@sizeOf(Self) +
-            @sizeOf(DispatchElement) * (smallestPrimeAtLeast(@max(5, nMethods)) + overAllocate), @sizeOf(Object));
+            @sizeOf(DispatchElement) * (smallestPrimeAtLeast(@max(5, nMethods)) + overAllocate - 1),
+            @sizeOf(Object)); // extra -1 is for `start` field
     }
     var dispatches = [_]*Self{&empty} ** max_classes;
-    inline fn methods(self: *Self) [*]DispatchElement {
-        return @as([*]DispatchElement, @ptrCast(@alignCast(&self.start))) + numberOfFixed;
-    }
-    fn isUpdateable(self: *const Self, methodPtr: *const DispatchElement) bool {
-        return @intFromPtr(methodPtr) < @intFromPtr(self.methods() + self.nMethods + matchSize - 1) and methodPtr.isNil();
+    inline fn methods(self: *const Self) [*]DispatchElement {
+        return @as([*]DispatchElement, @constCast(@ptrCast(@alignCast(&self.start))));
     }
     inline fn methodSlice(self: *Self) []DispatchElement {
         return self.methods()[0..self.nMethods];
@@ -129,29 +112,30 @@ const Dispatch = struct {
         self.state = .clean;
         return self;
     }
-    //inline
-    fn lookupAddress(self: *const Self, signature: Signature) ?*DispatchElement {
-        const index = getIndex(signature, self.nMethods);
-        const des: [*]DispatchElement = self.methods() + index;
-        if (DispatchElement.matchOrNil(des, matchSize, signature)) |de|
-            return de;
-        return null;
+    inline fn lookupAddress(self: *const Self, selector: Object, ci: ClassIndex) ?*DispatchElement {
+        const dm = self.dispatchMatch(selector);
+        return dm.matchOrEmpty(Signature.from(selector,ci));
     }
-    //inline
-    fn lookupMethod(self: *Self, signature: Signature) *const CompiledMethod {
-        const index = getIndex(signature, self.nMethods);
-        const des: [*]DispatchElement = self.methods() + index;
-        if (DispatchElement.match(des, matchSize, signature)) |method|
+    inline fn lookupMethod(self: *const Self, selector: Object, ci: ClassIndex) ?*const CompiledMethod {
+        return self.dispatchMatch(selector).match(Signature.from(selector,ci));
+    }
+    inline fn dispatchMatch(self: *const Self, selector: Object) *DispatchMatch {
+        const index = getIndex(selector, self.nMethods);
+        return @ptrCast(self.methods() + index);
+    }
+    inline fn getIndex(selector: Object, size: u64) u64 {
+        return selector.symbolDirectHash() * size >> 32;
+    }
+    pub inline fn lookupMethodForClass(ci: ClassIndex, selector: Object) *const CompiledMethod {
+        trace(" (lookupMethodForClass) {}", .{ci});
+        if (dispatches[@intFromEnum(ci)].lookupMethod(selector,ci)) |method|
             return method;
+        return loadMethodForClass(ci, selector);
+    }
+    fn loadMethodForClass(ci: ClassIndex, selector: Object) *const CompiledMethod {
+        _ = ci;
+        _ = selector;
         unreachable;
-    }
-    inline fn getIndex(selector: Signature, size: u64) u64 {
-        return selector.hash() * size >> 32;
-    }
-    pub inline fn lookupMethodForClass(signature: Signature) *const CompiledMethod {
-        trace(" (lookupMethodForClass) {}", .{signature.getClass()});
-        const cM = dispatches[@intFromEnum(signature.getClass())].lookupMethod(signature);
-        return cM;
     }
     fn lock(self: *Self) !void {
         while (true) {
@@ -177,11 +161,9 @@ const Dispatch = struct {
                 return true;
             }
         } else {
-            if (self.isUpdateable(address)) {
-                address.store(cmp);
-                trace(" - installed", .{});
-                return true;
-            }
+            address.store(cmp);
+            trace(" - installed", .{});
+            return true;
         }
         trace(" - no free space", .{});
         return false;
@@ -204,21 +186,9 @@ const Dispatch = struct {
         return sp;
     }
 };
-test "dispatch" { // *** something here causes an immediate crash
-    // var array align(@alignOf(Dispatch)) = [_]Object{undefined} ** Dispatch.allocationSize(0);
+test "dispatch" {
 
-    // try struct {
-    //     const selector = Signature.from(Sym.value, .SmallInteger);
-    //     fn t(dispatch: *Dispatch) !void {
-    //         try std.testing.expectEqual(null, dispatch.lookupMethod(selector));
-    //     }
-    //     fn testIncrement(programCounter: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
-    //         _ = .{ process, context, extra };
-    //         @as(*usize, @ptrFromInt(programCounter.uint())).* += 1;
-    //         return sp;
-    //     }
-    // }.t(Dispatch.init(&array));
-    // return error.FailedInExecute;
+    return error.FailedInExecute;
 }
 // test "disambiguate" {
 //     const ee = std.testing.expectEqual;
@@ -398,14 +368,24 @@ pub const threadedFunctions = struct {
             unreachable;
         }
     };
+    fn sendGetMethod(pc: PC, sp: SP, context: *Context) *const CompiledMethod {
+        const selector = pc.object();
+        context.setReturn(pc.next2());
+        const receiver = sp.at(selector.numArgs());
+        return receiver.get_class().lookupMethodForClass(selector);
+    }
     pub const send = struct {
         pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, _: Extra) Result {
-            const selector = pc.object();
-            context.setReturn(pc.next2());
-            const receiver = sp.at(selector.numArgs());
-            return @call(tailCall, dispatchPIC, .{ pc.next(), sp, process, context, Extra{ .signature = Signature.from(selector, receiver.get_class()) } });
+            const method = sendGetMethod(pc, sp, context);
+            const newPc = method.codePc();
+            return @call(tailCall, newPc.prim(), .{ newPc.next(), sp, process, context, Extra{ .method = @constCast(method) } });
         }
     };
+    fn tailGetMethod(pc: PC, sp: SP) *CompiledMethod {
+        const selector = pc.object();
+        const receiver = sp.at(selector.numArgs());
+        return receiver.get_class().lookupMethodForClass(selector);
+    }
     pub const tailCallMethod = struct {
         pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
             _ = .{ pc, sp, process, context, extra, unreachable };
@@ -423,53 +403,19 @@ pub const threadedFunctions = struct {
     };
     pub const tailSendNoContext = struct {
         pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, _: Extra) Result {
-            const selector = pc.object();
-            const receiver = sp.at(selector.numArgs());
-            return @call(tailCall, dispatchPIC, .{ pc.next(), sp, process, context, Extra{ .signature = Signature.from(selector, receiver.get_class()) } });
+            const method = sendGetMethod(pc, sp, context);
+            const newPc = method.codePc();
+            return @call(tailCall, newPc.prim(), .{ newPc.next(), sp, process, context, Extra{ .method = @constCast(method) } });
         }
     };
 };
-const oldFns = struct {
-    inline fn getSignature(pc: PC, sp: SP, comptime offset: anytype) Signature {
-        const selector = pc.object();
-        const receiver = sp.at(if (@TypeOf(offset) == @TypeOf(null)) selector.numArgs() else offset);
-        const class = receiver.get_class();
-        return Signature.from(selector, class);
-    }
-    fn setupSend(pc: PC, sp: SP, process: *Process, context: *Context, _: Extra) Result {
-        const ms = getSignature(pc, sp, null);
-        const returnPc = pc.next().returnOffset();
-        context.setReturn(returnPc);
-        return @call(tailCall, process.check(pc.prim2()), .{ pc.next2(), sp, process, context, .{ .signature = ms } });
-    }
-    fn setupTailSend(pc: PC, sp: SP, process: *Process, context: *Context, _: Extra) Result {
-        return @call(tailCall, process.check(pc.prim()), .{ pc.next(), sp, process, context, .{ .signature = getSignature(pc, sp, null) } });
-    }
-    pub fn setupTailSend0(pc: PC, sp: SP, process: *Process, context: *Context, _: Extra) Result {
-        return @call(tailCall, process.check(pc.prim()), .{ pc.next(), sp, process, context, .{ .signature = getSignature(pc, sp, 0) } });
-    }
-    pub fn dynamicDispatch(_: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
-        const cM = Dispatch.lookupMethodForClass(extra.signature);
-        trace("\ndynamicDispatch: {any} {}", .{ cM, extra });
-        const pc = cM.codePc();
-        return @call(tailCall, process.check(cM.executeFn), .{ pc, sp, process, context, extra });
-    }
-    pub fn fallback(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
-        const self = sp.at(extra.signature.numArgs());
-        context.setReturn(pc);
-        const class = self.get_class();
-        const cM = Dispatch.lookupMethodForClass(extra.signature);
-        trace("\nfallback: {} {} {} {}", .{ extra.signature, class, pc, cM });
-        return @call(tailCall, process.check(cM.executeFn), .{ cM.codePc(), sp, process, context, extra });
-    }
-};
+
 const max_classes = config.max_classes;
 const symbols = symbol.symbols;
 const smallestPrimeAtLeast = @import("utilities.zig").smallestPrimeAtLeast;
-// // note that self and other could become invalid after any method call if they are heap objects, so will need to be re-loaded from context.fields if needed thereafter
+// note that self and other could become invalid after any method call if they are heap objects, so will need to be re-loaded from context.fields if needed thereafter
 
 // pub const forTest = Dispatch.forTest;
-const noArgs = ([0]Object{})[0..];
 pub const dump = Dispatch.dump;
 pub fn init() void {
     //    _ = Dispatch.new();
@@ -479,71 +425,34 @@ pub fn loadIntrinsicsDispatch() void {}
 fn dispatchOrCompile(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
     _ = .{ pc, sp, process, context, extra, unreachable };
 }
-pub fn dispatchPIC(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
-    const pic = pc.object();
-    if (pic.isPIC()) {
-        if (pic.highPointer(*PICObject)) |picO| {
-            if (picO.match(extra.signature)) |method|
-                return @call(tailCall, process.check(method.executeFn), .{ method.startPc(), sp, process, context, Extra{ .method = @constCast(method) } });
-            unreachable;
-        }
-        return @call(tailCall, dispatchOrCompile, .{ undefined, sp, process, context, extra });
-    } else {
-        if (pic.toUnchecked(?*CompiledMethod)) |method| {
-            if (method.signature == extra.signature)
-                return @call(tailCall, process.check(method.executeFn), .{ method.startPc(), sp, process, context, Extra{ .method = @constCast(method) } });
-            unreachable;
-        }
-    }
-    unreachable;
-}
-const PICObject = struct {
-    header: HeapHeader,
-    signature: Signature,
-    elements: [DispatchElement.matchSize]DispatchElement,
-    inline fn match(self: *PICObject, signature: Signature) ?*const CompiledMethod {
-        inline for (&self.elements) |*element| {
-            if (element.match(signature)) |method|
-                return method;
-        }
-        return null;
-    }
-    comptime {
-        std.debug.assert(@sizeOf(PICObject) == 8 * @sizeOf(Object));
-    }
-};
-const DispatchMatch = struct {
-    elements: [DispatchElement.matchSize]DispatchElement,
-    inline fn match(self: *PICObject, signature: Signature) ?*CompiledMethod {
-        inline for (&self.elements) |*element| {
-            if (element.match(signature)) |method|
-                return method;
-        }
-        return null;
-    }
-};
 const DispatchElementType = enum { method, signature, function };
 const dispatchElementType = DispatchElementType.method;
 const DispatchElement = switch (dispatchElementType) {
     .method => DispatchMethod,
-    .signature => DispatchSignature,
-    .function => unreachable,
+    else => unreachable,
 };
 const DispatchMethod = struct {
-    method: ?*const CompiledMethod,
+    method: *const CompiledMethod,
     const Self = @This();
     const IntSelf = u64;
     comptime {
         std.debug.assert(@sizeOf(Self) == @sizeOf(IntSelf));
     }
-    const matchSize: usize = 6;
     fn initUpdateable(self: *Self) void {
-        self.method = null;
+        self.* = empty;
     }
     fn new(compiledMethod: *const CompiledMethod) Self {
         return .{ .method = compiledMethod };
     }
-    const empty: Self = .{ .method = null };
+    const emptyMethod: CompiledMethod = .{
+        .header = undefined,
+        .stackStructure = undefined,
+        .executeFn = undefined,
+        .jitted = undefined,
+        .code = undefined,
+        .signature = Signature.empty,
+    };
+    pub const empty = new(&emptyMethod);
     inline fn cas(self: *Self, replacement: *const CompiledMethod) ?Self {
         const current = self.asInt();
         const replace = new(replacement).asInt();
@@ -555,21 +464,13 @@ const DispatchMethod = struct {
         self.method = replacement;
     }
     inline fn match(self: *DispatchMethod, signature: Signature) ?*const CompiledMethod {
-        if (self.method) |method| {
-            if (method.signature == signature)
-                return method;
-        }
+        const method = self.method;
+        if (method.signature == signature)
+            return method;
         return null;
     }
-    inline fn matchOrNil(self: *DispatchMethod, signature: Signature) ?*DispatchMethod {
-        if (self.method) |method| {
-            if (method.signature == signature)
-                return self;
-        } else return self;
-        return null;
-    }
-    inline fn isNil(self: Self) bool {
-        return self.method == null;
+    inline fn isEmpty(self: Self) bool {
+        return self == empty;
     }
     inline fn asInt(self: Self) IntSelf {
         return @bitCast(self);
@@ -578,66 +479,21 @@ const DispatchMethod = struct {
         return @alignCast(@ptrCast(self));
     }
 };
-const DispatchSignature = struct {
-    signature: Signature,
-    method: *const CompiledMethod,
-    const Self = @This();
-    const IntSelf = u128;
-    comptime {
-        std.debug.assert(@sizeOf(Self) == @sizeOf(IntSelf));
-    }
-    fn initUpdateable(self: *Self) void {
-        self.signature = Extra.nil;
-        self.method = undefined;
-    }
-    fn new(compiledMethod: *const CompiledMethod) Self {
-        return .{ .signature = compiledMethod.signature, .method = compiledMethod };
-    }
-    const empty: Self = .{ .signature = Signature.nil, .method = undefined };
-    inline fn cas(self: *Self, replacement: *const CompiledMethod) ?Self {
-        const current = self.asInt();
-        const replace = new(replacement).asInt();
-        if (@cmpxchgWeak(IntSelf, self.asIntPtr(), current, replace, .seq_cst, .seq_cst)) |notClean|
-            return @bitCast(notClean);
-        return null;
-    }
-    inline fn storeMethod(self: *Self, replacement: *const CompiledMethod) void {
-        self.method = replacement;
-    }
-    inline fn match(array: [*]const Self, n: usize, signature: Signature) ?*const CompiledMethod {
-        inline for (array[0..n]) |self|
-            if (self.signature.equals(signature)) return self.method;
-        return null;
-    }
-    inline fn matchOrNil(array: [*]Self, n: usize, signature: Signature) ?*DispatchElement {
-        inline for (array[0..n]) |self| {
-            if (self.signature == signature) return self;
-            if (self.isNil()) return self;
+const DispatchMatch = struct {
+    elements: [matchSize]DispatchElement,
+    const matchSize: usize = 3;
+    inline fn match(self: *DispatchMatch, signature: Signature) ?*const CompiledMethod {
+        inline for (&self.elements) |*element| {
+            if (element.match(signature)) |method|
+                return method;
         }
         return null;
     }
-    inline fn isNil(self: Self) bool {
-        return self.signature.isNil();
-    }
-    inline fn asInt(self: Self) IntSelf {
-        return @bitCast(self);
-    }
-    inline fn asIntPtr(self: *Self) *IntSelf {
-        return @alignCast(@ptrCast(self));
-    }
-    inline fn pc(self: *const Self) PC {
-        return PC.init(self.method.?.codePtr());
-    }
-    inline fn next(self: *Self) *Self {
-        return @ptrCast(@as([*]Self, @ptrCast(self)) + 1);
-    }
-    pub fn format(
-        self: Self,
-        comptime fmt: []const u8,
-        options: std.fmt.FormatOptions,
-        writer: anytype,
-    ) !void {
-        _ = .{ fmt, options };
-        try writer.print("DispatchSignature(ThreadedFn@{x},CompiledMethod@{x})", .{ @intFromPtr(self.primitive), @intFromPtr(self.method) });
+    inline fn matchOrEmpty(self: *DispatchMatch, signature: Signature) ?*DispatchMethod {
+        inline for (&self.elements) |*element| {
+            if (element.isEmpty() or element.match(signature))
+                return element;
+        }
+        return null;
     }
 };

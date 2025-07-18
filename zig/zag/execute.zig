@@ -164,9 +164,9 @@ pub const Signature = packed struct {
         class: ClassIndex,
         padding: u8 = 0,
     };
-    const nil: Signature = .{ .int = @bitCast(Nil) };
-    pub fn isNil(self: Signature) bool {
-        return self.equals(nil);
+    pub const empty: Signature = .{ .int = 0 };
+    pub fn isEmpty(self: Signature) bool {
+        return self.equals(empty);
     }
     pub fn hash(self: Signature) u32 {
         return @truncate(self.int);

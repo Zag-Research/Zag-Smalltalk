@@ -188,9 +188,6 @@ pub const Object = packed struct(u64) {
     inline fn oImm(c: ClassIndex.Compact, h: u56) Self {
         return Self{ .tag = .immediates, .class = c, .hash = h };
     }
-    inline fn immX(c: ClassIndex.Compact, h: u56) u64 {
-        return @bitCast(oImm(c, h));
-    }
     inline fn g(grp: Group) u64 {
         return grp.base();
     }
@@ -242,6 +239,9 @@ pub const Object = packed struct(u64) {
     }
     pub inline fn hash32(self: object.Object) u32 {
         return @truncate(self.hash);
+    }
+    pub inline fn symbolDirectHash(self: object.Object) u32 {
+        return @truncate(@as(u64, @bitCast(self)));
     }
     inline fn encode(x: f64) !object.Object {
         const u = math.rotl(u64, @bitCast(x), 4) + 2;

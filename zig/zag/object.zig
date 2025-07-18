@@ -136,6 +136,7 @@ pub const ClassIndex = enum(u16) {
     pub inline fn compact(ci: ClassIndex) Compact {
         return @enumFromInt(@intFromEnum(ci));
     }
+    pub const lookupMethodForClass = @import("dispatch.zig").lookupMethodForClass;
 };
 comptime {
     std.debug.assert(@intFromEnum(ClassIndex.replace0) == 0xffff);
