@@ -228,7 +228,7 @@ initialDispatch
 - For `send`, but not `tailSend` or `tailSendContext`, save the return `tpc` and `npc`.
 - then load the next word, which will be a `CompiledMethod` and and compares its signature with the current one.
 	1. if they match, it's the monomorphic case, so this is the correct `CompiledMethod`
-	2. otherwise if the `CompiledMethod` has a zero signature, then it is the initialDispatch, so we need to look up the `Compiled Method` for this signature and replace the `initialDispatch` reference with the address of the found `CompiledMethod`. The next time this send is executed, we will match that method, which handles the monomorphic case. Note that this replacement doesn't have to be multi-processor safe, because any match we found is valid.
+	2. otherwise if the `CompiledMethod` has a zero signature, then it is the initialDispatch, so we need to look up the `Compiled Method` for this signature and replace the `initialDispatch` reference with the address of the found `CompiledMethod`. The next time this send is executed, we will match that method, which handles the monomorphic case. Note that this replacement doesn't have to be multi-processor safe (even though, theoretically, another process could be executing this send at the same time with a different object as receiver), because any match we find is valid.
 	3. otherwise this is a polymorphic send, so look up the `CompiledMethod` for the current signature
 		- other implementations would use a PIC in this case with a list of possible alternate methods
 		- our lookup is so fast that's what we simply do. This requires 2 memory accesses more than accessing a PIC would, but is actually faster if the PIC would have more than 2 or 3 entries

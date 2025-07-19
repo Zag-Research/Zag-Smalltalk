@@ -192,13 +192,13 @@ pub const Signature = packed struct {
     fn asObject(self: Signature) Object {
         return @bitCast(self.int);
     }
-    fn asSymbol(self: Signature) Object {
+    pub inline fn asSymbol(self: Signature) Object {
         return @bitCast(self.int & 0xffffffffff);
     }
-    fn getClassIndex(self: Signature) u64 {
+    pub inline fn getClassIndex(self: Signature) u64 {
         return self.int >> 40;
     }
-    fn getClass(self: Signature) ClassIndex {
+    pub inline fn getClass(self: Signature) ClassIndex {
         return @as(Internal, @bitCast(self.int)).class;
     }
     fn setClass(self: *Signature, class: ClassIndex) void {
