@@ -329,7 +329,7 @@ pub const Object = packed union {
     pub const numArgs = OF.numArgs;
     pub const promoteToUnmovable = OF.promoteToUnmovable;
     pub const rawFromU = OF.rawFromU;
-    pub const to  = OF.to;
+    pub const to = OF.to;
     pub const toUnchecked = OF.toUnchecked;
 };
 

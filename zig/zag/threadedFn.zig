@@ -115,12 +115,12 @@ const enumAndFunctions =
             arrayFns[arraySize - 1] = &execute.Code.end;
         }
 
-        break :blk .{@Type(.{ .@"enum" = .{
+        break :blk .{ @Type(.{ .@"enum" = .{
             .tag_type = usize,
             .is_exhaustive = false,
             .fields = fields,
             .decls = &.{},
-        } }), arrayFns};
+        } }), arrayFns };
     };
 
 pub const Enum = enumAndFunctions[0];

@@ -148,9 +148,7 @@ pub fn Stats(comptime Arg: type, comptime K: type, comptime runs: comptime_int, 
                                 }
                             } else if (options.precision == null) {
                                 try writer.print("{d}", .{self.stdDev()});
-                            } else
-                                try writer.print("{d:.2}", .{self.stdDev()});
-
+                            } else try writer.print("{d:.2}", .{self.stdDev()});
                         },
                         // change % to give a percentile or express stdDev as a percentage
                         '+' => try writer.print("±", .{}),

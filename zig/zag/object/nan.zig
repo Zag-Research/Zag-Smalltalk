@@ -386,7 +386,7 @@ pub const Object = packed struct(u64) {
     pub const promoteToUnmovable = OF.promoteToUnmovable;
     pub const rawFromU = OF.rawFromU;
     pub const setField = OF.setField;
-    pub const to  = OF.to;
+    pub const to = OF.to;
     pub const toUnchecked = OF.toUnchecked;
 };
 test "all generated NaNs are positive" {

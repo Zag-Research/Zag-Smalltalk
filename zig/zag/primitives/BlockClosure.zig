@@ -227,7 +227,9 @@ pub const threadedFns = struct {
                         result = Object.from(@as(f64, @bitCast(sign_exponent | exponent_mantissa)));
                         continue :sw .reserved;
                     },
-                    .ThunkReturnLocal, .ThunkReturnInstance, => { // this is the common part for ThunkReturns
+                    .ThunkReturnLocal,
+                    .ThunkReturnInstance,
+                    => { // this is the common part for ThunkReturns
                         const targetContext: Context = @ptrFromInt(val >> 16);
                         switch (val.class) {
                             .ThunkReturnLocal => {

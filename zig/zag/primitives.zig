@@ -558,7 +558,7 @@ pub const primitiveThreadedFunctions = .{
     // @import("primitives/Smallinteger.zig").threadedFns,
     // @import("primitives/Behavior.zig").threadedFns,
     @import("primitives/BlockClosure.zig").threadedFns,
-    // @import("primitives/Boolean.zig").threadedFns,
+        // @import("primitives/Boolean.zig").threadedFns,
 };
 pub fn init() void {
     @import("primitives/Object.zig").init();
