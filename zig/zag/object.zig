@@ -165,7 +165,7 @@ pub const ObjectFunctions = struct {
     pub inline fn numArgs(self: Object) u4 {
         return symbol.symbolArity(self);
     }
-    pub //inline
+    pub inline//
     fn setField(self: Object, field: usize, value: Object) void {
         if (self.asObjectArray()) |ptr| ptr[field] = value;
     }
@@ -274,7 +274,7 @@ pub const ObjectFunctions = struct {
         if (sla.len > slb.len) return ord.gt;
         return ord.eq;
     }
-    pub //inline
+    pub inline//
     fn immediate_class(self: Object) ClassIndex {
         return self.which_class(false);
     }

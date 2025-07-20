@@ -148,7 +148,7 @@ const Dispatch = struct {
         const dm = self.dispatchMatch(selector);
         return dm.matchOrEmpty(Signature.from(selector, ci));
     }
-    //inline
+    inline//
     fn lookupMethod(self: *const Self, selector: Object, ci: ClassIndex) ?*const CompiledMethod {
         return self.dispatchMatch(selector).match(Signature.from(selector, ci));
     }
@@ -248,7 +248,7 @@ test "add/lookup" {
     try std.testing.expectEqual(lookupMethodForClass(class, symbols.@"new:"), &defaultForTest.dummyMethod);
     try std.testing.expectEqual(true, defaultForTest.called);
     //@"value:" @"new:" @"ifNotNil:" @"~=" @">=" all hash to 4 with a dispatch table of size 5
-    return error.TestFailed;
+    //return error.TestFailed;
 }
 // test "disambiguate" {
 //     const ee = std.testing.expectEqual;
@@ -511,7 +511,7 @@ const DispatchMethod = struct {
     inline fn storeMethod(self: *Self, replacement: *const CompiledMethod) void {
         self.method = replacement;
     }
-    //inline
+    inline//
     fn match(self: *DispatchMethod, signature: Signature) ?*const CompiledMethod {
         const method = self.method;
         if (method.signature == signature)
@@ -536,7 +536,7 @@ const DispatchMethod = struct {
 const DispatchMatch = struct {
     elements: [matchSize]DispatchElement,
     const matchSize = 3;
-    //inline
+    inline//
     fn match(self: *DispatchMatch, signature: Signature) ?*const CompiledMethod {
         inline for (&self.elements) |*element| {
             if (element.match(signature)) |method|

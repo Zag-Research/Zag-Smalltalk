@@ -79,7 +79,7 @@ const Stack = struct {
     pub inline fn slice(self: SP, n: usize) []Object {
         return self.array()[0..n];
     }
-    pub //inline
+    pub inline//
     fn sliceTo(self: SP, ptr: anytype) []Object {
         const i_ptr = @intFromPtr(ptr);
         return self.slice(((i_ptr - @intFromPtr(self))) / @sizeOf(Object));
@@ -222,7 +222,7 @@ pub const PC = packed struct {
     pub fn init(code: *const Code) PC { // don't inline this as it triggers a zig bug!
         return .{ .code = code };
     }
-    pub //inline
+    pub inline//
     fn packedObject(self: PC) PackedObject {
         if (logging) {
             @setRuntimeSafety(false);
@@ -231,7 +231,7 @@ pub const PC = packed struct {
         }
         return self.code.packedObject;
     }
-    pub //inline
+    pub inline//
     fn method(self: PC) *CompiledMethod {
         if (logging) {
             @setRuntimeSafety(false);
@@ -240,7 +240,7 @@ pub const PC = packed struct {
         }
         return self.code.method;
     }
-    pub //inline
+    pub inline//
     fn codeAddress(self: PC) *const Code {
         if (logging) {
             @setRuntimeSafety(false);
@@ -249,14 +249,14 @@ pub const PC = packed struct {
         }
         return self.code.codePtr;
     }
-    pub //inline
+    pub inline//
     fn targetPC(self: PC) PC {
         return .{ .code = self.codeAddress() };
     }
     pub inline fn asThreadedFn(self: PC) ThreadedFn {
         return self.code.asThreadedFn();
     }
-    pub //inline
+    pub inline//
     fn prim(self: PC) ThreadedFn.Fn {
         if (logging) {
             @setRuntimeSafety(false);
@@ -265,7 +265,7 @@ pub const PC = packed struct {
         }
         return self.code.threadedFn;
     }
-    pub //inline
+    pub inline//
     fn object(self: PC) Object {
         if (logging) {
             @setRuntimeSafety(false);
@@ -283,7 +283,7 @@ pub const PC = packed struct {
     pub inline fn structure(self: PC) StackStructure {
         return self.code.structure;
     }
-    pub //inline
+    pub inline//
     fn uint(self: PC) u64 {
         if (logging) {
             @setRuntimeSafety(false);
@@ -292,7 +292,7 @@ pub const PC = packed struct {
         }
         return self.code.object.to(u64);
     }
-    pub //inline
+    pub inline//
     fn int(self: PC) i64 {
         if (logging) {
             @setRuntimeSafety(false);
@@ -357,7 +357,7 @@ pub const Code = union {
         const result = Code{ .threadedFn = pp };
         return result;
     }
-    pub //inline
+    pub inline//
     fn asObject(self: Code) Object {
         //        @setRuntimeSafety(false);
         return self.object;
