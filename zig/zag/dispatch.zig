@@ -112,13 +112,11 @@ const Dispatch = struct {
     fn stats(self: *Self) Stats {
         var total: usize = 0;
         var active: usize = 0;
-        var percent: usize = 0;
-        for (self.methods()[0 .. self.nMethods + overAllocate]) |de| {
+        for (self.methodsAllocatedSlice()) |de| {
             total += 1;
             if (!de.isEmpty()) active += 1;
         }
-        percent = active / @max(total, 1);
-        return .{ .total = total, .active = active, .nMethods = self.nMethods, .percent = percent };
+        return .{ .total = total, .active = active, .nMethods = self.nMethods, .percent = active * 100 / @max(total, 1) };
     }
     fn initialize(self: *Self, nMethods: usize) void {
         self.state = .clean;
@@ -156,6 +154,7 @@ const Dispatch = struct {
     }
     inline fn dispatchMatch(self: *const Self, selector: Object) *DispatchMatch {
         const index = getIndex(selector, self.nMethods);
+        std.debug.print("dispatchMatch: index = {}\n", .{index});
         return @ptrCast(self.methods() + index);
     }
     inline fn getIndex(selector: Object, size: u64) u64 {
@@ -174,7 +173,6 @@ const Dispatch = struct {
         return self.add(cmp);
     }
     fn add(self: *Self, cmp: *const CompiledMethod) bool {
-        if (self.nMethods == 0) return false;
         const signature = cmp.signature;
         self.lock() catch {
             return false;
@@ -234,7 +232,7 @@ const defaultForTest = if (config.is_test) struct {
     }
 } else {};
 test "add/lookup" {
-    const selector = symbols.value;
+    const selector = symbols.@"value:";
     const class = ClassIndex.Object;
     const emptyMethod = dummyCompiledMethod(Signature.from(selector, class));
     addMethod(&emptyMethod);
@@ -247,8 +245,10 @@ test "add/lookup" {
     try std.testing.expectEqual(5, stats.nMethods);
     try std.testing.expectEqual(7, stats.total);
     defaultForTest.called = false;
-    try std.testing.expectEqual(lookupMethodForClass(class, symbols.Object), &defaultForTest.dummyMethod);
+    try std.testing.expectEqual(lookupMethodForClass(class, symbols.@"new:"), &defaultForTest.dummyMethod);
     try std.testing.expectEqual(true, defaultForTest.called);
+    //@"value:" @"new:" @"ifNotNil:" @"~=" @">=" all hash to 4 with a dispatch table of size 5
+    return error.TestFailed;
 }
 // test "disambiguate" {
 //     const ee = std.testing.expectEqual;

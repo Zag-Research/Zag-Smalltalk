@@ -139,7 +139,7 @@ const SymbolsStruct = struct {
     pub const @"~~" = symbol1(20);
     pub const @"<" = symbol1(21);
     pub const @"<=" = symbol1(22);
-    pub const @",>=" = symbol1(23);
+    pub const @">=" = symbol1(23);
     pub const @">" = symbol1(24);
     pub const @"at:put:" = symbol2(25);
     pub const @"value:value:" = symbol2(26);
