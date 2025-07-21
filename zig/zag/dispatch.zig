@@ -132,7 +132,7 @@ const Dispatch = struct {
         return @as([*]DispatchElement, @constCast(@ptrCast(@alignCast(&self.start))));
     }
     inline fn methodSlice(self: *Self) []DispatchElement {
-        return self.methods()[0 .. self.nMethods];
+        return self.methods()[0..self.nMethods];
     }
     inline fn methodsAllocatedSlice(self: *Self) []DispatchElement {
         return self.methods()[0 .. self.nMethods + overAllocate];
@@ -148,7 +148,7 @@ const Dispatch = struct {
         const dm = self.dispatchMatch(selector);
         return dm.matchOrEmpty(Signature.from(selector, ci));
     }
-    inline//
+    inline //
     fn lookupMethod(self: *const Self, selector: Object, ci: ClassIndex) ?*const CompiledMethod {
         return self.dispatchMatch(selector).match(Signature.from(selector, ci));
     }
@@ -510,7 +510,7 @@ const DispatchMethod = struct {
     inline fn storeMethod(self: *Self, replacement: *const CompiledMethod) void {
         self.method = replacement;
     }
-    inline//
+    inline //
     fn match(self: *DispatchMethod, signature: Signature) ?*const CompiledMethod {
         const method = self.method;
         if (method.signature == signature)
@@ -535,7 +535,7 @@ const DispatchMethod = struct {
 const DispatchMatch = struct {
     elements: [matchSize]DispatchElement,
     const matchSize = 3;
-    inline//
+    inline //
     fn match(self: *DispatchMatch, signature: Signature) ?*const CompiledMethod {
         inline for (&self.elements) |*element| {
             if (element.match(signature)) |method|

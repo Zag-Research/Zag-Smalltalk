@@ -77,7 +77,7 @@ pub const Format = enum(u7) {
     pub inline fn instVars(self: Self, header: HeapHeader, obj: *const HeapObject) HeapOperationError![]Object {
         return self.operations().instVars(self, header, @constCast(obj));
     }
-    pub inline//
+    pub inline //
     fn array(self: Self, header: HeapHeader, obj: *const HeapObject, elementSize: usize) HeapOperationError![]Object {
         return self.operations().array(self, header, @constCast(obj), elementSize);
     }
@@ -761,7 +761,7 @@ pub const HeapObjectPtr = *align(@alignOf(u64)) HeapObject;
 pub const HeapObjectConstPtr = *align(@alignOf(u64)) const HeapObject;
 pub const HeapObject = packed struct {
     header: HeapHeader,
-    pub inline//
+    pub inline //
     fn fillToBoundary(self: HeapObjectArray) HeapObjectArray {
         if (@intFromPtr(self) & 8 == 0)
             return self;
@@ -793,7 +793,7 @@ pub const HeapObject = packed struct {
     pub inline fn isIndexable(self: HeapObjectConstPtr) bool {
         return self.header.isIndexable();
     }
-    pub inline//
+    pub inline //
     fn isUnmoving(self: HeapObjectConstPtr) bool {
         return self.header.isUnmoving();
     }
@@ -862,7 +862,7 @@ pub const HeapObject = packed struct {
         const self = maybeForwarded.forwarded();
         return self.start[1..self.length];
     }
-    pub inline//
+    pub inline //
     fn arrayAsSlice(self: HeapObjectConstPtr, comptime T: type) ![]T {
         const head = self.header;
         const arry = if (head.forwardedTo()) |realSelf|
@@ -937,7 +937,7 @@ pub const HeapObject = packed struct {
     pub inline fn isRaw(self: HeapObjectConstPtr) bool {
         return self.format.isRaw();
     }
-    pub inline//
+    pub inline //
     fn asObject(self: HeapObjectConstPtr) Object {
         return Object.from(self, null);
     }

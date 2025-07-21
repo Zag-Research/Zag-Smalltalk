@@ -109,7 +109,7 @@ pub const threadedFns = struct {
             // return null;
         }
         test "asThunk int" {
-            if (config.notZag) return error.SkipZigTest;
+            try config.skipNotZag();
             try Execution.runTestWithValidator(
                 "asThunk int",
                 .{tf.asThunk},
@@ -126,7 +126,7 @@ pub const threadedFns = struct {
         }
 
         test "asThunk ptr" {
-            if (config.notZag) return error.SkipZigTest;
+            try config.skipNotZag();
             const obj = Object.from(&ThunkReturnSmallInteger.method, null);
             try Execution.runTestWithValidator(
                 "asThunk ptr",
@@ -145,7 +145,7 @@ pub const threadedFns = struct {
         }
 
         test "asThunk True" {
-            if (config.notZag) return error.SkipZigTest;
+            try config.skipNotZag();
             try Execution.runTestWithValidator(
                 "asThunk True",
                 .{tf.asThunk},
@@ -162,7 +162,7 @@ pub const threadedFns = struct {
         }
 
         test "asThunk float" {
-            if (config.notZag) return error.SkipZigTest;
+            try config.skipNotZag();
             try Execution.runTestWithValidator(
                 "asThunk float",
                 .{tf.asThunk},
@@ -179,7 +179,7 @@ pub const threadedFns = struct {
         }
 
         test "asThunk doesn't fit" {
-            if (config.notZag) return error.SkipZigTest;
+            try config.skipNotZag();
             const obj = Object.from(1.0 / 5.0, null);
             try Execution.runTestWithValidator(
                 "asThunk doesn't fit",
@@ -278,7 +278,7 @@ pub const threadedFns = struct {
                         return @call(tailCall, process.check(newPc[0].prim), .{ newPc + 1, sp, process, context, Sym.value });
                     },
                     .ThunkReturnSmallInteger, .ThunkReturnImmediate, .ThunkReturnCharacter, .ThunkReturnFloat, .ThunkReturnLocal, .ThunkReturnInstance, .ThunkImmediate, .ThunkHeap, .ThunkLocal, .ThunkInstance, .ThunkFloat => @panic("wrong # arguments"),
-                    else => {}
+                    else => {},
                 }
             }
             @panic("not implemented");

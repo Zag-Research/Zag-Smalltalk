@@ -373,7 +373,7 @@ pub const QuickSelectors = [_]Object{ symbols.@"=", symbols.value, symbols.@"val
 pub const QuickSelectorsMask = 0x19046000;
 pub const QuickSelectorsMatch = 0x18046000;
 test "find key value for quick selectors" {
-    if (config.notZag) return error.SkipZigTest;
+    try config.skipNotZag();
     const printing = false;
     var mask: u64 = 0;
     var match: u64 = 0;

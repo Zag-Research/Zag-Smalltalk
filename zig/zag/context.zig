@@ -110,7 +110,7 @@ pub fn format(
 inline fn headerOf(self: *const Context) *HeapHeader {
     return @as(HeapObjectPtr, @constCast(@ptrCast(self))).headerPtr();
 }
-const PopTuple = std.meta.Tuple(&.{SP, *Context});
+const PopTuple = std.meta.Tuple(&.{ SP, *Context });
 pub inline fn popTargetContext(self: *Context, sp: SP, target: *Context, process: *Process, result: Object) PopTuple {
     _ = .{ self, target, process };
     const newSp = sp;

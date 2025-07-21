@@ -32,6 +32,9 @@ const Encoding = enum {
     cachedPtr,
     ptr,
 };
+pub fn skipNotZag() !void {
+    if (notZag) return error.SkipZigTest;
+}
 
 test "config" {
     std.debug.print(
