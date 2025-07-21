@@ -32,12 +32,12 @@ pub fn moduleInit() void {}
 pub const moduleName = "BlockClosure";
 const zModuleName = stringOf(moduleName).init().obj();
 pub const ThunkReturnSmallInteger = struct {
-    pub fn primitive(_: PC, sp: SP, process: *Process, context: *Context, _: Extra) Result {
+    pub fn primitive(_: PC, sp: SP, process: *Process, _: *Context, _: Extra) Result {
         const val = sp.top;
         trace("\nvalue: {x}", .{val});
         const result = Object.from(@as(i50, val.extraI()), null);
         const targetContext = val.highPointer(*Context).?;
-        const newSp, const callerContext = context.popTargetContext(sp, targetContext, process, result);
+        const newSp, const callerContext = targetContext.popTargetContext(process, result);
         return @call(tailCall, process.check(callerContext.getNPc()), .{ callerContext.getTPc(), newSp, process, callerContext, Extra.fromContext(callerContext) });
     }
     const name = stringOf("ThunkReturnSmallInteger").init().obj();

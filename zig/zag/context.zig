@@ -110,14 +110,13 @@ pub fn format(
 inline fn headerOf(self: *const Context) *HeapHeader {
     return @as(HeapObjectPtr, @constCast(@ptrCast(self))).headerPtr();
 }
-const PopTuple = std.meta.Tuple(&.{ SP, *Context });
-pub inline fn popTargetContext(self: *Context, sp: SP, target: *Context, process: *Process, result: Object) PopTuple {
-    _ = .{ self, target, process };
-    const newSp = sp;
+pub inline fn popTargetContext(target: *Context, process: *Process, result: Object) struct { SP, *Context} {
+    //TODO: check if result is on the stack and ?copy to heap if so?
+    const newSp, const newTarget = target.pop(process);
     newSp.top = result;
-    return .{ newSp, unreachable };
+    return .{ newSp, newTarget };
 }
-pub inline fn pop(self: *Context, process: *Process) PopTuple {
+pub inline fn pop(self: *Context, process: *Process) struct { SP, *Context} {
     _ = process;
     const wordsToDiscard = self.header.hash16();
     trace("\npop: 0x{x} {} sp=0x{x} {}", .{ @intFromPtr(self), self.header, @intFromPtr(self.asNewSp().unreserve(wordsToDiscard + 1)), wordsToDiscard });
