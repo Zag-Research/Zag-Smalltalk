@@ -12,4 +12,4 @@
 		3. differently flagged `*CompiledMethod` for failed primitive
 - we could get rid of the process pointer as we can always create it from the stack pointer - but then we'd have to find a place to pass the "check for interrupt" flag - possibly in extra
 - although the test for match could be moved from `send`/`tailSend` into the method, which would maybe save 1 or 2 when running a JITted method, it would mean an extra parameter to all threadedFns and an extra word for every send, which doesn't seem like the right trade-off
-- 
+- push/pop local parameter could have 2 fields.... and offset if there is no context, and one if there is
