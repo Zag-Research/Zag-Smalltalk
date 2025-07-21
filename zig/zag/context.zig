@@ -110,18 +110,19 @@ pub fn format(
 inline fn headerOf(self: *const Context) *HeapHeader {
     return @as(HeapObjectPtr, @constCast(@ptrCast(self))).headerPtr();
 }
-pub inline fn popTargetContext(self: *Context, sp: SP, target: *Context, process: *Process, result: Object) struct { sp: SP, ctxt: *Context } {
+const PopTuple = std.meta.Tuple(&.{SP, *Context});
+pub inline fn popTargetContext(self: *Context, sp: SP, target: *Context, process: *Process, result: Object) PopTuple {
     _ = .{ self, target, process };
     const newSp = sp;
     newSp.top = result;
-    return .{ .sp = newSp, .ctxt = unreachable };
+    return .{ newSp, unreachable };
 }
-pub inline fn pop(self: *Context, process: *Process) struct { sp: SP, ctxt: *Context } {
+pub inline fn pop(self: *Context, process: *Process) PopTuple {
     _ = process;
     const wordsToDiscard = self.header.hash16();
     trace("\npop: 0x{x} {} sp=0x{x} {}", .{ @intFromPtr(self), self.header, @intFromPtr(self.asNewSp().unreserve(wordsToDiscard + 1)), wordsToDiscard });
     if (self.isOnStack())
-        return .{ .sp = self.asNewSp().unreserve(wordsToDiscard), .ctxt = self.previous() };
+        return .{ self.asNewSp().unreserve(wordsToDiscard), self.previous() };
     trace("\npop: {*}", .{self});
     @panic("incomplete");
     // const itemsToKeep = self.temps[wordsToDiscard-baseSize..self.size];
@@ -251,16 +252,8 @@ pub const threadedFunctions = struct {
         }
     };
     pub const popLocal = struct {
-        pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, _: Extra) Result {
-            const contextData = context.contextData;
-            contextData.localAddress(pc.object()).* = sp.top;
-            const newSp = sp.drop();
-            return @call(tailCall, process.check(pc.prim2()), .{ pc.skip(2), newSp, process, context, Extra{ .contextData = contextData } });
-        }
-    };
-    pub const popLocalViaExtra = struct {
         pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
-            const contextData = extra.contextData;
+            const contextData = context.contextData;
             contextData.localAddress(pc.object()).* = sp.top;
             const newSp = sp.drop();
             return @call(tailCall, process.check(pc.prim2()), .{ pc.skip(2), newSp, process, context, extra });
@@ -306,17 +299,10 @@ pub const threadedFunctions = struct {
         // }
     };
     pub const pushLocal = struct {
-        pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, _: Extra) Result {
+        pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
             const contextData = context.contextData;
             const newSp = sp.push(contextData.localAddress(pc.object()).*);
-            return @call(tailCall, process.check(pc.next().prim2()), .{ pc.next2(), newSp, process, context, Extra{ .contextData = contextData } });
-        }
-    };
-    pub const pushLocalViaExtra = struct {
-        pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
-            const contextData = extra.contextData;
-            const newSp = sp.push(contextData.localAddress(pc.object()).*);
-            return @call(tailCall, process.check(pc.prim2()), .{ pc.next2(), newSp, process, context, extra });
+            return @call(tailCall, process.check(pc.next().prim2()), .{ pc.next2(), newSp, process, context, extra });
         }
     };
     pub const pushThisContext = struct {
@@ -326,15 +312,8 @@ pub const threadedFunctions = struct {
         }
     };
     pub const storeLocal = struct {
-        pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, _: Extra) Result {
-            const contextData = context.contextData;
-            contextData.localAddress(pc.object()).* = sp.top;
-            return @call(tailCall, process.check(pc.prim2()), .{ pc.skip(2), sp, process, context, Extra{ .contextData = contextData } });
-        }
-    };
-    pub const storeLocalViaExtra = struct {
         pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
-            const contextData = extra.contextData;
+            const contextData = context.contextData;
             contextData.localAddress(pc.object()).* = sp.top;
             return @call(tailCall, process.check(pc.prim2()), .{ pc.skip(2), sp, process, context, extra });
         }

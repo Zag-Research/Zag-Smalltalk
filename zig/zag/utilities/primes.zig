@@ -112,7 +112,6 @@ test "primes at least" {
     try std.testing.expectEqual(smallestPrimeAtLeast(4294836197 - 13), 4294836197);
 }
 test "prime diffs" {
-    if (true) return error.SkipZigTest;
     var tests: usize = 0;
     var n: usize = 0;
     var p: usize = 16;

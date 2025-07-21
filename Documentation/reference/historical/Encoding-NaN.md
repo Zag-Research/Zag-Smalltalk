@@ -38,13 +38,13 @@ So this leaves us with the following encoding based on the **S**ign+**E**xponent
 | `FFFB`        | `0022` | `0000` | `0000` | reserved (tag = `Float`)        |
 | `FFFCii`      | `iiii` | `iiii` | `iiii` | `SmallInteger` values           |
 
-So, interpreted as a u64, any value that is less than or equal to -inf is a double. Else, the bottom 4 bits of the fraction are a class grouping. For group B, the next 16 bits are a class number so the first 8 classes have (and all classes can have) a compressed representation. 
+So, interpreted as a u64, any value that is less than or equal to -inf is a double. Else, the top 4 bits of the mantissa are a class grouping. For group B, the next 16 bits are a class number so the first 8 classes have (and all classes can have) a compressed representation. 
 Groups 0 through A have the low 48 bits being the address of an object.
 
 #### Class numbers
-1. `ThunkReturnLocal`: There is no encoding for this class in NaN encoding.
-2. `ThunkReturnInstance`: There is no encoding for this class in NaN encoding - a limited version. is provided by `ThunkReturnUmmediate`.
-3.  `ThunkReturnSmallInteger`: There is no encoding for this class in NaN encoding - a limited version. is provided by `ThunkReturnUmmediate`.
+1. `ThunkReturnLocal`: *There is no encoding for this class in NaN encoding*.
+2. `ThunkReturnInstance`: *There is no encoding for this class in NaN encoding - a limited version. is provided by `ThunkReturnImmediate`*.
+3.  `ThunkReturnSmallInteger`: *There is no encoding for this class in NaN encoding - a limited version. is provided by `ThunkReturnImmediate`.*
 4. `ThunkReturnImmediate`: non-local return of one of 8 constant values. The low 48 bits (with the low 3 bits forced to zero) are the address of the Context. The only possible values (encoded in the low 3 bits) are: `[^self]`, `[^true]`, `[^false]`, `[^nil]`, `[^-1]`, `[^0]`, `[^1]`, `[^ firstInstanceVariable]`.
 5. `ThunkReturnCharacter`: *There is no encoding for this class in NaN encoding.*
 6. `ThunkReturnFloat`: *There is no encoding for this class in NaN encoding.*

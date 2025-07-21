@@ -418,13 +418,11 @@ pub const swap = struct {
         );
     }
 };
-pub const testFunctions = if (zag.config.is_test) struct {
-    pub const callLabel = struct {
-        pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, _: Extra) Result {
-            const target = pc.targetPC();
-            // skip the structure word
-            context.setReturn(pc.next().next());
-            return @call(tailCall, process.check(target.prim()), .{ target.next(), sp, process, context, Extra{ .method = @constCast(@ptrCast(pc.asCodePtr())) } });
-        }
-    };
+pub const callLabel = if (zag.config.is_test) struct {
+    pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, _: Extra) Result {
+        const target = pc.targetPC();
+        // skip the structure word
+        context.setReturn(pc.next().next());
+        return @call(tailCall, process.check(target.prim()), .{ target.next(), sp, process, context, Extra.forMethod(@ptrCast(pc.asCodePtr())) });
+    }
 } else struct {};

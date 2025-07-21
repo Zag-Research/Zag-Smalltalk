@@ -111,7 +111,13 @@ pub const Extra = union {
     method: *CompiledMethod,
     object: Object,
     signature: Signature,
-    contextData: *Context.ContextData,
+    contextData: *const Context.ContextData,
+    pub fn forMethod(method: *const CompiledMethod) Extra {
+        return .{ .method = @constCast(method) };
+    }
+    pub fn fromContext(context: *const Context) Extra {
+        return .{ .method = @constCast(context.method) };
+    }
     pub fn encoded(self: Extra) Extra {
         @setRuntimeSafety(false);
         if (self.object.tagMethod()) |obj| {

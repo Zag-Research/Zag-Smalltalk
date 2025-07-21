@@ -149,7 +149,8 @@ pub const makeJITPrimitiveGenerator = struct {
         primitiveGenerator.context = llvm.core.LLVMContextCreate();
         primitiveGenerator.module = llvm.core.LLVMModuleCreateWithNameInContext("jit_module", primitiveGenerator.context);
         primitiveGenerator.builder = llvm.core.LLVMCreateBuilderInContext(primitiveGenerator.context);
-        return PrimitiveGeneratorRef.asObject(primitiveGenerator);
+        // return PrimitiveGeneratorRef.asObject(primitiveGenerator);
+        @panic("should be pushing that on the stack and returning to the caller");
     }
     test "foo" {
         var exe = Execution.initTest("llvm foo", .{

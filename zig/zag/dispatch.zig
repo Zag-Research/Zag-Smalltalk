@@ -346,7 +346,7 @@ pub const threadedFunctions = struct {
             context.setReturn(pc.next2());
             const method = pc.method();
             const newPc = method.codePc();
-            return @call(tailCall, process.check(method.executeFn), .{ newPc.next(), sp, process, context, Extra{ .method = method } });
+            return @call(tailCall, process.check(method.executeFn), .{ newPc.next(), sp, process, context, Extra.forMethod(method) });
         }
     };
     pub const cullColon = struct {
@@ -355,8 +355,9 @@ pub const threadedFunctions = struct {
         }
     };
     pub const returnSelf = struct {
-        pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
-            _ = .{ pc, sp, process, context, extra, unreachable };
+        pub fn threadedFn(_: PC, _: SP, process: *Process, context: *Context, _: Extra) Result {
+            const newSp, const callerContext = context.pop(process);
+            return @call(tailCall, process.check(callerContext.getNPc()), .{ callerContext.getTPc(), newSp, process, callerContext, Extra.fromContext(callerContext) });
         }
     };
     pub const returnSelfNoContext = struct {
@@ -384,17 +385,15 @@ pub const threadedFunctions = struct {
         }
     };
     pub const returnTop = struct {
-        pub fn threadedFn(_: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
+        pub fn threadedFn(_: PC, sp: SP, process: *Process, context: *Context, _: Extra) Result {
             trace("\nreturnTop: {} ", .{sp.top});
             trace("{any} ", .{context.stack(sp, process)});
             const top = sp.top;
-            const result = context.pop(process);
-            const newSp = result.sp;
+            const newSp, const callerContext = context.pop(process);
             newSp.top = top;
-            const callerContext = result.ctxt;
             trace("-> {x}", .{@intFromPtr(newSp)});
             trace("-> {any}", .{callerContext.stack(newSp, process)});
-            return @call(tailCall, process.check(callerContext.getNPc()), .{ callerContext.getTPc(), newSp, process, @constCast(callerContext), extra });
+            return @call(tailCall, process.check(callerContext.getNPc()), .{ callerContext.getTPc(), newSp, process, callerContext, Extra.fromContext(callerContext) });
         }
     };
     pub const returnTopNoContext = struct {
@@ -403,7 +402,7 @@ pub const threadedFunctions = struct {
             const top = sp.top;
             const newSp = sp.unreserve(selfOffset);
             newSp.top = top;
-            return @call(tailCall, process.check(context.npc.f), .{ context.tpc, newSp, process, context, undefined });
+            return @call(tailCall, process.check(context.npc.f), .{ context.tpc, newSp, process, context, Extra.fromContext(context) });
         }
         test "returnTopNoContext" {
             try Execution.runTest(
@@ -438,7 +437,7 @@ pub const threadedFunctions = struct {
         pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, _: Extra) Result {
             const method = sendGetMethod(pc, sp, context);
             const newPc = method.codePc();
-            return @call(tailCall, newPc.prim(), .{ newPc.next(), sp, process, context, Extra{ .method = @constCast(method) } });
+            return @call(tailCall, newPc.prim(), .{ newPc.next(), sp, process, context, Extra.forMethod(method) });
         }
     };
     fn tailGetMethod(pc: PC, sp: SP) *const CompiledMethod {
@@ -451,7 +450,7 @@ pub const threadedFunctions = struct {
             const method = pc.method();
             const newPc = method.codePc();
             if (true) unreachable;
-            return @call(tailCall, process.check(method.executeFn), .{ newPc.next(), sp, process, context, Extra{ .method = method } });
+            return @call(tailCall, process.check(method.executeFn), .{ newPc.next(), sp, process, context, Extra.forMethod(method) });
         }
     };
     pub const tailCallMethodNoContext = struct {
@@ -459,7 +458,7 @@ pub const threadedFunctions = struct {
             const method = pc.method();
             const newPc = method.codePc();
             if (true) unreachable;
-            return @call(tailCall, process.check(method.executeFn), .{ newPc.next(), sp, process, context, Extra{ .method = method } });
+            return @call(tailCall, process.check(method.executeFn), .{ newPc.next(), sp, process, context, Extra.forMethod(method) });
         }
     };
     pub const tailSend = struct {
@@ -467,7 +466,7 @@ pub const threadedFunctions = struct {
             const method = tailGetMethod(pc, sp);
             const newPc = method.codePc();
             if (true) unreachable;
-            return @call(tailCall, newPc.prim(), .{ newPc.next(), sp, process, context, Extra{ .method = @constCast(method) } });
+            return @call(tailCall, newPc.prim(), .{ newPc.next(), sp, process, context, Extra.forMethod(method) });
         }
     };
     pub const tailSendNoContext = struct {
@@ -475,7 +474,7 @@ pub const threadedFunctions = struct {
             const method = tailGetMethod(pc, sp);
             const newPc = method.codePc();
             if (true) unreachable;
-            return @call(tailCall, newPc.prim(), .{ newPc.next(), sp, process, context, Extra{ .method = @constCast(method) } });
+            return @call(tailCall, newPc.prim(), .{ newPc.next(), sp, process, context, Extra.forMethod(method) });
         }
     };
 };
