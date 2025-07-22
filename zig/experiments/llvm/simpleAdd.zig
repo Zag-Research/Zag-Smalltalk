@@ -1,5 +1,5 @@
 const std = @import("std");
-const llvm = @import("llvm");
+const llvm = @import("llvm-build-module");
 const target = llvm.target;
 const types = llvm.types;
 const core = llvm.core;
@@ -97,8 +97,9 @@ pub fn populateModule(module: types.LLVMModuleRef, builder: types.LLVMBuilderRef
     _ = core.LLVMBuildRet(builder, sp_3);
 
     // Verify the module and capture the message
-    var errorMessage: ?[*:0]u8 = null;
-    if (analysis.LLVMVerifyModule(module, types.LLVMVerifierFailureAction.LLVMPrintMessageAction, &errorMessage) != 0) {
+    var errorMessage: [*c]u8 = undefined;
+    const cErrorMessagePtr: [*c][*c]u8 = @ptrCast(&errorMessage);
+    if (analysis.LLVMVerifyModule(module, types.LLVMVerifierFailureAction.LLVMPrintMessageAction, cErrorMessagePtr) != 0) {
         if (errorMessage) |msg| {
             defer core.LLVMDisposeMessage(msg); // ensures cleanup
             std.debug.print("Verification failed: {s}\n", .{msg});

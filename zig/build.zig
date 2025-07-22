@@ -3,10 +3,9 @@ const std = @import("std");
 pub fn build(b: *std.Build) !void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
-    const test_step = b.step("test", "Run LLVM tests");
 
     // LLVM MODULE
-    const llvm_module = b.addModule("llvm", .{
+    const llvm_module = b.addModule("llvm-build-module", .{
         .root_source_file = b.path("./zag/libs/zig-llvm/src/llvm.zig"),
         .target = target,
         .optimize = optimize,
@@ -38,33 +37,6 @@ pub fn build(b: *std.Build) !void {
         }),
     }
 
-    // CLANG MODULE
-    const clang_module = b.addModule("clang", .{
-        .root_source_file = b.path("./zag/libs/zig-llvm/src/clang.zig"),
-        .target = target,
-        .optimize = optimize,
-    });
-
-    if (target.result.abi != .msvc)
-        clang_module.link_libc = true
-    else
-        clang_module.link_libcpp = true;
-
-    switch (target.result.os.tag) {
-        .linux => clang_module.linkSystemLibrary("clang-18", .{}), // Ubuntu
-        .macos => {
-            clang_module.addLibraryPath(.{
-                .cwd_relative = "/opt/homebrew/opt/llvm/lib",
-            });
-            clang_module.linkSystemLibrary("clang", .{
-                .use_pkg_config = .no,
-            });
-        },
-        else => clang_module.linkSystemLibrary("clang", .{
-            .use_pkg_config = .no,
-        }),
-    }
-
     // Add a new option for specifying the LLVM path
     const llvm_file_path = b.option([]const u8, "llvm-path", "Path to the LLVM file") orelse "";
     // Build executable
@@ -83,19 +55,21 @@ pub fn build(b: *std.Build) !void {
             .filepath = llvm_test_file_path,
             .target = target,
             .optimize = .Debug,
-        }, test_step);
+        });
     }
 }
 
 fn buildLLVMFile(b: *std.Build, i: BuildInfo) void {
-    const exe = b.addExecutable(.{
-        .name = i.filename(),
+    const root_mod = b.createModule(.{
         .root_source_file = b.path(i.filepath),
         .target = i.target,
         .optimize = i.optimize,
     });
 
-    exe.root_module.addImport("llvm", b.modules.get("llvm").?);
+    root_mod.addImport("llvm-build-module", b.modules.get("llvm-build-module").?);
+
+    const exe = b.addExecutable(.{ .name = i.filename(), .root_module = root_mod });
+
     // Install the executable into zig-out/bin
     b.installArtifact(exe);
 
@@ -110,23 +84,28 @@ fn buildLLVMFile(b: *std.Build, i: BuildInfo) void {
     run_step.dependOn(&run_cmd.step);
 }
 
-fn buildLLVMTestFile(b: *std.Build, i: BuildInfo, test_step: *std.Build.Step) void {
+fn buildLLVMTestFile(b: *std.Build, i: BuildInfo) void {
     std.debug.print(">> building test file: {s}\n", .{i.filepath});
-    const test_exe = b.addTest(.{
-        .name = i.filename(),
+
+    const root_mod = b.createModule(.{
         .root_source_file = b.path(i.filepath),
         .target = i.target,
         .optimize = i.optimize,
     });
 
-    test_exe.root_module.addImport("llvm", b.modules.get("llvm").?);
+    root_mod.addImport("llvm-build-module", b.modules.get("llvm-build-module").?);
+
+    const test_exe = b.addTest(.{
+        .name = i.filename(),
+        .root_module = root_mod,
+    });
 
     const run_cmd = b.addRunArtifact(test_exe);
     if (b.args) |args| {
         run_cmd.addArgs(args);
     }
 
-    test_step.dependOn(&run_cmd.step);
+    b.default_step = &run_cmd.step;
 }
 
 const BuildInfo = struct {
