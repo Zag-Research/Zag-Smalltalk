@@ -30,7 +30,7 @@ const modules = [_]Module{
     // Module.init(@import("primitives/Behavior.zig").module),
     Module.init(@import("primitives/BlockClosure.zig")),
     // Module.init(@import("primitives/Boolean.zig").module),
-    Module.init(@import("primitives/jit.zig")),
+    Module.init(if (config.includeLLVM) @import("primitives/llvm.zig") else struct {const moduleName = "llvm";}),
     // Module.init(@import("dispatch.zig")),
     Module.init(@import("controlWords.zig").module),
 };
