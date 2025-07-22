@@ -1,13 +1,13 @@
 const std = @import("std");
 const builtin = @import("builtin");
-const build = struct {const includeLLVM = false;}; // this should be an import from the build
+const options = @import("options");
 pub const is_test = builtin.is_test;
 pub const native_endian = builtin.target.cpu.arch.endian();
 pub const tailCall: std.builtin.CallModifier = if (show_error_stack) .never_inline else .always_tail;
 pub fn trace(comptime format: anytype, values: anytype) void {
     if (show_trace) std.debug.print(format, values);
 }
-pub const includeLLVM = build.includeLLVM;
+pub const includeLLVM = options.includeLLVM;
 pub const objectEncoding: Encoding = .zag;
 
 pub const debugging = false;
