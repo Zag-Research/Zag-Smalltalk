@@ -110,13 +110,12 @@ test "Stack" {
 pub const Extra = union {
     method: *CompiledMethod,
     object: Object,
-    signature: Signature,
     contextData: *const Context.ContextData,
     pub fn forMethod(method: *const CompiledMethod) Extra {
         return .{ .method = @constCast(method) };
     }
     pub fn fromContext(context: *const Context) Extra {
-        return .{ .method = @constCast(context.method) };
+        return .{ .contextData = @constCast(context.contextData) };
     }
     pub fn encoded(self: Extra) Extra {
         @setRuntimeSafety(false);
@@ -134,10 +133,6 @@ pub const Extra = union {
         @setRuntimeSafety(false);
         return self.object.isTaggedMethod();
     }
-    pub fn isSignature(self: Extra) bool {
-        @setRuntimeSafety(false);
-        return self.object.isSymbol();
-    }
     pub fn primitiveFailed(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
         if (config.logThreadExecution)
             std.debug.print("primitiveFailed: {} {}\n", .{ extra, pc });
@@ -153,7 +148,6 @@ pub const Extra = union {
         switch (self) {
             .method => |m| try writer.print("Extra{{.method = {*}}}", .{m}),
             .object => |o| try writer.print("Extra{{.object = {}}}", .{o}),
-            .signature => |s| try writer.print("Extra{{.method = {}}}", .{s}),
             .contextData => |l| try writer.print("Extra{{.contextData = {}}}", .{l}),
         }
     }

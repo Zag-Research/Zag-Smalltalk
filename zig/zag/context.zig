@@ -110,13 +110,13 @@ pub fn format(
 inline fn headerOf(self: *const Context) *HeapHeader {
     return @as(HeapObjectPtr, @constCast(@ptrCast(self))).headerPtr();
 }
-pub inline fn popTargetContext(target: *Context, process: *Process, result: Object) struct { SP, *Context} {
+pub inline fn popTargetContext(target: *Context, process: *Process, result: Object) struct { SP, *Context } {
     //TODO: check if result is on the stack and ?copy to heap if so?
     const newSp, const newTarget = target.pop(process);
     newSp.top = result;
     return .{ newSp, newTarget };
 }
-pub inline fn pop(self: *Context, process: *Process) struct { SP, *Context} {
+pub inline fn pop(self: *Context, process: *Process) struct { SP, *Context } {
     _ = process;
     const wordsToDiscard = self.header.hash16();
     trace("\npop: 0x{x} {} sp=0x{x} {}", .{ @intFromPtr(self), self.header, @intFromPtr(self.asNewSp().unreserve(wordsToDiscard + 1)), wordsToDiscard });
@@ -131,7 +131,7 @@ pub inline fn pop(self: *Context, process: *Process) struct { SP, *Context} {
     // }
     // return .{.sp=newSp,.ctxt=self.previous()};
 }
-pub fn push(self: ContextPtr, sp: SP, process: *Process, method: *const CompiledMethod) ContextPtr {
+pub fn push(self: ContextPtr, sp: SP, process: *Process, method: *const CompiledMethod) struct { SP, *Context } {
     const stackStructure = method.stackStructure;
     const locals = stackStructure.locals;
     const spForLocals = sp.reserve(locals + 1);
@@ -145,7 +145,7 @@ pub fn push(self: ContextPtr, sp: SP, process: *Process, method: *const Compiled
     ctxt.method = method;
     ctxt.contextData = contextData;
     ctxt.header = HeapHeader.headerOnStack(.Context, 0, baseSize);
-    return ctxt;
+    return .{newSp.reserve(1), ctxt};
 }
 pub fn moveToHeap(self: *const Context, sp: SP, process: *Process) ContextPtr {
     _ = self;
@@ -226,7 +226,7 @@ pub inline fn asHeapObjectPtr(self: *const Context) HeapObjectPtr {
 pub inline fn asObjectPtr(self: *const Context) [*]Object {
     return @ptrCast(@constCast(self));
 }
-pub inline fn asNewSp(self: *const Context) SP {
+inline fn asNewSp(self: *const Context) SP {
     return @as(SP, @ptrCast(@constCast(self))).reserve(1);
 }
 pub inline fn cleanAddress(self: *const Context) u64 {
@@ -237,7 +237,7 @@ inline fn fromObjectPtr(op: [*]Object) ContextPtr {
 }
 pub fn print(self: *const Context, process: *const Process) void {
     const pr = std.debug.print;
-    pr("Context: {*} {} {any}\n", .{ self, self.header, self.allLocals(process) });
+    pr("Context: {*} {f} {any}\n", .{ self, self.header, self.allLocals(process) });
     if (self.prevCtxt) |ctxt| {
         ctxt.print(process);
     }
@@ -259,11 +259,13 @@ pub const threadedFunctions = struct {
         }
     };
     pub const pushContext = struct {
+        /// any inlinePrimitive or threadedFn that needs a context can call this to create one
+        /// and then re-execute the original operation; simply:
+        /// return @call(tailCall, pushContext.threadedFn, .{ pc.prev(), sp, process, context, extra });
         pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
             const method = extra.method;
-            const ctxt = context.push(sp, process, method);
-            const newSp = ctxt.asNewSp();
-            return @call(tailCall, process.check(pc.prim()), .{ pc.next(), newSp, process, ctxt, extra });
+            const newSp, const ctxt = context.push(sp, process, method);
+            return @call(tailCall, process.check(pc.prim()), .{ pc.next(), newSp, process, ctxt, Extra.fromContext(ctxt) });
         }
         test "pushContext" {
             var exe = Execution.initTest("pushContext", .{
