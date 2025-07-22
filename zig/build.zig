@@ -24,6 +24,8 @@ pub fn build(b: *std.Build) void {
     const options = b.addOptions();
         //options.addOption([]const u8, "version", version);
 
+    const llvm_module = build_llvm_module(b, target, optimize);
+
     // This creates a module, which represents a collection of source files alongside
     // some compilation options, such as optimization mode and linked system libraries.
     // Zig modules are the preferred way of making Zig code available to consumers.
@@ -160,32 +162,24 @@ pub fn build(b: *std.Build) void {
 
     // LLVM MODULE
     var includeLLVM = false;
-    if (build_llvm_module(b, target, optimize)) |llvm_module| {
 
-        // Add a new option for specifying the LLVM path
-        if (b.option([]const u8, "llvm-path", "Path to the LLVM file")) |llvm_file_path| {
-            buildLLVMFile(b, .{
-                .filepath = llvm_file_path,
-                .target = target,
-                .optimize = .Debug,
-            }, llvm_module);
-            includeLLVM = true;
-        }
+    // Add a new option for specifying the LLVM path
+    if (b.option([]const u8, "llvm-path", "Path to the LLVM file")) |llvm_file_path| {
+        buildLLVMFile(b, .{
+            .filepath = llvm_file_path,
+            .target = target,
+            .optimize = .Debug,
+        }, llvm_module);
+        includeLLVM = true;
+    }
 
-        // Build tests
-        if (b.option([]const u8, "llvm-test-path", "Path to the LLVM file that contains tests")) |llvm_test_file_path| {
-            buildLLVMTestFile(b, .{
-                .filepath = llvm_test_file_path,
-                .target = target,
-                .optimize = .Debug,
-            }, llvm_module);
-            includeLLVM = true;
-        }
+    if (b.option(bool, "llvm", "Include LLVM in build") orelse false) {
+        includeLLVM = true;
     }
     options.addOption(bool, "includeLLVM", includeLLVM);
 }
 
-fn build_llvm_module(b: *std.Build, target: std.Build.ResolvedTarget, optimize: std.builtin.OptimizeMode) ?*std.Build.Module {
+fn build_llvm_module(b: *std.Build, target: std.Build.ResolvedTarget, optimize: std.builtin.OptimizeMode) *std.Build.Module {
     const llvm_module = b.addModule("llvm-build-module", .{
         .root_source_file = b.path("./zag/libs/zig-llvm/src/llvm.zig"),
         .target = target,
@@ -244,31 +238,6 @@ fn buildLLVMFile(b: *std.Build, i: BuildInfo, llvm_module: *std.Build.Module) vo
     const run_step = b.step(i.filename(), b.fmt("Run the {s}", .{i.filename()}));
     run_step.dependOn(&run_cmd.step);
 }
-
-fn buildLLVMTestFile(b: *std.Build, i: BuildInfo, llvm_module: *std.Build.Module) void {
-    std.debug.print(">> building test file: {s}\n", .{i.filepath});
-
-    const root_mod = b.createModule(.{
-        .root_source_file = b.path(i.filepath),
-        .target = i.target,
-        .optimize = i.optimize,
-    });
-
-    root_mod.addImport("llvm-build-module", llvm_module);
-
-    const test_exe = b.addTest(.{
-        .name = i.filename(),
-        .root_module = root_mod,
-    });
-
-    const run_cmd = b.addRunArtifact(test_exe);
-    if (b.args) |args| {
-        run_cmd.addArgs(args);
-    }
-
-    b.default_step = &run_cmd.step;
-}
-
 const BuildInfo = struct {
     filepath: []const u8,
     target: std.Build.ResolvedTarget,
