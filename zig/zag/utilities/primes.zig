@@ -61,13 +61,13 @@ fn isProbablyPrime(p: anytype) bool {
     return true;
 }
 pub fn smallestPrimeAtLeast(min: usize) usize {
-    var i = (min & ~@as(usize, 1)) + 1;
+    var i = min | 1;
     while (!isPrime(i)) : (i += 2) {}
     return i;
 }
 pub fn largestPrimeLessThan(max: usize) usize {
     if (max <= 4) return max - 1;
-    var i = (max & ~@as(usize, 1)) - 1;
+    var i = (max - 2) | 1;
     while (!isPrime(i)) : (i -= 2) {}
     return i;
 }

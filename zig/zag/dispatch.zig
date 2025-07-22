@@ -364,7 +364,7 @@ pub const threadedFunctions = struct {
         pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, _: Extra) Result {
             const selfOffset = pc.uint();
             const newSp = sp.unreserve(selfOffset);
-            return @call(tailCall, process.check(context.npc.f), .{ context.tpc, newSp, process, context, undefined });
+            return @call(tailCall, process.check(context.getNPc()), .{ context.getTPc(), newSp, process, context, undefined });
         }
         test "returnSelfNoContext" {
             try Execution.runTest(
