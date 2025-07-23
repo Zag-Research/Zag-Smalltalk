@@ -142,7 +142,7 @@ const JITPrimitiveGenerator = struct {
     builder: LLVMBuilderRef,
 };
 
-pub const initNativeTarget = if (config.objectEncoding != .zag) struct {} else struct {
+pub const initNativeTarget = if (config.notZag) struct {} else struct {
     pub const number = 900;
     pub fn primitive(_: PC, sp: SP, process: *Process, context: *Context, _: Extra) Result {
         // TODO: future might need a fallback case if native target is incorrect
@@ -156,7 +156,7 @@ pub const initNativeTarget = if (config.objectEncoding != .zag) struct {} else s
     }
 };
 
-pub const makeJITPrimitiveGenerator = if (config.objectEncoding != .zag) struct {} else struct {
+pub const makeJITPrimitiveGenerator = if (config.notZag) struct {} else struct {
     pub const number = 901;
     pub fn primitive(_: PC, sp: SP, process: *Process, context: *Context, _: Extra) Result {
         // TODO: Ensure the LLVM-C API calls don't fail - implement call to Extra.primitiveFailed if so (?)

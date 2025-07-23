@@ -45,7 +45,6 @@ pub fn build(b: *std.Build) void {
         // which requires us to specify a target.
         .target = target,
     });
-    mod.addImport("llvm-build-module", llvm_module);
     mod.addOptions("options", options);
     // Here we define an executable. An executable needs to have a root module
     // which needs to expose a `main` function. While we could add a main function
@@ -178,6 +177,9 @@ pub fn build(b: *std.Build) void {
         includeLLVM = true;
     }
     options.addOption(bool, "includeLLVM", includeLLVM);
+    if (includeLLVM) {
+        mod.addImport("llvm-build-module", llvm_module);
+    }
 }
 
 fn build_llvm_module(b: *std.Build, target: std.Build.ResolvedTarget, optimize: std.builtin.OptimizeMode) *std.Build.Module {
