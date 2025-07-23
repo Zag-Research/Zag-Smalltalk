@@ -1,5 +1,6 @@
 const std = @import("std");
 const expectEqual = std.testing.expectEqual;
+const expect = std.testing.expect;
 const zag = @import("../zag.zig");
 const config = zag.config;
 const tailCall = config.tailCall;
@@ -58,7 +59,14 @@ const LLVMValueMetadataEntry = LLVMtype.LLVMValueMetadataEntry;
 const LLVMValueRef = LLVMtype.LLVMValueRef;
 const llvmClass = @intFromEnum(object.ClassIndex.LLVM);
 
-// Gets executed from 'default.zog` with `zig build -Dllvm-test-path='./default.zig'`
+// Execution of tests: call `zig build test -Dllvm
+// JITDriver (future)     =>  Traverses through each threaded word in a compiled method's code array and
+//                            sends the word as a message to the JITDispatcher.
+// JITDispatcher (future) => Contains logic that orchastrates which primitives to send to the
+//                           JITPrimitiveGEnerator class. Defined on the Smalltalk side.
+//                           Contains sp, driver, and gen instance variables.
+// JITPrimitiveGenerator  => Contains direct LLVM primitive calls.
+//                           Contains builder, module and context instance variables.
 
 pub fn main() void {}
 fn Converter(T: type) type {
@@ -127,7 +135,6 @@ const UseRef = Converter(LLVMUseRef);
 const ValueMetadataEntry = Converter(LLVMValueMetadataEntry);
 const ValueRef = Converter(LLVMValueRef);
 const PrimitiveGeneratorRef = Converter(JITPrimitiveGeneratorRef);
-
 const JITPrimitiveGeneratorRef = *JITPrimitiveGenerator;
 const JITPrimitiveGenerator = struct {
     module: LLVMModuleRef,
@@ -135,9 +142,25 @@ const JITPrimitiveGenerator = struct {
     builder: LLVMBuilderRef,
 };
 
-pub const makeJITPrimitiveGenerator = if (config.objectEncoding != .zag) struct {} else struct {
+pub const initNativeTarget = if (config.objectEncoding != .zag) struct {} else struct {
     pub const number = 900;
     pub fn primitive(_: PC, sp: SP, process: *Process, context: *Context, _: Extra) Result {
+        // TODO: future might need a fallback case if native target is incorrect
+        llvm.target.initNativeTarget();
+        return @call(tailCall, process.check(context.npc.f), .{ context.tpc, sp, process, context, undefined });
+    }
+    test "initNativeTarget" {
+        _ = Execution.initTest("llvm init target", .{
+            tf.inlinePrimitive, 900,
+        });
+    }
+};
+
+pub const makeJITPrimitiveGenerator = if (config.objectEncoding != .zag) struct {} else struct {
+    pub const number = 901;
+    pub fn primitive(_: PC, sp: SP, process: *Process, context: *Context, _: Extra) Result {
+        // TODO: Ensure the LLVM-C API calls don't fail - implement call to Extra.primitiveFailed if so (?)
+        // The fields of the generator must be not be null
         const memory = allocator.alloc(JITPrimitiveGenerator, 1) catch unreachable;
         const primitiveGenerator: JITPrimitiveGeneratorRef = @ptrCast(memory);
         primitiveGenerator.context = llvm.core.LLVMContextCreate();
@@ -146,17 +169,25 @@ pub const makeJITPrimitiveGenerator = if (config.objectEncoding != .zag) struct 
         const new_sp = sp.push(PrimitiveGeneratorRef.asObject(primitiveGenerator));
         return @call(tailCall, process.check(context.npc.f), .{ context.tpc, new_sp, process, context, undefined });
     }
-    test "makePrimitiveGenerator" {
+    test "makeJITPrimitiveGenerator" {
+        // TODO: Couple primitive 900 here
         var exe = Execution.initTest("llvm primitiveGenerator", .{
-            tf.inlinePrimitive, 900,
+            // tf.inlinePrimitive, 900,
+            tf.inlinePrimitive, 901,
         });
         try exe.execute(&[_]Object{}); // initial stack
         const result = exe.stack()[0];
         const spec = result.rawSpecial();
         try expectEqual(llvmClass, spec.imm);
         try expectEqual(PrimitiveGeneratorRef.getTag(), spec.tag);
+        const llvmObj = try PrimitiveGeneratorRef.asLLVM(result);
+        try expect(llvmObj.module != null);
+        try expect(llvmObj.context != null);
+        try expect(llvmObj.builder != null);
     }
 };
+
+pub const @"createThreadedSig:methodName" = if (config.objectEncoding != .zag) struct {} else struct {};
 
 pub const freeJITResources = if (config.objectEncoding != .zag) struct {} else struct {
     pub const number = 454;

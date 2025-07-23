@@ -1,8 +1,6 @@
 const std = @import("std");
 
-const SP = @import("../zig/zag/execute.zig").SP;
-
-const llvm = @import("llvm");
+const llvm = @import("llvm-build-module");
 const target = llvm.target;
 const types = llvm.types;
 const core = llvm.core;
@@ -134,7 +132,7 @@ pub fn createThreadedFnSig(module: types.LLVMModuleRef, fnName: [:0]const u8) !?
     core.LLVMSetValueName(ctxParam, "context");
     core.LLVMSetValueName(sigParam, "signature");
 
-    // // Only for testing purposes - enables emission of types textually in the IR
+    // Only for testing purposes - enables emission of types textually in the IR
     // _ = core.LLVMBuildAlloca(builder, stackTy, "test-stack");
     // _ = core.LLVMBuildAlloca(builder, tagObjectTy, "test-tagObject");
     // _ = core.LLVMBuildAlloca(builder, codeUnionTy, "test-union");
@@ -146,8 +144,9 @@ pub fn createThreadedFnSig(module: types.LLVMModuleRef, fnName: [:0]const u8) !?
 
 pub fn verifyModule(module: types.LLVMModuleRef) !void {
     // Verify the module and capture the message
-    var errorMessage: ?[*:0]u8 = null;
-    if (analysis.LLVMVerifyModule(module, types.LLVMVerifierFailureAction.LLVMPrintMessageAction, &errorMessage) != 0) {
+    var errorMessage: [*c]u8 = undefined;
+    const cErrorMessagePtr: [*c][*c]u8 = @ptrCast(&errorMessage);
+    if (analysis.LLVMVerifyModule(module, types.LLVMVerifierFailureAction.LLVMPrintMessageAction, cErrorMessagePtr) != 0) {
         if (errorMessage) |msg| {
             defer core.LLVMDisposeMessage(msg); // ensures cleanup
             std.debug.print("Verification failed: {s}\n", .{msg});
