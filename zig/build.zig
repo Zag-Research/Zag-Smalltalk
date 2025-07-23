@@ -22,7 +22,7 @@ pub fn build(b: *std.Build) void {
     // in this directory.
 
     const options = b.addOptions();
-        //options.addOption([]const u8, "version", version);
+    //options.addOption([]const u8, "version", version);
 
     const llvm_module = build_llvm_module(b, target, optimize);
 
@@ -45,6 +45,7 @@ pub fn build(b: *std.Build) void {
         // which requires us to specify a target.
         .target = target,
     });
+    mod.addImport("llvm-build-module", llvm_module);
     mod.addOptions("options", options);
     // Here we define an executable. An executable needs to have a root module
     // which needs to expose a `main` function. While we could add a main function
@@ -201,15 +202,15 @@ fn build_llvm_module(b: *std.Build, target: std.Build.ResolvedTarget, optimize: 
         .linux => llvm_module.linkSystemLibrary("LLVM-18", .{}), // Ubuntu
         .macos => {
             llvm_module.addLibraryPath(.{
-                    .cwd_relative = "/opt/homebrew/opt/llvm/lib",
-                });
-                llvm_module.linkSystemLibrary("LLVM", .{
-                    .use_pkg_config = .no,
-                });
-            },
-        else => llvm_module.linkSystemLibrary("LLVM", .{
+                .cwd_relative = "/opt/homebrew/opt/llvm/lib",
+            });
+            llvm_module.linkSystemLibrary("LLVM", .{
                 .use_pkg_config = .no,
-            }),
+            });
+        },
+        else => llvm_module.linkSystemLibrary("LLVM", .{
+            .use_pkg_config = .no,
+        }),
     }
     return llvm_module;
 }
