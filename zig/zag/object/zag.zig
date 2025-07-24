@@ -116,8 +116,14 @@ pub const Object = packed struct(u64) {
     pub inline fn extraValue(self: object.Object) object.Object {
         return @bitCast(self.nativeI_noCheck() >> 8);
     }
-    pub inline fn isPIC(self: object.Object) bool {
-        return self.isImmediateClass(.PICPointer);
+    pub inline fn withPrimitive(self: object.Object, prim: u64) object.Object {
+        return @bitCast(self.rawU() | prim << 40);
+    }
+    pub inline fn primitive(self: object.Object) u64 {
+        return self.rawU() >> 40;
+    }
+    pub inline fn symbol(self: object.Object) object.Object {
+        return @bitCast(self.rawU() & 0xffffffffff);
     }
     pub const testU = rawU;
     pub const testI = rawI;

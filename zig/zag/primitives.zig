@@ -43,6 +43,7 @@ const Module = struct {
         number: u32,
         primitive: ?ThreadedFn.Fn,
         primitiveError: ?ThreadedFn.Fn,
+        inlinePrimitive: ?ThreadedFn.Fn,
         moduleInit: ?*const fn () void,
         method: ?*const execute.CompiledMethod,
     };
@@ -80,6 +81,7 @@ const Module = struct {
                                 .number = if (@hasDecl(ds, "number")) @field(ds, "number") else 0,
                                 .primitive = if (@hasDecl(ds, "primitive")) &@field(ds, "primitive") else null,
                                 .primitiveError = if (@hasDecl(ds, "primitiveError")) &@field(ds, "primitiveError") else null,
+                                .inlinePrimitive = if (@hasDecl(ds, "inlinePrimitive")) &@field(ds, "inlinePrimitive") else null,
                                 .moduleInit = if (@hasDecl(ds, "moduleInit")) &@field(ds, "moduleInit") else null,
                                 .method = if (@hasDecl(ds, "method")) &@field(ds, "method") else null,
                             };
@@ -136,6 +138,14 @@ const testModule = if (config.is_test) struct {
                 return @call(tailCall, process.check(context.npc.f), .{ context.tpc, newSp, process, context, extra });
             }
         }
+        pub fn inlinePrimitive(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
+            if (sp.next.immediate_class() != sp.top.immediate_class()) {
+                return @call(tailCall, Extra.inlinePrimitiveFailed, .{ pc, sp, process, context, extra });
+            } else {
+                const newSp = sp.dropPut(Object.from(sp.next == sp.top, null));
+                return @call(tailCall, process.check(pc.prim2()), .{ pc.next2(), newSp, process, context, extra });
+            }
+        }
     };
 } else struct {
     const moduleName = "test module";
@@ -149,9 +159,6 @@ fn noPrim(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Re
 fn noPrimWithError(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
     const newSp = sp.push(Nil());
     return @call(tailCall, Extra.primitiveFailed, .{ pc, newSp, process, context, extra });
-}
-fn failedInlinePrim(_: PC, _: SP, _: *Process, _: *Context, _: Extra) Result {
-    @panic("failed inlinePrimitive");
 }
 
 pub const threadedFunctions = struct {
@@ -221,76 +228,6 @@ pub const threadedFunctions = struct {
                     999,
                     tf.pushLiteral,
                     99,
-                },
-                &[_]Object{
-                    Object.from(42, null),
-                    Object.from(17, null),
-                },
-                &[_]Object{
-                    Object.from(99, null),
-                    Object.from(42, null),
-                    Object.from(17, null),
-                },
-            );
-        }
-    };
-    pub const inlinePrimitive = struct {
-        pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
-            if (extra.isEncoded()) @panic("inlinePrimitive may have failed");
-            const primNumber = pc.uint();
-            const method = extra.method;
-            method.executeFn = &failedInlinePrim;
-            method.jitted = &failedInlinePrim;
-            if (Module.findNumberedPrimitive(primNumber)) |prim| {
-                if (prim.primitive) |p|
-                    return @call(tailCall, p, .{ pc, sp, process, context, extra });
-            }
-            @panic("found primitive:error: need primitive:");
-        }
-        test "primitive found" {
-            try Execution.runTest(
-                "inlinePrimitive: found",
-                .{
-                    tf.inlinePrimitive,
-                    998,
-                    tf.pushLiteral,
-                    99,
-                },
-                &[_]Object{
-                    Object.from(42, null),
-                    Object.from(17, null),
-                },
-                &[_]Object{
-                    False(),
-                },
-            );
-        }
-        test "inlinePrimitive with error" {
-            if (true) return error.SkipZigTest;
-            try Execution.runTest(
-                "inlinePrimitive: with error",
-                .{
-                    tf.inlinePrimitive,
-                    998,
-                },
-                &[_]Object{
-                    True(),
-                    Object.from(17, null),
-                },
-                &[_]Object{
-                    Object.from(99, null),
-                    True(),
-                    Object.from(17, null),
-                },
-            );
-        }
-        test "inlinePrimitive not found" {
-            if (true) return error.SkipZigTest;
-            try Execution.runTest(
-                "inlinePrimitive: not found",
-                .{
-                    tf.inlinePrimitive,
-                    999,
                 },
                 &[_]Object{
                     Object.from(42, null),
@@ -550,6 +487,59 @@ pub const threadedFunctions = struct {
                 Object.from(42, null),
                 Object.from(17, null),
             }, exe.stack());
+        }
+    };
+    pub const inlinePrimitive = struct {
+        pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
+            const primNumber = pc.object().primitive();
+            if (Module.findNumberedPrimitive(primNumber)) |prim| {
+                if (prim.inlinePrimitive) |p| {
+                    @constCast(pc.prev().asCodePtr()).patchPrim(p);
+                    return @call(tailCall, p, .{ pc, sp, process, context, extra });
+                }
+            }
+            @panic("found primitive:error: need primitive:");
+        }
+        test "inlinePrimitive found" {
+            var exe = Execution.initTest(
+                "inlinePrimitive: found",
+                .{
+                    tf.inlinePrimitive,
+                    "0prim",
+                    tf.inlinePrimitive,
+                    "0prim",
+                    tf.pushLiteral,
+                    99,
+                });
+            try exe.resolve(&[_]Object{Sym.value.withPrimitive(998)});
+            try exe.execute(&[_]Object{
+                Object.from(42, null),
+                Object.from(17, null),
+                False(),
+            });
+            try expectEqualSlices(Object, &[_]Object{
+                Object.from(99, null),
+                True(),
+            }, exe.stack());
+        }
+        test "inlinePrimitive not found" {
+            if (true) return error.SkipZigTest;
+            try Execution.runTest(
+                "inlinePrimitive: not found",
+                .{
+                    tf.inlinePrimitive,
+                    999,
+                },
+                &[_]Object{
+                    Object.from(42, null),
+                    Object.from(17, null),
+                },
+                &[_]Object{
+                    Object.from(99, null),
+                    Object.from(42, null),
+                    Object.from(17, null),
+                },
+            );
         }
     };
 };

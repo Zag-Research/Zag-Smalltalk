@@ -138,6 +138,12 @@ pub const Extra = union {
             std.debug.print("primitiveFailed: {} {}\n", .{ extra, pc });
         return @call(tailCall, process.check(pc.prev().prim()), .{ pc, sp, process, context, extra.encoded() });
     }
+    pub fn inlinePrimitiveFailed(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
+        if (config.logThreadExecution)
+            std.debug.print("primitiveFailed: {} {}\n", .{ extra, pc });
+        _ = .{ sp, process, context, @panic("inlinePrimitiveFailed") };
+        //return @call(tailCall, process.check(pc.prev().prim()), .{ pc, sp, process, context, extra.encoded() });
+    }
     pub fn formatX(
         self: Extra,
         comptime fmt: []const u8,
@@ -356,6 +362,9 @@ pub const Code = union {
         //@compileLog(pp);
         const result = Code{ .threadedFn = pp };
         return result;
+    }
+    pub inline fn patchPrim(self: *Code, pp: ThreadedFn.Fn) void {
+        self.* = Code{ .threadedFn = pp };
     }
     pub inline //
     fn asObject(self: Code) Object {
