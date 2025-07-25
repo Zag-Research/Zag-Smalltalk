@@ -14,6 +14,7 @@ Indicate 👍 (thumbs up) or 👎 (thumbs down) for each
 			- possibly could count SP freespace as well as `self` offset to make the overflow easier to calculate
 		2. `*ContextData` - as an immediate value with the extra field unneeded - can be reloaded on returns. or could just be the pointer if we really don't need the extra field (considered counting the space for closures, but very little value - better to be able to recognize the difference with an `and` and a `test`)
 		3. differently flagged `*CompiledMethod` for failed primitive
+	- 👍👍 Even better is to have the low bits of the `Extra` value have the low bits of the `sp` address of `self`. Then we just check for the low bits of the `sp` (`@intFromPtr(sp) & stack_full_mask`) to be 0 - which is an overflow and we can get the `self` address from the `sp` and `extra`. This means that words that push on the stack only have to handle a possible stack overflow - at which point we'd have to make a context anyway, so we could spill.
 	- 👍 push/pop local parameter could have 2 offsets.... an offset if there is no context, and one if there is
 		- the one for no context, is a negative offset from the `self offset` on the stack (so the offset for `self` would be zero, the offset for the first parameter would be 1, etc.)
 		- the one for yes context, is a positive offset into the `ContextData` object (so if there were 3 locals and one parameter, the offset to `self` would be 4, the offset for the first parameter would be 3, etc.)

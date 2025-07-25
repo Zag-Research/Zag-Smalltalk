@@ -38,7 +38,8 @@ const CodeContextPtr = execute.CodeContextPtr;
 /// this is really a Process object with the low bits encoding additional information
 m: [process_total_size]u8 align(1), // alignment explicitly stated to emphasize the difference from Process
 const process_total_size = if (config.is_test) 2048 else 64 * 1024; // must be more than HeapObject.maxLength*8 so externally allocated
-pub const alignment = flagMask + 1;
+pub const alignment = zag.utilities.largerPowerOf2(Process.stack_size);
+pub const stack_full_mask = alignment - 1;
 const Process = extern struct {
     stack: [stack_size]Object align(alignment),
     h: Fields,
@@ -59,10 +60,13 @@ const Process = extern struct {
     };
     const headerSize = @sizeOf(Fields);
     const processAvail = (process_total_size - headerSize) / @sizeOf(Object);
-    const nursery_size = (processAvail - processAvail / 9) / 2;
-    const stack_size = processAvail - nursery_size * 2;
+    const approx_nursery_size = (processAvail - processAvail / 9) / 2;
+    const stack_size = @min(processAvail - approx_nursery_size * 2, 0x7ff);
+    const nursery_size = (processAvail - stack_size) / 2;
     comptime {
         assert(stack_size <= nursery_size);
+        assert(alignment < 0x1000);
+        assert(flagMask < alignment);
     }
     const lastNurseryAge = Age.lastNurseryAge;
     const maxNurseryObjectSize = @min(HeapHeader.maxLength, nursery_size / 4);
