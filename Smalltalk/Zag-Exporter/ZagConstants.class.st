@@ -388,3 +388,28 @@ ZagConstants class >> loadThreadedConstants: array [
 	T_ValueColon := array at: 48.
 
 ]
+
+{ #category : 'class initialization' }
+ZagConstants class >> showThreadedConstants [
+
+	<script>
+	{ self threadedAPI . self threadedOperations } inspect
+]
+
+{ #category : 'class initialization' }
+ZagConstants class >> threadedAPI [
+
+	^ self api methodDictionary keys sorted
+]
+
+{ #category : 'class initialization' }
+ZagConstants class >> threadedOperations [
+
+	^ (ZagOperations allSubclasses select: [ : class | class methodDict includesKey: #resultStack: ]
+	thenCollect: [ : class |
+		| n |
+		n := class name.
+		(n beginsWith: 'ASC') ifTrue: [ n := n allButFirst: 3 ].
+		(n beginsWith: 'Zag') ifTrue: [ n := n allButFirst: 3 ].
+		n first lowercase asString, (n allButFirst: 1) ]) sorted asArray
+]
