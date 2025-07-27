@@ -71,7 +71,7 @@ pub inline fn pop(self: *Context, process: *Process) struct { sp: SP, ctxt: Cont
     if (self.isOnStack())
         return .{ .sp = self.asNewSp().unreserve(wordsToDiscard), .ctxt = self.previous() };
     trace("\npop: {*}", .{self});
-    _ = .{process, @panic("incomplete")};
+    _ = .{ process, @panic("incomplete") };
     // const itemsToKeep = self.temps[wordsToDiscard-baseSize..self.size];
     // const newSp = process.endOfStack() - itemsToKeep.len;
     // for (itemsToKeep,0..) | obj,index | {

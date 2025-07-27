@@ -9,6 +9,7 @@ There *is* an interpreter that runs in Smalltalk as part of the Zag-Core-Test pa
 - restructure operation for branch-returns and inlined methods
 - tailSend with/no context with restructure parameter
 - can optimize away pushes into restructure instruction/tailSend
+- Polymorphic Inline Caches
 
 ### Threaded Method Implementation
 The threaded implementation is a sequence of addresses of functions implementing embedded primitives  and control operations. Every `CompiledMethod` has a threaded implementation. One of the "registers" that is passed through the thread is a flag indicating whether the current thread needs to check for interruptions. Every threaded operation checks this flag before passing control along to the next function. This allows the threaded implementation to single step through the method. Control is passed using an indirect tail-call.
@@ -43,7 +44,7 @@ The parameters (presumably all in registers on modern architectures) are:
 | process   | pointer to the current process            |
 | context   | pointer to the current context            |
 | extra     | multi-purpose value                       |
-The result type is mostly irrelevant, because none of these functions ever return; they always exit via a tail-call. Usually this is to the next threaded word unless this threaded word is a return or a call/send. When going to the next threaded word, we also need to bump the `pc` past that address. Note that the `sp` parameter that we pass is the `newSp` value because we just pushed something onto the stack. The `process.check` is an inline function that checks if we are in single-step mode, otherwise continuing to the next word.
+The result type is mostly irrelevant, because none of these functions ever return; they always exit via a tail-call. Usually this is to the next threaded word unless the current threaded word is a return or a call/send. When going to the next threaded word, we also need to bump the `pc` past that address. Note that in the example, the `sp` parameter that we pass is the `newSp` value because we just pushed something onto the stack. The `process.check` is an inline function that checks if we are in single-step mode, otherwise continuing to the next word.
 ## Heap and Arenas
 ## The stack and Contexts
 
@@ -213,14 +214,49 @@ When we dispatch to a method, we execute the `executeFn` function, with the `pc`
 
 ## Sends and Polymorphic Inline Caches
 Experience has shown that 90% of message sending locations dispatch to a single class and 9% to a small set of classes. Thus a significant speedup is achieved by trying previously found methods before going to a generalized dispatch. While Zag dispatch is much more efficient than most, it is certainly slower than a comparison.
-A message send is followed by a selector and a PIC. The selector (which is a  [[Symbol]]) is augmented with the class of the receiver to create a signature.
 
-The Polymorphic Inline Cache is a single object with 4 possible values:
-1. It is initially `nil` which means this is the first time this send is being executed. The correct method will be looked up and the `nil` replaced with a reference to that `CompiledMethod` and then it will be executed.
-2. It may be a regular heap pointer which is a reference to a `CompiledMethod`. If the method signature matches the signature for the send, then we have found the correct method and we start executing it. This covers 90% of message sends. If it doesn't match, a PIC object is created and the method pointer is replaced by a `PICPointer` that references the PIC object.
-3. It may be a `PICPointer`, in which case we extract the pointer. If it is not null then it points to a PIC object (an array of 7 objects (either `nil` or references to `CompiledMethod` objects)). Searching through these we either match or find a `nil`. If we match, we execute the method. If we find `nil` we look up the method and replace the `nil` with the reference and execute it. This handles the 9% of message sends. If we look at all 7 and don't find a matching signature, then we replace the `PICPointer` in the PIC with a null `PICPointer`.
-4. If the pointer of the `PICPointer` is null, then the lookup and execute the method through the dispatch table. This handle the remaining 1% of message sends. The null `PICPointer` bypasses the searching through the 7 potential references, because our dispatch mechanism is only a bit slower than that scan.
-Note that all of these updates are done in a multi-process-safe way (i.e. Compare-and-Swap with failure looping back to the start of the PIC processing). The choice of 7 for the size of a PIC object is because it doesn't have any internal fragmentation in the heap object, and is close to the size recommended by the literature.
+### Current version
+Noticing that a full dispatch (with dispatch table hit) is 5 memory accesses and a direct dispatch is 3, there is little point in having an elaborate PIC. So the current version uses a single element PIC, which captures the monomorphic case in 3 accesses, and falls back to 7 for a missed cache.
+
+The code for a send looks like:
+```
+send/tailSend/tailSendContext
+selector
+initialDispatch
+```
+- The `send` looks at the arity of the selector, gets the class from the appropriate object on the stack (offset by the arity) and combines the class and the selector to create a `Signature`. (There are also unary, binary, and ternary versions that can load the receiver at a fixed offset on the stack without having to wait for the selector to load to get the arity.)
+- For `send`, but not `tailSend` or `tailSendContext`, save the return `tpc` and `npc`.
+- then load the next word, which will be a `CompiledMethod` and and compares its signature with the current one.
+	1. if they match, it's the monomorphic case, so this is the correct `CompiledMethod`
+	2. otherwise if the `CompiledMethod` has a zero signature, then it is the initialDispatch, so we need to look up the `Compiled Method` for this signature and replace the `initialDispatch` reference with the address of the found `CompiledMethod`. The next time this send is executed, we will match that method, which handles the monomorphic case. Note that this replacement doesn't have to be multi-processor safe (even though, theoretically, another process could be executing this send at the same time with a different object as receiver), because any match we find is valid.
+	3. otherwise this is a polymorphic send, so look up the `CompiledMethod` for the current signature
+		- other implementations would use a PIC in this case with a list of possible alternate methods
+		- our lookup is so fast that's what we simply do. This requires 2 memory accesses more than accessing a PIC would, but is actually faster if the PIC would have more than 2 or 3 entries
+		- one possible variant would be to always replace the pointer with the discovered `CompiledMethod` (like in case 2) so that methods that have phases would perform better (and case 2 and 3 would become the same), however this would do cache invalidations on every change, which might not be advantageous
+- transfer to the `executeFn` for the method with the `extra` parameter set to the `CompiledMethod` pointer, and the `pc` set to the second `Code` word.
+#### Possible enhancement
+The pointer to the `CompiledMethod` is preceded by the address of the execute function. So we jump directly to the execute function and all the testing happens in the function. This way, the JITted case could be reduced to 1 memory access, plus use of immediate values - which may or may not be faster. The threaded case would remain at 3.
+
+In this version, `initialDispatch` is a `CompiledMethod` whose `executeFn` is a threadedFn that looks up the signature to get a `Compiled Method` and then replaces the `initialDispatch` reference with the address of the found `CompiledMethod`. The next time this send is executed, we will dispatch to that method, which handles the monomorphic case.
+
+For all other cases, we are executing the `executeFn` of the actual method (which is a special verify function for threaded execution). Here the `extra` parameter can be either a `Signature` or a pointer to a `CompiledMethod`.
+- If `extra` is a signature, this is the monomorphic method and we must check if it matches the signature for this method.
+	- If it does match, we proceed to execute the body of the method, passing the `CompiledMethod` pointer in the `extra` parameter.
+		- In the threaded case, we load the `CompiledMethod` pointer from the sending location (which the `pc` still points to).
+		- In JITted code, we can just compare with an immediate value.
+	- If the signature doesn't match , this is a polymorphic case so we branch to common code to use the signature to look up the correct method and branch to it.
+- If `extra` is a pointer, then we don't have to check (a dispatch lookup was done so we are the proper method), we proceed directly to execute the body of the method.
+### Previous version
+A message send is followed by a selector and a PIC. The selector (which is a  [[Symbol]]) is augmented with the class of the receiver to create a target signature.
+
+The Polymorphic Inline Cache (PIC) is a single reference object. It either is a reference to a `CompiledMethod` or to a `PICCache`. Both have a Signature field in as the first field, so the target signature is compared with that signature. If they match, then this is the correct `CompiledMethod` and we start executing it. This is the case of a monomorphic dispatch which covers 90% of sends.
+
+If it doesn't match, there are are 4 possibilities dispatched on the bottom 2 bits of the found signature:
+0. This is the first time this send is being executed. The correct method will be looked up and the PIC replaced with a reference to that `CompiledMethod` and then it will be executed.
+1. This is a reference to a `CompiledMethod`, but not the correct method. Therefore what was a monomorphic PIC has become polymorphic, so a `PICCache` object is created, the previous PIC is added to it and the new method is looked up and added to it. Then the original PIC is replaced by a reference to the `PICCache` object. Finally we execute the proper `CompiledMethod`.
+2. This is a `PICCache` object which has an array of 7 objects (either `nil` or references to `CompiledMethod` objects). Searching through these we either match or find a `nil`. If we match, we execute the method. If we find `nil` we look up the method and replace the `nil` with the reference and execute it. This handles 9% of message sends. If we look at all 7 and don't find a matching signature, then we replace the PIC with a null `PICCache`.
+3. This is a null `PICCache` so we lookup and execute the method immediately through the dispatch table. This handles the remaining 1% of message sends. The null `PICPointer` bypasses the searching through the 7 potential references, because our dispatch mechanism is only a bit slower than that scan.
+Note that all of these updates are done in a multi-process-safe way (i.e. Compare-and-Swap with failure looping back to the start of the PIC processing). The choice of 7 for the size of a PIC object is because it doesn't have any internal fragmentation in the heap object, and is close to the size recommended by the literature. Experimentally we may find this to be too large, or even that the PICCache isn't worth having - particularly with our emphasis on inlining.
 ## Dispatch
 To find a compiled method from a signature, we need to get the dispatch table for the class, and then hash into that to find the actual method.
 
@@ -228,7 +264,7 @@ The signature is an augmented [[Symbol]] that has the class number in the top 24
 
 Each `Dispatch` object has an array of pointers to `CompiledMethod`s.
 
-We then calculate a 'random' offset into the array. That is calculated as follows. The low 32 bits of the signature are the 24-bit hashed index of the symbol number and the 8-bit tag for `Symbol`. Because of the way this hash is created, this can be considered a fairly uniformly distributed number between 0 and 2^32 which means that dividing it by 2^32 will give a number between 0 and 1. If we multiply that by the number of elements in the array, we end up with a number between 0 and the size of the array-1. So if we label the hash as h and the size of the array as n. we have `h/2^32*n` which we can reorder as `h*n/2^32` and we can do that division via a shift. So we take the low 32 bits, do a 64-bit multiplication by the size of the array and shift right 32 bits, ending up with the equivalent of a mod operation (an integer between 0 and the size of the array-1) using only a multiply and a shift.
+We then calculate a 'random' offset into the array. That is calculated as follows. The low 32 bits of the signature are the 24-bit hashed index of the symbol number and the 8-bit tag for `Symbol`. Because of the way this hash is created, this can be considered a fairly uniformly distributed number between 0 and 2^32 which means that dividing it by 2^32 will give a number between 0 and 1. If we multiply that by the number of elements in the array, we end up with a number between 0 and the size of the array-1. So if we label the hash as h and the size of the array as n. we have `h/2^32*n` which we can reorder as `h*n/2^32` and we can do that division via a shift. So we take the low 32 bits, do a 64-bit multiplication by the size of the array and shift right 32 bits, ending up with the equivalent of a mod operation (an integer between 0 and the size of the array-1) using only a multiply and a shift - significantly faster than a `mod` operation.
 
 Starting from that position we check each object as either a `nil` or a `CompiledMethod`. If it is a `CompiledMethod` we compare its signature for a match with the signature we are looking for. If we find a match, we execute the referenced method. If not, we look at the next one, etc. If the object is `nil`, the method isn't in the table. We look at up to 7 objects. If we don't find either a `nil` or a matching method, we will create a larger table where all objects are matched within 7 objects of the starting position. This number 7 is somewhat arbitrarily chosen to be the same as the PIC object size.
 
@@ -250,7 +286,7 @@ Logically, Smalltalk message dispatch follows these steps:
 
 This is not the whole story for 2 reasons:
  1. Some messages such as `ifTrue:ifFalse:` and `whileTrue:` and related messages are recognized by the compiler, and are turned into conditional byte code sequences, as an optimization.
- 2. After the lookup described above, the target method is cached in the calling code, so the next time we do the lookup we should be very fast. This gets complicated because there could be objects from a different class in a subsequent lookup, so somewhat complex mechanisms are used to save the multiple method targets.
+ 2. After the lookup described above, the target method is cached in the calling code, so the next time we do the lookup we should be very fast. This gets complicated because there could be objects from a different class in a subsequent lookup, so somewhat complex mechanisms are used to save the multiple method targets. See [[Execution#Sends and Polymorphic Inline Caches|above]].
  
  See:
  - [Inline caching](https://en.wikipedia.org/wiki/Inline_caching)
@@ -281,7 +317,7 @@ The sequence to look up a method is:
 2. convert to a u64 and then multiply by the hash multiplier
 3. shift right 32 bits(the multiply and shift replace a modulo)
 4. use that as the index into the array
-5. jump to the threaded code
+5. start searching at that point (an earlier approach jumped directly to the method
 
 This dispatch is near-optimal. The method will check that the selector matches, else call DNU
 

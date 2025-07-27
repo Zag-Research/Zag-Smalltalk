@@ -18,7 +18,7 @@ Class {
 { #category : 'initialization' }
 ASIStackHeapObject >> array: aCollection offset: anInteger size: aSize [
 
-	stackOrArray := aCollection.
+	stackOrArray :=   OrderedCollection newFrom: aCollection.
 	offset := anInteger.
 	size := aSize.
 	isOnStack := true

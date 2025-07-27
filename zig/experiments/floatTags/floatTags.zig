@@ -71,7 +71,7 @@ pub const Object = packed struct {
             .null => return Nil,
             .pointer => |ptr_info| {
                 switch (ptr_info.size) {
-                    .One => {
+                    .one => {
                         switch (@typeInfo(ptr_info.child)) {
                             .array => |array_info| {
                                 if (array_info.child == u8)
@@ -189,17 +189,17 @@ pub fn main() !void {
         const x = blk1: {
             const sign_exponent = @as(u64, bits & 0xc0) << 56;
             const exponent_mantissa = @as(u64, @bitCast(@as(i64, @bitCast(@as(u64, bits) << 58)) >> 6)) >> 2;
-            break :blk1 @as(f64, @bitCast( sign_exponent | exponent_mantissa ));
+            break :blk1 @as(f64, @bitCast(sign_exponent | exponent_mantissa));
         };
         const f = blk2: {
             const val = @as(u64, bits) << 8;
             const sign_exponent = (val & 0xc000) << 48;
             const exponent_mantissa = @as(u64, @bitCast(@as(i64, @bitCast((val & 0x3f00) << 50)) >> 6)) >> 2;
-            break :blk2 @as(f64,@bitCast( sign_exponent | exponent_mantissa ));
+            break :blk2 @as(f64, @bitCast(sign_exponent | exponent_mantissa));
         };
         std.debug.print("{:>3}: {x:0>16} ", .{ bits, cvtU64(x) });
         if (@abs(x) < 0.0001 or @abs(x) > 1000.0) {
-            std.debug.print("{e:10.5} {e:10.5}\n", .{x,f});
-        } else std.debug.print("{d:11.7} {d:11.7}\n", .{x,f});
+            std.debug.print("{e:10.5} {e:10.5}\n", .{ x, f });
+        } else std.debug.print("{d:11.7} {d:11.7}\n", .{ x, f });
     }
 }

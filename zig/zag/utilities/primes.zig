@@ -61,13 +61,13 @@ fn isProbablyPrime(p: anytype) bool {
     return true;
 }
 pub fn smallestPrimeAtLeast(min: usize) usize {
-    var i = (min & ~@as(usize, 1)) + 1;
+    var i = min | 1;
     while (!isPrime(i)) : (i += 2) {}
     return i;
 }
 pub fn largestPrimeLessThan(max: usize) usize {
     if (max <= 4) return max - 1;
-    var i = (max & ~@as(usize, 1)) - 1;
+    var i = (max - 2) | 1;
     while (!isPrime(i)) : (i -= 2) {}
     return i;
 }
@@ -112,7 +112,6 @@ test "primes at least" {
     try std.testing.expectEqual(smallestPrimeAtLeast(4294836197 - 13), 4294836197);
 }
 test "prime diffs" {
-    if (true) return error.SkipZigTest;
     var tests: usize = 0;
     var n: usize = 0;
     var p: usize = 16;

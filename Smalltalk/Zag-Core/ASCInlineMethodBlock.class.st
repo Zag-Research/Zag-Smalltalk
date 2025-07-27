@@ -7,6 +7,9 @@ My final expression will be a stack adjustment and branch to the return point, l
 Class {
 	#name : 'ASCInlineMethodBlock',
 	#superclass : 'ASCInlinedBlock',
+	#instVars : [
+		'astBlock'
+	],
 	#category : 'Zag-Core-BasicBlocks',
 	#package : 'Zag-Core',
 	#tag : 'BasicBlocks'
@@ -58,4 +61,10 @@ ASCInlineMethodBlock >> selfElementClass [
 ASCInlineMethodBlock >> sendTail: aSymbol targetClass: target for: aBasicBlock [ 
 	
 	^ aBasicBlock sendTail: aSymbol targetClass: target
+]
+
+{ #category : 'API' }
+ASCInlineMethodBlock >> setBlock: anASMethodNode [
+
+	astBlock := anASMethodNode
 ]

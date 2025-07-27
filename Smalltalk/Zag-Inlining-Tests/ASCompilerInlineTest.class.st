@@ -253,7 +253,8 @@ ASCompilerInlineTest >> testBlockEvaluationWithCallAndLocalWithoutTailCall [
 		^ x "
 
 	self
-		assertEquivalentSending: #blockEvaluationWithCallAndLocalWithoutTailCall
+		assertEquivalentSending:
+		#blockEvaluationWithCallAndLocalWithoutTailCall
 		to: ASCompileTestClass1 new
 ]
 
@@ -281,13 +282,14 @@ ASCompilerInlineTest >> testBlockEvaluationWithSend2 [
 { #category : 'tests' }
 ASCompilerInlineTest >> testBlockEvaluationWithSendWithoutTailCall [
 	"blockEvaluationWithSendWithoutTailCall
+
 	| x |
 	x := [ 10 + 5 ] value.
 	^ x"
-	
-	self assertEquivalentSending: #blockEvaluationWithSendWithoutTailCall to: ASCompileTestClass1 new.
-	
-	
+
+	self
+		assertEquivalentSending: #blockEvaluationWithSendWithoutTailCall
+		to: ASCompileTestClass1 new
 ]
 
 { #category : 'tests' }
@@ -350,6 +352,16 @@ ASCompilerInlineTest >> testBlockValueNonlocal [
 	^ [ 4 ] value "
 
 	self assertEquivalentSending: #blockValueNonlocal to: ASCompileTestClass1 new
+]
+
+{ #category : 'tests' }
+ASCompilerInlineTest >> testBlockWithAdd [
+	"
+blockWithAdd
+
+	^ [ 5 +10 ] value"
+
+	self assertEquivalentSending: #blockWithAdd to: ASCompileTestClass1 new
 ]
 
 { #category : 'tests' }
@@ -453,14 +465,19 @@ ASCompilerInlineTest >> testFoo1 [
 { #category : 'tests' }
 ASCompilerInlineTest >> testFoo1Inlined [
 	"foo
-	^ self bar isLarge"
+	^ self bar"
 
 	"bar
 	^ 42"
 
-"	interpreter inlineDepth: 1.
+	"	interpreter inlineDepth: 1.
 	self testFoo1"
-	self assertEquivalentSending: #foo arguments: { } to: ASCompileTestClass1 new inlineDepth: 1000.
+
+	self
+		assertEquivalentSending: #foo
+		arguments: {  }
+		to: ASCompileTestClass1 new
+		inlineDepth: 1000
 ]
 
 { #category : 'tests' }
@@ -530,14 +547,11 @@ ASCompilerInlineTest >> testInlinePlus1Inlined [
 	"plus1: aNumber
 	^ aNumber + 1"
 
-	| cg |
-	cg := ASCodeGenerator
-		      targetClass: ASCompileTestClass1
-		      selector: #inlinePlus1.
-	cg
-		inline: true;
-		finalAnalysis;
-		inspect
+	self
+		assertEquivalentSending: #inlinePlus1
+		arguments: {  }
+		to: ASCompileTestClass1 new
+		inlineDepth: 1000
 ]
 
 { #category : 'tests' }
@@ -553,18 +567,8 @@ ASCompilerInlineTest >> testInsertionSort [
 
 { #category : 'tests' }
 ASCompilerInlineTest >> testNegatedInlined [
-	"inlinePlus1
-	^ self plus1: 30"
 
-	"plus1: aNumber
-	^ aNumber + 1"
-
-	| cg |
-	cg := ASCodeGenerator targetClass: SmallInteger selector: #negated.
-	cg
-		inline: true;
-		finalAnalysis;
-		inspect
+	self assertEquivalentSending: #negated arguments: #(  ) to: 6
 ]
 
 { #category : 'tests' }

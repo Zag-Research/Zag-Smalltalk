@@ -27,7 +27,9 @@ ASCPushVariable >> dotStringOn: aStream [
 ASCPushVariable >> inspectZagASTOn: aStream [
 
 	super inspectZagASTOn: aStream.
-	variableLocation inspectZagASTOn: aStream 
+	aStream tab.
+	aStream << 'value: '.
+	aStream << variableLocation name
 ]
 
 { #category : 'testing' }

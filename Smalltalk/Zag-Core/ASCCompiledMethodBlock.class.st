@@ -73,7 +73,8 @@ ASCCompiledMethodBlock >> newInlineMethodBlockReturnSelf [
 { #category : 'API' }
 ASCCompiledMethodBlock >> returnTopFor: aBasicBlock current: current [ 
 
-	^ self returnTop
+^ current returnTop
+	"^ self returnTop"
 ]
 
 { #category : 'accessing' }

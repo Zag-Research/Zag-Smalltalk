@@ -43,8 +43,8 @@ const p = primitives.primitives;
 const testReps = 7;
 
 // fibonacci
-//	self <= 2 ifTrue: [ ^ 1 ].
-//	^ (self - 1) fibonacci + (self - 2) fibonacci
+//    self <= 2 ifTrue: [ ^ 1 ].
+//    ^ (self - 1) fibonacci + (self - 2) fibonacci
 
 const callsToFib40 = 204_668_309;
 pub fn fibNative(self: i64) i64 {
@@ -78,7 +78,7 @@ var fibCPSM = compileMethod(Sym.i_0, 0, 0, .{&fibCPS});
 const fibCPST = PC.init(&fibCPSM.code[0]);
 pub fn fibCPS(pc: PC, sp: SP, process: *Process, context: ContextPtr, selector: Object) callconv(stdCall) SP {
     if (!fibCPSM.selector.selectorEquals(selector)) {
-        return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, selector});
+        return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, selector });
     }
     return @call(tailCall, fibCPS0, .{ fibCPST.next(), sp, process, context, selector });
 }
@@ -117,28 +117,28 @@ fn runCPS(_: usize) void {
 }
 var fibThread =
     compileMethod(Sym.i_0, 0, 2, .{
-    ":recurse",
-    &e.dup, // self
-    &e.pushLiteral2, //&e.pushLiteral, two,
-    &e.SmallInteger.@"<=_N", // <= know that self and 2 are definitely integers
-    &e.ifFalse,
-    "label3",
-    &e.replaceLiteral1, // self
-    &e.returnNoContext,
-    ":label3",
-    &e.pushContext,
-    "^",
-    &e.pushLocal0,
-    &e.SmallInteger.@"-_L1", // -1 &e.pushLiteral1,&e.p2,
-    &e.callRecursive,
-    "recurse",
-    &e.pushLocal0,
-    &e.SmallInteger.@"-_L2", // -2
-    &e.callRecursive,
-    "recurse",
-    &e.SmallInteger.@"+", // +
-    &e.returnTop,
-});
+        ":recurse",
+        &e.dup, // self
+        &e.pushLiteral2, //&e.pushLiteral, two,
+        &e.SmallInteger.@"<=_N", // <= know that self and 2 are definitely integers
+        &e.ifFalse,
+        "label3",
+        &e.replaceLiteral1, // self
+        &e.returnNoContext,
+        ":label3",
+        &e.pushContext,
+        "^",
+        &e.pushLocal0,
+        &e.SmallInteger.@"-_L1", // -1 &e.pushLiteral1,&e.p2,
+        &e.callRecursive,
+        "recurse",
+        &e.pushLocal0,
+        &e.SmallInteger.@"-_L2", // -2
+        &e.callRecursive,
+        "recurse",
+        &e.SmallInteger.@"+", // +
+        &e.returnTop,
+    });
 var fibThreadMethod: CompiledMethodPtr = undefined;
 
 pub fn main() !void {

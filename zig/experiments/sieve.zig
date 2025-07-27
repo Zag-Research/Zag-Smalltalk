@@ -27,19 +27,19 @@ const p = struct {
 };
 var sieveCompM = compileMethod(Nil, 0, 0, .{&sieveComp});
 const sieveCompT = @as([*]Code, @ptrCast(&sieveCompM.code[0]));
-//	| size flags prime k count |
-//	size := 8190.
-//	1 to: self do: [ :iter |
-//		count := 0.
-//		flags := (ByteArray new: size) atAllPut: 1.
-//		1 to: size do: [ :i |
-//			(flags at: i)=1 ifTrue: [
-//				prime := i + 1.
-//				k := i + prime.
-//				[ k <= size ] whileTrue: [
-//					flags at: k put: 0.
-//					k := k + prime ].
-//				count := count + 1 ] ] ].
+//    | size flags prime k count |
+//    size := 8190.
+//    1 to: self do: [ :iter |
+//        count := 0.
+//        flags := (ByteArray new: size) atAllPut: 1.
+//        1 to: size do: [ :i |
+//            (flags at: i)=1 ifTrue: [
+//                prime := i + 1.
+//                k := i + prime.
+//                [ k <= size ] whileTrue: [
+//                    flags at: k put: 0.
+//                    k := k + prime ].
+//                count := count + 1 ] ] ].
 //    ^ count
 pub fn sieveNative(self: i64) i64 {
     const size = 8190;
@@ -98,99 +98,99 @@ const sieveThreadRef = uniqueSymbol(42);
 const ByteArray = header(0, array, ByteArray_I, 0, static).o();
 var sieveThread =
     compileMethod(Nil, 0, 7, .{
-    &p.pushContext,    "^",
-    ":label1",         &p.pushLiteral,
-    Object.from(8190),
-    &p.popIntoTemp,  1, //size
-    &p.pushLiteral1,
-    &p.popIntoTemp, 6, //iter
-    ":label2",
-    &p.pushTemp, 6, //iter
-    &p.pushTemp,    8, //self
-    &p.p5,          "p5OK",
-    &p.primFailure, ":p5OK",
-    &p.ifFalse,     "label12",
-    ":label3",      &p.pushLiteral0,
-    &p.popIntoTemp, 5, //count
-    &p.pushLiteral, ByteArray,
-    &p.pushTemp,     1, //size
-    &p.p71,          "p71OK",
-    &p.primFailure,  ":p71OK",
-    &p.pushLiteral1, &p.p145,
-    "p145OK",        &p.primFailure,
-    ":p145OK",
-    &p.popIntoTemp, 2, //flags
-    &p.pushTemp, 1, //size
-    &p.popIntoTemp,  8, //limit_i
-    &p.pushLiteral1,
-    &p.popIntoTemp, 7, //i
-    ":label4",
-    &p.pushTemp, 7, //i
-    &p.pushTemp,    8, //limit_i
-    &p.p5,          "p5OKb",
-    &p.primFailure, ":p5OKb",
-    &p.ifFalse,     "label11",
-    ":label5",
-    &p.pushTemp, 2, //flags
-    &p.pushTemp,     7, //i
-    &p.p60,          "p60OK",
-    &p.primFailure,  ":p60OK",
-    &p.pushLiteral1, &p.p7,
-    "p7OK",          &p.primFailure,
-    ":p7OK",         &p.ifFalse,
-    "label10",       ":label6",
-    &p.pushTemp,     7, //i
-    &p.pushLiteral1, &p.p1,
-    "p1OK",          &p.primFailure,
-    ":p1OK",
-    &p.popIntoTemp, 3, //prime
-    &p.pushTemp, 7, //i
-    &p.pushTemp,    3, //prime
-    &p.p1,          "p1OKb",
-    &p.primFailure, ":p1OKb",
-    &p.popIntoTemp, 4, //k
-    ":label7",
-    &p.pushTemp, 4, //k
-    &p.pushTemp,    1, //size
-    &p.p5,          "p5OKc",
-    &p.primFailure, ":p5OKc",
-    &p.ifFalse,     "label9",
-    ":label8",
-    &p.pushTemp, 2, //flags
-    &p.pushTemp,     4, //k
-    &p.pushLiteral0, &p.p61,
-    "p61OK",         &p.primFailure,
-    ":p61OK",        &p.drop,
-    &p.pushTemp, 4, //k
-    &p.pushTemp,    3, //prime
-    &p.p1,          "p1OKc",
-    &p.primFailure, ":p1OKc",
-    &p.popIntoTemp, 4, //k
-    &p.branch,      "label7",
-    ":label9",
-    &p.pushTemp,     5, //count
-    &p.pushLiteral1, &p.p1,
-    "p1OKd",         &p.primFailure,
-    ":p1OKd",
-    &p.popIntoTemp, 5, //count
-    ":label10",
-    &p.pushTemp,     7, //i
-    &p.pushLiteral1, &p.p1,
-    "p1OKe",         &p.primFailure,
-    ":p1OKe",
-    &p.popIntoTemp, 7, //i
-    &p.branch,      "label4",
-    ":label11",
-    &p.pushTemp,     6, //iter
-    &p.pushLiteral1, &p.p1,
-    "p1OKf",         &p.primFailure,
-    ":p1OKf",
-    &p.popIntoTemp, 6, //iter
-    &p.branch,      "label2",
-    ":label12",
-    &p.pushTemp,  5, //count
-    &p.returnTop,
-});
+        &p.pushContext,    "^",
+        ":label1",         &p.pushLiteral,
+        Object.from(8190),
+        &p.popIntoTemp,  1, //size
+        &p.pushLiteral1,
+        &p.popIntoTemp, 6, //iter
+        ":label2",
+        &p.pushTemp, 6, //iter
+        &p.pushTemp,    8, //self
+        &p.p5,          "p5OK",
+        &p.primFailure, ":p5OK",
+        &p.ifFalse,     "label12",
+        ":label3",      &p.pushLiteral0,
+        &p.popIntoTemp, 5, //count
+        &p.pushLiteral, ByteArray,
+        &p.pushTemp,     1, //size
+        &p.p71,          "p71OK",
+        &p.primFailure,  ":p71OK",
+        &p.pushLiteral1, &p.p145,
+        "p145OK",        &p.primFailure,
+        ":p145OK",
+        &p.popIntoTemp, 2, //flags
+        &p.pushTemp, 1, //size
+        &p.popIntoTemp,  8, //limit_i
+        &p.pushLiteral1,
+        &p.popIntoTemp, 7, //i
+        ":label4",
+        &p.pushTemp, 7, //i
+        &p.pushTemp,    8, //limit_i
+        &p.p5,          "p5OKb",
+        &p.primFailure, ":p5OKb",
+        &p.ifFalse,     "label11",
+        ":label5",
+        &p.pushTemp, 2, //flags
+        &p.pushTemp,     7, //i
+        &p.p60,          "p60OK",
+        &p.primFailure,  ":p60OK",
+        &p.pushLiteral1, &p.p7,
+        "p7OK",          &p.primFailure,
+        ":p7OK",         &p.ifFalse,
+        "label10",       ":label6",
+        &p.pushTemp,     7, //i
+        &p.pushLiteral1, &p.p1,
+        "p1OK",          &p.primFailure,
+        ":p1OK",
+        &p.popIntoTemp, 3, //prime
+        &p.pushTemp, 7, //i
+        &p.pushTemp,    3, //prime
+        &p.p1,          "p1OKb",
+        &p.primFailure, ":p1OKb",
+        &p.popIntoTemp, 4, //k
+        ":label7",
+        &p.pushTemp, 4, //k
+        &p.pushTemp,    1, //size
+        &p.p5,          "p5OKc",
+        &p.primFailure, ":p5OKc",
+        &p.ifFalse,     "label9",
+        ":label8",
+        &p.pushTemp, 2, //flags
+        &p.pushTemp,     4, //k
+        &p.pushLiteral0, &p.p61,
+        "p61OK",         &p.primFailure,
+        ":p61OK",        &p.drop,
+        &p.pushTemp, 4, //k
+        &p.pushTemp,    3, //prime
+        &p.p1,          "p1OKc",
+        &p.primFailure, ":p1OKc",
+        &p.popIntoTemp, 4, //k
+        &p.branch,      "label7",
+        ":label9",
+        &p.pushTemp,     5, //count
+        &p.pushLiteral1, &p.p1,
+        "p1OKd",         &p.primFailure,
+        ":p1OKd",
+        &p.popIntoTemp, 5, //count
+        ":label10",
+        &p.pushTemp,     7, //i
+        &p.pushLiteral1, &p.p1,
+        "p1OKe",         &p.primFailure,
+        ":p1OKe",
+        &p.popIntoTemp, 7, //i
+        &p.branch,      "label4",
+        ":label11",
+        &p.pushTemp,     6, //iter
+        &p.pushLiteral1, &p.p1,
+        "p1OKf",         &p.primFailure,
+        ":p1OKf",
+        &p.popIntoTemp, 6, //iter
+        &p.branch,      "label2",
+        ":label12",
+        &p.pushTemp,  5, //count
+        &p.returnTop,
+    });
 test "sieveNative" {
     const n = 5;
     const result = sieveNative(n);

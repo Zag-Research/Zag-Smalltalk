@@ -1,6 +1,7 @@
 Extension { #name : 'ASCPopVariable' }
 
 { #category : '*Zag-Core-Tests' }
-ASCPopVariable >> interpretFor: anASemanticInterpreter [ 
-	self shouldBeImplemented.
+ASCPopVariable >> interpretFor: anInterpreter [
+
+	^ anInterpreter pop: anInterpreter top into: variableLocation offset
 ]

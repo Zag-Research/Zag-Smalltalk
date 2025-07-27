@@ -17,7 +17,7 @@ const Process = struct {
 };
 fn f(_: *Process) void {}
 test "die" {
-    const tfn = execute.ThreadedFn{.f = &f};
+    const tfn = execute.ThreadedFn{ .f = &f };
     var p: Process = undefined;
     tfn.f(&p);
 }

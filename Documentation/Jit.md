@@ -44,6 +44,8 @@ My Task: I am not generating the CPS code - rather, I am simply taking the compi
 
 #### Copy-and-Patch Jit
 [Here is part 1](https://sillycross.github.io/2022/11/22/2022-11-22/) [and part 2](https://sillycross.github.io/2023/05/12/2023-05-12/index.html) of an article by Xu about Deegen, a JIT for Lua that automatically generates a JIT from C++ specs of the interpreter. [[Copy-and-patch-JIT.pdf|Here is the original paper]].
+
+The interesting thing about Zag is that the threaded code in the `CompiledMethod` is actually already almost everything we need! Each word points to some compiled code that typically ends with a dispatch to the next word. So we simply copy over the code recognizing the dispatch code and references to the 
 #### Links 
 
 - [an LLVM-Zig repo](https://github.com/kassane/llvm-zig/tree/main)

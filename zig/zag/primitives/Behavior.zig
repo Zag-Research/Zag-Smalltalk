@@ -47,10 +47,6 @@ pub const primitives = struct {
         unreachable;
     }
 };
-const p = struct {
-    usingnamespace execute.controlPrimitives;
-    usingnamespace primitives;
-};
 fn testExecute(method: CompiledMethodPtr) []Object {
     var te = execute.TestExecution.new();
     te.init();

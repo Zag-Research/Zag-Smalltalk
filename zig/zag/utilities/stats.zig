@@ -2,31 +2,42 @@ const std = @import("std");
 const math = std.math;
 const Order = math.Order;
 const Units = enum {
+    units,
     seconds,
     milliseconds,
     microseconds,
     nanoseconds,
-    pub fn name(self: Units) []u8 {
+    fn name(self: Units) []const u8 {
         return switch (self) {
-            .seconds,
-            => "seconds",
+            .units => "units",
+            .seconds => "seconds",
             .milliseconds => "milliseconds",
             .microseconds => "microseconds",
             .nanoseconds => "nanoseconds",
         };
     }
-    pub fn shortName(self: Units) []u8 {
+    fn shortName(self: Units) []const u8 {
         return switch (self) {
-            .seconds,
-            => "s",
+            .units => "un",
+            .seconds => "s ",
             .milliseconds => "ms",
             .microseconds => "us",
             .nanoseconds => "ns",
         };
     }
+    fn scale(self: Units) u64 {
+        return switch (self) {
+            .units => 1,
+            .seconds => 1_000_000_000,
+            .milliseconds => 1_000_000,
+            .microseconds => 1_000,
+            .nanoseconds => 1,
+        };
+    }
 };
-pub fn Stats(comptime K: type, comptime runs: comptime_int, comptime units: Units) type {
+pub fn Stats(comptime Arg: type, comptime K: type, comptime runs: comptime_int, comptime units: Units) type {
     const T = if (K == void) u64 else K;
+    const A = if (Arg == void) u64 else Arg;
     return struct {
         values: [runs]T = undefined,
         minValue: T = undefined,
@@ -34,19 +45,14 @@ pub fn Stats(comptime K: type, comptime runs: comptime_int, comptime units: Unit
         n: usize = 0,
         sum: T = 0,
         sumsq: T = 0,
+        proof: usize = 0,
         const Self = @This();
         const isInt = switch (@typeInfo(T)) {
-            .Int => true,
+            .int => true,
             else => false,
         };
         const warmups = @min(3, @max(1, (runs + 1) / 3));
-        const scale: u64 = switch (units) {
-            .seconds,
-            => 1_000_000_000,
-            .milliseconds => 1_000_000,
-            .microseconds => 1_000,
-            .nanoseconds => 1,
-        };
+        const scale = units.scale();
         pub fn init() Self {
             return .{};
         }
@@ -61,13 +67,15 @@ pub fn Stats(comptime K: type, comptime runs: comptime_int, comptime units: Unit
                 self.addData(runner(runNumber));
             }
         }
-        pub fn time(self: *Self, runner: *const fn (usize) void) void {
-            for (0..warmups) |_| @call(.never_inline, runner, .{0});
+        pub fn time(self: *Self, runner: *const fn (comptime A, usize) usize, comptime param: anytype) void {
+            for (0..warmups) |_| {
+                self.proof = @call(.never_inline, runner, .{ if (A == u64) 0 else param, self.proof });
+            }
             var timer = std.time.Timer.start() catch @panic("no timer available");
-            for (1..runs + 1) |runNumber| {
-                timer.reset();
-                @call(.never_inline, runner, .{runNumber});
-                const diff = timer.read() / scale;
+            var diff: usize = 0;
+            for (0..runs) |runNumber| {
+                self.proof = @call(.never_inline, runner, .{ if (A == u64) runNumber + 1 else param, self.proof });
+                diff = timer.lap() / scale;
                 self.addData(diff);
             }
         }
@@ -113,31 +121,41 @@ pub fn Stats(comptime K: type, comptime runs: comptime_int, comptime units: Unit
         pub fn format(
             self: *const Self,
             comptime fmt: []const u8,
-            comptime options: std.fmt.FormatOptions,
+            options: std.fmt.FormatOptions,
             writer: anytype,
         ) !void {
             if (self.noData()) {
                 try writer.print("?", .{});
             } else {
-                var sep: []const u8 = "";
-                const flOpts: []const u8 = comptime if (options.precision == null) "{d}" else "{d:.2}";
-                const opts: []const u8 = comptime if (isInt) "{}" else flOpts;
-                inline for (if (fmt.len == 0) "nmxs" else fmt) |f| {
-                    try writer.print("{s}", .{sep});
+                const opts: []const u8 = comptime if (isInt) "{}" else "{d:.2}";
+                var percent = false;
+                inline for (if (fmt.len == 0) "n--m--x--s" else fmt) |f| {
                     switch (f) {
                         'n' => try writer.print(opts, .{self.minValue}),
                         'm' => try writer.print(opts, .{self.mean()}),
                         'M' => try writer.print(opts, .{self.median()}),
                         'x' => try writer.print(opts, .{self.maxValue}),
-                        's' => try writer.print(flOpts, .{self.stdDev()}),
-                        '%' => try writer.print("{.1}%", .{self.stdDev() * 100 / comptime if (isInt) @as(f64, @floatFromInt(self.mean())) else self.mean()}),
                         'r' => try writer.print(opts, .{(self.maxValue - self.minValue) / 2}),
+                        '%' => percent = true,
+                        's' => {
+                            if (percent) {
+                                percent = false;
+                                const divisor = if (isInt) @as(f64, @floatFromInt(self.mean())) else self.mean();
+                                if (divisor == 0.0) {
+                                    try writer.print("0", .{});
+                                } else {
+                                    try writer.print("{d:.1}%", .{self.stdDev() * 100 / divisor});
+                                }
+                            } else if (options.precision == null) {
+                                try writer.print("{d}", .{self.stdDev()});
+                            } else try writer.print("{d:.2}", .{self.stdDev()});
+                        },
+                        // change % to give a percentile or express stdDev as a percentage
+                        '+' => try writer.print("±", .{}),
                         'u' => try writer.print("{s}", .{units.shortName()}),
                         'U' => try writer.print("{s}", .{units.name()}),
-                        ' ' => sep = " ",
-                        else => {},
+                        else => try writer.print("{c}", .{f}),
                     }
-                    sep = "--";
                 }
             }
         }
@@ -146,7 +164,7 @@ pub fn Stats(comptime K: type, comptime runs: comptime_int, comptime units: Unit
 test "simple int stats" {
     const expectEqual = @import("std").testing.expectEqual;
     const expect = @import("std").testing.expect;
-    var stat = Stats(usize, 0).init();
+    var stat = Stats(void, usize, 0, .units).init();
     stat.addData(2);
     stat.addData(4);
     try expectEqual(stat.min(), 2);
@@ -154,15 +172,13 @@ test "simple int stats" {
     try expectEqual(stat.mean(), 3);
     try expectEqual(stat.median(), null);
     try expectEqual(stat.stdDev(), 1.0);
-    const buf: [200]u8 = undefined;
-    const buf2: [200]u8 = undefined;
-    //    const ebuf: []const u8 = "2.0--3.0--4.0--1.0";
-    //    std.debug.print("\nstats {<FOO>nmxs}",.{stat});
-    _ = .{ expect, buf, buf2 }; //    try expect(std.mem.eql(u8,try std.fmt.bufPrint(buf2[0..],"2--3--4--1",.{}),try std.fmt.bufPrint(buf[0..], "{}",.{stat})));
+    var buf: [200]u8 = undefined;
+    var buf2: [200]u8 = undefined;
+    try expect(std.mem.eql(u8, try std.fmt.bufPrint(&buf2, "2--3--4--1", .{}), try std.fmt.bufPrint(&buf, "{}", .{stat})));
 }
 test "simple int stats with values" {
     const expectEqual = @import("std").testing.expectEqual;
-    var stat = Stats(usize, 10).init();
+    var stat = Stats(void, usize, 10, .units).init();
     stat.addData(2);
     stat.addData(4);
     try expectEqual(stat.min(), 2);
@@ -180,7 +196,7 @@ fn testRunner(run: usize) usize {
 }
 test "simple int stats with runner" {
     const expectEqual = @import("std").testing.expectEqual;
-    var stat = Stats(usize, 3).init();
+    var stat = Stats(void, usize, 3, .units).init();
     stat.run(testRunner);
     try expectEqual(stat.min(), 2);
     try expectEqual(stat.max(), 4);
@@ -190,7 +206,7 @@ test "simple int stats with runner" {
 }
 test "larger int stats with runner" {
     const expectEqual = @import("std").testing.expectEqual;
-    var stat = Stats(usize, 10).init();
+    var stat = Stats(void, usize, 10, .units).init();
     stat.run(testRunner);
     try expectEqual(stat.min(), 2);
     try expectEqual(stat.max(), 16);
@@ -202,7 +218,7 @@ test "larger int stats with runner" {
 test "simple float stats" {
     const expectEqual = @import("std").testing.expectEqual;
     const expect = @import("std").testing.expect;
-    var stat = Stats(f64, 0).init();
+    var stat = Stats(void, f64, 0, .units).init();
     stat.addData(2.0);
     stat.addData(4.0);
     try expectEqual(stat.min(), 2.0);
@@ -214,4 +230,14 @@ test "simple float stats" {
     //    const ebuf: []const u8 = "2.0--3.0--4.0--1.0";
     //    std.debug.print("\nstats {<FOO>nmxs}",.{stat});
     _ = .{ expect, buf, buf2 }; //    try expect(std.mem.eql(u8,try std.fmt.bufPrint(buf2[0..],"2--3--4--1",.{}),try std.fmt.bufPrint(buf[0..], "{}",.{stat})));
+}
+fn timeRunner(comptime _: usize, proof: usize) usize {
+    return proof;
+}
+test "simple timed stats" {
+    const expect = @import("std").testing.expect;
+    var stat = Stats(usize, void, 3, .nanoseconds).init();
+    stat.time(timeRunner, 0);
+    try expect(stat.max() > 0);
+    try expect(stat.mean() > 0);
 }

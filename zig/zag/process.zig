@@ -105,7 +105,7 @@ pub fn init(origin: *align(alignment) Self, process: Object) void {
     while (true) {
         self.h.next = allProcesses;
         self.h.id = if (allProcesses) |p| p.header().id + 1 else 1;
-        trace("\nprocess.init {}", .{self.h.id});
+        trace("\nprocess.init {x}", .{self.h.id});
         if (@cmpxchgWeak(?*Self, &allProcesses, self.h.next, origin, SeqCst, SeqCst) == null) break;
     }
     self.h.trapContextNumber = 0;
@@ -158,7 +158,7 @@ pub inline fn getSp(self: *align(1) const Self) SP {
 pub inline fn freeStack(self: *align(1) const Self, sp: SP) usize {
     return (@intFromPtr(sp) - @intFromPtr(self.ptr())) / 8;
 }
-pub //inline
+pub inline //
 fn getStack(self: *align(1) const Self, sp: SP) []Object {
     //    return sp.slice((@intFromPtr(self.endOfStack()) - @intFromPtr(sp)) / @sizeOf(Object));
     return sp.sliceTo(self.endOfStack());
@@ -199,7 +199,8 @@ fn allocSpace(self: *align(1) Self, size: u11, sp: SP, context: *Context) HeapOb
 pub fn alloc(self: *align(1) Self, classIndex: ClassIndex, iVars: u11, indexed: ?usize, comptime element: type, makeWeak: bool) heap.AllocReturn {
     const aI = allocationInfo(iVars, indexed, element, makeWeak);
     if (aI.objectSize(Process.maxNurseryObjectSize)) |size| {
-        const result = self.header().currHp;
+        //std.debug.print("self: {x} self.header() {x} {} {x}\n", .{ @intFromPtr(self), @intFromPtr(self.header()), size, @intFromPtr(self.header().currHp) });
+        const result = HeapObject.fillToBoundary(self.header().currHp);
         const newHp = result + size + 1;
         if (@intFromPtr(newHp) <= @intFromPtr(self.header().currEnd)) {
             self.header().currHp = newHp;
@@ -306,7 +307,7 @@ test "nursery allocation" {
     const ee = std.testing.expectEqual;
     var process align(alignment) = new();
     var pr = &process;
-    pr.init(Nil);
+    pr.init(Nil());
     const emptySize = Process.nursery_size;
     trace("\nemptySize = {}\n", .{emptySize});
     try ee(Process.stack_size, 27);
@@ -314,21 +315,34 @@ test "nursery allocation" {
     var sp = pr.endOfStack();
     var initialContext = Context.init();
     var ar = try pr.alloc(ClassIndex.Class, 4, null, void, false);
+    trace("\nar = {}\n", .{ar});
     _ = ar.initAll();
     const o1 = ar.allocated;
     try ee(pr.freeNursery(), emptySize - 5);
     ar = try pr.alloc(ClassIndex.Class, 5, null, void, false);
+    trace("\nar = {}\n", .{ar});
     _ = ar.initAll();
     ar = try pr.alloc(ClassIndex.Class, 6, null, void, false);
     const o2 = ar.initAll();
-    try ee(pr.freeNursery(), emptySize - 18);
+    trace("\nar = {}\n", .{ar});
+    try ee(emptySize - 19, pr.freeNursery());
+    trace("\no1 = {} {x}\n", .{ o1, o1.asObject().testU() });
+    trace("\no2 = {*} {} \n", .{ o2, o2 });
+    trace(" {x}\n", .{o2.asObject().testU()});
     try o1.instVarPut(0, o2.asObject());
+    trace("\npoint\n", .{});
     sp = sp.push(o1.asObject());
+    trace("\npoint\n", .{});
     const news = pr.spillStack(sp, &initialContext);
     try ee(sp, news.sp);
     try ee(&initialContext, news.context);
+    trace("\npoint\n", .{});
     pr.collectNursery(sp, &initialContext, 0);
-    try ee(pr.freeNursery(), emptySize - 12);
+    try ee(emptySize - switch (config.objectEncoding) {
+        .zag, .nan => 12,
+        else => 7,
+    }, pr.freeNursery());
+    trace("\nend\n", .{});
     // age test
     // o1 still contains corrected address of o2
     // add second reference to o2 and circulare ref to o1
@@ -337,7 +351,7 @@ test "nursery allocation" {
 test "check flag" {
     const testing = std.testing;
     var process: struct { f: [alignment]u8 align(alignment) = undefined, p: Self } = .{ .p = new() };
-    @as(*align(alignment) Self, @alignCast(&process.p)).init(Nil);
+    @as(*align(alignment) Self, @alignCast(&process.p)).init(Nil());
     var pr align(1) = &process.p;
     try testing.expect(!pr.needsCheck());
     const origEOS = pr.endOfStack();

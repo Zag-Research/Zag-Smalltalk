@@ -23,10 +23,10 @@ pub const TaggedPtrObject = packed struct(u64) {
         return @bitCast(v);
     }
     pub inline fn thunkImmediate(o: Object) ?Object {
-        _ = .{ o, unreachable};
+        _ = .{ o, unreachable };
     }
     pub inline fn thunkImmediateValue(self: Self) Object {
-        _ = .{ self, unreachable};
+        _ = .{ self, unreachable };
     }
     pub inline fn isImmediateClass(_: Object, _: ClassIndex.Compact) bool {
         return false;
@@ -196,7 +196,7 @@ pub const TaggedPtrObject = packed struct(u64) {
             return self.vtable.simple(self.ptr, obj);
         }
         fn noSimple(ctx: *anyopaque, obj: Object) void {
-            _ = .{ctx, obj};
+            _ = .{ ctx, obj };
         }
     };
     pub inline fn isSymbol(self: Object) bool {
@@ -208,5 +208,26 @@ pub const TaggedPtrObject = packed struct(u64) {
     pub inline fn isHeapObject(self: Object) bool {
         return self.tag == .heap;
     }
-    pub usingnamespace object.ObjectFunctions;
+    const OF = object.ObjectFunctions;
+    pub const arrayAsSlice = OF.arrayAsSlice;
+    pub const asMemoryObject = OF.asMemoryObject;
+    pub const asObjectArray = OF.asObjectArray;
+    pub const asZeroTerminatedString = OF.asZeroTerminatedString;
+    pub const compare = OF.compare;
+    pub const empty = OF.empty;
+    pub const equals = OF.equals;
+    pub const format = OF.format;
+    pub const getField = OF.getField;
+    pub const get_class = OF.get_class;
+    pub const immediate_class = OF.immediate_class;
+    pub const isBool = OF.isBool;
+    pub const isIndexable = OF.isIndexable;
+    pub const isNil = OF.isNil;
+    pub const isUnmoving = OF.isUnmoving;
+    pub const numArgs = OF.numArgs;
+    pub const promoteToUnmovable = OF.promoteToUnmovable;
+    pub const rawFromU = OF.rawFromU;
+    pub const setField = OF.setField;
+    pub const to = OF.to;
+    pub const toUnchecked = OF.toUnchecked;
 };

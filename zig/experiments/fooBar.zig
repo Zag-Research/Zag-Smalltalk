@@ -18,8 +18,8 @@ const symbol = @import("zag/symbol.zig");
 const heap = @import("zag/heap.zig");
 
 // fibonacci
-//	self <= 2 ifTrue: [ ^ 1 ].
-//	^ (self - 1) fibonacci + (self - 2) fibonacci
+//    self <= 2 ifTrue: [ ^ 1 ].
+//    ^ (self - 1) fibonacci + (self - 2) fibonacci
 pub fn fibNative(self: i64) i64 {
     if (self <= 2) return 1;
     return fibNative(self - 1) + fibNative(self - 2);
@@ -50,82 +50,82 @@ var sym: Sym = undefined;
 //    ^ l1
 var @"foo:bar:" =
     compileMethod(Sym.i_1, 5, 2 + 11, .{ // self-7 p1-6 p2-5 l2-4 closureData-3 BCself-2 BC1-1 BC2-0
-    &e.verifySelector,
-    &e.pushContext,
-    "^",
-    // define all blocks here
-    &e.closureData, 3 + (1 << 12), // local:3 size:1 (offset 1 is l1)
-    &e.nonlocalClosure_self, 2, // [^ self] local:2
-    &e.blockClosure, "0foo:bar::1", 1 + (1 << 12) + (0 << 20) + (3 << 32), // local:1, 1 field, no includeContext, closureData at local3
-    &e.blockClosure, "1foo:bar::2", 0 + (1 << 12) + (255 << 20) + (3 << 32), // local:0, 1 field, includeContext, closureData at local3
-    // all blocks defined by now
-    &e.pushLocal, 6, // p1
-    &e.popLocalData, 1 + (3 << 12), // p1 (read-only) copy offset 3 in local 1 (field in BC1)
-    &e.pushLocal, 6, // p1
-    &e.pushLocal, 5, // p2
-    &e.send1,     Sym.@"<",
-    &e.pushLocal, 2, // [^ self]
-    &e.send1,     Sym.@"ifTrue:",
-    &e.drop, // discard result from ifTrue: (if it returned)
-    &e.pushLocal, 5, // p2
-    &e.popLocalData, 3 + (1 << 12), // l1
-    &e.pushLocal, 6, // p1
-    &e.pushLocal, 5, // p2
-    &e.send1,     Sym.@"\\",
-    &e.popLocal, 4, // l2
-    &e.pushLocal, 5, // p2
-    &e.pushLocal, 4, // l2
-    &e.send1,     Sym.@"-",
-    &e.popLocalData, 0 + (4 << 12), // l3 offset 4 in local 0
-    &e.pushLocal, 1, // BC1 [ l1 < p1 ]
-    &e.pushLocal, 0, // BC2 [ l1 := ... ]
-    &e.send1,     Sym.@"whileTrue:",
-    &e.drop,
-    &e.pushLocalData, 3 + (1 << 12), // l1
-    &e.returnTop,
-});
+        &e.verifySelector,
+        &e.pushContext,
+        "^",
+        // define all blocks here
+        &e.closureData, 3 + (1 << 12), // local:3 size:1 (offset 1 is l1)
+        &e.nonlocalClosure_self, 2, // [^ self] local:2
+        &e.blockClosure, "0foo:bar::1", 1 + (1 << 12) + (0 << 20) + (3 << 32), // local:1, 1 field, no includeContext, closureData at local3
+        &e.blockClosure, "1foo:bar::2", 0 + (1 << 12) + (255 << 20) + (3 << 32), // local:0, 1 field, includeContext, closureData at local3
+            // all blocks defined by now
+        &e.pushLocal, 6, // p1
+        &e.popLocalData, 1 + (3 << 12), // p1 (read-only) copy offset 3 in local 1 (field in BC1)
+        &e.pushLocal, 6, // p1
+        &e.pushLocal, 5, // p2
+        &e.send1,     Sym.@"<",
+        &e.pushLocal, 2, // [^ self]
+        &e.send1,     Sym.@"ifTrue:",
+        &e.drop, // discard result from ifTrue: (if it returned)
+        &e.pushLocal, 5, // p2
+        &e.popLocalData, 3 + (1 << 12), // l1
+        &e.pushLocal, 6, // p1
+        &e.pushLocal, 5, // p2
+        &e.send1,     Sym.@"\\",
+        &e.popLocal, 4, // l2
+        &e.pushLocal, 5, // p2
+        &e.pushLocal, 4, // l2
+        &e.send1,     Sym.@"-",
+        &e.popLocalData, 0 + (4 << 12), // l3 offset 4 in local 0
+        &e.pushLocal, 1, // BC1 [ l1 < p1 ]
+        &e.pushLocal, 0, // BC2 [ l1 := ... ]
+        &e.send1,     Sym.@"whileTrue:",
+        &e.drop,
+        &e.pushLocalData, 3 + (1 << 12), // l1
+        &e.returnTop,
+    });
 var @"foo:bar::1" =
     // [ l1 < p1 ]
     compileMethod(sym.value, 0, 2, .{ // self-0
-    &e.verifySelector,
-    &e.pushContext,
-    "^",
-    &e.pushLocalDataData, 0 + (2 << 12) + (1 << 24), // l1 offset 1 in offset 2 in local 0
-    &e.pushLocalData, 0 + (3 << 12), // p1 offset 3 in local 0
-    &e.send,          Sym.@"<",
-    &e.returnTop,
-    //        &e.classCase, "4:falseBranch,5:trueBranch"
-    // fall through if not False or True
-    //            &e.send, Sym....
-    // special case for Booleans
-    //        &e.ifTrue, "trueBranch"
-    //        &e.ifFalse, "falseBranch"
-    // other inlines instead of
-    //        &e.send2, Sym.@"ifTrue:ifFalse:"
-    //   do
-    //        &e.Boolean.@"ifTrue:ifFalse:" // faster way to do theses sends
-    // all the ifs, all the whiles, simple values
-    // also for +, - , etc. if receiver is known to be SmallInteger
-});
+        &e.verifySelector,
+        &e.pushContext,
+        "^",
+        &e.pushLocalDataData, 0 + (2 << 12) + (1 << 24), // l1 offset 1 in offset 2 in local 0
+        &e.pushLocalData, 0 + (3 << 12), // p1 offset 3 in local 0
+        &e.send,          Sym.@"<",
+        &e.returnTop,
+            //        &e.classCase, "4:falseBranch,5:trueBranch"
+            // fall through if not False or True
+            //            &e.send, Sym....
+            // special case for Booleans
+            //        &e.ifTrue, "trueBranch"
+            //        &e.ifFalse, "falseBranch"
+            // other inlines instead of
+            //        &e.send2, Sym.@"ifTrue:ifFalse:"
+            //   do
+            //        &e.Boolean.@"ifTrue:ifFalse:" // faster way to do theses sends
+            // all the ifs, all the whiles, simple values
+            // also for +, - , etc. if receiver is known to be SmallInteger
+    });
 var @"foo:bar::2" =
     // [ l1 := l1 + 1.
     //   l1 = l3 ifTrue: [ ^ 1 ] ]
     compileMethod(sym.value, @"foo:bar::2-arity", 2 + 4, .{ // self-1 BCone-0
-    &e.verifySelector,
-    &e.pushContext,
-    "^",
-    &e.nonlocalClosure_one, 0 + (1 << 12) + (2 << 24), // [^ 1] local:0 context at offset 2 in local 1
-    &e.pushLocalDataData, 1 + (3 << 12) + (1 << 24), // l1 offset 1 in offset 3 in local 1
-    &e.pushLiteral,       Object.from(1),
-    &e.send,              Sym.@"+",
-    &e.popLocalDataData, 1 + (3 << 12) + (1 << 24), // l1 offset 1 in offset 3 in local 1
-    &e.pushLocalDataData, 1 + (3 << 12) + (1 << 24), // l1 offset 1 in offset 3 in local 1
-    &e.pushLocalData, 1 + (4 << 12), // l3 offset 4 in local 1
-    &e.send,          Sym.@"=",
-    &e.pushLocal, 0, // [^ 1]
-    &e.send,      Sym.@"ifTrue:",
-    &e.returnTop,
-});
+        &e.verifySelector,
+        &e.pushContext,
+        "^",
+        &e.nonlocalClosure_one, 0 + (1 << 12) + (2 << 24), // [^ 1] local:0 context at offset 2 in local 1
+        &e.pushLocalDataData, 1 + (3 << 12) + (1 << 24), // l1 offset 1 in offset 3 in local 1
+        &e.pushLiteral,       Object.from(1),
+        &e.send,              Sym.@"+",
+        &e.popLocalDataData, 1 + (3 << 12) + (1 << 24), // l1 offset 1 in offset 3 in local 1
+        &e.pushLocalDataData, 1 + (3 << 12) + (1 << 24), // l1 offset 1 in offset 3 in local 1
+        &e.pushLocalData, 1 + (4 << 12), // l3 offset 4 in local 1
+        &e.send,          Sym.@"=",
+        &e.pushLocal, 0, // [^ 1]
+        &e.send,      Sym.@"ifTrue:",
+        &e.returnTop,
+    });
 const @"foo:bar::2-arity" = 1;
 fn initSmalltalk() void {
     primitives.init();

@@ -23,8 +23,6 @@ const utilities = zag.utilities;
 const largerPowerOf2 = utilities.largerPowerOf2;
 const inversePhi24 = utilities.inversePhi(u24);
 const assert = std.debug.assert;
-//const compileObject = zag.execute.compileObject;
-//const Sym = zag.symbol.symbols;
 pub const Format = enum(u7) {
     immutableSizeZero = 0,
     indexedStruct = NumberOfBytes + 1, // this is an allocated struct, not an Object
@@ -79,7 +77,7 @@ pub const Format = enum(u7) {
     pub inline fn instVars(self: Self, header: HeapHeader, obj: *const HeapObject) HeapOperationError![]Object {
         return self.operations().instVars(self, header, @constCast(obj));
     }
-    pub //inline
+    pub inline //
     fn array(self: Self, header: HeapHeader, obj: *const HeapObject, elementSize: usize) HeapOperationError![]Object {
         return self.operations().array(self, header, @constCast(obj), elementSize);
     }
@@ -194,7 +192,7 @@ const HeapOperations = struct {
     instVarWithPtr: Format = .free,
     inline fn set(ops: *[128]HeapOperations, format: Format, tuple: HeapOperations) void {
         const idx = @intFromEnum(format);
-        const withPtr = if (idx >= @intFromEnum(Format.notIndexable) and idx < @intFromEnum(Format.free)) idx else idx + 8;
+        const withPtr = if (idx >= @intFromEnum(Format.notIndexable) and idx < @intFromEnum(Format.free)) idx + 8 else idx;
         ops[idx].array = tuple.array;
         ops[idx].instVars = tuple.instVars;
         ops[idx].size = tuple.size;
@@ -321,6 +319,8 @@ pub const HeapObjectPtrIterator = struct {
 //     const ho1 = AllocationInfo.calc(0, 0, Object, false).heapHeader(ClassIndex.Object, .static, 0);
 //     try testing.expectEqual(ho1.makeIterator(), null);
 //     const c = ClassIndex;
+//     const compileObject = zag.execute.compileObject;
+//     const Sym = zag.symbol.symbols;
 //     var o1b = compileObject(.{
 //         True,
 //         Sym.i_0, // alternate reference to replacement Object #1
@@ -424,12 +424,12 @@ pub const AllocationInfo = struct {
     pub inline fn initContents(self: Self, theHeapObject: HeapObjectPtr) void {
         const start = theHeapObject.asObjectArray();
         for (start[0..self.nInstVars]) |*obj|
-            obj.* = Nil;
+            obj.* = Nil();
         if (self.nIndexed > 0) {
             const slice = start[self.nInstVars .. self.nInstVars + self.nIndexed];
             if (self.isObject) {
                 for (slice) |*obj|
-                    obj.* = Nil;
+                    obj.* = Nil();
             } else {
                 for (slice) |*obj|
                     obj.* = Object.ZERO;
@@ -654,7 +654,7 @@ pub const HeapHeader = packed struct(u64) {
     pub inline fn headerOnStack(comptime class: ClassIndex, hash: u24, length: u11) HeapHeader {
         return .{ .classIndex = class, .hash = hash, .format = .special, .age = .onStack, .length = length };
     }
-    pub inline fn freeHeader(length: u12) HeapHeader {
+    pub fn freeHeader(length: u11) HeapHeader {
         return .{ .classIndex = .none, .hash = 0, .format = .free, .age = .free, .length = length };
     }
     pub inline fn storeFreeHeader(self: *HeapHeader) void {
@@ -704,6 +704,15 @@ pub const HeapHeader = packed struct(u64) {
             .length = length,
         };
     }
+    pub inline fn withHash(self: HeapHeader, hash: u24) HeapHeader {
+        return .{
+            .classIndex = self.classIndex,
+            .hash = hash,
+            .format = self.format,
+            .age = self.age,
+            .length = self.length,
+        };
+    }
     pub inline fn isOnStack(self: HeapHeader) bool {
         return self.age.isOnStack();
     }
@@ -742,11 +751,8 @@ pub const HeapHeader = packed struct(u64) {
     pub inline fn isIndexable(self: HeapHeader) bool {
         return self.format.isIndexable();
     }
-    pub inline fn isIndexableWithPtrs(self: HeapHeader) bool {
-        return self.format.isIndexableWithPtrs();
-    }
     pub inline fn o(self: HeapHeader) Object {
-        return @as(Object, @bitCast(self));
+        return @bitCast(self);
     }
 };
 pub const HeapObjectArray = [*]align(@alignOf(u64)) HeapObject;
@@ -755,6 +761,13 @@ pub const HeapObjectPtr = *align(@alignOf(u64)) HeapObject;
 pub const HeapObjectConstPtr = *align(@alignOf(u64)) const HeapObject;
 pub const HeapObject = packed struct {
     header: HeapHeader,
+    pub inline //
+    fn fillToBoundary(self: HeapObjectArray) HeapObjectArray {
+        if (@intFromPtr(self) & 8 == 0)
+            return self;
+        self[0].header = HeapHeader.freeHeader(0);
+        return self + 1;
+    }
     pub inline fn headerPtr(self: *const HeapObject) *HeapHeader {
         return @constCast(&self.header);
     }
@@ -780,7 +793,8 @@ pub const HeapObject = packed struct {
     pub inline fn isIndexable(self: HeapObjectConstPtr) bool {
         return self.header.isIndexable();
     }
-    pub inline fn isUnmoving(self: HeapObjectConstPtr) bool {
+    pub inline //
+    fn isUnmoving(self: HeapObjectConstPtr) bool {
         return self.header.isUnmoving();
     }
     pub inline fn isForwarded(self: HeapObjectConstPtr) bool {
@@ -797,10 +811,10 @@ pub const HeapObject = packed struct {
     }
     pub inline fn copyTo(self: HeapObjectPtr, hp: [*]HeapObject, reference: *Object) [*]HeapObject {
         const head = self.header;
-        if (head.forwardedTo()) |target| { // already forwarded
+        if (head.forwardedTo()) |_| { // already forwarded
             reference.* = switch (config.objectEncoding) {
-                .nan => @bitCast((reference.rawU() & 0xffff000000000000) + @as(u48, @truncate(@intFromPtr(target)))),
-                .tag => Nil,
+                .nan => Nil(), //@bitCast((reference.rawU() & 0xffff000000000000) + @as(u48, @truncate(@intFromPtr(target)))),
+                .zag => Nil(),
                 else => unreachable,
             };
             return hp;
@@ -811,8 +825,9 @@ pub const HeapObject = packed struct {
         self.setHeader(@bitCast((@as(u64, @bitCast(HeapHeader{ .forwarded = true })) << 48) + @intFromPtr(hp + 1)));
         // ToDo: adjust header if necessary
         reference.* = switch (config.objectEncoding) {
-            .nan => @bitCast((reference.rawU() & 0xffff000000000000) + @intFromPtr(hp + 1)),
-            .tag => Nil,
+            .nan => Nil(), //@bitCast((reference.rawU() & 0xffff000000000000) + @intFromPtr(hp + 1)),
+            .zag => Nil(),
+            .ptr => Nil(),
             else => unreachable,
         };
         return newHp;
@@ -847,15 +862,15 @@ pub const HeapObject = packed struct {
         const self = maybeForwarded.forwarded();
         return self.start[1..self.length];
     }
-    pub //inline
+    pub inline //
     fn arrayAsSlice(self: HeapObjectConstPtr, comptime T: type) ![]T {
         const head = self.header;
-        const array = if (head.forwardedTo()) |realSelf|
+        const arry = if (head.forwardedTo()) |realSelf|
             try realSelf.header.array(realSelf, @sizeOf(T))
         else
             try head.array(self, @sizeOf(T));
-        const ba = @as([*]T, @constCast(@ptrCast(array.ptr)));
-        return ba[0..array.len];
+        const ba = @as([*]T, @constCast(@ptrCast(arry.ptr)));
+        return ba[0..arry.len];
     }
     pub inline fn arraySize(self: HeapObjectConstPtr) !usize {
         const head = self.header;
@@ -874,6 +889,7 @@ pub const HeapObject = packed struct {
         const head = self.header;
         const ivs = try self.instVars();
         if (index < 0 or index >= ivs.len) return error.indexOutOfRange;
+        trace("\nbefore\n", .{});
         if (obj.asMemoryObject()) |otherHeapObject| {
             if (otherHeapObject.header.age.needsPromotionTo(head.age))
                 return error.needsPromotion;
@@ -921,8 +937,9 @@ pub const HeapObject = packed struct {
     pub inline fn isRaw(self: HeapObjectConstPtr) bool {
         return self.format.isRaw();
     }
-    pub inline fn asObject(self: HeapObjectConstPtr) Object {
-        return Object.from(self);
+    pub inline //
+    fn asObject(self: HeapObjectConstPtr) Object {
+        return Object.from(self, null);
     }
     pub inline fn asObjectValue(self: HeapObjectConstPtr) Object {
         return @bitCast(self.*);
@@ -940,6 +957,9 @@ pub const HeapObject = packed struct {
         return @as([*]align(@alignOf(u64)) Object, @ptrFromInt(@intFromPtr(self))) + 1;
     }
     pub inline fn start(self: HeapObjectConstPtr) [*]Object {
+        return @constCast(@ptrCast(self));
+    }
+    pub inline fn array(self: HeapObjectConstPtr, T: type) [*]T {
         return @constCast(@ptrCast(self));
     }
 };
@@ -1022,7 +1042,7 @@ test "compile time2" {
 }
 test "compile time3" {
     if (!debugError)
-        try std.testing.expect(mem.eql(u8, try Object.from(abcde).arrayAsSlice(u8), "abcdefghijklm"));
+        try std.testing.expect(mem.eql(u8, try Object.from(abcde, null).arrayAsSlice(u8), "abcdefghijklm"));
 }
 test "compile time4" {
     try std.testing.expect(mem.eql(u8, try strings[3].arrayAsSlice(u8), "False"));

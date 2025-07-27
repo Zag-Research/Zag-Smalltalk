@@ -2,7 +2,7 @@
 const std = @import("std");
 const assert = std.debug.assert;
 const mem = std.mem;
-pub const page_size = mem.page_size;
+pub const page_size = std.heap.page_size_min;
 const builtin = @import("builtin");
 const os = std.posix;
 

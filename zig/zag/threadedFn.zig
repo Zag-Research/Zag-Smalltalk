@@ -31,22 +31,26 @@ const symbol = zag.symbol;
 // contain any support fn/const/var declarations as well as tests.
 // Any other public declarations in the import will be ignored.
 
-const structures = struct {
-    pub usingnamespace @import("controlWords.zig");
-    pub usingnamespace @import("controlWords.zig").testFunctions;
-    pub usingnamespace @import("dispatch.zig").threadedFunctions;
-    pub usingnamespace @import("primitives.zig").threadedFunctions;
-    pub usingnamespace @import("context.zig").threadedFunctions;
-    pub usingnamespace @import("process.zig").threadedFunctions;
-    pub usingnamespace if (is_test) struct {
+const structures = .{
+    @import("controlWords.zig"),
+    @import("dispatch.zig").threadedFunctions,
+    @import("primitives.zig").threadedFunctions,
+    @import("context.zig").threadedFunctions,
+    @import("process.zig").threadedFunctions,
+    if (is_test) struct {
         // these are just for testing to  verify that we can filter them out
         // pub const T = u32; // don't know how to filter these out
-        pub const ignoreCTInt = 42;
-        pub const ignoreInt: usize = 42;
-        pub fn ignore() void {}
-    } else struct {};
-};
-
+        const ignoreCTInt = 42;
+        const ignoreInt: usize = 42;
+        fn ignore() void {}
+    } else struct {},
+} ++ @import("primitives.zig").primitiveThreadedFunctions;
+//comptime {@compileLog(structures[6].asThunk);}
+fn declsCount() usize {
+    comptime var count = 0;
+    for (structures) |structure| count += @typeInfo(structure).@"struct".decls.len;
+    return count;
+}
 fn enumLessThan(_: void, lhs: EnumSort, rhs: EnumSort) bool {
     switch (std.math.order(lhs.order, rhs.order)) {
         .eq => return std.mem.lessThan(u8, lhs.field.name, rhs.field.name),
@@ -57,72 +61,70 @@ fn enumLessThan(_: void, lhs: EnumSort, rhs: EnumSort) bool {
 const EnumSort = struct {
     field: *const std.builtin.Type.Declaration,
     order: usize,
+    threadedFn: ThreadedFn.Fn,
 };
 const addUnrecognized = true;
-pub const Enum =
+const enumAndFunctions =
     blk: {
-    @setEvalBranchQuota(100000);
-    const decls = @typeInfo(structures).@"struct".decls;
-    var array: [decls.len]EnumSort = undefined;
-    var n = 0;
-    for (decls) |decl| {
-        const ds = @field(structures, decl.name);
-        switch (@typeInfo(@TypeOf(ds))) {
-            .comptime_int, .int, .@"fn", .array => {},
-            else => {
-                if (@hasDecl(ds, "threadedFn")) {
-                    if (@hasDecl(ds, "order")) {
-                        array[n] = .{ .field = &decl, .order = @field(ds, "order") };
-                    } else array[n] = .{ .field = &decl, .order = 0 };
-                    n += 1;
+        @setEvalBranchQuota(100000);
+        var array: [declsCount()]EnumSort = undefined;
+        var n = 0;
+        for (structures) |structure| {
+            const decls = @typeInfo(structure).@"struct".decls;
+            for (decls) |decl| {
+                const ds = @field(structure, decl.name);
+                switch (@typeInfo(@TypeOf(ds))) {
+                    .comptime_int, .int, .@"fn", .array => {},
+                    else => {
+                        if (@hasDecl(ds, "threadedFn")) {
+                            if (@hasDecl(ds, "order")) {
+                                array[n] = .{ .field = &decl, .order = @field(ds, "order"), .threadedFn = @field(ds, "threadedFn") };
+                            } else array[n] = .{ .field = &decl, .order = 0, .threadedFn = @field(ds, "threadedFn") };
+                            n += 1;
+                        }
+                    },
                 }
-            },
-        }
-    }
-    const enums = array[0..n];
-    std.mem.sort(EnumSort, enums, {}, enumLessThan);
-    var fields = @typeInfo(enum {}).@"enum".fields;
-    for (enums, 0..) |d, i| {
-        fields = fields ++ [_]std.builtin.Type.EnumField{.{
-            .name = d.field.name,
-            .value = i,
-        }};
-    }
-    if (addUnrecognized) {
-        fields = fields ++ [_]std.builtin.Type.EnumField{.{
-            .name = "Code.end",
-            .value = fields.len,
-        }};
-        fields = fields ++ [_]std.builtin.Type.EnumField{.{
-            .name = "Unrecognized",
-            .value = 9999,
-        }};
-    }
-    //@compileLog(fields);
-    break :blk @Type(.{ .@"enum" = .{
-        .tag_type = usize,
-        .is_exhaustive = false,
-        .fields = fields,
-        .decls = &.{},
-    } });
-};
-
-pub const functions =
-    blk: {
-    const arraySize = @typeInfo(Enum).@"enum".fields.len - if (addUnrecognized) 1 else 0;
-    var array: [arraySize]ThreadedFn.Fn = undefined;
-    for (@typeInfo(Enum).@"enum".fields) |d| {
-        if (d.value < arraySize) {
-            if (d.value == arraySize - 1) {
-                array[d.value] = &execute.Code.end;
-            } else {
-                const ds = @field(structures, d.name);
-                array[d.value] = &@field(ds, "threadedFn");
             }
         }
-    }
-    break :blk array;
-};
+        const enums = array[0..n];
+        std.mem.sort(EnumSort, enums, {}, enumLessThan);
+        var fields = @typeInfo(enum {}).@"enum".fields;
+        for (enums, 0..) |d, i| {
+            fields = fields ++ [_]std.builtin.Type.EnumField{.{
+                .name = d.field.name,
+                .value = i,
+            }};
+        }
+        if (addUnrecognized) {
+            fields = fields ++ [_]std.builtin.Type.EnumField{.{
+                .name = "_end",
+                .value = fields.len,
+            }};
+            fields = fields ++ [_]std.builtin.Type.EnumField{.{
+                .name = "Unrecognized",
+                .value = 9999,
+            }};
+        }
+        //@compileLog(fields);
+        const arraySize = enums.len + if (addUnrecognized) 1 else 0;
+        var arrayFns: [arraySize]ThreadedFn.Fn = undefined;
+        for (enums, 0..) |eb, index| {
+            arrayFns[index] = eb.threadedFn;
+        }
+        if (addUnrecognized) {
+            arrayFns[arraySize - 1] = &execute.Code.end;
+        }
+
+        break :blk .{ @Type(.{ .@"enum" = .{
+            .tag_type = usize,
+            .is_exhaustive = false,
+            .fields = fields,
+            .decls = &.{},
+        } }), arrayFns };
+    };
+
+pub const Enum = enumAndFunctions[0];
+pub const functions = enumAndFunctions[1];
 
 pub fn initialize() void {}
 pub fn threadedFn(key: Enum) ThreadedFn.Fn {
@@ -135,7 +137,7 @@ pub fn find(f: ThreadedFn.Fn) Enum {
     return .Unrecognized;
 }
 comptime {
-    assert(structures.branch.threadedFn == threadedFn(.branch));
+    assert(@import("controlWords.zig").branch.threadedFn == threadedFn(.branch));
 }
 test "number of threaded functions" {
     if (true) return error.SkipZigTest;

@@ -14,10 +14,11 @@ Class {
 
 { #category : 'printing' }
 ASCVariableOperations >> inspectZagASTOn: aStream [
+
 	super inspectZagASTOn: aStream.
 	aStream tab.
-	aStream << '???' "variableLocation name"
-	
+	aStream << 'into: '.
+	aStream << variableLocation name
 ]
 
 { #category : 'testing' }

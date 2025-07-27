@@ -198,17 +198,6 @@ ASCodeGenerator >> generateTemp [
 	^ code nextSequence
 ]
 
-{ #category : 'accessing' }
-ASCodeGenerator >> getOrMakeReturnBlock [
-
-	^ code nextBasicBlocks ifNil: [
-		  | tempBlock |
-		  tempBlock := self newInline.
-		  tempBlock branchedToFrom: code.
-		  tempBlock returnTop.
-		  tempBlock ]
-]
-
 { #category : 'initialization' }
 ASCodeGenerator >> initCode [
 
@@ -245,8 +234,12 @@ ASCodeGenerator >> inlinePrimitive: aCompiledMethod for: aClass from: anASCSend 
 
 	| primitive |
 	primitive := aCompiledMethod primitive.
-	returnBlock := self getOrMakeReturnBlock.
-	(primitive between: 201 and: 210) ifTrue: [ ^ self inlineValue: (aCompiledMethod numArgs) for: aClass next: returnBlock ].
+	returnBlock := self makeReturnBlock.
+	(primitive between: 201 and: 210) ifTrue: [
+			^ self
+				  inlineValue: aCompiledMethod numArgs
+				  for: aClass
+				  next: returnBlock ].
 	code replaceOperation: (ASCEmbed new
 			 selector: aCompiledMethod selector;
 			 primitive: primitive).
@@ -316,6 +309,17 @@ ASCodeGenerator >> lookupLocal: aSymbol [
 ASCodeGenerator >> lookupObject: anObject [
 
 	^ self incompleteImplementation
+]
+
+{ #category : 'accessing' }
+ASCodeGenerator >> makeReturnBlock [
+
+	^ code nextBasicBlocks ifNil: [
+			  | tempBlock |
+			  tempBlock := self newInline.
+			  tempBlock branchedToFrom: code.
+			  tempBlock returnTop.
+			  tempBlock ]
 ]
 
 { #category : 'private - testing' }

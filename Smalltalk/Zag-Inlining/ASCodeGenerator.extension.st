@@ -7,28 +7,25 @@ ASCodeGenerator >> inlineBlock: offset next: common [
 	savedTargetClass := targetClass.
 	savedReturn := returnBlock.
 	[
-	| inlineBlock |
-	returnBlock := common.
-	
-	code removeLastOperation.
-	
-	blockClosure := (code stackBelow: offset) stackValue.
-	blockClosures remove: blockClosure.
-	
-	inlineBlock := self newInlinedBlock: blockClosure ast.
-	inlineBlock initNamedIndirect: code.
-	
-	self branch: inlineBlock.
-	code := inlineBlock.
-	
-	inlineBlock branch: returnBlock.
-	blockClosure ast zigWalkMethod: self.
-	
-	 ] 
-	ensure: [
-		code := returnBlock.
-		returnBlock := savedReturn.
-		targetClass := savedTargetClass ]
+		| inlineBlock |
+		returnBlock := common.
+
+		code removeLastOperation.
+
+		blockClosure := (code stackBelow: offset) stackValue.
+		blockClosures remove: blockClosure.
+
+		inlineBlock := self newInlinedBlock: blockClosure ast.
+		inlineBlock initNamedIndirect: code.
+
+		self branch: inlineBlock.
+		code := inlineBlock.
+
+		inlineBlock branch: returnBlock.
+		blockClosure ast zigWalkMethod: self ] ensure: [
+			code := returnBlock.
+			returnBlock := savedReturn.
+			targetClass := savedTargetClass ]
 ]
 
 { #category : '*Zag-Inlining' }
@@ -40,14 +37,15 @@ ASCodeGenerator >> inlineMethod: aMethodAST for: inlinedTargetClass from: anASCS
 	code removeLastOperation.
 	inlineBlock copyStackFrom: code.
 	[
-	targetClass := inlinedTargetClass.
-	self branch: inlineBlock.
-	returnBlock := self getOrMakeReturnBlock.
-	code := inlineBlock.
-	(ASPharoCompiler new astFor: aMethodAST) zigWalkMethod: self ]
+		targetClass := inlinedTargetClass.
+		self branch: inlineBlock.
+		
+		code := inlineBlock.
+		returnBlock := self makeReturnBlock.
+		(ASPharoCompiler new astFor: aMethodAST) zigWalkMethod: self ]
 		ensure: [ "when you hit a return while walking the method you need to not do returnTop you need to return to returnBlock""self can hold the return block"
-			code := returnBlock.
-			targetClass := savedTargetClass ]
+				code := returnBlock.
+				targetClass := savedTargetClass ]
 ]
 
 { #category : '*Zag-Inlining' }

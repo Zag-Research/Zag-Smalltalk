@@ -2,7 +2,7 @@
 
 ### Smalltalk
 
-- [Rewilding Software Engineering  - currently to Chapter 4](https://medium.com/feenk/rewilding-software-engineering-900ca95ebc8c)
+- [Rewilding Software Engineering  - currently to Chapter 5](https://medium.com/feenk/rewilding-software-engineering-900ca95ebc8c)
 - [Blue Book](http://stephane.ducasse.free.fr/FreeBooks/BlueBook/Bluebook.pdf)
 - [Jecel's list of Smalltalks](https://github.com/jeceljr/SmalltalkSurvey)
 - [UTF8 strings for Pharo](https://github.com/svenvc/UTF8String)
@@ -32,11 +32,18 @@ $ make install
 - [HydraVM](http://www.hydravm.org/hydra)
 - [GraalVM](https://www.graalvm.org)
 
+### WUFFS
+- [wuffs](https://github.com/google/wuffs/tree/main/doc/std) is a buffer-safe library for transcoding arbitrary input, including:
+	- [Compression Decoders](https://github.com/google/wuffs/blob/main/doc/std/compression-decoders.md).
+	- [Hashers](https://github.com/google/wuffs/blob/main/doc/std/hashers.md).
+	- [Image Decoders](https://github.com/google/wuffs/blob/main/doc/std/image-decoders.md).
 ### Memory Management
 #### mimalloc
 - [on github](https://github.com/microsoft/mimalloc)
 - has some interesting ideas similar to those I was thinking about
 - [this post](https://github.com/microsoft/mimalloc/issues/215#issuecomment-599711867) provides some hints about their memory structure
+#### Mesh
+- [Mesh](https://github.com/plasma-umass/Mesh) is a high performance malloc
 #### Mist
 - [MistDesign](MistDesign.md) also has some ideas we modify
 #### Garbage Collectors

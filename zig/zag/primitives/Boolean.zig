@@ -95,10 +95,6 @@ pub const primitives = struct {
         unreachable;
     }
 };
-const e = struct {
-    usingnamespace execute.controlPrimitives;
-    usingnamespace embedded;
-};
 // test "ifTrue:" {
 //     const expectEqual = std.testing.expectEqual;
 //     var prog = compileMethod(sym.value,0,0,.{

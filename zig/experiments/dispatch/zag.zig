@@ -8,4 +8,3 @@ pub const symbol = zag.symbol;
 pub const config = zag.config;
 pub const heap = zag.heap;
 pub const main = zag;
-

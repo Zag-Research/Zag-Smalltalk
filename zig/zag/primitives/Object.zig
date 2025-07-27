@@ -44,7 +44,7 @@ pub const inlines = struct {
         return error.primitiveError;
     }
     pub inline fn @"=="(self: Object, other: Object) bool { // Identical - can't fail
-        return self == other;
+        return self.equals(other);
     }
     pub inline fn @"atAllPut:"(self: Object, other: Object) !Object {
         _ = self;
@@ -67,16 +67,16 @@ pub const @"basicAt:" = struct {
 };
 pub const @"==" = struct {
     pub const number = 110;
-    pub fn primitive(_: PC, sp: SP, process: *Process, context: *Context, _: Extra) Result {
-        const newSp = sp.dropPut(Object.from(inlines.@"=="(sp.next, sp.top)));
-        return @call(tailCall, process.check(context.npc.f), .{ context.tpc, newSp, process, context, undefined });
+    pub fn primitive(_: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
+        const newSp = sp.dropPut(Object.from(inlines.@"=="(sp.next, sp.top), null));
+        return @call(tailCall, process.check(context.npc.f), .{ context.tpc, newSp, process, context, extra });
     }
 };
 pub const @"~~" = struct {
     pub const number = 169;
-    pub fn primitive(_: PC, sp: SP, process: *Process, context: *Context, _: Extra) Result {
-        const newSp = sp.dropPut(Object.from(inlines.@"~~"(sp.next, sp.top)));
-        return @call(tailCall, process.check(context.npc.f), .{ context.tpc, newSp, process, context, undefined });
+    pub fn primitive(_: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
+        const newSp = sp.dropPut(Object.from(inlines.@"~~"(sp.next, sp.top), null));
+        return @call(tailCall, process.check(context.npc.f), .{ context.tpc, newSp, process, context, extra });
     }
 };
 pub const @"perform:" = struct { // perform: perform:with: perform:with:with: perform:with:with:with:

@@ -1,1 +1,14 @@
-*.st text linguist-language=Smalltalk
+# Force LF line endings for all text file types
+# Some non-text (binary) files may appear as "changed" due to index metadata,
+# but their actual content remains untouched.
+* text=auto eol=lf
+
+# Mark binary files to be left alone
+*.pdf   binary
+*.jpg   binary
+*.jpeg  binary
+*.png   binary
+*.mp4   binary
+*.zip   binary
+*.exe   binary
+*.ico   binary
