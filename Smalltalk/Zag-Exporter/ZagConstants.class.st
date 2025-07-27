@@ -405,7 +405,8 @@ ZagConstants class >> threadedAPI [
 { #category : 'class initialization' }
 ZagConstants class >> threadedOperations [
 
-	^ (ZagOperations allSubclasses select: [ : class | class methodDict includesKey: #resultStack: ]
+	^ (ZagOperations allSubclasses select: [ : class |
+		(class methodDict includesKey: #interpretFor:) and: [ (class >> #interpretFor:) isAbstract not ] ]
 	thenCollect: [ : class |
 		| n |
 		n := class name.
