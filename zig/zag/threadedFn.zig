@@ -120,17 +120,17 @@ const enumAndFunctions =
             .is_exhaustive = false,
             .fields = fields,
             .decls = &.{},
-        } }), arrayFns, arraySize };
+        } }), arrayFns };
     };
 
 pub const Enum = enumAndFunctions[0];
-pub const functions = enumAndFunctions[1];
+const functions = enumAndFunctions[1];
 
 // test "print threadedFns" {
 //     for (0 .. @typeInfo(Enum).@"enum".fields.len) |index| {
 //         std.debug.print("{s:<25}", .{@as(Enum, @enumFromInt(index))});
 //     }
-//     std.debug.print("\n", .{});
+//     std.debug.print("len: {}\n", .{array_size});
 //     // std.debug.print("git version: {s}\n", .{ config.git_version })
 // }
 
