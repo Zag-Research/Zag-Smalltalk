@@ -84,7 +84,7 @@ pub const @"perform:" = struct { // perform: perform:with: perform:with:with: pe
     pub fn primitive(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
         // the same primitive number is used for perform:, perform:with:, etc.
         // so we need to find out where the selector is
-        const arity = extra.method.signature.numArgs() - 1;
+        const arity = extra.getMethod().?.signature.numArgs() - 1;
         const selector = sp.at(arity);
         const numArgs = selector.numArgs();
         if (selector.isSymbol() and numArgs == arity) {

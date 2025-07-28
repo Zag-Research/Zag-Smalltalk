@@ -14,6 +14,7 @@ const Nil = object.Nil;
 const True = object.True;
 const False = object.False;
 const Context = zag.Context;
+const ContextData = zag.Context.ContextData;
 const heap = zag.heap;
 const HeapHeader = heap.HeapHeader;
 const HeapObject = heap.HeapObject;
@@ -47,15 +48,19 @@ const Stack = struct {
     fn from(self: anytype) SP {
         return @ptrCast(self);
     }
-    pub inline fn push(self: SP, v: Object) SP {
-        const newSp = self.reserve(1);
-        newSp.top = v;
-        return newSp;
+    pub inline fn push(self: SP, v: Object) ?SP {
+        if (self.reserve(1)) |newSp| {
+            newSp.top = @bitCast(v);
+            return newSp;
+        }
+        return null;
     }
-    pub inline fn pushRawInt(self: SP, v: u64) SP {
-        const newSp = self.reserve(1);
-        newSp.top = @bitCast(v);
-        return newSp;
+    pub inline fn pushRawInt(self: SP, v: u64) ?SP {
+        if (self.reserve(1)) |newSp| {
+            newSp.top = @bitCast(v);
+            return newSp;
+        }
+        return null;
     }
     pub inline fn dropPut(self: SP, v: Object) SP {
         self.next = v;
@@ -64,7 +69,16 @@ const Stack = struct {
     pub inline fn drop(self: SP) SP {
         return self.unreserve(1);
     }
-    pub inline fn reserve(self: SP, n: usize) SP {
+    pub inline fn reserve(self: SP, n: anytype) ?SP {
+        const selfInt = @intFromPtr(self);
+        const newInt = selfInt - @sizeOf(Object) * n;
+        if (n == 1 and newInt & Process.stack_mask > 0) {
+            return @ptrFromInt(newInt);
+        } else if ((selfInt & Process.stack_mask_overflow) == (newInt & Process.stack_mask_overflow)) {
+            return @ptrFromInt(newInt);
+        } else return null;
+    }
+    pub inline fn safeReserve(self: SP, n: usize) SP {
         return @ptrFromInt(@intFromPtr(self) - @sizeOf(Object) * n);
     }
     pub inline fn unreserve(self: SP, n: usize) SP {
@@ -100,38 +114,52 @@ test "Stack" {
     const sp0 = @as(SP, @ptrCast(&stack[10]));
     sp0.top = True();
     try ee(True(), stack[10]);
-    const sp1 = sp0.push(False());
+    const sp1 = sp0.push(False()).?;
     try ee(True(), stack[10]);
     try ee(False(), stack[9]);
     _ = sp1.drop().push(Object.from(42, &process));
     try ee(Object.from(42, &process).to(i64), 42);
     try ee(stack[9].to(i64), 42);
 }
-pub const Extra = union {
-    method: *CompiledMethod,
-    object: Object,
-    contextData: *const Context.ContextData,
-    pub fn forMethod(method: *const CompiledMethod) Extra {
-        return .{ .method = @constCast(method) };
+pub const Extra = struct {
+    int: u64,
+    const stack_mask = Process.stack_mask;
+    const is_encoded = stack_mask + 1;
+    // Three states:
+    //  - method is not encoded - is_encoded will not be set and low bits not zero
+    //  - method is encoded - is_encoded will be set and low bits not zero
+    //  - contextData - low bits zero
+    pub fn forMethod(method: *const CompiledMethod, sp: SP) Extra {
+        // guaranteed that the low bits of sp are not zero by design in Process
+        const stackOffset = @intFromPtr(sp) & stack_mask;
+        return .{ .int = @intFromPtr(method) << 16 | stackOffset };
     }
-    pub fn fromContext(context: *const Context) Extra {
-        return .{ .contextData = @constCast(context.contextData) };
+    pub fn fromContextData(contextData: *const ContextData) Extra {
+        return .{ .int = @intFromPtr(contextData) << 16 };
+    }
+    pub fn getContextData(self: Extra) *ContextData {
+        return @ptrFromInt(self.int >> 16);
+    }
+    pub fn noContext(self: Extra) bool {
+        return self.int & stack_mask != 0;
+    }
+    pub fn getMethod(self: Extra) ?*const CompiledMethod {
+        if (self.noContext()) {
+            return @ptrFromInt(self.int >> 16);
+        }
+        return null;
+    }
+    pub fn addressIfNoContext(_: Extra, _: usize, _: SP) ?[*]Object {
+        @panic("needContext");
     }
     pub fn encoded(self: Extra) Extra {
-        @setRuntimeSafety(false);
-        if (self.object.tagMethod()) |obj| {
-            return .{ .object = obj };
-        } else {
-            std.debug.print("encoded: {} {x:0>16}\n", .{ self, @intFromPtr(self.method) });
-            @panic("weird method");
-        }
+        return .{ .int = self.int | is_encoded };
     }
     pub fn decoded(self: Extra) Extra {
-        return .{ .object = self.object.tagMethodValue() };
+        return .{ .int = self.int & ~is_encoded };
     }
     pub fn isEncoded(self: Extra) bool {
-        @setRuntimeSafety(false);
-        return self.object.isTaggedMethod();
+        return self.int & is_encoded != 0;
     }
     pub fn primitiveFailed(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
         if (config.logThreadExecution)
@@ -429,7 +457,6 @@ pub const StackStructure = packed struct {
     _filler: std.meta.Int(.unsigned, 64 - 33 - @bitSizeOf(Object.LowTagType) - @bitSizeOf(Object.HighTagType)) = 0,
     hightTag: object.Object.HighTagType = object.Object.highTagSmallInteger,
 };
-pub const StackAndContext = struct { sp: SP, context: *Context };
 pub const endMethod = CompiledMethod.init(Nil(), Code.end);
 pub const CompiledMethod = struct {
     header: HeapHeader,
@@ -466,18 +493,18 @@ pub const CompiledMethod = struct {
             .code = .{ Code.primOf(methodFn), undefined }, //TODO: should be something like primitiveFailed
         };
     }
-    pub inline fn reserve(spaceToReserve: u11, sp: SP, process: *Process, context: *Context) StackAndContext {
+    pub inline fn reserve(spaceToReserve: u11, sp: SP, process: *Process, context: *Context, extra: Extra) struct { SP, *Context, Extra } {
         if (!process.canAllocStackSpace(sp, spaceToReserve))
-            return process.spillStack(sp, context);
-        return .{ .sp = sp, .context = context };
+            return process.spillStack(sp, context, extra);
+        return .{ sp, context, extra };
     }
-    pub fn execute(self: *Self, sp: SP, process: *Process, context: *Context) Result {
-        const new = reserve(self.stackStructure.reserve, sp, process, context);
+    pub fn execute(self: *Self, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
+        const newSp, const newContext, const newExtra = reserve(self.stackStructure.reserve, sp, process, context, extra);
         const pc = PC.init(&self.code[0]);
         trace("\nexecute: {}", .{pc});
         //        trace(" {}", .{ new.sp });
         trace(" {x}\n", .{@as(u64, @bitCast(self.signature))});
-        return pc.prim()(pc.next(), new.sp, process, new.context, .{ .method = self });
+        return pc.prim()(pc.next(), newSp, process, newContext, newExtra);
     }
     // pub fn forDispatch(self: *Self, class: ClassIndex) void {
     //     self.signature.setClass(class);
@@ -1012,7 +1039,7 @@ pub const Execution = struct {
                 }
             }
             fn initStack(self: *Self, source: []const Object) void {
-                const sp = self.process.endOfStack().reserve(source.len);
+                const sp = self.process.endOfStack().safeReserve(source.len);
                 self.process.setSp(sp);
                 for (source, sp.slice(source.len)) |src, *stck|
                     stck.* = src;
@@ -1033,6 +1060,12 @@ pub const Execution = struct {
             pub fn getContext(self: *const Self) *Context {
                 return self.process.getContext();
             }
+            pub fn getSp(self: *const Self) SP {
+                return self.process.getSp();
+            }
+            pub fn getExtra(self: *const Self) Extra {
+                return Extra.forMethod(self.method.asCompiledMethodPtr(), self.process.getSp());
+            }
             pub fn execute(self: *Self, source: []const Object) !void {
                 const method: *CompiledMethod = self.method.asCompiledMethodPtr();
                 self.init(source);
@@ -1042,7 +1075,7 @@ pub const Execution = struct {
                     for (ptr[0 .. @sizeOf(MethodType) / 8], 0..) |*v, idx|
                         std.debug.print("[{:>2}:{x:0>16}]: {x:0>16}\n", .{ idx, @intFromPtr(v), v.* });
                 }
-                _ = method.execute(self.process.getSp(), &self.process, self.process.getContext());
+                _ = method.execute(self.process.getSp(), &self.process, self.getContext(), self.getExtra());
             }
             pub fn matchStack(self: *const Self, expected: []const Object) !void {
                 const result = self.stack();

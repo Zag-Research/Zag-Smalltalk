@@ -8,6 +8,7 @@ pub fn trace(comptime format: anytype, values: anytype) void {
     if (show_trace) std.debug.print(format, values);
 }
 pub const includeLLVM = options.includeLLVM;
+pub const git_version = options.git_version;
 pub const objectEncoding: Encoding = .zag;
 
 pub const debugging = false;

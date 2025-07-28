@@ -134,7 +134,7 @@ test "definitions" {
 }
 
 fn push42(_: PC, sp: SP, _: *Process, _: *Context, extra: Extra) Result {
-    const newSp = sp.push(Object.from(42));
+    const newSp = sp.push(Object.from(42)).?;
     return newSp;
 }
 test "send with dispatch direct" {
@@ -339,7 +339,7 @@ pub const controlPrimitivesX = struct {
     //     const newSp = sp.push(Object.from(-1));
     //     return @call(tailCall, process.check(pc.prim()), .{ pc.next(), newSp, process, context, undefined });
     // }
-    pub fn pushLiteralIndirect(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
+    pub fn pushLiteralIndirectX(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
         const newSp = sp.push(pc.literalIndirect());
         return @call(tailCall, process.check(pc.prim2()), .{ pc.next2(), newSp, process, context, undefined });
     }

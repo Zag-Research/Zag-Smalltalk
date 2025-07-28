@@ -38,8 +38,9 @@ const CodeContextPtr = execute.CodeContextPtr;
 /// this is really a Process object with the low bits encoding additional information
 m: [process_total_size]u8 align(1), // alignment explicitly stated to emphasize the difference from Process
 const process_total_size = if (config.is_test) 2048 else 64 * 1024; // must be more than HeapObject.maxLength*8 so externally allocated
-pub const alignment = zag.utilities.largerPowerOf2(Process.stack_size);
-pub const stack_full_mask = alignment - 1;
+pub const alignment = @max(stack_mask_overflow, flagMask + 1);
+pub const stack_mask_overflow = zag.utilities.largerPowerOf2(Process.stack_size * @sizeOf(Object));
+pub const stack_mask = stack_mask_overflow - 1;
 const Process = extern struct {
     stack: [stack_size]Object align(alignment),
     h: Fields,
@@ -61,12 +62,10 @@ const Process = extern struct {
     const headerSize = @sizeOf(Fields);
     const processAvail = (process_total_size - headerSize) / @sizeOf(Object);
     const approx_nursery_size = (processAvail - processAvail / 9) / 2;
-    const stack_size = @min(processAvail - approx_nursery_size * 2, 0x7ff);
+    const stack_size = @min(processAvail - approx_nursery_size * 2, (1 << 16) / @sizeOf(Object) - 1);
     const nursery_size = (processAvail - stack_size) / 2;
     comptime {
         assert(stack_size <= nursery_size);
-        assert(alignment < 0x1000);
-        assert(flagMask < alignment);
     }
     const lastNurseryAge = Age.lastNurseryAge;
     const maxNurseryObjectSize = @min(HeapHeader.maxLength, nursery_size / 4);
@@ -118,7 +117,7 @@ pub fn deinit(self: *align(1) Self) void {
     self.ptr().* = undefined;
 }
 const countType = u5;
-const countMask: usize = math.maxInt(u5);
+const countMask: usize = math.maxInt(countType);
 const countOverflowFlag = countMask + 1;
 const nonCount = ~(countOverflowFlag + countMask);
 const othersFlag = countOverflowFlag << 1;
@@ -177,9 +176,18 @@ pub inline fn getHeap(self: *align(1) const Self) []HeapObject {
 pub inline fn freeNursery(self: *align(1) const Self) usize {
     return (@intFromPtr(self.header().currEnd) - @intFromPtr(self.header().currHp)) / 8;
 }
-pub fn spillStack(self: *align(1) Self, sp: SP, context: *Context) execute.StackAndContext {
-    if (!context.isOnStack()) return .{ .sp = sp, .context = context };
-    // if the Context is on the stack, both the Context and the SP will move
+pub fn spillStackAndPush(self: *align(1) Self, value: Object, sp: SP, context: *Context, extra: Extra) struct { SP, *Context, Extra } {
+    const newSp, const newContext, const newExtra = self.spillStackAndReserve(1, sp, context, extra);
+    newSp.top = value;
+    return .{ newSp, newContext, newExtra };
+}
+pub fn spillStackAndReserve(self: *align(1) Self, reserve: usize, sp: SP, context: *Context, extra: Extra) struct { SP, *Context, Extra } {
+    const newSp, const newContext, const newExtra = self.spillStackAndReserve(reserve, sp, context, extra);
+    return .{ newSp.safeReserve(reserve), newContext, newExtra };
+}
+pub fn spillStack(self: *align(1) Self, sp: SP, context: *Context, extra: Extra) struct { SP, *Context, Extra } {
+    if (!context.isOnStack()) return .{ sp, context, extra };
+    // if the Context is on the stack, the Context, Extra and SP will move
     _ = .{ self, @panic("unimplemented") };
 }
 pub fn allocArray(self: *align(1) Self, slice: []const Object, sp: SP, context: *Context) HeapObjectArray {
@@ -335,11 +343,11 @@ test "nursery allocation" {
     trace(" {x}\n", .{o2.asObject().testU()});
     try o1.instVarPut(0, o2.asObject());
     trace("\npoint\n", .{});
-    sp = sp.push(o1.asObject());
+    sp = sp.push(o1.asObject()).?;
     trace("\npoint\n", .{});
-    const news = pr.spillStack(sp, &initialContext);
-    try ee(sp, news.sp);
-    try ee(&initialContext, news.context);
+    const news, const newContext, _ = pr.spillStack(sp, &initialContext, Extra{ .int = 0 });
+    try ee(sp, news);
+    try ee(&initialContext, newContext);
     trace("\npoint\n", .{});
     pr.collectNursery(sp, &initialContext, 0);
     try ee(emptySize - switch (config.objectEncoding) {
@@ -376,7 +384,7 @@ pub const threadedFunctions = struct {
     pub const pushThisProcess = struct {
         pub fn threadedFn(pc: PC, sp: SP, process: *Self, context: *Context, extra: Extra) Result {
             const newSp = sp.push(process.ptr().h.process);
-            return @call(tailCall, process.check(pc.prim()), .{ pc.next(), newSp, process, context, extra });
+            return @call(tailCall, process.check(pc.prim()), .{ pc.next(), newSp.?, process, context, extra });
         }
     };
 };

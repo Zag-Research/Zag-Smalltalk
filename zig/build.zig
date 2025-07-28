@@ -33,7 +33,7 @@ pub fn build(b: *std.Build) void {
     // to our consumers. We must give it a name because a Zig package can expose
     // multiple modules and consumers will need to be able to specify which
     // module they want to access.
-    const mod = b.createModule(.{//("zag", .{
+    const mod = b.createModule(.{ //("zag", .{
         // The root source file is the "entry point" of this module. Users of
         // this module will only be able to access public declarations contained
         // in this file, which means that if you have declarations that you
@@ -177,6 +177,10 @@ pub fn build(b: *std.Build) void {
         includeLLVM = true;
     }
     options.addOption(bool, "includeLLVM", includeLLVM);
+    // const get_command_output = b.addSystemCommand(&.{ "git", "rev-parse", "--short", "HEAD" });
+    // const git_version = get_command_output.captureStdOut();
+    // options.addOption([]const u8, "git_version", git_version);
+
     if (includeLLVM) {
         mod.addImport("llvm-build-module", llvm_module);
         exe.root_module.addImport("llvm-build-module", llvm_module);

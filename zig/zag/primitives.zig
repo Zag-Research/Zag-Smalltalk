@@ -30,7 +30,9 @@ const modules = [_]Module{
     // Module.init(@import("primitives/Behavior.zig").module),
     Module.init(@import("primitives/BlockClosure.zig")),
     // Module.init(@import("primitives/Boolean.zig").module),
-    Module.init(if (config.includeLLVM) @import("primitives/llvm-primitives.zig") else struct {const moduleName = "llvm";}),
+    Module.init(if (config.includeLLVM) @import("primitives/llvm-primitives.zig") else struct {
+        const moduleName = "llvm";
+    }),
     // Module.init(@import("dispatch.zig")),
     Module.init(@import("controlWords.zig").module),
 };
@@ -132,7 +134,7 @@ const testModule = if (config.is_test) struct {
         pub fn primitiveError(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
             if (sp.next.immediate_class() != sp.top.immediate_class()) {
                 const newSp = sp.push(Sym.value.asObject());
-                return @call(tailCall, Extra.primitiveFailed, .{ pc, newSp, process, context, extra });
+                return @call(tailCall, Extra.primitiveFailed, .{ pc, newSp.?, process, context, extra });
             } else {
                 const newSp = sp.dropPut(Object.from(sp.next == sp.top, null));
                 return @call(tailCall, process.check(context.npc.f), .{ context.tpc, newSp, process, context, extra });
@@ -157,7 +159,7 @@ fn noPrim(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Re
     // return @call(tailCall, Extra.primitiveFailed, .{ pc, sp, process, context, extra });
 }
 fn noPrimWithError(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
-    const newSp = sp.push(Nil());
+    const newSp = sp.push(Nil()).?;
     return @call(tailCall, Extra.primitiveFailed, .{ pc, newSp, process, context, extra });
 }
 
@@ -169,7 +171,7 @@ pub const threadedFunctions = struct {
                 return @call(tailCall, process.check(newPc.prim()), .{ newPc.next(), sp, process, context, extra.decoded() });
             }
             const primNumber = pc.uint();
-            const method = extra.method;
+            const method: *execute.CompiledMethod = @constCast(extra.getMethod().?);
             if (Module.findNumberedPrimitive(primNumber)) |prim| {
                 if (prim.primitive) |p| {
                     method.executeFn = p;
@@ -250,14 +252,14 @@ pub const threadedFunctions = struct {
             const primNumber = pc.uint();
             if (Module.findNumberedPrimitive(primNumber)) |prim| {
                 if (prim.primitiveError) |p| {
-                    const method = extra.method;
+                    const method: *execute.CompiledMethod = @constCast(extra.getMethod().?);
                     method.executeFn = p;
                     method.jitted = p;
                     return @call(tailCall, p, .{ pc, sp, process, context, extra });
                 } else if (config.is_test)
                     @panic("found primitive: need primitive:error:");
             }
-            const method = extra.method;
+            const method: *execute.CompiledMethod = @constCast(extra.getMethod().?);
             method.executeFn = noPrimWithError;
             method.jitted = noPrimWithError;
             return @call(tailCall, noPrimWithError, .{ pc, sp, process, context, extra });
@@ -333,7 +335,7 @@ pub const threadedFunctions = struct {
                 if (pc.next().object().arrayAsSlice(u8) catch null) |modName| {
                     if (Module.findNamedPrimitive(modName, primName)) |prim| {
                         if (prim.primitive) |p| {
-                            const method = extra.method;
+                            const method: *execute.CompiledMethod = @constCast(extra.getMethod().?);
                             method.executeFn = p;
                             method.jitted = p;
                             return @call(tailCall, p, .{ pc, sp, process, context, extra });
@@ -342,7 +344,7 @@ pub const threadedFunctions = struct {
                     }
                 }
             }
-            const method = extra.method;
+            const method: *execute.CompiledMethod = @constCast(extra.getMethod().?);
             method.executeFn = noPrim;
             method.jitted = noPrim;
             return @call(tailCall, noPrim, .{ pc, sp, process, context, extra });
@@ -415,7 +417,7 @@ pub const threadedFunctions = struct {
                 if (pc.next().object().arrayAsSlice(u8) catch null) |modName| {
                     if (Module.findNamedPrimitive(modName, primName)) |prim| {
                         if (prim.primitiveError) |p| {
-                            const method = extra.method;
+                            const method: *execute.CompiledMethod = @constCast(extra.getMethod().?);
                             method.executeFn = p;
                             method.jitted = p;
                             return @call(tailCall, p, .{ pc, sp, process, context, extra });
@@ -424,7 +426,7 @@ pub const threadedFunctions = struct {
                     }
                 }
             }
-            const method = extra.method;
+            const method: *execute.CompiledMethod = @constCast(extra.getMethod().?);
             method.executeFn = noPrimWithError;
             method.jitted = noPrimWithError;
             return @call(tailCall, noPrimWithError, .{ pc, sp, process, context, extra });
@@ -501,16 +503,14 @@ pub const threadedFunctions = struct {
             @panic("found primitive:error: need primitive:");
         }
         test "inlinePrimitive found" {
-            var exe = Execution.initTest(
-                "inlinePrimitive: found",
-                .{
-                    tf.inlinePrimitive,
-                    "0prim",
-                    tf.inlinePrimitive,
-                    "0prim",
-                    tf.pushLiteral,
-                    99,
-                });
+            var exe = Execution.initTest("inlinePrimitive: found", .{
+                tf.inlinePrimitive,
+                "0prim",
+                tf.inlinePrimitive,
+                "0prim",
+                tf.pushLiteral,
+                99,
+            });
             try exe.resolve(&[_]Object{Sym.value.withPrimitive(998)});
             try exe.execute(&[_]Object{
                 Object.from(42, null),

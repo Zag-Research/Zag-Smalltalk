@@ -346,7 +346,7 @@ pub const threadedFunctions = struct {
             context.setReturn(pc.next2());
             const method = pc.method();
             const newPc = method.codePc();
-            return @call(tailCall, process.check(method.executeFn), .{ newPc.next(), sp, process, context, Extra.forMethod(method) });
+            return @call(tailCall, process.check(method.executeFn), .{ newPc.next(), sp, process, context, Extra.forMethod(method, sp) });
         }
     };
     pub const cullColon = struct {
@@ -357,7 +357,7 @@ pub const threadedFunctions = struct {
     pub const returnSelf = struct {
         pub fn threadedFn(_: PC, _: SP, process: *Process, context: *Context, _: Extra) Result {
             const newSp, const callerContext = context.pop(process);
-            return @call(tailCall, process.check(callerContext.getNPc()), .{ callerContext.getTPc(), newSp, process, callerContext, Extra.fromContext(callerContext) });
+            return @call(tailCall, process.check(callerContext.getNPc()), .{ callerContext.getTPc(), newSp, process, callerContext, Extra.fromContextData(callerContext.contextData) });
         }
     };
     pub const returnSelfNoContext = struct {
@@ -393,7 +393,7 @@ pub const threadedFunctions = struct {
             newSp.top = top;
             trace("-> {x}", .{@intFromPtr(newSp)});
             trace("-> {any}", .{callerContext.stack(newSp, process)});
-            return @call(tailCall, process.check(callerContext.getNPc()), .{ callerContext.getTPc(), newSp, process, callerContext, Extra.fromContext(callerContext) });
+            return @call(tailCall, process.check(callerContext.getNPc()), .{ callerContext.getTPc(), newSp, process, callerContext, Extra.fromContextData(callerContext.contextData) });
         }
     };
     pub const returnTopNoContext = struct {
@@ -402,7 +402,7 @@ pub const threadedFunctions = struct {
             const top = sp.top;
             const newSp = sp.unreserve(selfOffset);
             newSp.top = top;
-            return @call(tailCall, process.check(context.npc.f), .{ context.tpc, newSp, process, context, Extra.fromContext(context) });
+            return @call(tailCall, process.check(context.npc.f), .{ context.tpc, newSp, process, context, Extra.fromContextData(context.contextData) });
         }
         test "returnTopNoContext" {
             try Execution.runTest(
@@ -437,7 +437,7 @@ pub const threadedFunctions = struct {
         pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, _: Extra) Result {
             const method = sendGetMethod(pc, sp, context);
             const newPc = method.codePc();
-            return @call(tailCall, newPc.prim(), .{ newPc.next(), sp, process, context, Extra.forMethod(method) });
+            return @call(tailCall, newPc.prim(), .{ newPc.next(), sp, process, context, Extra.forMethod(method, sp) });
         }
     };
     fn tailGetMethod(pc: PC, sp: SP) *const CompiledMethod {

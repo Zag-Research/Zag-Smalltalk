@@ -38,7 +38,7 @@ pub const ThunkReturnSmallInteger = struct {
         const result = Object.from(@as(i50, val.extraI()), null);
         const targetContext = val.highPointer(*Context).?;
         const newSp, const callerContext = targetContext.popTargetContext(process, result);
-        return @call(tailCall, process.check(callerContext.getNPc()), .{ callerContext.getTPc(), newSp, process, callerContext, Extra.fromContext(callerContext) });
+        return @call(tailCall, process.check(callerContext.getNPc()), .{ callerContext.getTPc(), newSp, process, callerContext, Extra.fromContextData(callerContext.contextData) });
     }
     const name = stringOf("ThunkReturnSmallInteger").init().obj();
     test "ThunkReturnSmallInteger" {
