@@ -45,11 +45,13 @@ test "config" {
         \\  objectEncoding = {}
         \\  max_classes    = {}
         \\  native_endian  = {}
+        \\  git_version    = {s}
         \\
     , .{
         objectEncoding,
         max_classes,
         native_endian,
+        git_version,
     });
 }
 comptime {

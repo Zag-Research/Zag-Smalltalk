@@ -163,23 +163,12 @@ pub fn build(b: *std.Build) void {
     // LLVM MODULE
     var includeLLVM = false;
 
-    // Add a new option for specifying the LLVM path
-    if (b.option([]const u8, "llvm-path", "Path to the LLVM file")) |llvm_file_path| {
-        buildLLVMFile(b, .{
-            .filepath = llvm_file_path,
-            .target = target,
-            .optimize = .Debug,
-        }, llvm_module);
-        includeLLVM = true;
-    }
-
     if (b.option(bool, "llvm", "Include LLVM in build") orelse false) {
         includeLLVM = true;
     }
     options.addOption(bool, "includeLLVM", includeLLVM);
-    // const get_command_output = b.addSystemCommand(&.{ "git", "rev-parse", "--short", "HEAD" });
-    // const git_version = get_command_output.captureStdOut();
-    // options.addOption([]const u8, "git_version", git_version);
+    const git_version = b.run(&.{ "git", "log", "--pretty=format:%cI-%h", "-1" });
+    options.addOption([]const u8, "git_version", git_version);
 
     if (includeLLVM) {
         mod.addImport("llvm-build-module", llvm_module);
@@ -221,38 +210,3 @@ fn build_llvm_module(b: *std.Build, target: std.Build.ResolvedTarget, optimize: 
     }
     return llvm_module;
 }
-
-fn buildLLVMFile(b: *std.Build, i: BuildInfo, llvm_module: *std.Build.Module) void {
-    const root_mod = b.createModule(.{
-        .root_source_file = b.path(i.filepath),
-        .target = i.target,
-        .optimize = i.optimize,
-    });
-
-    root_mod.addImport("llvm-build-module", llvm_module);
-
-    const exe = b.addExecutable(.{ .name = i.filename(), .root_module = root_mod });
-
-    // Install the executable into zig-out/bin
-    b.installArtifact(exe);
-
-    const run_cmd = b.addRunArtifact(exe);
-    run_cmd.step.dependOn(b.getInstallStep());
-
-    if (b.args) |args| {
-        run_cmd.addArgs(args);
-    }
-
-    const run_step = b.step(i.filename(), b.fmt("Run the {s}", .{i.filename()}));
-    run_step.dependOn(&run_cmd.step);
-}
-const BuildInfo = struct {
-    filepath: []const u8,
-    target: std.Build.ResolvedTarget,
-    optimize: std.builtin.OptimizeMode,
-
-    fn filename(self: BuildInfo) []const u8 {
-        var split = std.mem.splitSequence(u8, std.fs.path.basename(self.filepath), ".");
-        return split.first();
-    }
-};

@@ -64,12 +64,14 @@ const EnumSort = struct {
     threadedFn: ThreadedFn.Fn,
 };
 const addUnrecognized = true;
+const showThreadedFns = false;
 const enumAndFunctions =
     blk: {
         @setEvalBranchQuota(100000);
         var array: [declsCount()]EnumSort = undefined;
         var n = 0;
         for (structures) |structure| {
+            if (showThreadedFns) @compileLog(structure);
             const decls = @typeInfo(structure).@"struct".decls;
             for (decls) |decl| {
                 const ds = @field(structure, decl.name);
@@ -77,6 +79,7 @@ const enumAndFunctions =
                     .comptime_int, .int, .@"fn", .array => {},
                     else => {
                         if (@hasDecl(ds, "threadedFn")) {
+                            if (showThreadedFns and !(@hasDecl(ds,"forTests") and @field(ds,"forTests"))) @compileLog(decl.name);
                             if (@hasDecl(ds, "order")) {
                                 array[n] = .{ .field = &decl, .order = @field(ds, "order"), .threadedFn = @field(ds, "threadedFn") };
                             } else array[n] = .{ .field = &decl, .order = 0, .threadedFn = @field(ds, "threadedFn") };
@@ -105,7 +108,6 @@ const enumAndFunctions =
                 .value = 9999,
             }};
         }
-        //@compileLog(fields);
         const arraySize = enums.len + if (addUnrecognized) 1 else 0;
         var arrayFns: [arraySize]ThreadedFn.Fn = undefined;
         for (enums, 0..) |eb, index| {
@@ -127,11 +129,10 @@ pub const Enum = enumAndFunctions[0];
 const functions = enumAndFunctions[1];
 
 // test "print threadedFns" {
-//     for (0 .. @typeInfo(Enum).@"enum".fields.len) |index| {
-//         std.debug.print("{s:<25}", .{@as(Enum, @enumFromInt(index))});
+//     for (@typeInfo(Enum).@"enum".fields) |field| {
+//         std.debug.print("{s:<25}", .{field.name});
 //     }
-//     std.debug.print("len: {}\n", .{array_size});
-//     // std.debug.print("git version: {s}\n", .{ config.git_version })
+//     std.debug.print("\n", .{});
 // }
 
 pub fn initialize() void {}
