@@ -341,32 +341,16 @@ fn doDispatch(tE: *Execution, dispatch: *Dispatch, extra: Extra) []Object {
 // }
 pub const threadedFunctions = struct {
     const tf = zag.threadedFn.Enum;
-    pub const callMethod = struct {
-        pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, _: Extra) Result {
-            context.setReturn(pc.next2());
-            const method = pc.method();
-            const newPc = method.codePc();
-            return @call(tailCall, process.check(method.executeFn), .{ newPc.next(), sp, process, context, Extra.forMethod(method, sp) });
-        }
-    };
-    pub const cullColon = struct {
-        pub fn threadedFnX(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
-            _ = .{ pc, sp, process, context, extra, unreachable };
-        }
-    };
     pub const returnSelf = struct {
         pub fn threadedFn(_: PC, _: SP, process: *Process, context: *Context, _: Extra) Result {
             const newSp, const callerContext = context.pop(process);
             return @call(tailCall, process.check(callerContext.getNPc()), .{ callerContext.getTPc(), newSp, process, callerContext, Extra.fromContextData(callerContext.contextData) });
-        }
-    };
-    pub const returnSelfNoContext = struct {
-        pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, _: Extra) Result {
-            const selfOffset = pc.uint();
-            const newSp = sp.unreserve(selfOffset);
-            return @call(tailCall, process.check(context.getNPc()), .{ context.getTPc(), newSp, process, context, undefined });
+            // const selfOffset = pc.uint();
+            // const newSp = sp.unreserve(selfOffset);
+            // return @call(tailCall, process.check(context.getNPc()), .{ context.getTPc(), newSp, process, context, undefined });
         }
         test "returnSelfNoContext" {
+            if (true) return error.NotImplemented;
             try Execution.runTest(
                 "returnSelfNoContext",
                 .{
@@ -374,7 +358,7 @@ pub const threadedFunctions = struct {
                     91,
                     tf.pushLiteral,
                     17,
-                    tf.returnSelfNoContext,
+                    tf.returnSelf,
                     2,
                     tf.pushLiteral,
                     99,
@@ -393,18 +377,16 @@ pub const threadedFunctions = struct {
             newSp.top = top;
             trace("-> {x}", .{@intFromPtr(newSp)});
             trace("-> {any}", .{callerContext.stack(newSp, process)});
-            return @call(tailCall, process.check(callerContext.getNPc()), .{ callerContext.getTPc(), newSp, process, callerContext, Extra.fromContextData(callerContext.contextData) });
-        }
-    };
-    pub const returnTopNoContext = struct {
-        pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, _: Extra) Result {
-            const selfOffset = pc.uint();
-            const top = sp.top;
-            const newSp = sp.unreserve(selfOffset);
-            newSp.top = top;
+            if (true) unreachable;
+            // return @call(tailCall, process.check(callerContext.getNPc()), .{ callerContext.getTPc(), newSp, process, callerContext, Extra.fromContextData(callerContext.contextData) });
+            // const selfOffset = pc.uint();
+            // const top = sp.top;
+            // const newSp = sp.unreserve(selfOffset);
+            // newSp.top = top;
             return @call(tailCall, process.check(context.npc), .{ context.tpc, newSp, process, context, Extra.fromContextData(context.contextData) });
         }
         test "returnTopNoContext" {
+            if (true) return error.NotImplemented;
             try Execution.runTest(
                 "returnTopNoContext",
                 .{
@@ -412,7 +394,7 @@ pub const threadedFunctions = struct {
                     91,
                     tf.pushLiteral,
                     42,
-                    tf.returnTopNoContext,
+                    tf.returnTop,
                     2,
                     tf.pushLiteral,
                     99,
@@ -445,35 +427,14 @@ pub const threadedFunctions = struct {
         const receiver = sp.at(selector.numArgs());
         return receiver.get_class().lookupMethodForClass(selector);
     }
-    pub const tailCallMethod = struct {
-        pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, _: Extra) Result {
-            const method = pc.method();
-            const newPc = method.codePc();
-            if (true) unreachable;
-            return @call(tailCall, process.check(method.executeFn), .{ newPc.next(), sp, process, context, Extra.forMethod(method) });
-        }
-    };
-    pub const tailCallMethodNoContext = struct {
-        pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, _: Extra) Result {
-            const method = pc.method();
-            const newPc = method.codePc();
-            if (true) unreachable;
-            return @call(tailCall, process.check(method.executeFn), .{ newPc.next(), sp, process, context, Extra.forMethod(method) });
-        }
-    };
     pub const tailSend = struct {
         pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, _: Extra) Result {
             const method = tailGetMethod(pc, sp);
             const newPc = method.codePc();
             if (true) unreachable;
-            return @call(tailCall, newPc.prim(), .{ newPc.next(), sp, process, context, Extra.forMethod(method) });
-        }
-    };
-    pub const tailSendNoContext = struct {
-        pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, _: Extra) Result {
-            const method = tailGetMethod(pc, sp);
-            const newPc = method.codePc();
-            if (true) unreachable;
+            // return @call(tailCall, newPc.prim(), .{ newPc.next(), sp, process, context, Extra.forMethod(method) });
+            // const method = tailGetMethod(pc, sp);
+            // const newPc = method.codePc();
             return @call(tailCall, newPc.prim(), .{ newPc.next(), sp, process, context, Extra.forMethod(method) });
         }
     };

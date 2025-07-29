@@ -56,7 +56,7 @@ pub const branch = struct {
         var exe = Execution.initTest("branch", .{
             tf.branch,
             "label",
-            tf.pushLocal,
+            tf.push,
             17,
             ":label",
         });
@@ -168,25 +168,6 @@ pub const drop = struct {
         );
     }
 };
-pub const dropNext = struct {
-    pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
-        const newSp = sp.dropPut(sp.top);
-        return @call(tailCall, process.check(pc.prim()), .{ pc.next(), newSp, process, context, extra });
-    }
-    test "dropNext" {
-        try Execution.runTest(
-            "dropNext",
-            .{tf.dropNext},
-            &[_]Object{
-                Object.from(42, null),
-                Object.from(17, null),
-            },
-            &[_]Object{
-                Object.from(42, null),
-            },
-        );
-    }
-};
 pub const dup = struct {
     pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
         const value = sp.top;
@@ -213,30 +194,14 @@ pub const dup = struct {
         );
     }
 };
-pub const over = struct {
+pub const pop = struct {
     pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
-        const value = sp.next;
-        if (sp.push(value)) |newSp| {
-            return @call(tailCall, process.check(pc.prim()), .{ pc.next(), newSp, process, context, extra });
-        } else {
-            const newSp, const newContext, const newExtra = process.spillStackAndPush(value, sp, context, extra);
-            return @call(tailCall, process.check(pc.prim()), .{ pc.next(), newSp, process, newContext, newExtra });
-        }
-    }
-    test "over" {
-        try Execution.runTest(
-            "over",
-            .{tf.over},
-            &[_]Object{
-                Object.from(17, null),
-                Object.from(42, null),
-            },
-            &[_]Object{
-                Object.from(42, null),
-                Object.from(17, null),
-                Object.from(42, null),
-            },
-        );
+        if (extra.noContext())
+            return @call(tailCall, Context.threadedFunctions.pushContext.threadedFn, .{ pc.prev(), sp, process, context, extra });
+        const address = Context.getAddress(pc.object(), sp, extra);
+        address.* = sp.top;
+        const newSp = sp.drop();
+        return @call(tailCall, process.check(pc.prim2()), .{ pc.skip(2), newSp, process, context, extra });
     }
 };
 pub const popAssociationValue = struct {
@@ -268,6 +233,39 @@ pub const popAssociationValue = struct {
             &[_]Object{},
         );
         try expectEqual(Object.from(42, null), association.objects[2]);
+    }
+};
+pub const push = struct {
+    pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
+        const address = Context.getAddress(pc.object(), sp, extra);
+        const value = address.*;
+        if (sp.push(value)) |newSp| {
+            return @call(tailCall, process.check(pc.prim2()), .{ pc.next2(), newSp, process, context, extra });
+        } else {
+            const newSp, const newContext, const newExtra = process.spillStackAndPush(value, sp, context, extra);
+            return @call(tailCall, process.check(pc.prim2()), .{ pc.next2(), newSp, process, newContext, newExtra });
+        }
+    }
+    test "pushStack" {
+        if (true) return error.UnimplementedTest;
+        try Execution.runTest(
+            "pushStack",
+            .{ tf.pushLocal, 1, tf.pushLocal, 4 },
+            &[_]Object{
+                Object.from(42, null),
+                Object.from(17, null),
+                Object.from(2, null),
+                Object.from(3, null),
+            },
+            &[_]Object{
+                Object.from(3, null),
+                Object.from(17, null),
+                Object.from(42, null),
+                Object.from(17, null),
+                Object.from(2, null),
+                Object.from(3, null),
+            },
+        );
     }
 };
 pub const pushAssociationValue = struct {
@@ -327,92 +325,17 @@ pub const pushLiteral = struct {
         );
     }
 };
-pub const pushClosure = struct {
+pub const store = struct {
     pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
-        const structure: PackedObject = pc.packedObject();
-        const stackedFields = structure.f1;
-        const stackOffset = structure.f2;
-        const stackReserve = structure.f3;
-        _ = stackReserve;
-        const includeContext = structure.f4;
-        const size = stackedFields + 1 + includeContext;
-        var tempBuffer: [10]Object = undefined;
-        const temp = tempBuffer[0..stackedFields]; // ToDo: verify that fits
-        for (temp, sp.slice(stackedFields)) |*t, s|
-            t.* = s;
-        const newSp, const newContext, const newExtra =
-            if (sp.reserve(3 + includeContext)) |anSp| blk: {
-                break :blk .{ anSp, context, extra };
-            } else process.spillStackAndReserve(3 + includeContext, sp, context, extra);
-        const copySize = stackOffset - stackedFields;
-        for (newSp.unreserve(1).slice(copySize), sp.unreserve(stackedFields).slice(copySize)) |*d, s|
-            d.* = s;
-        const closure = newSp.unreserve(copySize + 1).slice(size + 1);
-        for (closure[2 + includeContext ..], temp) |*d, s|
-            d.* = s;
-        closure[0] = (HeapHeader.calc(.BlockClosure, @truncate(size), @truncate(@intFromPtr(sp)), .onStack, null, Object, false) catch unreachable).o();
-        closure[1] = pc.next().object();
-        if (includeContext != 0) closure[2] = Object.from(context, null);
-        newSp.top = Object.from(closure.ptr, null);
-        return @call(tailCall, process.check(pc.skip(2).prim()), .{ pc.skip(2).next(), newSp, process, newContext, newExtra });
-    }
-    const testMethod = compileMethod(Sym.yourself, 0, 0, .BlockClosure, .{});
-    test "pushClosure" {
-        if (true) return error.NotImplemented;
-        var exe = Execution.initTest("pushClosure", .{
-            tf.pushLiteral,
-            42,
-            tf.pushLiteral,
-            "1True",
-            tf.pushLiteral,
-            "2Nil",
-            tf.pushLiteral,
-            1,
-            tf.pushClosure,
-            comptime object14(.{ 3, 4, 0 }),
-            "0block",
-        });
-        try exe.resolve(&[_]Object{ Object.from(&testMethod, null), True(), Nil() });
-        try exe.execute(&[_]Object{
-            Object.from(17, null),
-        });
-        const stack = exe.stack();
-        try expectEqual(Object.from(&stack[2], null), stack[0]);
-        try expectEqual(Object.from(42, null), stack[1]);
-        const header: HeapHeader = @bitCast(stack[2]);
-        try expectEqual(.onStack, header.age);
-        try expectEqual(4, header.length);
-        try expectEqual(.BlockClosure, header.classIndex);
-        try expectEqual(Object.from(&testMethod, null), stack[3]);
-        try expectEqual(Object.from(1, null), stack[4]);
-        try expectEqual(Nil(), stack[5]);
-        try expectEqual(True(), stack[6]);
-        try expectEqual(Object.from(17, null), stack[7]);
-    }
-};
-pub const swap = struct {
-    pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
-        const saved = sp.top;
-        sp.top = sp.next;
-        sp.next = saved;
-        return @call(tailCall, process.check(pc.prim()), .{ pc.next(), sp, process, context, extra });
-    }
-    test "swap" {
-        try Execution.runTest(
-            "swap",
-            .{tf.swap},
-            &[_]Object{
-                Object.from(17, null),
-                Object.from(42, null),
-            },
-            &[_]Object{
-                Object.from(42, null),
-                Object.from(17, null),
-            },
-        );
+        if (extra.noContext())
+            return @call(tailCall, Context.threadedFunctions.pushContext.threadedFn, .{ pc.prev(), sp, process, context, extra });
+        const address = Context.getAddress(pc.object(), sp, extra);
+        address.* = sp.top;
+        return @call(tailCall, process.check(pc.prim2()), .{ pc.next2(), sp, process, context, extra });
     }
 };
 pub const callLabel = if (zag.config.is_test) struct {
+    pub const forTests = true;
     pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, _: Extra) Result {
         const target = pc.targetPC();
         // skip the structure word

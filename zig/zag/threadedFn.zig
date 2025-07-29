@@ -57,6 +57,7 @@ fn declsCount() usize {
     return count;
 }
 fn enumLessThan(_: void, lhs: EnumSort, rhs: EnumSort) bool {
+    if (lhs.production != rhs.production) return lhs.production;
     switch (std.math.order(lhs.order, rhs.order)) {
         .eq => return std.mem.lessThan(u8, lhs.field.name, rhs.field.name),
         .lt => return true,
@@ -66,17 +67,17 @@ fn enumLessThan(_: void, lhs: EnumSort, rhs: EnumSort) bool {
 const EnumSort = struct {
     field: *const std.builtin.Type.Declaration,
     order: usize,
+    production: bool,
     threadedFn: *const fn (programCounter: PC, stackPointer: SP, process: *Process, context: *Context, signature: Extra) Result,
 };
 const addUnrecognized = true;
-const showThreadedFns = false;
 const enumAndFunctions =
     blk: {
         @setEvalBranchQuota(100000);
         var array: [declsCount()]EnumSort = undefined;
         var n = 0;
+        var nProd = 0;
         for (structures) |structure| {
-            if (showThreadedFns) @compileLog(structure);
             const decls = @typeInfo(structure).@"struct".decls;
             for (decls) |decl| {
                 const ds = @field(structure, decl.name);
@@ -84,11 +85,12 @@ const enumAndFunctions =
                     .comptime_int, .int, .@"fn", .array => {},
                     else => {
                         if (@hasDecl(ds, "threadedFn")) {
-                            if (showThreadedFns and !(@hasDecl(ds,"forTests") and @field(ds,"forTests"))) @compileLog(decl.name);
+                            const forProduction = !(@hasDecl(ds,"forTests") and @field(ds,"forTests"));
                             if (@hasDecl(ds, "order")) {
-                                array[n] = .{ .field = &decl, .order = @field(ds, "order"), .threadedFn = @field(ds, "threadedFn") };
-                            } else array[n] = .{ .field = &decl, .order = 0, .threadedFn = @field(ds, "threadedFn") };
+                                array[n] = .{ .field = &decl, .order = @field(ds, "order"), .production = forProduction, .threadedFn = @field(ds, "threadedFn") };
+                            } else array[n] = .{ .field = &decl, .order = 0, .production = forProduction, .threadedFn = @field(ds, "threadedFn") };
                             n += 1;
+                            if (forProduction) nProd += 1;
                         }
                     },
                 }
@@ -127,18 +129,19 @@ const enumAndFunctions =
             .is_exhaustive = false,
             .fields = fields,
             .decls = &.{},
-        } }), arrayFns };
+        } }), arrayFns, nProd };
     };
 
 pub const Enum = enumAndFunctions[0];
 const functions = enumAndFunctions[1];
+const nProduction = enumAndFunctions[2];
 
-// test "print threadedFns" {
-//     for (@typeInfo(Enum).@"enum".fields) |field| {
-//         std.debug.print("{s:<25}", .{field.name});
-//     }
-//     std.debug.print("\n", .{});
-// }
+test "print threadedFns" {
+    for (0..nProduction) |index| {
+        std.debug.print("{s} ", .{@tagName(@as(Enum, @enumFromInt(index)))});
+    }
+    std.debug.print("\n", .{});
+}
 
 pub fn initialize() void {}
 pub fn threadedFn(key: Enum) *const fn (programCounter: PC, stackPointer: SP, process: *Process, context: *Context, signature: Extra) Result {

@@ -22,10 +22,13 @@ const Compact = object.ClassIndex.Compact;
 const Nil = object.Nil;
 const True = object.True;
 const False = object.False;
+const PackedObject = object.PackedObject;
+const object14 = object.PackedObject.object14;
 const Sym = zag.symbol.symbols;
 const heap = zag.heap;
 const tf = zag.threadedFn.Enum;
 const stringOf = zag.heap.CompileTimeString;
+const HeapHeader = zag.heap.HeapHeader;
 const expectEqual = std.testing.expectEqual;
 
 pub fn moduleInit() void {}
@@ -203,6 +206,74 @@ pub const threadedFns = struct {
             }
         }
     };
+    pub const cullColon = struct {
+        pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
+            _ = .{ pc, sp, process, context, extra, unreachable };
+        }
+    };
+   pub const pushClosure = struct {
+        pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
+            const structure: PackedObject = pc.packedObject();
+            const stackedFields = structure.f1;
+            const stackOffset = structure.f2;
+            const stackReserve = structure.f3;
+            _ = stackReserve;
+            const includeContext = structure.f4;
+            const size = stackedFields + 1 + includeContext;
+            var tempBuffer: [10]Object = undefined;
+            const temp = tempBuffer[0..stackedFields]; // ToDo: verify that fits
+            for (temp, sp.slice(stackedFields)) |*t, s|
+                t.* = s;
+            const newSp, const newContext, const newExtra =
+                if (sp.reserve(3 + includeContext)) |anSp| blk: {
+                    break :blk .{ anSp, context, extra };
+                } else process.spillStackAndReserve(3 + includeContext, sp, context, extra);
+            const copySize = stackOffset - stackedFields;
+            for (newSp.unreserve(1).slice(copySize), sp.unreserve(stackedFields).slice(copySize)) |*d, s|
+                d.* = s;
+            const closure = newSp.unreserve(copySize + 1).slice(size + 1);
+            for (closure[2 + includeContext ..], temp) |*d, s|
+                d.* = s;
+            closure[0] = (HeapHeader.calc(.BlockClosure, @truncate(size), @truncate(@intFromPtr(sp)), .onStack, null, Object, false) catch unreachable).o();
+            closure[1] = pc.next().object();
+            if (includeContext != 0) closure[2] = Object.from(context, null);
+            newSp.top = Object.from(closure.ptr, null);
+            return @call(tailCall, process.check(pc.skip(2).prim()), .{ pc.skip(2).next(), newSp, process, newContext, newExtra });
+        }
+        const testMethod = compileMethod(Sym.yourself, 0, 0, .BlockClosure, .{});
+        test "pushClosure" {
+            if (true) return error.NotImplemented;
+            var exe = Execution.initTest("pushClosure", .{
+                tf.pushLiteral,
+                42,
+                tf.pushLiteral,
+                "1True",
+                tf.pushLiteral,
+                "2Nil",
+                tf.pushLiteral,
+                1,
+                tf.pushClosure,
+                comptime object14(.{ 3, 4, 0 }),
+                "0block",
+            });
+            try exe.resolve(&[_]Object{ Object.from(&testMethod, null), True(), Nil() });
+            try exe.execute(&[_]Object{
+                Object.from(17, null),
+            });
+            const stack = exe.stack();
+            try expectEqual(Object.from(&stack[2], null), stack[0]);
+            try expectEqual(Object.from(42, null), stack[1]);
+            const header: HeapHeader = @bitCast(stack[2]);
+            try expectEqual(.onStack, header.age);
+            try expectEqual(4, header.length);
+            try expectEqual(.BlockClosure, header.classIndex);
+            try expectEqual(Object.from(&testMethod, null), stack[3]);
+            try expectEqual(Object.from(1, null), stack[4]);
+            try expectEqual(Nil(), stack[5]);
+            try expectEqual(True(), stack[6]);
+            try expectEqual(Object.from(17, null), stack[7]);
+        }
+    };
     pub const value = struct {
         pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
             const val = sp.top;
@@ -264,7 +335,7 @@ pub const threadedFns = struct {
         }
     };
     pub const valueColon = struct {
-        fn threadedFn(pc: PC, sp: SP, process: *Process, context: Context, _: Extra) Result {
+        pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, _: Extra) Result {
             const val = sp.next;
             if (val.isImmediate()) {
                 switch (val.class) {

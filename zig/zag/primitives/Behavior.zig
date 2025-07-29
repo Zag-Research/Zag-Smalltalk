@@ -1,8 +1,9 @@
 const std = @import("std");
-const config = @import("../config.zig");
+const zag = @import("../zag.zig");
+const config = zag.config;
 const tailCall = config.tailCall;
 const trace = config.trace;
-const execute = @import("../execute.zig");
+const execute = zag.execute;
 const SendCache = execute.SendCache;
 const Context = execute.Context;
 const ContextPtr = *Context;
@@ -11,14 +12,18 @@ const PC = execute.PC;
 const SP = execute.SP;
 const compileMethod = execute.compileMethod;
 const CompiledMethodPtr = execute.CompiledMethodPtr;
-const Process = @import("../process.zig").Process;
-const object = @import("../zobject.zig");
+const Process = zag.Process;
+const object = zag.object;
 const Object = object.Object;
 const Nil = object.Nil;
 const True = object.True;
 const False = object.False;
-const Sym = @import("../symbol.zig").symbols;
-const heap = @import("../heap.zig");
+const Sym = zag.symbol.symbols;
+const heap = zag.heap;
+const tf = zag.threadedFn.Enum;
+const stringOf = zag.heap.CompileTimeString;
+const HeapHeader = zag.heap.HeapHeader;
+const expectEqual = std.testing.expectEqual;
 
 pub fn init() void {}
 

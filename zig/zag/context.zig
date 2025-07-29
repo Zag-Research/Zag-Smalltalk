@@ -198,12 +198,6 @@ pub inline fn setResult(self: *const Context, value: Object) void {
     const wordsToDiscard = self.asHeapObjectPtr().hash16();
     self.asObjectPtr()[wordsToDiscard] = value;
 }
-pub inline fn getLocalX(self: *const Context, indices: Object) Object {
-    return self.contextData.localAddress(indices).*;
-}
-pub inline fn setLocalX(self: ContextPtr, indices: Object, v: Object) void {
-    self.contextData.localAddress(indices).* = v;
-}
 pub inline fn previous(self: *const Context) ContextPtr {
     return self.prevCtxt orelse @panic("0 prev");
 }
@@ -229,24 +223,22 @@ pub fn print(self: *const Context, process: *const Process) void {
         ctxt.print(process);
     }
 }
+pub fn getAddress(obj: Object, sp: SP, extra: Extra) *Object {
+    if (obj.nativeU()) |r| {
+        var objs: [*]Object =
+            if (extra.addressIfNoContext((r >> 8) & 0xff, sp)) |stackOffsetAddress| stackOffsetAddress else extra.getContextData().localAddress(r & 0xff);
+        var ref = r >> 16;
+        while (ref > 0) {
+            objs = objs[ref & 0x3ff].to([*]Object);
+            ref = ref >> 10;
+        }
+        return &objs[0];
+    }
+    unreachable;
+}
 pub const threadedFunctions = struct {
     const tf = zag.threadedFn.Enum;
     const expect = std.testing.expect;
-    pub const makeImmediateClosure = struct {
-        pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, signature: Extra) Result {
-            _ = .{ pc, sp, process, context, signature, unreachable };
-        }
-    };
-    pub const popLocal = struct {
-        pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
-            if (extra.noContext())
-                return @call(tailCall, pushContext.threadedFn, .{ pc.prev(), sp, process, context, extra });
-            const address = getAddress(pc.object(), sp, extra);
-            address.* = sp.top;
-            const newSp = sp.drop();
-            return @call(tailCall, process.check(pc.prim2()), .{ pc.skip(2), newSp, process, context, extra });
-        }
-    };
     pub const pushContext = struct {
         /// any inlinePrimitive or threadedFn that needs a context can call this to create one
         /// and then re-execute the original operation; simply:
@@ -290,52 +282,6 @@ pub const threadedFunctions = struct {
         //     std.debug.print("init: 8\n", .{});
         // }
     };
-    fn getAddress(obj: Object, sp: SP, extra: Extra) *Object {
-        if (obj.nativeU()) |r| {
-            var objs: [*]Object =
-                if (extra.addressIfNoContext((r >> 8) & 0xff, sp)) |stackOffsetAddress| stackOffsetAddress else extra.getContextData().localAddress(r & 0xff);
-            var ref = r >> 16;
-            while (ref > 0) {
-                objs = objs[ref & 0x3ff].to([*]Object);
-                ref = ref >> 10;
-            }
-            return &objs[0];
-        }
-        unreachable;
-    }
-    pub const pushLocal = struct {
-        pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
-            const address = getAddress(pc.object(), sp, extra);
-            const value = address.*;
-            if (sp.push(value)) |newSp| {
-                return @call(tailCall, process.check(pc.prim2()), .{ pc.next2(), newSp, process, context, extra });
-            } else {
-                const newSp, const newContext, const newExtra = process.spillStackAndPush(value, sp, context, extra);
-                return @call(tailCall, process.check(pc.prim2()), .{ pc.next2(), newSp, process, newContext, newExtra });
-            }
-        }
-        test "pushStack" {
-            if (true) return error.UnimplementedTest;
-            try Execution.runTest(
-                "pushStack",
-                .{ tf.pushLocal, 1, tf.pushLocal, 4 },
-                &[_]Object{
-                    Object.from(42, null),
-                    Object.from(17, null),
-                    Object.from(2, null),
-                    Object.from(3, null),
-                },
-                &[_]Object{
-                    Object.from(3, null),
-                    Object.from(17, null),
-                    Object.from(42, null),
-                    Object.from(17, null),
-                    Object.from(2, null),
-                    Object.from(3, null),
-                },
-            );
-        }
-    };
     pub const pushThisContext = struct {
         pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
             if (extra.noContext())
@@ -347,15 +293,6 @@ pub const threadedFunctions = struct {
                 const newSp, const newContext, const newExtra = process.spillStackAndPush(value, sp, context, extra);
                 return @call(tailCall, process.check(pc.prim()), .{ pc.next(), newSp, process, newContext, newExtra });
             }
-        }
-    };
-    pub const storeLocal = struct {
-        pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
-            if (extra.noContext())
-                return @call(tailCall, pushContext.threadedFn, .{ pc.prev(), sp, process, context, extra });
-            const address = getAddress(pc.object(), sp, extra);
-            address.* = sp.top;
-            return @call(tailCall, process.check(pc.prim2()), .{ pc.next2(), sp, process, context, extra });
         }
     };
 };

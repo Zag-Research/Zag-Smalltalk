@@ -25,6 +25,7 @@ const Sym = zag.symbol.symbols;
 const modules = [_]Module{
     Module.init(testModule),
     Module.init(@import("primitives/Object.zig")),
+    Module.init(@import("primitives/Array.zig")),
     Module.init(@import("primitives/Smallinteger.zig")),
     // Module.init(@import("primitives/Behavior.zig").module),
     Module.init(@import("primitives/BlockClosure.zig")),
@@ -543,6 +544,7 @@ pub const threadedFunctions = struct {
     };
 };
 pub const primitiveThreadedFunctions = .{
+    @import("primitives/Array.zig").threadedFns,
     // @import("primitives/Object.zig").threadedFns,
     // @import("primitives/Smallinteger.zig").threadedFns,
     // @import("primitives/Behavior.zig").threadedFns,
@@ -550,6 +552,7 @@ pub const primitiveThreadedFunctions = .{
         // @import("primitives/Boolean.zig").threadedFns,
 };
 pub fn init() void {
+    @import("primitives/Array.zig").init();
     @import("primitives/Object.zig").init();
     // @import("primitives/Smallinteger.zig").init();
     // @import("primitives/Behavior.zig").init();
