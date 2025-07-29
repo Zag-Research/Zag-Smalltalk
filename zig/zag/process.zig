@@ -36,6 +36,7 @@ const Result = execute.Result;
 const CodeContextPtr = execute.CodeContextPtr;
 
 /// this is really a Process object with the low bits encoding additional information
+const Self = @This();
 m: [process_total_size]u8 align(1), // alignment explicitly stated to emphasize the difference from Process
 const process_total_size = if (config.is_test) 2048 else 64 * 1024; // must be more than HeapObject.maxLength*8 so externally allocated
 pub const alignment = @max(stack_mask_overflow, flagMask + 1);
@@ -51,7 +52,7 @@ const Process = extern struct {
         id: u64,
         context: *Context,
         trapContextNumber: u64,
-        debugFn: ?execute.ThreadedFn.Fn,
+        debugFn: ?*const fn (programCounter: PC, stackPointer: SP, process: *Self, context: *Context, signature: Extra) Result,
         sp: SP,
         process: Object,
         currHeap: HeapObjectArray,
@@ -86,7 +87,6 @@ pub fn format(
 comptime {
     assert(process_total_size == @sizeOf(Process));
 }
-const Self = @This();
 var allProcesses: ?*Self = null;
 pub inline fn ptr(self: *align(1) const Self) *Process {
     return @ptrFromInt(@intFromPtr(self) & nonFlags);
@@ -124,7 +124,7 @@ const othersFlag = countOverflowFlag << 1;
 const checkFlags = othersFlag | countOverflowFlag;
 const flagMask = checkFlags | countMask;
 const nonFlags = ~flagMask;
-pub inline fn check(self: *align(1) const Self, next: execute.ThreadedFn.Fn) execute.ThreadedFn.Fn {
+pub inline fn check(self: *align(1) const Self, next: *const fn (programCounter: PC, stackPointer: SP, process: *Self, context: *Context, signature: Extra) Result) *const fn (programCounter: PC, stackPointer: SP, process: *Self, context: *Context, signature: Extra) Result {
     return if (self.needsCheck()) &fullCheck else next;
 }
 inline fn needsCheck(self: *align(1) const Self) bool {

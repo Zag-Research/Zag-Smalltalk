@@ -11,7 +11,6 @@ const Nil = zag.object.Nil;
 const True = zag.object.True;
 const False = zag.object.False;
 const execute = zag.execute;
-const ThreadedFn = execute.ThreadedFn;
 const PC = execute.PC;
 const SP = execute.SP;
 const Execution = execute.Execution;
@@ -43,9 +42,9 @@ const Module = struct {
     const Primitive = struct {
         name: []const u8,
         number: u32,
-        primitive: ?ThreadedFn.Fn,
-        primitiveError: ?ThreadedFn.Fn,
-        inlinePrimitive: ?ThreadedFn.Fn,
+        primitive: ?*const fn (programCounter: PC, stackPointer: SP, process: *Process, context: *Context, signature: Extra) Result,
+        primitiveError: ?*const fn (programCounter: PC, stackPointer: SP, process: *Process, context: *Context, signature: Extra) Result,
+        inlinePrimitive: ?*const fn (programCounter: PC, stackPointer: SP, process: *Process, context: *Context, signature: Extra) Result,
         moduleInit: ?*const fn () void,
         method: ?*const execute.CompiledMethod,
     };
@@ -128,7 +127,7 @@ const testModule = if (config.is_test) struct {
                 return @call(tailCall, Extra.primitiveFailed, .{ pc, sp, process, context, extra });
             } else {
                 const newSp = sp.dropPut(Object.from(sp.next.equals(sp.top), null));
-                return @call(tailCall, process.check(context.npc.f), .{ context.tpc, newSp, process, context, extra });
+                return @call(tailCall, process.check(context.npc), .{ context.tpc, newSp, process, context, extra });
             }
         }
         pub fn primitiveError(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
@@ -137,7 +136,7 @@ const testModule = if (config.is_test) struct {
                 return @call(tailCall, Extra.primitiveFailed, .{ pc, newSp.?, process, context, extra });
             } else {
                 const newSp = sp.dropPut(Object.from(sp.next == sp.top, null));
-                return @call(tailCall, process.check(context.npc.f), .{ context.tpc, newSp, process, context, extra });
+                return @call(tailCall, process.check(context.npc), .{ context.tpc, newSp, process, context, extra });
             }
         }
         pub fn inlinePrimitive(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {

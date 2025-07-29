@@ -16,7 +16,6 @@ const Sym = symbol.symbols;
 const Process = @import("process.zig");
 const Context = @import("context.zig");
 const execute = @import("execute.zig");
-const ThreadedFn = execute.ThreadedFn;
 const PC = execute.PC;
 const SP = execute.SP;
 const Extra = execute.Extra;
@@ -105,7 +104,7 @@ pub const references = convertFn(.{
     &value,
     &valueColon,
 });
-fn convertFn(comptime source: anytype) [source.len]ThreadedFn {
+fn convertFn(comptime source: anytype) [source.len]*const fn (programCounter: PC, stackPointer: SP, process: *Process, context: *Context, signature: Extra) Result {
     var result: [source.len]ThreadedFn = undefined;
     inline for (source, &result) |src, *dst|
         dst.* = .{ .f = src };

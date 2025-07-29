@@ -20,7 +20,6 @@ const Sym = symbol.symbols;
 const Process = zag.Process;
 const Context = zag.Context;
 const execute = zag.execute;
-const ThreadedFn = execute.ThreadedFn;
 const PC = execute.PC;
 const SP = execute.SP;
 const Extra = execute.Extra;

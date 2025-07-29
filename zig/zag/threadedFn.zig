@@ -6,7 +6,12 @@ const is_test = zag.config.is_test;
 const object = zag.object;
 const Object = object.Object;
 const execute = zag.execute;
-const ThreadedFn = execute.ThreadedFn;
+const PC = execute.PC;
+const SP = execute.SP;
+const Extra = execute.Extra;
+const Result = execute.Result;
+const Process = zag.Process;
+const Context = zag.Context;
 const primitives = zag.primitives;
 const globalArena = zag.globalArena;
 const symbol = zag.symbol;
@@ -61,7 +66,7 @@ fn enumLessThan(_: void, lhs: EnumSort, rhs: EnumSort) bool {
 const EnumSort = struct {
     field: *const std.builtin.Type.Declaration,
     order: usize,
-    threadedFn: ThreadedFn.Fn,
+    threadedFn: *const fn (programCounter: PC, stackPointer: SP, process: *Process, context: *Context, signature: Extra) Result,
 };
 const addUnrecognized = true;
 const showThreadedFns = false;
@@ -109,7 +114,7 @@ const enumAndFunctions =
             }};
         }
         const arraySize = enums.len + if (addUnrecognized) 1 else 0;
-        var arrayFns: [arraySize]ThreadedFn.Fn = undefined;
+        var arrayFns: [arraySize]*const fn (programCounter: PC, stackPointer: SP, process: *Process, context: *Context, signature: Extra) Result = undefined;
         for (enums, 0..) |eb, index| {
             arrayFns[index] = eb.threadedFn;
         }
@@ -136,10 +141,10 @@ const functions = enumAndFunctions[1];
 // }
 
 pub fn initialize() void {}
-pub fn threadedFn(key: Enum) ThreadedFn.Fn {
+pub fn threadedFn(key: Enum) *const fn (programCounter: PC, stackPointer: SP, process: *Process, context: *Context, signature: Extra) Result {
     return functions[@intFromEnum(key)];
 }
-pub fn find(f: ThreadedFn.Fn) Enum {
+pub fn find(f: *const fn (programCounter: PC, stackPointer: SP, process: *Process, context: *Context, signature: Extra) Result) Enum {
     for (&functions, 0..) |func, index| {
         if (func == f) return @enumFromInt(index);
     }

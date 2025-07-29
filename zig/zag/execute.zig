@@ -187,10 +187,6 @@ pub const Extra = struct {
     }
 };
 pub const Result = SP;
-pub const ThreadedFn = struct {
-    f: Fn,
-    pub const Fn = *const fn (programCounter: PC, stackPointer: SP, process: *Process, context: *Context, signature: Extra) Result;
-};
 pub const Signature = packed struct {
     int: u64,
     const Internal = packed struct {
@@ -287,11 +283,11 @@ pub const PC = packed struct {
     fn targetPC(self: PC) PC {
         return .{ .code = self.codeAddress() };
     }
-    pub inline fn asThreadedFn(self: PC) ThreadedFn {
-        return self.code.asThreadedFn();
+    pub inline fn asThreadedFn(self: PC) *const fn (programCounter: PC, stackPointer: SP, process: *Process, context: *Context, signature: Extra) Result {
+        return self.code.prim();
     }
     pub inline //
-    fn prim(self: PC) ThreadedFn.Fn {
+    fn prim(self: PC) *const fn (programCounter: PC, stackPointer: SP, process: *Process, context: *Context, signature: Extra) Result {
         if (logging) {
             @setRuntimeSafety(false);
             std.debug.print("PC_prim:        {x:0>16}: {}\n", .{ @intFromPtr(self.code), @import("threadedFn.zig").find(self.code.threadedFn) });
@@ -341,7 +337,7 @@ pub const PC = packed struct {
     pub inline fn prev(self: PC) PC {
         return asPC(self.array() - 1);
     }
-    pub inline fn prim2(self: PC) ThreadedFn.Fn {
+    pub inline fn prim2(self: PC) *const fn (programCounter: PC, stackPointer: SP, process: *Process, context: *Context, signature: Extra) Result {
         return self.array()[1].prim();
     }
     pub inline fn next2(self: PC) PC {
@@ -380,18 +376,18 @@ pub const PC = packed struct {
 };
 pub const Code = union {
     object: Object,
-    threadedFn: ThreadedFn.Fn,
+    threadedFn: *const fn (programCounter: PC, stackPointer: SP, process: *Process, context: *Context, signature: Extra) Result,
     method: *CompiledMethod,
     codePtr: *Code,
     offset: i64,
     packedObject: PackedObject,
     structure: StackStructure,
-    pub inline fn primOf(pp: ThreadedFn.Fn) Code {
+    pub inline fn primOf(pp: *const fn (programCounter: PC, stackPointer: SP, process: *Process, context: *Context, signature: Extra) Result) Code {
         //@compileLog(pp);
         const result = Code{ .threadedFn = pp };
         return result;
     }
-    pub inline fn patchPrim(self: *Code, pp: ThreadedFn.Fn) void {
+    pub inline fn patchPrim(self: *Code, pp: *const fn (programCounter: PC, stackPointer: SP, process: *Process, context: *Context, signature: Extra) Result) void {
         self.* = Code{ .threadedFn = pp };
     }
     pub inline //
@@ -415,11 +411,8 @@ pub const Code = union {
         const addr = @as([*]Code, @ptrCast(code)) + 1;
         return Code{ .codePtr = @ptrCast(addr + @as(u64, @bitCast(offs))) };
     }
-    pub inline fn prim(self: Code) ThreadedFn.Fn {
+    pub inline fn prim(self: Code) *const fn (programCounter: PC, stackPointer: SP, process: *Process, context: *Context, signature: Extra) Result {
         return self.threadedFn;
-    }
-    pub inline fn asThreadedFn(self: Code) ThreadedFn {
-        return .{ .f = self.threadedFn };
     }
     pub fn end(_: PC, sp: SP, process: *Process, context: *Context, _: Extra) Result { // not embedded
         process.setContext(context);
@@ -462,8 +455,8 @@ pub const CompiledMethod = struct {
     header: HeapHeader,
     signature: Signature,
     stackStructure: StackStructure,
-    executeFn: ThreadedFn.Fn,
-    jitted: ?ThreadedFn.Fn,
+    executeFn: *const fn (programCounter: PC, stackPointer: SP, process: *Process, context: *Context, signature: Extra) Result,
+    jitted: ?*const fn (programCounter: PC, stackPointer: SP, process: *Process, context: *Context, signature: Extra) Result,
     code: [codeSize]Code, // the threaded version of the method
     const Self = @This();
     const codeSize = 2;
@@ -472,7 +465,7 @@ pub const CompiledMethod = struct {
         std.debug.assert(@offsetOf(Self, "header") == 0);
     }
     const codeOffsetInObjects = codeOffset / 8;
-    pub fn init(name: Object, methodFn: ThreadedFn.Fn) Self {
+    pub fn init(name: Object, methodFn: *const fn (programCounter: PC, stackPointer: SP, process: *Process, context: *Context, signature: Extra) Result) Self {
         return Self{
             .header = HeapHeader.calc(.CompiledMethod, codeOffsetInObjects + codeSize, 42 //name.hash24()
                 , .static, null, Object, false) catch unreachable,
@@ -483,7 +476,7 @@ pub const CompiledMethod = struct {
             .code = .{ Code.primOf(methodFn), undefined },
         };
     }
-    pub fn initInfalliblePrimitive(name: Object, class: ClassIndex, methodFn: ThreadedFn.Fn) Self {
+    pub fn initInfalliblePrimitive(name: Object, class: ClassIndex, methodFn: *const fn (programCounter: PC, stackPointer: SP, process: *Process, context: *Context, signature: Extra) Result) Self {
         return Self{
             .header = HeapHeader.calc(ClassIndex.CompiledMethod, codeOffsetInObjects + codeSize, name.hash24(), Age.static, null, Object, false) catch unreachable,
             .stackStructure = StackStructure{},
@@ -579,7 +572,7 @@ fn countNonLabels(comptime tup: anytype) usize {
                         c += 1;
                     },
                     else => {
-                        @compileLog(field, ThreadedFn);
+                        @compileLog(field);
                         unreachable;
                     },
                 }
@@ -613,8 +606,8 @@ fn CompileTimeMethod(comptime counts: usize) type {
         header: HeapHeader,
         signature: Signature,
         stackStructure: StackStructure, // f1 - locals, f2 - maxStackNeeded, f3 - selfOffset
-        executeFn: ThreadedFn.Fn,
-        jitted: ThreadedFn.Fn,
+        executeFn: *const fn (programCounter: PC, stackPointer: SP, process: *Process, context: *Context, signature: Extra) Result,
+        jitted: *const fn (programCounter: PC, stackPointer: SP, process: *Process, context: *Context, signature: Extra) Result,
         code: [codes]Code,
         offsets: [codes]bool align(8),
         const codeOffsetInUnits = CompiledMethod.codeOffsetInObjects;
@@ -625,7 +618,7 @@ fn CompileTimeMethod(comptime counts: usize) type {
         //         @compileError("CompiledMethod prefix not the same as CompileTimeMethod == " ++ s);
         // }
         const cacheSize = 0; //@sizeOf(SendCacheStruct) / @sizeOf(Code);
-        pub fn init(name: anytype, comptime locals: u11, comptime maxStack: u16, function: ?ThreadedFn.Fn, class: ClassIndex, tup: anytype) Self {
+        pub fn init(name: anytype, comptime locals: u11, comptime maxStack: u16, function: ?*const fn (programCounter: PC, stackPointer: SP, process: *Process, context: *Context, signature: Extra) Result, class: ClassIndex, tup: anytype) Self {
             const header = comptime HeapHeader.calc(.CompiledMethod, codeOffsetInUnits + codes, 0, Age.static, null, Object, false) catch @compileError("method too big");
             const f = function orelse &Code.noOp;
             var method = Self{
@@ -641,7 +634,7 @@ fn CompileTimeMethod(comptime counts: usize) type {
             comptime var n = 0;
             inline for (tup) |field| {
                 switch (@TypeOf(field)) {
-                    ThreadedFn.Fn => {
+                    *const fn (programCounter: PC, stackPointer: SP, process: *Process, context: *Context, signature: Extra) Result => {
                         //@compileLog(field);
                         code[n] = Code.primOf(field);
                         n = n + 1;
@@ -750,7 +743,7 @@ fn compiledMethodType(comptime codeSize: comptime_int) type {
 pub fn compileMethod(name: anytype, comptime locals: comptime_int, comptime maxStack: comptime_int, comptime class: ClassIndex, comptime tup: anytype) CompileTimeMethod(countNonLabels(tup)) {
     return compileMethodWith(name, locals, maxStack, class, null, tup);
 }
-fn compileMethodWith(name: anytype, comptime locals: comptime_int, comptime maxStack: comptime_int, comptime class: ClassIndex, comptime verifier: ?ThreadedFn.Fn, comptime tup: anytype) CompileTimeMethod(countNonLabels(tup)) {
+fn compileMethodWith(name: anytype, comptime locals: comptime_int, comptime maxStack: comptime_int, comptime class: ClassIndex, comptime verifier: ?*const fn (programCounter: PC, stackPointer: SP, process: *Process, context: *Context, signature: Extra) Result, comptime tup: anytype) CompileTimeMethod(countNonLabels(tup)) {
     @setEvalBranchQuota(100000);
     const MethodType = CompileTimeMethod(countNonLabels(tup));
     return MethodType.init(name, locals, maxStack, verifier, class, tup);
@@ -758,7 +751,7 @@ fn compileMethodWith(name: anytype, comptime locals: comptime_int, comptime maxS
 fn lookupLabel(tup: anytype, comptime field: []const u8) i56 {
     comptime var lp = 0;
     inline for (tup) |t| {
-        if (@TypeOf(t) == ThreadedFn) {
+        if (@TypeOf(t) == *const fn (programCounter: PC, stackPointer: SP, process: *Process, context: *Context, signature: Extra) Result) {
             lp += 1;
             if (t == null) lp += 4;
         } else switch (@typeInfo(@TypeOf(t))) {

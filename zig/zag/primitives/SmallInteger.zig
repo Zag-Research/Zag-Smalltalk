@@ -120,7 +120,7 @@ pub const @"+" = struct {
     pub fn primitive(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result { // SmallInteger>>#+
         const newSp = sp.dropPut(inlines.p1(sp.next, sp.top, process) catch
             return @call(tailCall, Extra.primitiveFailed, .{ pc, sp, process, context, extra }));
-        return @call(tailCall, process.check(context.npc.f), .{ context.tpc, newSp, process, context, undefined });
+        return @call(tailCall, process.check(context.npc), .{ context.tpc, newSp, process, context, undefined });
     }
     test "simple add" {
         try Execution.runTest(
@@ -156,7 +156,7 @@ pub const @"-" = struct {
     pub fn primitive(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result { // SmallInteger>>#-
         const newSp = sp.dropPut(inlines.p2(sp.next, sp.top, process) catch
             return @call(tailCall, Extra.primitiveFailed, .{ pc, sp, process, context, extra }));
-        return @call(tailCall, process.check(context.npc.f), .{ context.tpc, newSp, process, context, undefined });
+        return @call(tailCall, process.check(context.npc), .{ context.tpc, newSp, process, context, undefined });
     }
 };
 pub fn p7(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result { // at:
@@ -167,7 +167,7 @@ pub const @"<=" = struct {
     pub fn primitive(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result { // SmallInteger>>#<=
         const newSp = sp.dropPut(Object.from(inlines.p5(sp.next, sp.top) catch
             return @call(tailCall, Extra.primitiveFailed, .{ pc, sp, process, context, extra }), null));
-        return @call(tailCall, process.check(context.npc.f), .{ pc, newSp, process, context, undefined });
+        return @call(tailCall, process.check(context.npc), .{ pc, newSp, process, context, undefined });
     }
 };
 pub const @"*" = struct {
@@ -175,6 +175,6 @@ pub const @"*" = struct {
     pub fn primitive(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result { // SmallInteger>>#*
         const newSp = sp.dropPut(Object.from(inlines.p9(sp.next, sp.top, process) catch
             return @call(tailCall, Extra.primitiveFailed, .{ pc, sp, process, context, extra }), null));
-        return @call(tailCall, process.check(context.npc.f), .{ pc, newSp, process, context, undefined });
+        return @call(tailCall, process.check(context.npc), .{ pc, newSp, process, context, undefined });
     }
 };

@@ -25,7 +25,6 @@ const SP = execute.SP;
 const Extra = execute.Extra;
 const Result = execute.Result;
 const Execution = execute.Execution;
-const ThreadedFn = execute.ThreadedFn;
 const CompiledMethod = execute.CompiledMethod;
 const Sym = zag.symbol.symbols;
 pub const ContextPtr = *Context;
@@ -35,7 +34,7 @@ const Context = Self;
 header: HeapHeader,
 method: *const CompiledMethod,
 tpc: PC, // threaded PC
-npc: ThreadedFn, // native PC - in Continuation Passing Style
+npc: *const fn (programCounter: PC, stackPointer: SP, process: *Process, context: *Context, signature: Extra) Result, // native PC - in Continuation Passing Style
 prevCtxt: ?ContextPtr,
 trapContextNumber: u64,
 contextData: *ContextData,
@@ -173,7 +172,7 @@ pub fn stack(self: *const Self, sp: SP, process: *const Process) []Object {
 pub inline fn getTPc(self: *const Context) PC {
     return self.tpc;
 }
-pub inline fn setReturnBoth(self: ContextPtr, npc: ThreadedFn, tpc: PC) void {
+pub inline fn setReturnBoth(self: ContextPtr, npc: *const fn (programCounter: PC, stackPointer: SP, process: *Process, context: *Context, signature: Extra) Result, tpc: PC) void {
     trace("\nsetReturnBoth: {} {}", .{ npc, tpc });
     self.npc = npc;
     self.tpc = tpc;
@@ -182,10 +181,10 @@ pub inline fn setReturn(self: ContextPtr, tpc: PC) void {
     trace("\nsetReturn: {}", .{tpc});
     self.setReturnBoth(tpc.asThreadedFn(), tpc.next());
 }
-pub inline fn getNPc(self: *const Context) ThreadedFn.Fn {
-    return self.npc.f;
+pub inline fn getNPc(self: *const Context) *const fn (programCounter: PC, stackPointer: SP, process: *Process, context: *Context, signature: Extra) Result {
+    return self.npc;
 }
-pub inline fn setNPc(self: *Context, npc: ThreadedFn) void {
+pub inline fn setNPc(self: *Context, npc: *const fn (programCounter: PC, stackPointer: SP, process: *Process, context: *Context, signature: Extra) Result) void {
     self.npc = npc;
 }
 pub inline fn setTPc(self: *Context, tpc: PC) void {

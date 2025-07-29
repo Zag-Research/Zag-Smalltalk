@@ -402,7 +402,7 @@ pub const threadedFunctions = struct {
             const top = sp.top;
             const newSp = sp.unreserve(selfOffset);
             newSp.top = top;
-            return @call(tailCall, process.check(context.npc.f), .{ context.tpc, newSp, process, context, Extra.fromContextData(context.contextData) });
+            return @call(tailCall, process.check(context.npc), .{ context.tpc, newSp, process, context, Extra.fromContextData(context.contextData) });
         }
         test "returnTopNoContext" {
             try Execution.runTest(
