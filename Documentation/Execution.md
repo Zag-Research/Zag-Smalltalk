@@ -5,11 +5,7 @@ This system uses a dual execution model.  For each method, there is a threaded i
 ### Semantic Interpreter
 There *is* an interpreter that runs in Smalltalk as part of the Zag-Core-Test package. It allow execution of method sends in the compiled code to verify that the Zag code executes the same as the host Smalltalk system (Pharo, Cuis, etc.). It is slow, and is not a complete implementation. In particular it uses host arrays to emulate objects, and doesn't do real memory allocation or garbage collection, but it does dispatch, on-demand compilation, program counter, stack, contexts, and closures in an analogous manner.
 ##### Execution details currently having their semantics clarified
-- return with/no context - with/no tos - offset to self
 - restructure operation for branch-returns and inlined methods
-- tailSend with/no context with restructure parameter
-- can optimize away pushes into restructure instruction/tailSend
-- Polymorphic Inline Caches
 
 ### Threaded Method Implementation
 The threaded implementation is a sequence of addresses of functions implementing embedded primitives  and control operations. Every `CompiledMethod` has a threaded implementation. One of the "registers" that is passed through the thread is a flag indicating whether the current thread needs to check for interruptions. Every threaded operation checks this flag before passing control along to the next function. This allows the threaded implementation to single step through the method. Control is passed using an indirect tail-call.
@@ -18,9 +14,9 @@ The threaded implementation is a sequence of addresses of functions implementing
 The native implementation is a sequence of functions implementing everything between actual message sends. After inlining, this can be a significant amount of code. Each function passes control to the next code via a tail-call, passing the same registers as the threaded implementation. This means that native code implements continuation-passing style, and no native activation records are created. One of the registers that is passed is the program counter... that is, the next threaded code to be executed. Because one native function can implement several threaded equivalents, these may be non-sequential.
 
 ### Common features
-All functions that are part of the normal execution flow (threaded words, primitives, jitted native code) have a common signature. As an example, here is the code for the threaded word `dup` which pushes a copy of the object on top of the stack onto the stack:
+All functions that are part of the normal execution flow (threaded words, primitives, jitted native code) have a common signature. As an example, here is the code for the threaded word `drop` which discards the object on top of the stack:
 ```zig
-pub const dup = struct {
+pub const drop = struct {
     pub fn threadedFn(
 		    pc: PC,
 		    sp: SP,
@@ -28,7 +24,7 @@ pub const dup = struct {
 		    context: *Context,
 		    extra: Extra)
 		      Result {
-        const newSp = sp.push(sp.top);
+        const newSp = sp.drop();
         return @call(tailCall, process.check(pc.prim()),
 	         .{ pc.next(), newSp, process, context, extra });
     }
@@ -42,9 +38,45 @@ The parameters (presumably all in registers on modern architectures) are:
 | pc        | pointer to the next threaded word         |
 | sp        | pointer to the top of the Smalltalk stack |
 | process   | pointer to the current process            |
-| context   | pointer to the current context            |
+| context   | pointer to the current/caller context     |
 | extra     | multi-purpose value                       |
-The result type is mostly irrelevant, because none of these functions ever return; they always exit via a tail-call. Usually this is to the next threaded word unless the current threaded word is a return or a call/send. When going to the next threaded word, we also need to bump the `pc` past that address. Note that in the example, the `sp` parameter that we pass is the `newSp` value because we just pushed something onto the stack. The `process.check` is an inline function that checks if we are in single-step mode, otherwise continuing to the next word.
+The result type is mostly irrelevant, because none of these functions ever return; they always exit via a tail-call. Usually this is to the next threaded word unless the current threaded word is a return or a call/send. When going to the next threaded word, we also need to bump the `pc` past that address. Note that in the example, the `sp` parameter that we pass is the `newSp` value because we just pushed something onto the stack. The `process.check` is an inline function that checks if we are in single-step mode, otherwise continuing to the next word. The `extra` parameter has several uses, but the primary one is indicating if the `context` refers to our context or the caller's context.
+
+### ThreadedFns
+The following threaded functions are defined:
+
+| Name                  | Parameter                | Stack               | Description                   |
+| --------------------- | ------------------------ | ------------------- | ----------------------------- |
+| array                 | size                     | size ➛ array        | allocate an initialized array |
+| asThunk               |                          | value ➛ closure     |                               |
+| branch                | address                  |                     |                               |
+| classCase             | classDescriptor address* | o ➛                 |                               |
+| cullColon             |                          | r o1 ➛ o2           |                               |
+| drop                  |                          | o ➛                 |                               |
+| dup                   |                          | o1 ➛ o1 o1          |                               |
+| inlinePrimitive       | symbol + primitive#      | r o* ➛ o2           |                               |
+| inlinePrimitiveModule | primName primModule      | r o* ➛ o2           |                               |
+| over                  |                          | o1 o2 ➛ o1 o2 o1    |                               |
+| pop                   | variableDescriptor       | o ➛                 |                               |
+| popAssociationValue   | associationAddress       | o ➛                 |                               |
+| primitive             | primitive#               | r on ➛ o2 \| r on   |                               |
+| primitiveError        | primitive#               | r on ➛ o2 \| r on e |                               |
+| primitiveModule       |                          |                     |                               |
+| primitiveModuleError  |                          |                     |                               |
+| push                  |                          |                     |                               |
+| pushAssociationValue  |                          |                     |                               |
+| pushClosure           |                          |                     |                               |
+| pushLiteral           |                          |                     |                               |
+| pushThisContext       |                          |                     |                               |
+| pushThisProcess       |                          |                     |                               |
+| returnSelf            |                          |                     |                               |
+| returnTop             |                          |                     |                               |
+| returnTopNonLocal     |                          |                     |                               |
+| send                  |                          |                     |                               |
+| store                 |                          |                     |                               |
+| tailSend              |                          |                     |                               |
+| value                 |                          |                     |                               |
+| valueColon            |                          |                     |                               |
 ## Heap and Arenas
 ## The stack and Contexts
 

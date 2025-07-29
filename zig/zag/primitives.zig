@@ -542,6 +542,57 @@ pub const threadedFunctions = struct {
             );
         }
     };
+    pub const inlinePrimitiveModule = struct {
+        pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
+            const primNumber = pc.object().primitive();
+            if (Module.findNumberedPrimitive(primNumber)) |prim| {
+                if (prim.inlinePrimitive) |p| {
+                    @constCast(pc.prev().asCodePtr()).patchPrim(p);
+                    return @call(tailCall, p, .{ pc, sp, process, context, extra });
+                }
+            }
+            @panic("found primitive:error: need primitive:");
+        }
+        test "inlinePrimitiveModule found" {
+            var exe = Execution.initTest("inlinePrimitiveModule: found", .{
+                tf.inlinePrimitiveModule,
+                "0prim",
+                tf.inlinePrimitiveModule,
+                "0prim",
+                tf.pushLiteral,
+                99,
+            });
+            try exe.resolve(&[_]Object{Sym.value.withPrimitive(998)});
+            try exe.execute(&[_]Object{
+                Object.from(42, null),
+                Object.from(17, null),
+                False(),
+            });
+            try expectEqualSlices(Object, &[_]Object{
+                Object.from(99, null),
+                True(),
+            }, exe.stack());
+        }
+        test "inlinePrimitiveModule not found" {
+            if (true) return error.SkipZigTest;
+            try Execution.runTest(
+                "inlinePrimitiveModule: not found",
+                .{
+                    tf.inlinePrimitiveModule,
+                    999,
+                },
+                &[_]Object{
+                    Object.from(42, null),
+                    Object.from(17, null),
+                },
+                &[_]Object{
+                    Object.from(99, null),
+                    Object.from(42, null),
+                    Object.from(17, null),
+                },
+            );
+        }
+    };
 };
 pub const primitiveThreadedFunctions = .{
     @import("primitives/Array.zig").threadedFns,

@@ -1,0 +1,44 @@
+// Project tasks configuration. See https://zed.dev/docs/tasks for documentation.
+//
+// Example:
+[
+  {
+    "label": "grep",
+    "command": "grep -rne \"$ZED_SELECTED_TEXT\" *|grep zig:",
+    "cwd": "$ZED_WORKTREE_ROOT/zig/zag",
+  },
+  {
+    "label": "test-current",
+    "command": "zig test -freference-trace=20 $ZED_FILENAME",
+    "cwd": "$ZED_WORKTREE_ROOT/$ZED_RELATIVE_DIR",
+    //"hide": "on_success",
+  },
+  {
+    "label": "test-default",
+    "command": "zig build test -freference-trace=20",
+    "cwd": "$ZED_WORKTREE_ROOT/zig",
+    "hide": "on_success",
+  },
+  {
+    "label": "test-llvm",
+    "command": "zig build test -freference-trace=20 -Dllvm",
+    "cwd": "$ZED_WORKTREE_ROOT/zig",
+    "hide": "on_success",
+  },
+  {
+    "label": "test-fibonacci",
+    "command": "zig test -freference-trace=20 fibonacci.zig",
+    "cwd": "$ZED_WORKTREE_ROOT/zig",
+    "hide": "on_success",
+  },
+  {
+    "label": "fibonacci",
+    "command": "zig build-exe -O ReleaseFast fibonacci.zig && taskpolicy -l5 -t5 time ./fibonacci",
+    "cwd": "$ZED_WORKTREE_ROOT/zig",
+  },
+  {
+    "label": "branchPrediction",
+    "command": "zig build-exe -O ReleaseFast branchPrediction.zig && taskpolicy -l5 -t5 time ./branchPrediction",
+    "cwd": "$ZED_WORKTREE_ROOT/zig",
+  },
+]

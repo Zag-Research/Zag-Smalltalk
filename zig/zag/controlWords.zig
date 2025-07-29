@@ -194,6 +194,32 @@ pub const dup = struct {
         );
     }
 };
+pub const over = struct {
+    pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
+        const value = sp.next;
+        if (sp.push(value)) |newSp| {
+            return @call(tailCall, process.check(pc.prim()), .{ pc.next(), newSp, process, context, extra });
+        } else {
+            const newSp, const newContext, const newExtra = process.spillStackAndPush(value, sp, context, extra);
+            return @call(tailCall, process.check(pc.prim()), .{ pc.next(), newSp, process, newContext, newExtra });
+        }
+    }
+    test "over" {
+        try Execution.runTest(
+            "over",
+            .{tf.over},
+            &[_]Object{
+                Object.from(17, null),
+                Object.from(42, null),
+            },
+            &[_]Object{
+                Object.from(42, null),
+                Object.from(17, null),
+                Object.from(42, null),
+            },
+        );
+    }
+};
 pub const pop = struct {
     pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
         if (extra.noContext())

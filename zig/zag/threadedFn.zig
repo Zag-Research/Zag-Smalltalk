@@ -138,7 +138,7 @@ const nProduction = enumAndFunctions[2];
 
 test "print threadedFns" {
     for (0..nProduction) |index| {
-        std.debug.print("{s} ", .{@tagName(@as(Enum, @enumFromInt(index)))});
+        std.debug.print("{s} \n", .{@tagName(@as(Enum, @enumFromInt(index)))});
     }
     std.debug.print("\n", .{});
 }
