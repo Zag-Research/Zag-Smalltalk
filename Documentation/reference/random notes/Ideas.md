@@ -21,4 +21,12 @@ Indicate 👍 (thumbs up) or 👎 (thumbs down) for each
 - 👎 we could get rid of the process pointer as we can always create it from the stack pointer - but then we'd have to find a place to pass the "check for interrupt" flag - possibly in extra
 - 👎 although the test for match could be moved from `send`/`tailSend` into the method, which would maybe save 1 or 2 when running a JITted method, it would mean an extra parameter to all threadedFns and an extra word for every send, which doesn't seem like the right trade-off
 - 👍 jitting, if the PIC address for a send isn't the initial case, we don't have to check the signature for 0
+- can use `executeFn` for a variety of things:
+	- they just need to go to `pc.prev().prim()`
+	- counting down to being jitted (replacing with next downcount)
+	- usage counting
+- can optimize some cases and swap in simpler functions
+	- can save stalls/instructions, but also can minimize copy-n-patch size
+	- 👍 generic `send`/`tailSend` can swap in the one that knows the arity of the selector
+	- 🤷 if we knew that all paths to a context-requiring word had the same context requirements, then we could swap in versions that didn't have to check. But this seems difficult to determine - well... we'd have to trace the flow of control from the start of the method... might be worth doing for CnP
 

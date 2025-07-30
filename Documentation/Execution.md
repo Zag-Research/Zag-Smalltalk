@@ -45,38 +45,38 @@ The result type is mostly irrelevant, because none of these functions ever retur
 ### ThreadedFns
 The following threaded functions are defined:
 
-| Name                  | Parameter                | Stack               | Description                   |
-| --------------------- | ------------------------ | ------------------- | ----------------------------- |
-| array                 | size                     | size ➛ array        | allocate an initialized array |
-| asThunk               |                          | value ➛ closure     |                               |
-| branch                | address                  |                     |                               |
-| classCase             | classDescriptor address* | o ➛                 |                               |
-| cullColon             |                          | r o1 ➛ o2           |                               |
-| drop                  |                          | o ➛                 |                               |
-| dup                   |                          | o1 ➛ o1 o1          |                               |
-| inlinePrimitive       | symbol + primitive#      | r o* ➛ o2           |                               |
-| inlinePrimitiveModule | primName primModule      | r o* ➛ o2           |                               |
-| over                  |                          | o1 o2 ➛ o1 o2 o1    |                               |
-| pop                   | variableDescriptor       | o ➛                 |                               |
-| popAssociationValue   | associationAddress       | o ➛                 |                               |
-| primitive             | primitive#               | r on ➛ o2 \| r on   |                               |
-| primitiveError        | primitive#               | r on ➛ o2 \| r on e |                               |
-| primitiveModule       |                          |                     |                               |
-| primitiveModuleError  |                          |                     |                               |
-| push                  |                          |                     |                               |
-| pushAssociationValue  |                          |                     |                               |
-| pushClosure           |                          |                     |                               |
-| pushLiteral           |                          |                     |                               |
-| pushThisContext       |                          |                     |                               |
-| pushThisProcess       |                          |                     |                               |
-| returnSelf            |                          |                     |                               |
-| returnTop             |                          |                     |                               |
-| returnTopNonLocal     |                          |                     |                               |
-| send                  |                          |                     |                               |
-| store                 |                          |                     |                               |
-| tailSend              |                          |                     |                               |
-| value                 |                          |                     |                               |
-| valueColon            |                          |                     |                               |
+| Name                    | Parameter                         | Stack               | Description                                                                                                                                         |
+| ----------------------- | --------------------------------- | ------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `array`                 | size                              | size ➛ array        | allocate an initialized array                                                                                                                       |
+| `asThunk`               |                                   | value ➛ closure     | a thunk that returns the value                                                                                                                      |
+| `branch`                | address                           |                     | branch to the address in the current method                                                                                                         |
+| `classCase`             | classDescriptor address*          | o ➛                 | match class of the object and branch to corresponding address                                                                                       |
+| `cullColon`             |                                   | r o1 ➛ o2           | optimization of `send` with the selector `cull:`                                                                                                    |
+| `drop`                  |                                   | o ➛                 | discard TOS                                                                                                                                         |
+| `dup`                   |                                   | o1 ➛ o1 o1          | duplicate TOS                                                                                                                                       |
+| `inlinePrimitive`       | symbol + primitive#               | r os ➛ o2           | evaluate the primitive, or if it fails, send the symbol                                                                                             |
+| `inlinePrimitiveModule` | primitiveName primitiveModule     | r os ➛ o2           | evaluate the primitive, or if it fails, send the symbol                                                                                             |
+| `over`                  |                                   | o1 o2 ➛ o1 o2 o1    | copies the next on stack                                                                                                                            |
+| `pop`                   | variableDescriptor                | o ➛                 | pops TOS to the variable                                                                                                                            |
+| `popAssociationValue`   | associationAddress                | o ➛                 | pops TOS to the value field of the `Association`                                                                                                    |
+| `primitive`             | primitive#                        | r on ➛ o2 \| r on   | evaluate the primitive and return; continuing this method on failure                                                                                |
+| `primitiveError`        | primitive#                        | r on ➛ o2 \| r on e | same as `primitive` except pushes error on failure                                                                                                  |
+| `primitiveModule`       | primitiveName primitiveModule     | r on ➛ o2 \| r on   | evaluate the primitive and return; continuing this method on failure                                                                                |
+| `primitiveModuleError`  | primitiveName primitiveModule     | r on ➛ o2 \| r on e | same as `primitiveModule` except pushes error on failure                                                                                            |
+| `push`                  | variableDescriptor                | ➛ o                 | push the variable onto the stack                                                                                                                    |
+| `pushAssociationValue`  | associationAddress                | ➛ o                 | push the value field of the `Association` onto the stack                                                                                            |
+| `pushClosure`           | closureDescriptor compiledClosure | os ➛ o              | creates a block closure; closureDescriptor is a tagged integer: number of fields (low 8 bits), flag to include context, flag to include contextData |
+| `pushLiteral`           | immutableObject                   | ➛ o                 | push the literal onto the stack                                                                                                                     |
+| `pushThisContext`       |                                   | ➛ o                 | push the context onto the stack                                                                                                                     |
+| `pushThisProcess`       |                                   | ➛ o                 | push the process onto the stack                                                                                                                     |
+| `returnSelf`            |                                   | self ... ➛ self     | return to the caller, with `self` as the result                                                                                                     |
+| `returnTop`             |                                   | self ... o ➛ o      | return to the caller, with TOS as the result                                                                                                        |
+| `returnTopNonLocal`     |                                   | ... o ➛ o           | return from the method that created the current closure                                                                                             |
+| `send`                  | selector                          | r os ➛ o            | evaluates the receiver with parameters, replacing them with the result                                                                              |
+| `store`                 | variableDescriptor                | o ➛ o               | stores TOS to the variable, leaving it on the stack                                                                                                 |
+| `tailSend`              | selector                          | r os ➛ o            | like `send` except result to our sender; no inline return                                                                                           |
+| `value`                 |                                   | r ➛ o               | optimization of `send` with the selector `value`                                                                                                    |
+| `valueColon`            |                                   | r o1 ➛ o2           | optimization of `send` with the selector `value:`                                                                                                   |
 ## Heap and Arenas
 ## The stack and Contexts
 
@@ -233,15 +233,15 @@ The send will set the `tpc` of our context to the address after the `returnSelf`
 A method will only create a Context if `thisContext` is referenced, or if a non-tail message send will be performed. If there is a `<primitive>`, this is only done after the primitive is evaluated and fails. If the primitive succeeds, it adjusts the stack and returns to the current (calling) context. Primitives that fail proceed to the next threaded function, which will typically create a Context.
 
 #### Non-local Return and Exceptions
-Non-local return does a return from the target Context, making all the intervening Contexts inaccessible (and hence garbage). In most cases this is within a couple of instructions of as efficient as a normal return.
+Non-local return does a return from the target (creating) Context, making all the intervening Contexts inaccessible (and hence garbage unless they were otherwise captured). In most cases this is within a couple of instructions of as efficient as a normal return.
 The complication is if there is an `on:do:` or an `ensure:` between the target Context and the current Context. If all the Contexts were on a stack, this could be checked with a simple range check. However Contexts can migrate to the heap, at which point there is no longer any guaranteed ordering of addresses. The solution is that every time a trapping context is created, a thread-local counter is incremented. The good news is that if the target and current trap-context number is equal, all further checking is avoided. If the trap-context number is different for the target and current Contexts then a trapping context has been created between them. That context may no longer be active, but a more expensive check will have to be performed. The first check is if the top trapping context on the queue has a trap-context smaller than the target, in which case it is not a problem for this non-local return. in this case, any intervening `on:do:` contexts need to be removed from the queue, and the first intervening `ensure:` context needs to be returned to.
 
 ### ???
 When sending a message, the current `Context` will be updated with the return PC, and the address of the CPS next function. When that method returns to the CPS next function, we will continue in native execution mode. In threaded mode, it will point to the next threaded function. If we need to switch execution to threaded mode (for debugging or single-stepping), we simply replace the return CPS address with the address of the next threaded function.
 
-When we dispatch to a method, we execute the `executeFn` function, with the `pc` parameter set to the address of the second word of the threaded implementation and the `extra` parameter set to the address of the method. There are several cases of what `executeFn` could point to:
+When we dispatch to a method, we execute the `executeFn` function, with the `pc` parameter set to the address of the second word of the threaded implementation and the `extra` parameter set to the address of the method and the low bits of the address of `self`. There are several cases of what `executeFn` could point to:
 1. If the method has been jitted, `executeFn` is the address of the jitted code.
-2. If it has not been jitted, this is the address of a function that checks that there is enough stack space for the stack and then jumps to the first threaded word.
+2. If it has not been jitted, this is the address of the function for the first threaded word.
 3. If the method starts with a primitive and this is not the first execution, then `executeFn` will point to the native code for the primitive.
 
 ## Sends and Polymorphic Inline Caches

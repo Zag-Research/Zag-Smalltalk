@@ -85,7 +85,7 @@ const enumAndFunctions =
                     .comptime_int, .int, .@"fn", .array => {},
                     else => {
                         if (@hasDecl(ds, "threadedFn")) {
-                            const forProduction = !(@hasDecl(ds,"forTests") and @field(ds,"forTests"));
+                            const forProduction = !(@hasDecl(ds, "hidden") and @field(ds, "hidden"));
                             if (@hasDecl(ds, "order")) {
                                 array[n] = .{ .field = &decl, .order = @field(ds, "order"), .production = forProduction, .threadedFn = @field(ds, "threadedFn") };
                             } else array[n] = .{ .field = &decl, .order = 0, .production = forProduction, .threadedFn = @field(ds, "threadedFn") };

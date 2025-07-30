@@ -46,10 +46,7 @@ c/eg*[0-9]
 *.sources
 pharo-local
 log1.txt
-zig/zag/execute
-zig/fibonacci
-zig/fullfib
-zig/sieve
+zig-out/
 *.a
 *-generated.zig
 
