@@ -40,7 +40,7 @@ pub fn build(b: *std.Build) void {
         // intend to expose to consumers that were defined in other files part
         // of this module, you will have to make sure to re-export them from
         // the root file.
-        .root_source_file = b.path("zag/root.zig"),
+        .root_source_file = b.path("zag/zag.zig"),
         // Later on we'll use this module as the root module of a test executable
         // which requires us to specify a target.
         .target = target,
@@ -174,6 +174,21 @@ pub fn build(b: *std.Build) void {
         mod.addImport("llvm-build-module", llvm_module);
         exe.root_module.addImport("llvm-build-module", llvm_module);
     }
+
+    const fib = b.addExecutable(.{
+        .name = "fib",
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("experiments/fib.zig"),
+            .target = target,
+            .optimize = optimize,
+            .imports = &.{
+                .{ .name = "zag", .module = mod },
+            },
+        }),
+        .optimize = .ReleaseFast,
+    });
+    //b.step("fib", "Compile fib").dependOn(&b.installArtifact(fib).step);
+    b.installArtifact(fib);
 }
 
 fn build_llvm_module(b: *std.Build, target: std.Build.ResolvedTarget, optimize: std.builtin.OptimizeMode) *std.Build.Module {

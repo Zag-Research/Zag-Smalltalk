@@ -223,18 +223,25 @@ pub fn print(self: *const Context, process: *const Process) void {
         ctxt.print(process);
     }
 }
-pub fn getAddress(obj: Object, sp: SP, extra: Extra) *Object {
-    if (obj.nativeU()) |r| {
-        var objs: [*]Object =
-            if (extra.addressIfNoContext((r >> 8) & 0xff, sp)) |stackOffsetAddress| stackOffsetAddress else extra.getContextData().localAddress(r & 0xff);
-        var ref = r >> 16;
-        while (ref > 0) {
-            objs = objs[ref & 0x3ff].to([*]Object);
-            ref = ref >> 10;
-        }
-        return &objs[0];
+pub fn getAddress(r: u64, sp: SP, extra: Extra) *Object {
+    var objs: [*]Object =
+        if (extra.addressIfNoContext((r >> 8) & 0xff, sp)) |stackOffsetAddress| stackOffsetAddress else extra.getContextData().localAddress(r & 0xff);
+    var ref = r >> 16;
+    while (ref > 0) {
+        objs = objs[ref & 0x3ff].to([*]Object);
+        ref = ref >> 10;
     }
     unreachable;
+}
+/// Install a context
+/// used by any threaded function that needs a context
+/// note that `pc` is the program counter of the instruction that called `installContext`
+pub fn installContext(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
+    if (extra.getMethod()) |method| {
+        const newSp, const ctxt = context.push(sp, process, method);
+        return @call(tailCall, pc.prev().prim(), .{ pc, newSp, process, ctxt, Extra.fromContextData(ctxt.contextData) });
+    }
+    return @call(tailCall, pc.prev().prim(), .{ pc, sp, process, context, extra });
 }
 pub const threadedFunctions = struct {
     const tf = zag.threadedFn.Enum;
@@ -244,10 +251,8 @@ pub const threadedFunctions = struct {
         /// and then re-execute the original operation; simply:
         /// return @call(tailCall, pushContext.threadedFn, .{ pc.prev(), sp, process, context, extra });
         pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
-            if (extra.getMethod()) |method| {
-                const newSp, const ctxt = context.push(sp, process, method);
-                return @call(tailCall, process.check(pc.prim()), .{ pc.next(), newSp, process, ctxt, Extra.fromContextData(ctxt.contextData) });
-            }
+            if (extra.noContext())
+                return @call(tailCall, installContext, .{ pc, sp, process, context, extra });
             return @call(tailCall, process.check(pc.prim()), .{ pc.next(), sp, process, context, extra });
         }
         test "pushContext" {
@@ -285,7 +290,7 @@ pub const threadedFunctions = struct {
     pub const pushThisContext = struct {
         pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
             if (extra.noContext())
-                return @call(tailCall, pushContext.threadedFn, .{ pc.prev(), sp, process, context, extra });
+                return @call(tailCall, installContext, .{ pc, sp, process, context, extra });
             const value = Object.from(context, null);
             if (sp.push(value)) |newSp| {
                 return @call(tailCall, process.check(pc.prim()), .{ pc.next(), newSp, process, context, extra });

@@ -272,7 +272,6 @@ inline fn singleIndexGEP(builder: LLVMBuilderRef, elementType: LLVMTypeRef, base
 //     Process.resetForTest();
 //     const pl = if (true) &p.pushLiteral else llvmPLCM;
 //     var method = compileMethod(Sym.yourself, 1, 0, .testClass, .{
-//         &p.pushContext,   "^",
 //         ":label1",        &p.pushLiteral,
 //         42,               &p.popLocal,
 //         0,                &p.pushLocal,

@@ -1,6 +1,6 @@
 ## Execution
 
-This system uses a dual execution model.  For each method, there is a threaded implementation and possibly a native implementation. There is no classical "interpreter". The closest is the threaded implementation. 
+This system uses a dual execution model.  For each method, there is a threaded implementation and possibly a native implementation. There is no classical "interpreter". The closest is the threaded implementation.
 
 ### Semantic Interpreter
 There *is* an interpreter that runs in Smalltalk as part of the Zag-Core-Test package. It allow execution of method sends in the compiled code to verify that the Zag code executes the same as the host Smalltalk system (Pharo, Cuis, etc.). It is slow, and is not a complete implementation. In particular it uses host arrays to emulate objects, and doesn't do real memory allocation or garbage collection, but it does dispatch, on-demand compilation, program counter, stack, contexts, and closures in an analogous manner.
@@ -42,41 +42,8 @@ The parameters (presumably all in registers on modern architectures) are:
 | extra     | multi-purpose value                       |
 The result type is mostly irrelevant, because none of these functions ever return; they always exit via a tail-call. Usually this is to the next threaded word unless the current threaded word is a return or a call/send. When going to the next threaded word, we also need to bump the `pc` past that address. Note that in the example, the `sp` parameter that we pass is the `newSp` value because we just pushed something onto the stack. The `process.check` is an inline function that checks if we are in single-step mode, otherwise continuing to the next word. The `extra` parameter has several uses, but the primary one is indicating if the `context` refers to our context or the caller's context.
 
-### ThreadedFns
-The following threaded functions are defined:
+### Threaded Functions
 
-| Name                    | Parameter                         | Stack               | Description                                                                                                                                         |
-| ----------------------- | --------------------------------- | ------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `array`                 | size                              | size ➛ array        | allocate an initialized array                                                                                                                       |
-| `asThunk`               |                                   | value ➛ closure     | a thunk that returns the value                                                                                                                      |
-| `branch`                | address                           |                     | branch to the address in the current method                                                                                                         |
-| `classCase`             | classDescriptor address*          | o ➛                 | match class of the object and branch to corresponding address                                                                                       |
-| `cullColon`             |                                   | r o1 ➛ o2           | optimization of `send` with the selector `cull:`                                                                                                    |
-| `drop`                  |                                   | o ➛                 | discard TOS                                                                                                                                         |
-| `dup`                   |                                   | o1 ➛ o1 o1          | duplicate TOS                                                                                                                                       |
-| `inlinePrimitive`       | symbol + primitive#               | r os ➛ o2           | evaluate the primitive, or if it fails, send the symbol                                                                                             |
-| `inlinePrimitiveModule` | primitiveName primitiveModule     | r os ➛ o2           | evaluate the primitive, or if it fails, send the symbol                                                                                             |
-| `over`                  |                                   | o1 o2 ➛ o1 o2 o1    | copies the next on stack                                                                                                                            |
-| `pop`                   | variableDescriptor                | o ➛                 | pops TOS to the variable                                                                                                                            |
-| `popAssociationValue`   | associationAddress                | o ➛                 | pops TOS to the value field of the `Association`                                                                                                    |
-| `primitive`             | primitive#                        | r on ➛ o2 \| r on   | evaluate the primitive and return; continuing this method on failure                                                                                |
-| `primitiveError`        | primitive#                        | r on ➛ o2 \| r on e | same as `primitive` except pushes error on failure                                                                                                  |
-| `primitiveModule`       | primitiveName primitiveModule     | r on ➛ o2 \| r on   | evaluate the primitive and return; continuing this method on failure                                                                                |
-| `primitiveModuleError`  | primitiveName primitiveModule     | r on ➛ o2 \| r on e | same as `primitiveModule` except pushes error on failure                                                                                            |
-| `push`                  | variableDescriptor                | ➛ o                 | push the variable onto the stack                                                                                                                    |
-| `pushAssociationValue`  | associationAddress                | ➛ o                 | push the value field of the `Association` onto the stack                                                                                            |
-| `pushClosure`           | closureDescriptor compiledClosure | os ➛ o              | creates a block closure; closureDescriptor is a tagged integer: number of fields (low 8 bits), flag to include context, flag to include contextData |
-| `pushLiteral`           | immutableObject                   | ➛ o                 | push the literal onto the stack                                                                                                                     |
-| `pushThisContext`       |                                   | ➛ o                 | push the context onto the stack                                                                                                                     |
-| `pushThisProcess`       |                                   | ➛ o                 | push the process onto the stack                                                                                                                     |
-| `returnSelf`            |                                   | self ... ➛ self     | return to the caller, with `self` as the result                                                                                                     |
-| `returnTop`             |                                   | self ... o ➛ o      | return to the caller, with TOS as the result                                                                                                        |
-| `returnTopNonLocal`     |                                   | ... o ➛ o           | return from the method that created the current closure                                                                                             |
-| `send`                  | selector                          | r os ➛ o            | evaluates the receiver with parameters, replacing them with the result                                                                              |
-| `store`                 | variableDescriptor                | o ➛ o               | stores TOS to the variable, leaving it on the stack                                                                                                 |
-| `tailSend`              | selector                          | r os ➛ o            | like `send` except result to our sender; no inline return                                                                                           |
-| `value`                 |                                   | r ➛ o               | optimization of `send` with the selector `value`                                                                                                    |
-| `valueColon`            |                                   | r o1 ➛ o2           | optimization of `send` with the selector `value:`                                                                                                   |
 ## Heap and Arenas
 ## The stack and Contexts
 
@@ -319,7 +286,7 @@ Logically, Smalltalk message dispatch follows these steps:
 This is not the whole story for 2 reasons:
  1. Some messages such as `ifTrue:ifFalse:` and `whileTrue:` and related messages are recognized by the compiler, and are turned into conditional byte code sequences, as an optimization.
  2. After the lookup described above, the target method is cached in the calling code, so the next time we do the lookup we should be very fast. This gets complicated because there could be objects from a different class in a subsequent lookup, so somewhat complex mechanisms are used to save the multiple method targets. See [[Execution#Sends and Polymorphic Inline Caches|above]].
- 
+
  See:
  - [Inline caching](https://en.wikipedia.org/wiki/Inline_caching)
  - [from Dynamic Dispatch](https://en.wikipedia.org/wiki/Dynamic_dispatch)
@@ -381,7 +348,7 @@ foo: p1 bar: p2
 	l1 := p2.
 	l2 := p1 \\ p2.
 	l3 := p2 - l2.
-	[ l1 < p1 ] whileTrue: [ 
+	[ l1 < p1 ] whileTrue: [
 		l1 := l1 + 1.
 		l1 = l3 ifTrue: [ ^ 1 ] ].
 	^ l1

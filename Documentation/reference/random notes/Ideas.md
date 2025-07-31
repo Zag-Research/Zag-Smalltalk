@@ -29,4 +29,5 @@ Indicate 👍 (thumbs up) or 👎 (thumbs down) for each
 	- can save stalls/instructions, but also can minimize copy-n-patch size
 	- 👍 generic `send`/`tailSend` can swap in the one that knows the arity of the selector
 	- 🤷 if we knew that all paths to a context-requiring word had the same context requirements, then we could swap in versions that didn't have to check. But this seems difficult to determine - well... we'd have to trace the flow of control from the start of the method... might be worth doing for CnP
+	- `push`/`pop`/`store` for simple cases like `self` for methods with particular structure (like unary/binary with/without locals), also for cases where we will still need to do offsets, but e.g. no indirection, or just instance variables, or closure variables - could gather stats on how often particular patterns show up. Even if we don't match any special cases we will switch to a version that doesn't check
 

@@ -1,6 +1,6 @@
 const std = @import("std");
 const builtin = @import("builtin");
-const options = @import("options");
+pub const options = @import("options");
 pub const is_test = builtin.is_test;
 pub const native_endian = builtin.target.cpu.arch.endian();
 pub const tailCall: std.builtin.CallModifier = if (show_error_stack) .never_inline else .always_tail;

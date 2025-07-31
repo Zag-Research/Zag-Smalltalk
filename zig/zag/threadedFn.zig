@@ -133,7 +133,7 @@ const enumAndFunctions =
     };
 
 pub const Enum = enumAndFunctions[0];
-const functions = enumAndFunctions[1];
+pub const functions = enumAndFunctions[1];
 const nProduction = enumAndFunctions[2];
 
 test "print threadedFns" {

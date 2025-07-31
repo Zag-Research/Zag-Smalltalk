@@ -1,6 +1,7 @@
 const std = @import("std");
-const zag = @import("zag");
+const zag = @import("zag.zig");
 const assert = std.debug.assert;
+const config = zag.config;
 const InMemory = zag.inMemory;
 const object = zag.object;
 const Object = object.Object;
@@ -52,9 +53,12 @@ const ZagImageHeader = struct {
 var zagImageHeader: ZagImageHeader = undefined;
 fn usage() void {
     std.debug.print(
-        \\Usage: zig image-directory
+        \\Usage: zag image-directory
         \\
     , .{});
+}
+fn version() void {
+    std.debug.print("{s}\n", .{config.git_version});
 }
 fn extensionMatches(name: []const u8, ext: []const u8) bool {
     if (name.len <= ext.len) return false;
@@ -98,12 +102,14 @@ fn loadSymbols() !void {
     var exportedSymbols = zagImageHeader.symTable;
     outer: while (!exportedSymbols.isNil()) {
         for (try exportedSymbols.arrayAsSlice(Object)) |obj| {
-            if (obj.isString()) {
-                std.debug.print("LoadingSymbol: {}\n", .{symbol.intern(obj)});
-            } else {
-                exportedSymbols = obj;
-                continue :outer;
-            }
+            // if (obj.isString()) {
+            //     std.debug.print("LoadingSymbol: {}\n", .{symbol.intern(obj)});
+            // } else {
+            //     exportedSymbols = obj;
+            //     continue :outer;
+            // }
+            _ = obj;
+            continue :outer;
         }
         break;
     }
@@ -199,10 +205,13 @@ pub fn main() !void {
     _ = argsIterator.next(); // Skip executable
 
     if (argsIterator.next()) |arg| {
-        if (std.mem.orderZ(u8, arg, "-h") == .eq or std.mem.orderZ(u8, arg, "--help") == .eq) {
+        if (std.mem.orderZ(u8, arg, "-v") == .eq or std.mem.orderZ(u8, arg, "--version") == .eq) {
+            version();
+        } else if (std.mem.orderZ(u8, arg, "-h") == .eq or std.mem.orderZ(u8, arg, "--help") == .eq) {
             usage();
         } else {
-            try loadAndRun(arg);
+            _ = @import("controlWords.zig").drop.threadedFn;
+            // try loadAndRun(arg);
         }
         while (argsIterator.next()) |extra|
             std.debug.print(

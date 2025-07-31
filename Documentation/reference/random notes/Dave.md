@@ -7,8 +7,9 @@ https://futureofcoding.org/
 Debugging with lldb or gdb:
 ```sh
 zig build
-# Assuming your exe name is `exe`
-lldb zig-out/bin/exe
+# Assuming your exe name is `zag`
+lldb zig-out/bin/zag
 # Or to use gdb
-gdb zig-out/bin/exe
+gdb zig-out/bin/zag
 ```
+See [this blog](https://ziggit.dev/t/debugging-zig-with-a-debugger/7160) which [references this one](https://ziggit.dev/t/zig-debugging-with-lldb/3931)

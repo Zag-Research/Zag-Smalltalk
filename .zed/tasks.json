@@ -32,8 +32,8 @@
     "hide": "on_success",
   },
   {
-    "label": "fibonacci",
-    "command": "zig build-exe -O ReleaseFast fibonacci.zig && taskpolicy -l5 -t5 time ./fibonacci",
+    "label": "fib",
+    "command": "zig build && taskpolicy -l5 -t5 time ./zig-out/bin/fib",
     "cwd": "$ZED_WORKTREE_ROOT/zig",
   },
   {

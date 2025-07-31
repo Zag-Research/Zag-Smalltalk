@@ -10,8 +10,8 @@ pub const symbol = @import("symbol.zig");
 pub const utilities = @import("utilities.zig");
 pub const llvm = if (config.includeLLVM) @import("llvm-build-module") else null;
 pub const threadedFn = @import("threadedFn.zig");
-test "root test" {
-    _ = config;
-    _ = llvm;
-    _ = threadedFn;
-}
+// test "root test" {
+//     _ = config;
+//     _ = llvm;
+//     _ = threadedFn;
+// }

@@ -8,5 +8,6 @@ pub const heap = @import("heap.zig");
 pub const globalArena = @import("globalArena.zig");
 pub const symbol = @import("symbol.zig");
 pub const utilities = @import("utilities.zig");
+pub const llvm = if (config.includeLLVM) @import("llvm-build-module") else null;
 pub const threadedFn = @import("threadedFn.zig");
-pub const llvm = @import("llvm-build-module");
+pub const Stats = utilities.stats.Stats;

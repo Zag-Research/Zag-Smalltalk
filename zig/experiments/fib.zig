@@ -1,4 +1,8 @@
-const zag = @import("zag.zig");
+const std = @import("std");
+const zag = @import("zag");
+const Execution = zag.execute.Execution;
+const tf = zag.threadedFn.Enum;
+const Sym = zag.symbol.symbols;
 
 const intIncluded = true;
 
@@ -24,26 +28,33 @@ const fibInteger = if (intIncluded) struct {
     var fib =
         compileMethod(Sym.i_0, 0, 2, .none, .{
             ":recurse",
-            &e.dup, // self
-            &e.pushLiteral2, //&e.pushLiteral, two,
-            &e.SmallInteger.@"<=_N", // <= know that self and 2 are definitely integers
-            &e.ifFalse,
+            tf.push, variable(0,1,.{}), // self
+            tf.pushLiteral, 2, //&e.pushLiteral, two,
+            tf.immediatePrimitive,
+            immediatePrimitive(@"<=",SmallInteger.@"<="), // <= know that self and 2 are definitely integers
+            tf.classCase,
+            classCase(.{ Sym.False }),
             "label3",
-            &e.replaceLiteral1, // self
-            &e.returnNoContext,
+            tf.push, variable(0,1,.{}), // self
+            tf.returnTop,
             ":label3",
-            &e.pushContext,
-            "^",
-            &e.pushLocal0,
-            &e.SmallInteger.@"-_L1", // -1 &e.pushLiteral1,&e.p2,
-            &e.callRecursive,
-            "recurse",
-            &e.pushLocal0,
-            &e.SmallInteger.@"-_L2", // -2
-            &e.callRecursive,
-            "recurse",
-            &e.SmallInteger.@"+", // +
-            &e.returnTop,
+            tf.push, variable(0,1,.{}), // self
+            tf.pushLiteral, 1,
+            tf.immediatePrimitive,
+            immediatePrimitive(@"-",SmallInteger.@"-"),
+            tf.send,
+            "0fib",
+            nullMethod,
+            tf.push, variable(0,1,.{}), // self
+            tf.pushLiteral, 2,
+            tf.immediatePrimitive,
+            immediatePrimitive(@"-",SmallInteger.@"-"),
+            tf.send,
+            "0fib",
+            nullMethod,
+            tf.immediatePrimitive,
+            immediatePrimitive(@"+",SmallInteger.@"+"),
+            tf.returnTop,
         });
     var fibThreadMethod: CompiledMethodPtr = undefined;
     fn runIt(_: usize) void {
@@ -59,7 +70,7 @@ const fibInteger = if (intIncluded) struct {
     }
 } else notIncluded;
 
-const Stats = @import("zag/utilities/stats.zig").Stats;
+const Stats = zag.Stats;
 pub fn timing(args: [][]const u8, default: bool) !void {
     const nRuns = 5;
     const eql = std.mem.eql;
