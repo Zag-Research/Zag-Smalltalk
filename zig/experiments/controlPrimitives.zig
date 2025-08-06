@@ -18,7 +18,7 @@ const Context = @import("context.zig");
 const execute = @import("execute.zig");
 const PC = execute.PC;
 const SP = execute.SP;
-const Extra = execute.Extra;
+const Extra = Context.Extra;
 const compileMethod = execute.compileMethod;
 const Execution = execute.Execution;
 fn popIndirect(pc: PC, sp: SP, process: *Process, context: *Context, signature: Extra) Result {

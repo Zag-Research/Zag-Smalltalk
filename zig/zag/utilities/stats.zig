@@ -67,7 +67,7 @@ pub fn Stats(comptime Arg: type, comptime K: type, comptime runs: comptime_int, 
                 self.addData(runner(runNumber));
             }
         }
-        pub fn time(self: *Self, runner: *const fn (comptime A, usize) usize, comptime param: anytype) void {
+        pub fn time(self: *Self, runner: *const fn (A, usize) usize, comptime param: anytype) void {
             for (0..warmups) |_| {
                 self.proof = @call(.never_inline, runner, .{ if (A == u64) 0 else param, self.proof });
             }

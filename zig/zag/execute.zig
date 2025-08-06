@@ -6,6 +6,7 @@ const zag = @import("zag.zig");
 const checkEqual = zag.utilities.checkEqual;
 const Process = zag.Process;
 const ProcessPtr = *Process;
+const SP = Process.SP;
 const object = zag.object;
 const Object = object.Object;
 const PackedObject = object.PackedObject;
@@ -14,7 +15,8 @@ const Nil = object.Nil;
 const True = object.True;
 const False = object.False;
 const Context = zag.Context;
-const ContextData = zag.Context.ContextData;
+const ContextData = Context.ContextData;
+const Extra = Context.Extra;
 const heap = zag.heap;
 const HeapHeader = heap.HeapHeader;
 const HeapObject = heap.HeapObject;
@@ -31,161 +33,6 @@ const phi32 = zag.utilities.inversePhi(u32);
 const threadedFn = zag.threadedFn;
 const tf = threadedFn.Enum;
 
-pub const SP = *Stack;
-pub const initStack = Stack.from;
-const Stack = struct {
-    top: Object,
-    next: Object,
-    third: Object,
-    comptime {
-        std.debug.assert(@offsetOf(Stack, "top") == 0);
-        std.debug.assert(@offsetOf(Stack, "next") == @sizeOf(Object));
-        std.debug.assert(@offsetOf(Stack, "third") == @sizeOf(Object) * 2);
-    }
-    pub inline fn lessThan(self: SP, other: anytype) bool {
-        return @intFromPtr(self) < @intFromPtr(other);
-    }
-    fn from(self: anytype) SP {
-        return @ptrCast(self);
-    }
-    pub inline fn push(self: SP, v: Object) ?SP {
-        if (self.reserve(1)) |newSp| {
-            newSp.top = @bitCast(v);
-            return newSp;
-        }
-        return null;
-    }
-    pub inline fn pushRawInt(self: SP, v: u64) ?SP {
-        if (self.reserve(1)) |newSp| {
-            newSp.top = @bitCast(v);
-            return newSp;
-        }
-        return null;
-    }
-    pub inline fn dropPut(self: SP, v: Object) SP {
-        self.next = v;
-        return self.unreserve(1);
-    }
-    pub inline fn drop(self: SP) SP {
-        return self.unreserve(1);
-    }
-    pub inline fn reserve(self: SP, n: anytype) ?SP {
-        const selfInt = @intFromPtr(self);
-        const newInt = selfInt - @sizeOf(Object) * n;
-        if (n == 1 and newInt & Process.stack_mask > 0) {
-            return @ptrFromInt(newInt);
-        } else if ((selfInt & Process.stack_mask_overflow) == (newInt & Process.stack_mask_overflow)) {
-            return @ptrFromInt(newInt);
-        } else return null;
-    }
-    pub inline fn safeReserve(self: SP, n: usize) SP {
-        return @ptrFromInt(@intFromPtr(self) - @sizeOf(Object) * n);
-    }
-    pub inline fn unreserve(self: SP, n: usize) SP {
-        return @ptrFromInt(@intFromPtr(self) + @sizeOf(Object) * n);
-    }
-    pub inline fn delta(self: SP, other: SP) usize {
-        return (@intFromPtr(other) - @intFromPtr(self)) / @sizeOf(Object);
-    }
-    pub inline fn array(self: SP) [*]Object {
-        return @ptrCast(self);
-    }
-    pub inline fn slice(self: SP, n: usize) []Object {
-        return self.array()[0..n];
-    }
-    pub inline //
-    fn sliceTo(self: SP, ptr: anytype) []Object {
-        const i_ptr = @intFromPtr(ptr);
-        return self.slice(((i_ptr - @intFromPtr(self))) / @sizeOf(Object));
-    }
-    pub inline fn at(self: SP, n: usize) Object {
-        return self.array()[n];
-    }
-    pub inline fn atPut(self: SP, n: usize, o: Object) void {
-        self.array()[n] = o;
-    }
-};
-test "Stack" {
-    std.debug.print("Test: Stack\n", .{});
-    var process: Process align(Process.alignment) = Process.new();
-    process.init(Nil());
-    const ee = std.testing.expectEqual;
-    var stack: [11]Object = undefined;
-    const sp0 = @as(SP, @ptrCast(&stack[10]));
-    sp0.top = True();
-    try ee(True(), stack[10]);
-    const sp1 = sp0.push(False()).?;
-    try ee(True(), stack[10]);
-    try ee(False(), stack[9]);
-    _ = sp1.drop().push(Object.from(42, &process));
-    try ee(Object.from(42, &process).to(i64), 42);
-    try ee(stack[9].to(i64), 42);
-}
-pub const Extra = struct {
-    int: u64,
-    const stack_mask = Process.stack_mask;
-    const is_encoded = stack_mask + 1;
-    // Three states:
-    //  - method is not encoded - is_encoded will not be set and low bits not zero
-    //  - method is encoded - is_encoded will be set and low bits not zero
-    //  - contextData - low bits zero
-    pub fn forMethod(method: *const CompiledMethod, sp: SP) Extra {
-        // guaranteed that the low bits of sp are not zero by design in Process
-        const stackOffset = @intFromPtr(sp) & stack_mask;
-        return .{ .int = @intFromPtr(method) << 16 | stackOffset };
-    }
-    pub fn fromContextData(contextData: *const ContextData) Extra {
-        return .{ .int = @intFromPtr(contextData) << 16 };
-    }
-    pub fn getContextData(self: Extra) *ContextData {
-        return @ptrFromInt(self.int >> 16);
-    }
-    pub fn noContext(self: Extra) bool {
-        return self.int & stack_mask != 0;
-    }
-    pub fn getMethod(self: Extra) ?*const CompiledMethod {
-        if (self.noContext()) {
-            return @ptrFromInt(self.int >> 16);
-        }
-        return null;
-    }
-    pub fn addressIfNoContext(_: Extra, _: usize, _: SP) ?[*]Object {
-        @panic("needContext");
-    }
-    pub fn encoded(self: Extra) Extra {
-        return .{ .int = self.int | is_encoded };
-    }
-    pub fn decoded(self: Extra) Extra {
-        return .{ .int = self.int & ~is_encoded };
-    }
-    pub fn isEncoded(self: Extra) bool {
-        return self.int & is_encoded != 0;
-    }
-    pub fn primitiveFailed(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
-        if (config.logThreadExecution)
-            std.debug.print("primitiveFailed: {} {}\n", .{ extra, pc });
-        return @call(tailCall, process.check(pc.prev().prim()), .{ pc, sp, process, context, extra.encoded() });
-    }
-    pub fn inlinePrimitiveFailed(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
-        if (config.logThreadExecution)
-            std.debug.print("primitiveFailed: {} {}\n", .{ extra, pc });
-        _ = .{ sp, process, context, @panic("inlinePrimitiveFailed") };
-        //return @call(tailCall, process.check(pc.prev().prim()), .{ pc, sp, process, context, extra.encoded() });
-    }
-    pub fn formatX(
-        self: Extra,
-        comptime fmt: []const u8,
-        options: std.fmt.FormatOptions,
-        writer: anytype,
-    ) !void {
-        _ = .{ fmt, options };
-        switch (self) {
-            .method => |m| try writer.print("Extra{{.method = {*}}}", .{m}),
-            .object => |o| try writer.print("Extra{{.object = {}}}", .{o}),
-            .contextData => |l| try writer.print("Extra{{.contextData = {}}}", .{l}),
-        }
-    }
-};
 pub const Result = SP;
 pub const Signature = packed struct {
     int: u64,
@@ -248,7 +95,7 @@ pub const PC = packed struct {
     code: *const Code,
     pub const baseType = Code;
     const Self = @This();
-    const logging = config.logThreadExecution;
+    const logging = true or config.logThreadExecution;
     pub fn init(code: *const Code) PC { // don't inline this as it triggers a zig bug!
         return .{ .code = code };
     }
@@ -419,6 +266,7 @@ pub const Code = union {
         process.setSp(sp);
         return sp;
     }
+    pub const endCode = primOf(end);
     pub fn panic(_: PC, _: SP, _: *Process, _: *Context, _: Extra) Result { // not embedded
         @panic("not implemented");
     }
@@ -446,9 +294,8 @@ pub const StackStructure = packed struct {
     tag: object.Object.LowTagType = object.Object.lowTagSmallInteger,
     locals: u11 = 0,
     selfOffset: u11 = 0,
-    reserve: u11 = 0,
-    _filler: std.meta.Int(.unsigned, 64 - 33 - @bitSizeOf(Object.LowTagType) - @bitSizeOf(Object.HighTagType)) = 0,
-    hightTag: object.Object.HighTagType = object.Object.highTagSmallInteger,
+    _filler: std.meta.Int(.unsigned, 64 - 22 - @bitSizeOf(Object.LowTagType) - @bitSizeOf(Object.HighTagType)) = 0,
+    highTag: object.Object.HighTagType = object.Object.highTagSmallInteger,
 };
 pub const endMethod = CompiledMethod.init(Nil(), Code.end);
 pub const CompiledMethod = struct {
@@ -477,27 +324,22 @@ pub const CompiledMethod = struct {
         };
     }
     pub fn initInfalliblePrimitive(name: Object, class: ClassIndex, methodFn: *const fn (programCounter: PC, stackPointer: SP, process: *Process, context: *Context, signature: Extra) Result) Self {
-        return Self{
-            .header = HeapHeader.calc(ClassIndex.CompiledMethod, codeOffsetInObjects + codeSize, name.hash24(), Age.static, null, Object, false) catch unreachable,
-            .stackStructure = StackStructure{},
-            .signature = Signature.from(name, class),
-            .executeFn = methodFn,
-            .jitted = methodFn,
-            .code = .{ Code.primOf(methodFn), undefined }, //TODO: should be something like primitiveFailed
-        };
-    }
-    pub inline fn reserve(spaceToReserve: u11, sp: SP, process: *Process, context: *Context, extra: Extra) struct { SP, *Context, Extra } {
-        if (!process.canAllocStackSpace(sp, spaceToReserve))
-            return process.spillStack(sp, context, extra);
-        return .{ sp, context, extra };
-    }
-    pub fn execute(self: *Self, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
-        const newSp, const newContext, const newExtra = reserve(self.stackStructure.reserve, sp, process, context, extra);
+          return Self{
+              .header = HeapHeader.calc(ClassIndex.CompiledMethod, codeOffsetInObjects + codeSize, name.hash24(), Age.static, null, Object, false) catch unreachable,
+              .stackStructure = StackStructure{},
+              .signature = Signature.from(name, class),
+              .executeFn = methodFn,
+              .jitted = methodFn,
+              .code = .{ Code.primOf(methodFn), undefined }, //TODO: should be something like primitiveFailed
+          };
+      }
+    pub fn execute(self: *Self, sp: SP, process: *Process, context: *Context, _: Extra) Result {
+        const newExtra = Extra.forMethod(self, sp);
         const pc = PC.init(&self.code[0]);
         trace("\nexecute: {}", .{pc});
         //        trace(" {}", .{ new.sp });
         trace(" {x}\n", .{@as(u64, @bitCast(self.signature))});
-        return pc.prim()(pc.next(), newSp, process, newContext, newExtra);
+        return pc.prim()(pc.next(), sp, process, context, newExtra);
     }
     // pub fn forDispatch(self: *Self, class: ClassIndex) void {
     //     self.signature.setClass(class);
@@ -605,7 +447,7 @@ fn CompileTimeMethod(comptime counts: usize) type {
     return struct { // structure must exactly match CompiledMethod
         header: HeapHeader,
         signature: Signature,
-        stackStructure: StackStructure, // f1 - locals, f2 - maxStackNeeded, f3 - selfOffset
+        stackStructure: StackStructure, // f1 - locals, f3 - selfOffset
         executeFn: *const fn (programCounter: PC, stackPointer: SP, process: *Process, context: *Context, signature: Extra) Result,
         jitted: *const fn (programCounter: PC, stackPointer: SP, process: *Process, context: *Context, signature: Extra) Result,
         code: [codes]Code,
@@ -618,13 +460,13 @@ fn CompileTimeMethod(comptime counts: usize) type {
         //         @compileError("CompiledMethod prefix not the same as CompileTimeMethod == " ++ s);
         // }
         const cacheSize = 0; //@sizeOf(SendCacheStruct) / @sizeOf(Code);
-        pub fn init(name: anytype, comptime locals: u11, comptime maxStack: u16, function: ?*const fn (programCounter: PC, stackPointer: SP, process: *Process, context: *Context, signature: Extra) Result, class: ClassIndex, tup: anytype) Self {
+        pub fn init(name: anytype, comptime locals: u11, function: ?*const fn (programCounter: PC, stackPointer: SP, process: *Process, context: *Context, signature: Extra) Result, class: ClassIndex, tup: anytype) Self {
             const header = comptime HeapHeader.calc(.CompiledMethod, codeOffsetInUnits + codes, 0, Age.static, null, Object, false) catch @compileError("method too big");
             const f = function orelse &Code.noOp;
             var method = Self{
                 .header = header,
                 .signature = Signature.fromNameClass(name, class),
-                .stackStructure = .{ .locals = locals, .reserve = maxStack, .selfOffset = locals + name.numArgs() },
+                .stackStructure = .{ .locals = locals, .selfOffset = locals + name.numArgs() },
                 .executeFn = f,
                 .jitted = f,
                 .code = undefined,
@@ -703,19 +545,6 @@ fn CompileTimeMethod(comptime counts: usize) type {
         pub fn getCodeSize(_: *Self) usize {
             return codes;
         }
-        pub fn findObjectX(self: *Self, search: Object) usize {
-            var index = self.references.len - 1;
-            while (index >= 0) : (index -= 1) {
-                const v = self.references[index];
-                if (search.equals(v))
-                    return index;
-                if (object.NotAnObject.equals(v)) {
-                    self.references[index] = search;
-                    return index;
-                }
-            }
-            unreachable;
-        }
     };
 }
 test "CompileTimeMethod" {
@@ -733,20 +562,17 @@ test "CompileTimeMethod" {
         "1mref",
         null,
     }));
-    var r1 = c1.init(Sym.value, 2, 3, null, .testClass, .{});
+    var r1 = c1.init(Sym.value, 2, null, .testClass, .{});
     //TODO    r1.setLiterals(Object.empty, &[_]Object{Nil, True});
     try expectEqual(8, r1.getCodeSize());
 }
-fn compiledMethodType(comptime codeSize: comptime_int) type {
-    return CompileTimeMethod(.{ .codes = codeSize });
+pub fn compileMethod(name: anytype, comptime locals: comptime_int, comptime class: ClassIndex, comptime tup: anytype) CompileTimeMethod(countNonLabels(tup)) {
+    return compileMethodWith(name, locals, class, null, tup);
 }
-pub fn compileMethod(name: anytype, comptime locals: comptime_int, comptime maxStack: comptime_int, comptime class: ClassIndex, comptime tup: anytype) CompileTimeMethod(countNonLabels(tup)) {
-    return compileMethodWith(name, locals, maxStack, class, null, tup);
-}
-fn compileMethodWith(name: anytype, comptime locals: comptime_int, comptime maxStack: comptime_int, comptime class: ClassIndex, comptime verifier: ?*const fn (programCounter: PC, stackPointer: SP, process: *Process, context: *Context, signature: Extra) Result, comptime tup: anytype) CompileTimeMethod(countNonLabels(tup)) {
+fn compileMethodWith(name: anytype, comptime locals: comptime_int, comptime class: ClassIndex, comptime verifier: ?*const fn (programCounter: PC, stackPointer: SP, process: *Process, context: *Context, signature: Extra) Result, comptime tup: anytype) CompileTimeMethod(countNonLabels(tup)) {
     @setEvalBranchQuota(100000);
     const MethodType = CompileTimeMethod(countNonLabels(tup));
-    return MethodType.init(name, locals, maxStack, verifier, class, tup);
+    return MethodType.init(name, locals, verifier, class, tup);
 }
 fn lookupLabel(tup: anytype, comptime field: []const u8) i56 {
     comptime var lp = 0;
@@ -796,7 +622,7 @@ test "compiling method" {
     std.debug.print("Test: compiling method\n", .{});
     const expectEqual = std.testing.expectEqual;
     //@compileLog(&p.send);
-    var m = compileMethod(Sym.yourself, 0, 0, .testClass, .{
+    var m = compileMethod(Sym.yourself, 0, .testClass, .{
         ":abc", p.branch,
         "def",  "0True",
         42,     ":def",
@@ -1063,7 +889,7 @@ pub const Execution = struct {
                 const method: *CompiledMethod = self.method.asCompiledMethodPtr();
                 self.init(source);
                 try self.resolve(Object.empty);
-                if (false) {
+                if (true) {
                     const ptr: [*]u64 = @ptrFromInt(@intFromPtr(&self.method));
                     for (ptr[0 .. @sizeOf(MethodType) / 8], 0..) |*v, idx|
                         std.debug.print("[{:>2}:{x:0>16}]: {x:0>16}\n", .{ idx, @intFromPtr(v), v.* });
@@ -1082,7 +908,7 @@ pub const Execution = struct {
     }
     fn init(tup: anytype) Executer(countNonLabels(tup)) {
         const ExeType = Executer(countNonLabels(tup));
-        return ExeType.new(compileMethod(Sym.yourself, 0, 0, .testClass, tup));
+        return ExeType.new(compileMethod(Sym.yourself, 0, .testClass, tup));
     }
     pub fn runTest(title: []const u8, tup: anytype, source: []const Object, expected: []const Object) !void {
         return runTestWithObjects(title, tup, Object.empty, source, expected);
@@ -1129,12 +955,31 @@ pub const Execution = struct {
         try std.testing.expectEqualSlices(Object, expected, result);
     }
 
-    // fn mainSendTo(selector: Object, target: Object) !void {
-    //     std.debug.print("Sending: {} to {}\n", .{ selector, target });
-    //     var exec = Self.new();
-    //     const args = [_]Object{target};
-    //     exec.initStack(&args);
-    //     exec.ctxt.setReturn(Code.endThread);
-    //     return error.NotImplemented;
-    // }
+    pub fn mainSendTo(selector: Object, target: Object) !Object {
+        const codes = 3;
+        const ExeType = Executer(codes);
+        const MethodType = ExeType.MethodType;
+        const header = comptime HeapHeader.calc(.CompiledMethod,
+            MethodType.codeOffsetInUnits + codes, 0, Age.aStruct, null, Object, false) catch unreachable;
+        const f = zag.dispatch.threadedFunctions.send.threadedFn;
+        var method: MethodType = .{
+            .header = header,
+            .signature = Signature.fromNameClass(Sym.yourself, .testClass),
+            .stackStructure = .{ .locals = 0, .selfOffset = 0 },
+            .executeFn = f,
+            .jitted = f,
+            .code = undefined,
+            .offsets = [_]bool{false} ** codes,
+        };
+        var exe = ExeType.new(method);
+        std.debug.print("Sending: {} to {}\n", .{ selector, target });
+        method.code[0] = Code.primOf(f);
+        method.code[1] = Code.objectOf(Sym.fibonacci);
+        method.code[2] = Code.endCode;
+        const args = [_]Object{target};
+        std.debug.print("mainSendTo:\n{}\n", .{method});
+        exe.initStack(&args);
+        exe.execute(Object.empty) catch unreachable;
+        return exe.stack()[0];
+    }
 };

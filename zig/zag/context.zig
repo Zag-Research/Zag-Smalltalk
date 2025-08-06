@@ -21,8 +21,7 @@ const execute = zag.execute;
 const SendCache = execute.SendCache;
 const Code = execute.Code;
 const PC = execute.PC;
-const SP = execute.SP;
-const Extra = execute.Extra;
+const SP = Process.SP;
 const Result = execute.Result;
 const Execution = execute.Execution;
 const CompiledMethod = execute.CompiledMethod;
@@ -39,6 +38,71 @@ prevCtxt: ?ContextPtr,
 trapContextNumber: u64,
 contextData: *ContextData,
 const baseSize = @sizeOf(Self) / @sizeOf(Object);
+pub const Extra = struct {
+    int: u64,
+    const stack_mask = Process.stack_mask;
+    const is_encoded = stack_mask + 1;
+    // Three states:
+    //  - method is not encoded - is_encoded will not be set and low bits not zero
+    //  - method is encoded - is_encoded will be set and low bits not zero
+    //  - contextData - low bits zero
+    pub fn forMethod(method: *const CompiledMethod, sp: SP) Extra {
+        // guaranteed that the low bits of sp are not zero by design in Process
+        const stackOffset = @intFromPtr(sp) & stack_mask;
+        return .{ .int = @intFromPtr(method) << 16 | stackOffset };
+    }
+    pub fn fromContextData(contextData: *const ContextData) Extra {
+        return .{ .int = @intFromPtr(contextData) << 16 };
+    }
+    pub fn getContextData(self: Extra) *ContextData {
+        return @ptrFromInt(self.int >> 16);
+    }
+    pub fn noContext(self: Extra) bool {
+        return self.int & stack_mask != 0;
+    }
+    pub fn getMethod(self: Extra) ?*const CompiledMethod {
+        if (self.noContext()) {
+            return @ptrFromInt(self.int >> 16);
+        }
+        return null;
+    }
+    pub fn addressIfNoContext(_: Extra, _: usize, _: SP) ?[*]Object {
+        @panic("needContext");
+    }
+    pub fn encoded(self: Extra) Extra {
+        return .{ .int = self.int | is_encoded };
+    }
+    pub fn decoded(self: Extra) Extra {
+        return .{ .int = self.int & ~is_encoded };
+    }
+    pub fn isEncoded(self: Extra) bool {
+        return self.int & is_encoded != 0;
+    }
+    pub fn primitiveFailed(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
+        if (config.logThreadExecution)
+            std.debug.print("primitiveFailed: {} {}\n", .{ extra, pc });
+        return @call(tailCall, process.check(pc.prev().prim()), .{ pc, sp, process, context, extra.encoded() });
+    }
+    pub fn inlinePrimitiveFailed(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
+        if (config.logThreadExecution)
+            std.debug.print("primitiveFailed: {} {}\n", .{ extra, pc });
+        _ = .{ sp, process, context, @panic("inlinePrimitiveFailed") };
+        //return @call(tailCall, process.check(pc.prev().prim()), .{ pc, sp, process, context, extra.encoded() });
+    }
+    pub fn formatX(
+        self: Extra,
+        comptime fmt: []const u8,
+        options: std.fmt.FormatOptions,
+        writer: anytype,
+    ) !void {
+        _ = .{ fmt, options };
+        switch (self) {
+            .method => |m| try writer.print("Extra{{.method = {*}}}", .{m}),
+            .object => |o| try writer.print("Extra{{.object = {}}}", .{o}),
+            .contextData => |l| try writer.print("Extra{{.contextData = {}}}", .{l}),
+        }
+    }
+};
 pub const ContextData = struct {
     header: HeapHeader,
     contextData: [1]Object,

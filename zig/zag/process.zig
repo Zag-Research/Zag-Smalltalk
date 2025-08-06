@@ -11,6 +11,8 @@ const SeqCst = std.builtin.AtomicOrder.seq_cst;
 const object = zag.object;
 const Object = object.Object;
 const Nil = object.Nil;
+const True = object.True;
+const False = object.False;
 const ClassIndex = object.ClassIndex;
 const checkEqual = zag.utilities.checkEqual;
 //const dispatch = @import("dispatch.zig");
@@ -25,20 +27,17 @@ const Format = heap.Format;
 const allocationInfo = heap.AllocationInfo.calc;
 const AllocReturn = heap.AllocReturn;
 const Context = zag.Context;
-const ContextPtr = *Context;
+const Extra = Context.Extra;
 const execute = zag.execute;
 const SendCache = execute.SendCache;
 const Code = execute.Code;
 const PC = execute.PC;
-const SP = execute.SP;
-const Extra = execute.Extra;
 const Result = execute.Result;
-const CodeContextPtr = execute.CodeContextPtr;
 
 /// this is really a Process object with the low bits encoding additional information
 const Self = @This();
 m: [process_total_size]u8 align(1), // alignment explicitly stated to emphasize the difference from Process
-const process_total_size = if (config.is_test) 2048 else 64 * 1024; // must be more than HeapObject.maxLength*8 so externally allocated
+const process_total_size = config.process_total_size;
 pub const alignment = @max(stack_mask_overflow, flagMask + 1);
 pub const stack_mask_overflow = zag.utilities.largerPowerOf2(Process.stack_size * @sizeOf(Object));
 pub const stack_mask = stack_mask_overflow - 1;
@@ -379,6 +378,96 @@ test "check flag" {
     try testing.expect(!pr.needsCheck());
     pr = pr.checkBump();
     try testing.expect(pr.needsCheck());
+}
+pub const SP = *Stack;
+pub const initStack = Stack.from;
+const Stack = struct {
+    top: Object,
+    next: Object,
+    third: Object,
+    comptime {
+        std.debug.assert(@offsetOf(Stack, "top") == 0);
+        std.debug.assert(@offsetOf(Stack, "next") == @sizeOf(Object));
+        std.debug.assert(@offsetOf(Stack, "third") == @sizeOf(Object) * 2);
+    }
+    pub inline fn lessThan(self: SP, other: anytype) bool {
+        return @intFromPtr(self) < @intFromPtr(other);
+    }
+    fn from(self: anytype) SP {
+        return @ptrCast(self);
+    }
+    pub inline fn push(self: SP, v: Object) ?SP {
+        if (self.reserve(1)) |newSp| {
+            newSp.top = @bitCast(v);
+            return newSp;
+        }
+        return null;
+    }
+    pub inline fn pushRawInt(self: SP, v: u64) ?SP {
+        if (self.reserve(1)) |newSp| {
+            newSp.top = @bitCast(v);
+            return newSp;
+        }
+        return null;
+    }
+    pub inline fn dropPut(self: SP, v: Object) SP {
+        self.next = v;
+        return self.unreserve(1);
+    }
+    pub inline fn drop(self: SP) SP {
+        return self.unreserve(1);
+    }
+    pub inline fn reserve(self: SP, n: anytype) ?SP {
+        const selfInt = @intFromPtr(self);
+        const newInt = selfInt - @sizeOf(Object) * n;
+        if (n == 1 and newInt & stack_mask > 0) {
+            return @ptrFromInt(newInt);
+        } else if ((selfInt & stack_mask_overflow) == (newInt & stack_mask_overflow)) {
+            return @ptrFromInt(newInt);
+        } else return null;
+    }
+    pub inline fn safeReserve(self: SP, n: usize) SP {
+        return @ptrFromInt(@intFromPtr(self) - @sizeOf(Object) * n);
+    }
+    pub inline fn unreserve(self: SP, n: usize) SP {
+        return @ptrFromInt(@intFromPtr(self) + @sizeOf(Object) * n);
+    }
+    pub inline fn delta(self: SP, other: SP) usize {
+        return (@intFromPtr(other) - @intFromPtr(self)) / @sizeOf(Object);
+    }
+    pub inline fn array(self: SP) [*]Object {
+        return @ptrCast(self);
+    }
+    pub inline fn slice(self: SP, n: usize) []Object {
+        return self.array()[0..n];
+    }
+    pub inline //
+    fn sliceTo(self: SP, a_ptr: anytype) []Object {
+        const i_ptr = @intFromPtr(a_ptr);
+        return self.slice(((i_ptr - @intFromPtr(self))) / @sizeOf(Object));
+    }
+    pub inline fn at(self: SP, n: usize) Object {
+        return self.array()[n];
+    }
+    pub inline fn atPut(self: SP, n: usize, o: Object) void {
+        self.array()[n] = o;
+    }
+};
+test "Stack" {
+    std.debug.print("Test: Stack\n", .{});
+    var process: Self align(alignment) = new();
+    process.init(Nil());
+    const ee = std.testing.expectEqual;
+    var stack: [11]Object = undefined;
+    const sp0 = @as(SP, @ptrCast(&stack[10]));
+    sp0.top = True();
+    try ee(True(), stack[10]);
+    const sp1 = sp0.push(False()).?;
+    try ee(True(), stack[10]);
+    try ee(False(), stack[9]);
+    _ = sp1.drop().push(Object.from(42, &process));
+    try ee(Object.from(42, &process).to(i64), 42);
+    try ee(stack[9].to(i64), 42);
 }
 pub const threadedFunctions = struct {
     pub const pushThisProcess = struct {

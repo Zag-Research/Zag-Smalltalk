@@ -60,13 +60,12 @@ pub const ClassIndex = enum(u16) {
     BlockAssignLocal,
     ThunkInstance,
     BlockAssignInstance,
-    PICPointer,
     ThunkHeap,
     ThunkImmediate,
     ThunkFloat,
-    SmallInteger,
     False,
     True,
+    SmallInteger,
     Symbol,
     Character,
     LLVM,
@@ -119,13 +118,12 @@ pub const ClassIndex = enum(u16) {
         BlockAssignLocal,
         ThunkInstance,
         BlockAssignInstance,
-        PICPointer,
         ThunkHeap,
         ThunkImmediate,
         ThunkFloat,
-        SmallInteger,
         False,
         True,
+        SmallInteger,
         Symbol,
         Character,
         LLVM,
@@ -346,7 +344,7 @@ pub const PackedObject = packed struct {
         std.debug.print("Test: combiners\n", .{});
         const expectEqual = std.testing.expectEqual;
         try expectEqual(16384 + 2, combine14(.{ 2, 1 }));
-        try expectEqual(294927, combine14([_]ClassIndex{ .SmallInteger, .Symbol }));
+        try expectEqual(0x44010, combine14([_]ClassIndex{ .SmallInteger, .Symbol }));
     }
 };
 
@@ -418,7 +416,7 @@ test "order" {
             const ee = std.testing.expectEqual;
             const sl1 = slice1()[0].buf;
             try ee(42, sl1[1]);
-            try ee(121, sl1[0]);
+            try ee(129, sl1[0]);
             try ee(0, sl1[2]);
             @setRuntimeSafety(false);
             const buf2 = (Buf{

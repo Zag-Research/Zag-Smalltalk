@@ -7,15 +7,15 @@ const trace = config.trace;
 const execute = zag.execute;
 const Code = execute.Code;
 const PC = execute.PC;
-const SP = execute.SP;
 const compileMethod = execute.compileMethod;
 const CompiledMethod = execute.CompiledMethod;
-const Extra = execute.Extra;
 const Result = execute.Result;
 const Execution = execute.Execution;
 const failed = Execution.failed;
 const Process = zag.Process;
+const SP = Process.SP;
 const Context = zag.Context;
+const Extra = Context.Extra;
 const object = zag.object;
 const Object = object.Object;
 const Compact = object.ClassIndex.Compact;
@@ -176,7 +176,7 @@ pub const threadedFns = struct {
         }
         fn validateFloat(exe: anytype, _: []const Object) Execution.ValidateErrors!void {
             switch (objectEncoding) {
-                .zag => try std.testing.expectEqualSlices(Object, &[_]Object{@bitCast(@as(u64, 0x0dffff0000000e71))}, exe.stack()),
+                .zag => try std.testing.expectEqualSlices(Object, &[_]Object{@bitCast(@as(u64, 0x0dffff0000000e69))}, exe.stack()),
                 else => return error.TestAborted,
             }
         }

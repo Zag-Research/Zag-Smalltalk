@@ -12,14 +12,14 @@ const False = object.False;
 const ClassIndex = object.ClassIndex;
 const execute = zag.execute;
 const PC = execute.PC;
-const SP = execute.SP;
-const Extra = execute.Extra;
+const SP = Process.SP;
 const Result = execute.Result;
 const Signature = execute.Signature;
 const Execution = execute.Execution;
 const CompiledMethod = execute.CompiledMethod;
 const Process = zag.Process;
 const Context = zag.Context;
+const Extra = Context.Extra;
 const globalArena = zag.globalArena;
 const symbol = zag.symbol;
 const symbols = symbol.symbols;
@@ -308,7 +308,7 @@ fn doDispatch(tE: *Execution, dispatch: *Dispatch, extra: Extra) []Object {
 //     const ee = std.testing.expectEqual;
 //     var temp0: usize = 0;
 //     var temp: usize = 0;
-//     const methodType = compiledMethodType(2);
+//     const methodType = CompiledMethod(2);
 //     const fns = struct {
 //         fn testYourself(_: PC, sp: SP, _: *Process, _: CodeContextPtr, extra: Extra) Result {
 //             if (!selector.equals(symbols.yourself)) @panic("hash doesn't match");
