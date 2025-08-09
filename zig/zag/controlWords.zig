@@ -80,18 +80,19 @@ pub const classCase = struct {
                 // with the first line commented, this works
                 // with the second line commented instead, this fails
                 //std.debug.print("currentClass: {}, match: {}\n", .{ currentClass, match });
-                std.debug.print("currentClass: {}, match: {}, extra: {}\n", .{ currentClass, match, extra });
+                std.debug.print("currentClass: {}, match: {}, process: {*}\n", .{ currentClass, match, process });
+                //std.debug.print("currentClass: {}, match: {}, extra: {f}\n", .{ currentClass, match, extra });
                 if (currentClass == match) {
                     newPc = newPc.targetPC();
-                    std.debug.print("currentClass: extra: {}\n", .{extra});
+                    std.debug.print("currentClass: extra: {f}\n", .{extra});
                     return @call(tailCall, process.check(newPc.prim()), .{ newPc.next(), sp.drop(), process, context, extra });
                 }
                 if (currentClass == 0) {
-                    std.debug.print("currentClass: extra: {}\n", .{extra});
+                    std.debug.print("currentClass: extra: {f}\n", .{extra});
                     return @call(tailCall, process.check(newPc.prim()), .{ newPc.next(), sp.drop(), process, context, extra });
                 }
                 if (currentClass == 0x3FFF) {
-                    std.debug.print("currentClass: extra: {}\n", .{extra});
+                    std.debug.print("currentClass: extra: {f}\n", .{extra});
                     return @call(tailCall, process.check(newPc.prim()), .{ newPc.next(), sp, process, context, extra });
                 }
                 classes >>= 14;
@@ -273,7 +274,7 @@ pub const push = struct {
         const variable = pc.object().variable();
         const address, const newContext, const newExtra, const newSp = context.getAddress(variable, sp, process, extra);
         const value = address.*;
-        std.debug.print("push: {} {}\n", .{ extra, newExtra });
+        std.debug.print("push: {f} {f}\n", .{ extra, newExtra });
         if (newSp.push(value)) |newerSp| {
             return @call(tailCall, process.check(pc.prim2()), .{ pc.next2(), newerSp, process, newContext, newExtra });
         } else {
@@ -339,7 +340,7 @@ pub const pushAssociationValue = struct {
 pub const pushLiteral = struct {
     pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
         const value = pc.object();
-        std.debug.print("pushLiteral: {}\n", .{extra});
+        std.debug.print("pushLiteral: {f}\n", .{extra});
         if (sp.push(value)) |newSp| {
             return @call(tailCall, process.check(pc.prim2()), .{ pc.next2(), newSp, process, context, extra });
         } else {

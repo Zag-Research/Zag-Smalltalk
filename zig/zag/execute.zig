@@ -83,12 +83,9 @@ pub const Signature = packed struct {
     }
     pub fn format(
         self: Signature,
-        comptime fmt: []const u8,
-        options: std.fmt.FormatOptions,
         writer: anytype,
     ) !void {
-        _ = .{ fmt, options };
-        try writer.print("Signature({},{})", .{ self.asSymbol(), self.getClass() });
+        try writer.print("Signature({f},{})", .{ self.asSymbol(), self.getClass() });
     }
 };
 pub const PC = packed struct {
@@ -112,7 +109,7 @@ pub const PC = packed struct {
     fn method(self: PC) *CompiledMethod {
         if (logging) {
             @setRuntimeSafety(false);
-            std.debug.print("PC_method:       {x:0>16}: {}\n", .{ @intFromPtr(self.code), self.code.method });
+            std.debug.print("PC_method:       {x:0>16}: {f}\n", .{ @intFromPtr(self.code), self.code.method });
         }
         return self.code.method;
     }
@@ -120,7 +117,7 @@ pub const PC = packed struct {
     fn codeAddress(self: PC) *const Code {
         if (logging) {
             @setRuntimeSafety(false);
-            std.debug.print("PC_codeAddress:  {x:0>16}: {}\n", .{ @intFromPtr(self.code), self.code.codePtr });
+            std.debug.print("PC_codeAddress:  {x:0>16}: {f}\n", .{ @intFromPtr(self.code), self.code.codePtr });
         }
         return self.code.codePtr;
     }
@@ -130,7 +127,7 @@ pub const PC = packed struct {
     }
     pub //inline
     fn asThreadedFn(self: PC) *const fn (programCounter: PC, stackPointer: SP, process: *Process, context: *Context, signature: Extra) Result {
-        std.debug.print("PC_asThreadedFn: {x:0>16}: {}\n", .{ @intFromPtr(self.code), self });
+        std.debug.print("PC_asThreadedFn: {x:0>16}: {f}\n", .{ @intFromPtr(self.code), self });
         return self.code.prim();
     }
     pub //inline
@@ -145,7 +142,7 @@ pub const PC = packed struct {
     fn object(self: PC) Object {
         if (logging) {
             @setRuntimeSafety(false);
-            std.debug.print("PC_object:       {x:0>16}: {}\n", .{ @intFromPtr(self.code), self.code.object });
+            std.debug.print("PC_object:       {x:0>16}: {f}\n", .{ @intFromPtr(self.code), self.code.object });
         }
         return self.code.object;
     }
@@ -162,7 +159,7 @@ pub const PC = packed struct {
     fn uint(self: PC) u64 {
         if (logging) {
             @setRuntimeSafety(false);
-            std.debug.print("PC_uint:         {x:0>16}: {}\n", .{ @intFromPtr(self.code), self.code.object });
+            std.debug.print("PC_uint:         {x:0>16}: {f}\n", .{ @intFromPtr(self.code), self.code.object });
         }
         return self.code.object.to(u64);
     }
@@ -170,7 +167,7 @@ pub const PC = packed struct {
     fn int(self: PC) i64 {
         if (logging) {
             @setRuntimeSafety(false);
-            std.debug.print("PC_int:          {x:0>16}: {}\n", .{ @intFromPtr(self.code), self.code.object });
+            std.debug.print("PC_int:          {x:0>16}: {f}\n", .{ @intFromPtr(self.code), self.code.object });
         }
         return self.code.object.to(i64);
     }
@@ -213,11 +210,8 @@ pub const PC = packed struct {
     }
     pub fn format(
         self: PC,
-        comptime fmt: []const u8,
-        options: std.fmt.FormatOptions,
         writer: anytype,
     ) !void {
-        _ = .{ fmt, options };
         try writer.print("{{PC {x}}}", .{@intFromPtr(self.code)});
     }
 };
@@ -276,12 +270,10 @@ pub const Code = union(enum) {
     }
     pub fn format(
         self: *const Code,
-        comptime _: []const u8,
-        _: std.fmt.FormatOptions,
         writer: anytype,
     ) !void {
         switch (self.*) {
-            .object => |obj| try writer.print("object({})", .{obj}),
+            .object => |obj| try writer.print("object({f})", .{obj}),
             .threadedFn => |tFn| {
                 if (@import("threadedFn.zig").find(tFn)) |name| {
                     try writer.print("{}", .{name});
@@ -322,13 +314,13 @@ pub const CompiledMethod = struct {
     pub fn dump(self: *const Self) void {
         std.debug.print("Header:           {}\n", .{self.header});
         std.debug.print("Stack Structure:  {}\n", .{self.stackStructure});
-        std.debug.print("Signature:        {}\n", .{self.signature});
+        std.debug.print("Signature:        {f}\n", .{self.signature});
         std.debug.print("Execute Function: {}\n", .{self.executeFn});
         std.debug.print("Jitted Function:  {?}\n", .{self.jitted});
         const code: [*]const Code = @ptrCast(&self.code);
         const methodSize = self.header.length - codeOffsetInObjects;
         for (code[0..methodSize]) |*instruction| {
-            std.debug.print("[{x:0>12}]: {}\n", .{ @intFromPtr(instruction), instruction.* });
+            std.debug.print("[{x:0>12}]: {f}\n", .{ @intFromPtr(instruction), instruction.* });
         }
     }
     pub fn init(name: Object, methodFn: *const fn (programCounter: PC, stackPointer: SP, process: *Process, context: *Context, signature: Extra) Result) Self {
@@ -381,12 +373,8 @@ pub const CompiledMethod = struct {
     }
     pub fn formatXXX(
         self: *const Self,
-        comptime fmt: []const u8,
-        options: std.fmt.FormatOptions,
         writer: anytype,
     ) !void {
-        _ = fmt;
-        _ = options;
         return self.write(writer);
     }
     pub fn write(
@@ -976,7 +964,7 @@ pub const Execution = struct {
     }
 
     pub fn mainSendTo(selector: Object, target: Object) !Object {
-        const codes = 3;
+        const codes = 4;
         const ExeType = Executer(codes);
         const MethodType = ExeType.MethodType;
         const header = comptime HeapHeader.calc(.CompiledMethod, MethodType.codeOffsetInUnits + codes, 0, Age.aStruct, null, Object, false) catch unreachable;
@@ -990,11 +978,12 @@ pub const Execution = struct {
             .code = undefined,
             .offsets = [_]bool{false} ** codes,
         });
-        std.debug.print("Sending: {} to {}\n", .{ selector, target });
+        std.debug.print("Sending: {f} to {f}\n", .{ selector, target });
         const method = &exe.method;
         method.code[0] = Code.primOf(f);
         method.code[1] = Code.objectOf(Sym.fibonacci);
-        method.code[2] = Code.endCode;
+        method.code[2] = Code.methodOf(&zag.dispatch.nullMethod);
+        method.code[3] = Code.endCode;
         const args = [_]Object{target};
         exe.execute(&args) catch unreachable;
         return exe.stack()[0];

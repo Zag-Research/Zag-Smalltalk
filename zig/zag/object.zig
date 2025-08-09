@@ -286,11 +286,8 @@ pub const ObjectFunctions = struct {
     }
     pub fn format(
         self: Object,
-        comptime fmt: []const u8,
-        options: std.fmt.FormatOptions,
         writer: anytype,
     ) !void {
-        _ = options;
         if (self.nativeI()) |i| {
             try writer.print("{d}", .{i});
         } else if (self.equals(False())) {
@@ -306,7 +303,6 @@ pub const ObjectFunctions = struct {
         } else {
             try writer.print("{{?0x{x:0>16}}}", .{@as(u64, @bitCast(self))});
         }
-        if (fmt.len == 1 and fmt[0] == 'x') try writer.print("(0x{x:0>16})", .{@as(u64, @bitCast(self))});
     }
     pub const alignment = @alignOf(u64);
 };

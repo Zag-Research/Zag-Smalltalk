@@ -72,12 +72,8 @@ const Process = extern struct {
 };
 pub fn format(
     orig: *const @This(),
-    comptime fmt: []const u8,
-    options: std.fmt.FormatOptions,
     writer: anytype,
 ) !void {
-    _ = fmt;
-    _ = options;
     const self = orig.ptr();
     try writer.print("process: {} .stack = {any}", .{ orig.header().id, orig.getStack(self.h.sp) });
     try writer.print(" .heap = {any}", .{orig.getHeap()});
@@ -129,7 +125,7 @@ inline fn needsCheck(self: *align(1) const Self) bool {
     return (@intFromPtr(self) & checkFlags) != 0;
 }
 fn fullCheck(pc: PC, sp: SP, process: *align(1) Self, context: *Context, extra: Extra) Result {
-    std.debug.print("fullCheck: {}\n", .{extra});
+    std.debug.print("fullCheck: {f}\n", .{extra});
     return @call(tailCall, pc.prev().prim(), .{ pc, sp, process, context, extra });
 }
 pub inline fn checkBump(self: *Self) *Self {

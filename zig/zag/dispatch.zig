@@ -41,7 +41,7 @@ const DispatchHandler = struct {
         return loadMethodForClass(ci, selector);
     }
     fn loadMethodForClass(ci: ClassIndex, selector: Object) *const CompiledMethod {
-        std.debug.print("loadMethodForClass({} {})\n", .{ ci, selector });
+        std.debug.print("loadMethodForClass({} {f})\n", .{ ci, selector });
         unreachable;
     }
     fn stats(index: ClassIndex) Dispatch.Stats {
@@ -355,7 +355,7 @@ pub const threadedFunctions = struct {
     const tf = zag.threadedFn.Enum;
     pub const returnSelf = struct {
         pub fn threadedFn(_: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
-            std.debug.print("returnSelf: {}\n", .{extra});
+            std.debug.print("returnSelf: {f}\n", .{extra});
             if (extra.addressIfNoContext(0, sp)) |address| {
                 const newSp: SP = @ptrCast(address);
                 return @call(tailCall, process.check(context.npc), .{ context.tpc, newSp, process, context, Extra.fromContextData(context.contextData) });
@@ -387,7 +387,7 @@ pub const threadedFunctions = struct {
     pub const returnTop = struct {
         pub fn threadedFn(_: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
             const top = sp.top;
-            std.debug.print("returnTop: {} {}\n", .{ top, extra });
+            std.debug.print("returnTop: {f} {f}\n", .{ top, extra });
             if (extra.addressIfNoContext(0, sp)) |address| {
                 const newSp: SP = @ptrCast(address);
                 newSp.top = top;
@@ -424,13 +424,13 @@ pub const threadedFunctions = struct {
     const SaveCase = enum { TailCall, Return };
     fn getMethod(pc: PC, sp: SP, context: *Context, saveReturn: SaveCase) *const CompiledMethod {
         const selector = pc.object();
-        if (saveReturn == .Return) context.setReturn(pc.next());
+        if (saveReturn == .Return) context.setReturn(pc.next2());
         const receiver = sp.at(selector.numArgs());
         return receiver.get_class().lookupMethodForClass(selector);
     }
     pub const send = struct {
         pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, _: Extra) Result {
-            std.debug.print("send: {}\n", .{pc});
+            std.debug.print("send: {f}\n", .{pc});
             const method = getMethod(pc, sp, context, .Return);
             const newPc = method.codePc();
             return @call(tailCall, newPc.prim(), .{ newPc.next(), sp, process, context, Extra.forMethod(method, sp) });

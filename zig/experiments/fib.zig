@@ -51,8 +51,7 @@ const fibInteger = struct {
             tf.inlinePrimitive,       leq,
             tf.classCase,             classCase(&.{.False}),
             "label3",
-            //tf.push,                  self,
-                            tf.returnSelf,
+            tf.returnSelf,
             ":label3",                tf.push,
             self,                     tf.pushLiteral,
             1,                        tf.inlinePrimitive,
@@ -122,4 +121,4 @@ pub fn main() !void {
     try timing(if (default) @constCast(do_all[0..]) else args[1..], default);
 }
 const testReps = 10;
-const fibN: u6 = 2;
+const fibN: u6 = 3;

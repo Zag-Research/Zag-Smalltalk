@@ -94,17 +94,15 @@ pub const Extra = struct {
     }
     pub fn format(
         self: Extra,
-        comptime fmt: []const u8,
-        options: std.fmt.FormatOptions,
         writer: anytype,
     ) !void {
-        _ = .{ fmt, options };
-        try writer.print("Extra{{{x}}}", .{self.int});
-        // if (self.getMethod()) |method| {
-        //     try writer.print("Extra{{stack: {x} {*}}}", .{ self.int & stack_mask, method });
-        // } else {
-        //     try writer.print("Extra{{.contextData = {}}}", .{self.getContextData()});
-        // }
+        if (self.int > 65535) {
+            try writer.print("Extra{{{x}}}", .{self.int});
+        } else if (self.getMethod()) |method| {
+            try writer.print("Extra{{stack: {x} {*}}}", .{ self.int & stack_mask, method });
+        } else {
+            try writer.print("Extra{{.contextData = {}}}", .{self.getContextData()});
+        }
     }
 };
 pub const ContextData = struct {
@@ -141,13 +139,8 @@ pub fn init() Self {
 }
 pub fn format(
     self: *const Context,
-    comptime fmt: []const u8,
-    options: std.fmt.FormatOptions,
     writer: anytype,
 ) !void {
-    _ = fmt;
-    _ = options;
-
     try writer.print("context: {{", .{});
     //    try writer.print(".header: {}", .{self.header});
     //    try writer.print(".method: {}", .{self.method});
@@ -335,7 +328,7 @@ pub fn oldAddress(v: Variable, sp: SP, extra: Extra) *Object {
 //         if (variable.isLocal and extra.noContext())
 //    return @call(tailCall, Context.installContext, .{ pc, sp, process, context, extra });
 pub fn getAddress(self: *Context, v: Variable, sp: SP, process: *Process, extra: Extra) struct { *Object, *Context, Extra, SP } {
-    std.debug.print("getAddress called {}\n", .{extra});
+    std.debug.print("getAddress called {f}\n", .{extra});
     var objs: [*]Object, const newContext, const newExtra, const newStack =
         if (extra.addressIfNoContext(v.stackOffset, sp)) |stackOffsetAddress|
             .{ stackOffsetAddress, self, extra, sp }
