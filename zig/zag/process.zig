@@ -29,7 +29,6 @@ const AllocReturn = heap.AllocReturn;
 const Context = zag.Context;
 const Extra = Context.Extra;
 const execute = zag.execute;
-const SendCache = execute.SendCache;
 const Code = execute.Code;
 const PC = execute.PC;
 const Result = execute.Result;
@@ -129,8 +128,9 @@ pub inline fn check(self: *align(1) const Self, next: *const fn (programCounter:
 inline fn needsCheck(self: *align(1) const Self) bool {
     return (@intFromPtr(self) & checkFlags) != 0;
 }
-fn fullCheck(pc: PC, sp: SP, process: *align(1) Self, context: *Context, signature: Extra) Result {
-    return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, signature });
+fn fullCheck(pc: PC, sp: SP, process: *align(1) Self, context: *Context, extra: Extra) Result {
+    std.debug.print("fullCheck: {}\n", .{extra});
+    return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, extra });
 }
 pub inline fn checkBump(self: *Self) *Self {
     if (self.needsCheck()) return self;
@@ -160,7 +160,7 @@ pub inline fn getSp(self: *align(1) const Self) SP {
 pub inline fn freeStack(self: *align(1) const Self, sp: SP) usize {
     return (@intFromPtr(sp) - @intFromPtr(self.ptr())) / 8;
 }
-pub inline //
+pub //inline
 fn getStack(self: *align(1) const Self, sp: SP) []Object {
     //    return sp.slice((@intFromPtr(self.endOfStack()) - @intFromPtr(sp)) / @sizeOf(Object));
     return sp.sliceTo(self.endOfStack());
@@ -207,7 +207,7 @@ fn allocSpace(self: *align(1) Self, size: u11, sp: SP, context: *Context) HeapOb
     }
     _ = .{ sp, context, unreachable };
 }
-pub fn alloc(self: *align(1) Self, classIndex: ClassIndex, iVars: u11, indexed: ?usize, comptime element: type, makeWeak: bool) heap.AllocReturn {
+pub fn alloc(self: *align(1) Self, classIndex: ClassIndex, iVars: u11, indexed: ?usize, comptime element: type, makeWeak: bool) heap.AllocResult {
     const aI = allocationInfo(iVars, indexed, element, makeWeak);
     if (aI.objectSize(Process.maxNurseryObjectSize)) |size| {
         //std.debug.print("self: {x} self.header() {x} {} {x}\n", .{ @intFromPtr(self), @intFromPtr(self.header()), size, @intFromPtr(self.header().currHp) });
@@ -441,7 +441,7 @@ const Stack = struct {
     pub inline fn slice(self: SP, n: usize) []Object {
         return self.array()[0..n];
     }
-    pub inline //
+    pub //inline
     fn sliceTo(self: SP, a_ptr: anytype) []Object {
         const i_ptr = @intFromPtr(a_ptr);
         return self.slice(((i_ptr - @intFromPtr(self))) / @sizeOf(Object));

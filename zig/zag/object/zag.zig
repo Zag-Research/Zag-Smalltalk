@@ -50,7 +50,9 @@ pub const Object = packed struct(u64) {
     pub const HighTagType = void;
     pub const highTagSmallInteger = {};
     pub const PackedTagType = u8;
-    pub const packedTagSmallInteger = oImm(.SmallInteger, 0).tagbits();
+    pub const packedTagSmallInteger = intTag;
+    pub const intTag = oImm(.SmallInteger, 0).tagbits();
+    pub const symbolTag = oImm(.Symbol, 0).tagbits();
     const TagAndClassType = u8;
     const tagAndClassBits = enumBits(Group) + enumBits(ClassIndex.Compact);
     comptime {
@@ -176,7 +178,7 @@ pub const Object = packed struct(u64) {
             try ee(object.Object.from(-42, null), value.thunkImmediateValue());
         try ee(null, thunkImmediate(object.Object.from(@as(u64, 1) << 47, null)));
     }
-    pub inline fn isImmediateClass(self: object.Object, class: ClassIndex.Compact) bool {
+    pub inline fn isImmediateClass(self: object.Object, comptime class: ClassIndex.Compact) bool {
         return self.tagbits() == oImm(class, 0).tagbits();
     }
     pub inline fn isHeap(self: object.Object) bool {
@@ -396,4 +398,6 @@ pub const Object = packed struct(u64) {
     pub const setField = OF.setField;
     pub const to = OF.to;
     pub const toUnchecked = OF.toUnchecked;
+    pub const variable = zag.Context.getVariable;
+    pub const PackedObject = object.PackedObject;
 };

@@ -37,7 +37,7 @@ ASZigCPSOutput >> doBasicBlock: bb [
 		print: bb number + 1;
 		nextPutAll: '), ';
 		rVal: #sp;
-		nextPutAll: ', process, context, selector, cache })';
+		nextPutAll: ', process, context, extra })';
 		endStatement 
 ]
 
@@ -114,7 +114,7 @@ ASZigCPSOutput >> outputMethodStart: bb [
 		nextPutAll: 'fn ';
 		id: bb label;
 		nextPutAll:
-			'(pc: PC, sp: SP, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) SP {
+			'(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
 '.
 	currentLVal := nil.
 	lVals := Dictionary new
@@ -277,7 +277,7 @@ ASZigCPSOutput >> visitReturnTop [
 		endStatement;
 		nextPutAll: 'return @call(tailCall, cContext.npc, .{ cContext.tpc, ';
 		rVal: #sp;
-		nextPutAll: ', process, cContext, selector, cache })';
+		nextPutAll: ', process, cContext, extra })';
 		endStatement;
 		flush
 ]

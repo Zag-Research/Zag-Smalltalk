@@ -162,6 +162,7 @@ The name is escaping me....something like Micro Systems....
 ## Miscellaneous
 - [Hidden Heroes](https://hiddenheroes.netguru.com/)
 - [Probability Theory: The Logic of Science](https://www.lesswrong.com/posts/KN3BYDkWei9ADXnBy/e-t-jaynes-probability-theory-the-logic-of-science-i)
+- [Why Japanese Developers Write Code Completely Differently (And Why It Works Better)](https://medium.com/@sohail_saifi/why-japanese-developers-write-code-completely-differently-and-why-it-works-better-de84d6244fab)
 
 ### Rust
 - [Learn Rust](https://www.rust-lang.org/learn)

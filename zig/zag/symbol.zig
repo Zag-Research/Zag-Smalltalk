@@ -26,7 +26,10 @@ pub inline fn symbolArity(obj: object.Object) u4 {
 inline fn hash_of(index: u24, arity: u4) u32 {
     return @as(u24, index *% inversePhi24) | (@as(u32, arity) << 24);
 }
-
+pub fn rawSymbol(sym: SymbolsEnum, primitive: u24) Object {
+    const int = @intFromEnum(sym);
+    return @bitCast(@as(u64, hash_of(int & 0xff, int >> 8)) << 8 | @as(u64, primitive) << 40 | Object.symbolTag);
+}
 const SymbolsEnum = enum(u16) {
     @"=" = 0x100 + 1,
     value = 2,
@@ -80,6 +83,7 @@ const SymbolsEnum = enum(u16) {
     Metaclass,
     SmallInteger,
     noFallback,
+    fibonacci,
     Object,
     _,
     const staticSymbols = blk: {

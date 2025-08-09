@@ -5,10 +5,9 @@ const Execution = zag.execute.Execution;
 const compileMethod = zag.execute.compileMethod;
 const tf = zag.threadedFn.Enum;
 const Sym = zag.symbol.symbols;
-
+const SmallInteger = zag.primitives.Smallinteger;
 fn fibNative(n: u32) u64 {
-    if (n == 0) return 0;
-    if (n == 1) return 1;
+    if (n < 2) return n;
     var a: u64 = 0;
     var b: u64 = 1;
     var i: u32 = 2;
@@ -38,44 +37,41 @@ const fibInteger = struct {
             }
         }
     }
+    const self = zag.Context.makeVariable(0, 1, .Parameter, &.{});
+    const leq = SmallInteger.@"<=".inlined;
+    const plus = SmallInteger.@"+".inlined;
+    const minus = SmallInteger.@"-".inlined;
+    const classCase = Object.PackedObject.classCase;
+    const rawSymbol = zag.symbol.rawSymbol;
+    const nullMethod = zag.dispatch.nullMethod;
     var fib =
         compileMethod(Sym.fibonacci, 0, .SmallInteger, .{
-            // ":recurse",
-            // tf.push, variable(0,1,.{}), // self
-            // tf.pushLiteral, 2, //&e.pushLiteral, two,
-            // tf.immediatePrimitive,
-            // immediatePrimitive(@"<=",SmallInteger.@"<="), // <= know that self and 2 are definitely integers
-            // tf.classCase,
-            // classCase(.{ Sym.False }),
-            // "label3",
-            // tf.push, variable(0,1,.{}), // self
-            // tf.returnTop,
-            // ":label3",
-            // tf.push, variable(0,1,.{}), // self
-            // tf.pushLiteral, 1,
-            // tf.immediatePrimitive,
-            // immediatePrimitive(@"-",SmallInteger.@"-"),
-            // tf.send,
-            // "0fib",
-            // nullMethod,
-            // tf.push, variable(0,1,.{}), // self
-            // tf.pushLiteral, 2,
-            // tf.immediatePrimitive,
-            // immediatePrimitive(@"-",SmallInteger.@"-"),
-            // tf.send,
-            // "0fib",
-            // nullMethod,
-            // tf.immediatePrimitive,
-            // immediatePrimitive(@"+",SmallInteger.@"+"),
-            // tf.returnTop,
+            tf.push,                  self,
+            tf.pushLiteral,           2,
+            tf.inlinePrimitive,       leq,
+            tf.classCase,             classCase(&.{.False}),
+            "label3",
+            //tf.push,                  self,
+                            tf.returnSelf,
+            ":label3",                tf.push,
+            self,                     tf.pushLiteral,
+            1,                        tf.inlinePrimitive,
+            minus,                    tf.send,
+            rawSymbol(.fibonacci, 0), &nullMethod,
+            tf.push,                  self,
+            tf.pushLiteral,           2,
+            tf.inlinePrimitive,       minus,
+            tf.send,                  rawSymbol(.fibonacci, 0),
+            &nullMethod,              tf.inlinePrimitive,
+            plus,                     tf.returnTop,
         });
     fn init() void {
-        fib.resolve(&[_]Object{Sym.fibonacci}) catch unreachable;
+        fib.resolve(&[_]Object{}) catch unreachable;
         zag.dispatch.addMethod(@ptrCast(&fib));
-        std.debug.print("fib:\n{}\n", .{fib});
     }
     fn runIt(_: usize, _: usize) usize {
-        if ((Execution.mainSendTo(Sym.fibonacci, Object.from(runs, null)) catch unreachable).nativeU()) |result| {
+        if ((Execution.mainSendTo(Sym.fibonacci, Object.from(fibN, null)) catch unreachable).nativeU()) |result| {
+            std.debug.print("fib result: {}\n", .{result});
             return result;
         }
         unreachable;
@@ -86,19 +82,17 @@ const fibInteger = struct {
 };
 const Stats = zag.Stats;
 pub fn timing(args: []const []const u8, default: bool) !void {
-    const nRuns = 5;
+    const nRuns = 1;
     const eql = std.mem.eql;
     const print = std.debug.print;
-    var stat = Stats(void, void, nRuns, .milliseconds).init();
+    var stat = Stats(void, void, nRuns, 0, .milliseconds).init();
     for (args) |arg| {
-        if (eql(u8, arg, "Config")) {
-            print("Config {s}dispatch cache\n", .{"no "});
-        } else if (eql(u8, arg, "Header")) {
-            print("for '{} fibonacci'\n", .{runs});
-            print("          Median   Mean   StdDev  SD/Mean ({} runs)\n", .{nRuns});
+        if (eql(u8, arg, "Header")) {
+            print("for '{} fibonacci'\n", .{fibN});
+            print("          Median   Mean   StdDev  SD/Mean ({} run{s}, {} warmup{s})\n", .{ stat.runs, if (stat.runs != 1) "s" else "", stat.warmups, if (stat.warmups != 1) "s" else "" });
         } else {
             var anyRun = false;
-            inline for (&.{fibInteger}) | benchmark | {
+            inline for (&.{fibInteger}) |benchmark| {
                 if (benchmark.included and eql(u8, arg, benchmark.name)) {
                     anyRun = true;
                     print("{s:>9}", .{benchmark.name});
@@ -114,17 +108,18 @@ pub fn timing(args: []const []const u8, default: bool) !void {
     }
 }
 pub fn main() !void {
-    const do_all = [_][]const u8{ "Config", "Header", "Native", "Integer" };
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-    const allocator = gpa.allocator();
-    defer {
-        const deinit_status = gpa.deinit();
-        //fail test; can't try in defer as defer is executed after we return
-        if (deinit_status == .leak) @panic("TEST FAIL");
-    }
+    const do_all = [_][]const u8{ "Header", "Native", "Integer" };
+    // var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    // const allocator = gpa.allocator();
+    const allocator = std.heap.page_allocator;
+    // defer {
+    //     const deinit_status = gpa.deinit();
+    //     //fail test; can't try in defer as defer is executed after we return
+    //     if (deinit_status == .leak) @panic("TEST FAIL");
+    // }
     const args = try std.process.argsAlloc(allocator);
     const default = args.len <= 1;
     try timing(if (default) @constCast(do_all[0..]) else args[1..], default);
 }
 const testReps = 10;
-const runs: u6 = 40;
+const fibN: u6 = 2;

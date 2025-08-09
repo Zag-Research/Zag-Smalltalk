@@ -64,11 +64,12 @@ fn enumLessThan(_: void, lhs: EnumSort, rhs: EnumSort) bool {
         else => return false,
     }
 }
+pub const Fn = *const fn (programCounter: PC, stackPointer: SP, process: *Process, context: *Context, signature: Extra) Result;
 const EnumSort = struct {
     field: *const std.builtin.Type.Declaration,
     order: usize,
     production: bool,
-    threadedFn: *const fn (programCounter: PC, stackPointer: SP, process: *Process, context: *Context, signature: Extra) Result,
+    threadedFn: Fn,
 };
 const addUnrecognized = true;
 const enumAndFunctions =
@@ -147,11 +148,11 @@ pub fn initialize() void {}
 pub fn threadedFn(key: Enum) *const fn (programCounter: PC, stackPointer: SP, process: *Process, context: *Context, signature: Extra) Result {
     return functions[@intFromEnum(key)];
 }
-pub fn find(f: *const fn (programCounter: PC, stackPointer: SP, process: *Process, context: *Context, signature: Extra) Result) Enum {
+pub fn find(f: *const fn (programCounter: PC, stackPointer: SP, process: *Process, context: *Context, signature: Extra) Result) ?Enum {
     for (&functions, 0..) |func, index| {
         if (func == f) return @enumFromInt(index);
     }
-    return .Unrecognized;
+    return null;
 }
 comptime {
     assert(@import("controlWords.zig").branch.threadedFn == threadedFn(.branch));

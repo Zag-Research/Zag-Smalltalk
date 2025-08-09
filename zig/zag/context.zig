@@ -18,7 +18,6 @@ const Format = heap.Format;
 const Age = heap.Age;
 //const class = zag.class;
 const execute = zag.execute;
-const SendCache = execute.SendCache;
 const Code = execute.Code;
 const PC = execute.PC;
 const SP = Process.SP;
@@ -26,7 +25,6 @@ const Result = execute.Result;
 const Execution = execute.Execution;
 const CompiledMethod = execute.CompiledMethod;
 const Sym = zag.symbol.symbols;
-pub const ContextPtr = *Context;
 pub var nullContext = Context.init();
 const Self = @This();
 const Context = Self;
@@ -34,7 +32,7 @@ header: HeapHeader,
 method: *const CompiledMethod,
 tpc: PC, // threaded PC
 npc: *const fn (programCounter: PC, stackPointer: SP, process: *Process, context: *Context, signature: Extra) Result, // native PC - in Continuation Passing Style
-prevCtxt: ?ContextPtr,
+prevCtxt: ?*Context,
 trapContextNumber: u64,
 contextData: *ContextData,
 const baseSize = @sizeOf(Self) / @sizeOf(Object);
@@ -66,8 +64,13 @@ pub const Extra = struct {
         }
         return null;
     }
-    pub fn addressIfNoContext(_: Extra, _: usize, _: SP) ?[*]Object {
-        @panic("needContext");
+    pub fn addressIfNoContext(self: Extra, offset: usize, sp: SP) ?[*]Object {
+        const selfOffset = self.int & stack_mask;
+        if (selfOffset != 0) {
+            const stackOffset: [*]Object = @ptrFromInt((@intFromPtr(sp) & ~stack_mask) + selfOffset);
+            return stackOffset + offset;
+        }
+        return null;
     }
     pub fn encoded(self: Extra) Extra {
         return .{ .int = self.int | is_encoded };
@@ -89,18 +92,19 @@ pub const Extra = struct {
         _ = .{ sp, process, context, @panic("inlinePrimitiveFailed") };
         //return @call(tailCall, process.check(pc.prev().prim()), .{ pc, sp, process, context, extra.encoded() });
     }
-    pub fn formatX(
+    pub fn format(
         self: Extra,
         comptime fmt: []const u8,
         options: std.fmt.FormatOptions,
         writer: anytype,
     ) !void {
         _ = .{ fmt, options };
-        switch (self) {
-            .method => |m| try writer.print("Extra{{.method = {*}}}", .{m}),
-            .object => |o| try writer.print("Extra{{.object = {}}}", .{o}),
-            .contextData => |l| try writer.print("Extra{{.contextData = {}}}", .{l}),
-        }
+        try writer.print("Extra{{{x}}}", .{self.int});
+        // if (self.getMethod()) |method| {
+        //     try writer.print("Extra{{stack: {x} {*}}}", .{ self.int & stack_mask, method });
+        // } else {
+        //     try writer.print("Extra{{.contextData = {}}}", .{self.getContextData()});
+        // }
     }
 };
 pub const ContextData = struct {
@@ -169,6 +173,7 @@ pub inline fn popTargetContext(target: *Context, process: *Process, result: Obje
 }
 pub inline fn pop(self: *Context, process: *Process) struct { SP, *Context } {
     _ = process;
+    std.debug.print("pop: 0x{x} {} {}", .{ @intFromPtr(self), self.header, self.header.hash16() });
     const wordsToDiscard = self.header.hash16();
     trace("\npop: 0x{x} {} {}", .{ @intFromPtr(self), self.header, wordsToDiscard });
     if (self.isOnStack())
@@ -182,7 +187,7 @@ pub inline fn pop(self: *Context, process: *Process) struct { SP, *Context } {
     // }
     // return .{.sp=newSp,.ctxt=self.previous()};
 }
-pub fn push(self: ContextPtr, sp: SP, process: *Process, method: *const CompiledMethod) struct { SP, *Context } {
+pub fn push(self: *Context, sp: SP, process: *Process, method: *const CompiledMethod) struct { SP, *Context } {
     const stackStructure = method.stackStructure;
     const locals = stackStructure.locals;
     const spForLocals = sp.safeReserve(locals + 1);
@@ -198,7 +203,7 @@ pub fn push(self: ContextPtr, sp: SP, process: *Process, method: *const Compiled
     ctxt.header = HeapHeader.headerOnStack(.Context, 0, baseSize);
     return .{ newSp.safeReserve(1), ctxt };
 }
-pub fn moveToHeap(self: *const Context, sp: SP, process: *Process) ContextPtr {
+pub fn moveToHeap(self: *const Context, sp: SP, process: *Process) *Context {
     _ = self;
     _ = sp;
     _ = process;
@@ -236,12 +241,13 @@ pub fn stack(self: *const Self, sp: SP, process: *const Process) []Object {
 pub inline fn getTPc(self: *const Context) PC {
     return self.tpc;
 }
-pub inline fn setReturnBoth(self: ContextPtr, npc: *const fn (programCounter: PC, stackPointer: SP, process: *Process, context: *Context, signature: Extra) Result, tpc: PC) void {
+pub inline fn setReturnBoth(self: *Context, npc: *const fn (programCounter: PC, stackPointer: SP, process: *Process, context: *Context, signature: Extra) Result, tpc: PC) void {
     trace("\nsetReturnBoth: {} {}", .{ npc, tpc });
     self.npc = npc;
     self.tpc = tpc;
 }
-pub inline fn setReturn(self: ContextPtr, tpc: PC) void {
+pub //inline
+fn setReturn(self: *Context, tpc: PC) void {
     trace("\nsetReturn: {}", .{tpc});
     self.setReturnBoth(tpc.asThreadedFn(), tpc.next());
 }
@@ -262,7 +268,7 @@ pub inline fn setResult(self: *const Context, value: Object) void {
     const wordsToDiscard = self.asHeapObjectPtr().hash16();
     self.asObjectPtr()[wordsToDiscard] = value;
 }
-pub inline fn previous(self: *const Context) ContextPtr {
+pub inline fn previous(self: *const Context) *Context {
     return self.prevCtxt orelse @panic("0 prev");
 }
 pub inline fn asHeapObjectPtr(self: *const Context) HeapObjectPtr {
@@ -277,8 +283,8 @@ inline fn asNewSpX(self: *const Context) SP {
 pub inline fn cleanAddress(self: *const Context) u64 {
     return @intFromPtr(self);
 }
-inline fn fromObjectPtr(op: [*]Object) ContextPtr {
-    return @as(ContextPtr, @ptrCast(op));
+inline fn fromObjectPtr(op: [*]Object) *Context {
+    return @as(*Context, @ptrCast(op));
 }
 pub fn print(self: *const Context, process: *const Process) void {
     const pr = std.debug.print;
@@ -287,15 +293,64 @@ pub fn print(self: *const Context, process: *const Process) void {
         ctxt.print(process);
     }
 }
-pub fn getAddress(r: u64, sp: SP, extra: Extra) *Object {
+const Variable = packed struct {
+    lowBits: u8,
+    localIndex: u7,
+    isLocal: bool,
+    stackOffset: u8,
+    objectIndices: u40,
+    fn variable(self: Object) Variable {
+        return @bitCast(self);
+    }
+    fn make(stackOffset: u8, localIndex: u7, options: Options, indices: []u10) Object {
+        var oi: u40 = 0;
+        for (indices, 0..) |index, shift| {
+            oi = oi | index << 10 * shift;
+        }
+        return @bitCast(Variable{
+            .lowBits = Object.intTag,
+            .localIndex = localIndex,
+            .isLocal = options == .Local,
+            .stackOffset = stackOffset,
+            .objectIndices = oi,
+        });
+    }
+    const Options = enum { Local, Parameter };
+};
+pub const getVariable = Variable.variable;
+pub const makeVariable = Variable.make;
+pub fn oldAddress(v: Variable, sp: SP, extra: Extra) *Object {
     var objs: [*]Object =
-        if (extra.addressIfNoContext((r >> 8) & 0xff, sp)) |stackOffsetAddress| stackOffsetAddress else extra.getContextData().localAddress(r & 0xff);
-    var ref = r >> 16;
+        if (extra.addressIfNoContext(v.stackOffset, sp)) |stackOffsetAddress|
+            stackOffsetAddress
+        else
+            extra.getContextData().localAddress(v.localIndex);
+    var ref = v.objectIndices;
     while (ref > 0) {
         objs = objs[ref & 0x3ff].to([*]Object);
         ref = ref >> 10;
     }
-    unreachable;
+    return &objs[0];
+}
+//         if (variable.isLocal and extra.noContext())
+//    return @call(tailCall, Context.installContext, .{ pc, sp, process, context, extra });
+pub fn getAddress(self: *Context, v: Variable, sp: SP, process: *Process, extra: Extra) struct { *Object, *Context, Extra, SP } {
+    std.debug.print("getAddress called {}\n", .{extra});
+    var objs: [*]Object, const newContext, const newExtra, const newStack =
+        if (extra.addressIfNoContext(v.stackOffset, sp)) |stackOffsetAddress|
+            .{ stackOffsetAddress, self, extra, sp }
+        else if (extra.getMethod()) |method| blk: { // means we don't have a context, so make one
+            const newSp, const ctxt = self.push(sp, process, method);
+            const contextData = ctxt.contextData;
+            const newExtra = Extra.fromContextData(contextData);
+            break :blk .{ contextData.localAddress(v.localIndex), ctxt, newExtra, newSp };
+        } else .{ extra.getContextData().localAddress(v.localIndex), self, extra, sp };
+    var ref = v.objectIndices;
+    while (ref > 0) {
+        objs = objs[ref & 0x3ff].to([*]Object);
+        ref = ref >> 10;
+    }
+    return .{ &objs[0], newContext, newExtra, newStack };
 }
 /// Install a context
 /// used by any threaded function that needs a context

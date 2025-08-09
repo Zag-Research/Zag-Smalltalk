@@ -138,7 +138,7 @@ const ClassTable = struct {
     pub fn getClass(self: *Self, className: Object) Object {
         return self.classes[self.getClassIndex(className)];
     }
-    pub fn subClass(self: *Self, superclass: ?*Metaclass_S, className: Object, context: @import("context.zig").ContextPtr) *Metaclass_S {
+    pub fn subClass(self: *Self, superclass: ?*Metaclass_S, className: Object, context: *zag.Context) *Metaclass_S {
         const class_I = self.getClassIndex(className);
         var class: *Class_S = undefined;
         var metaclass: *Metaclass_S = undefined;

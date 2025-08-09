@@ -421,7 +421,7 @@ pub const inlines = struct {
         _ = .{ oldSp, process, val, unreachable };
     }
     var valueClosureMethod = CompiledMethod.init2(Sym.value, pushValue, tf.returnNoContext);
-    pub inline fn fullClosure(oldSp: SP, process: *Process, block: *CompiledMethod, context: *Context, extra: Extra) SP {
+    pub inline fn fullClosure(oldSp: SP, process: *Process, block: *CompiledMethod, context: *Context, extra: Extra) Result {
         // const flags = block.stackStructure.locals; // TODO: wrong
         // const fields = flags & 63;
         // const sp = process.allocStackSpace(oldSp, fields + 2 - (flags >> 7)) catch @panic("no stack");
@@ -482,7 +482,6 @@ pub fn generalClosureX(pc: PC, sp: SP, process: *Process, context: *Context, ext
 //     const ee = std.testing.expectEqual;
 //     var context = Context.init();
 //     const sp = process.endOfStack().push(value);
-//     var cache = execute.SendCacheStruct.init();
 //     const newSp = embedded.immutableClosure(Code.endThread, sp, process, &context, Nil, cache.dontCache());
 //     if (newSp != sp) {
 //         try ee(value.u(), newSp.next.u());
@@ -512,7 +511,6 @@ pub fn generalClosureX(pc: PC, sp: SP, process: *Process, context: *Context, ext
 //     const ee = std.testing.expectEqual;
 //     var context = Context.init();
 //     const sp = process.endOfStack().push(value);
-//     var cache = execute.SendCacheStruct.init();
 //     const newSp = embedded.immutableClosure(Code.endThread, sp, process, &context, Nil, cache.dontCache());
 //     if (newSp != sp) {
 //         try ee(value.u(), newSp.next.u());

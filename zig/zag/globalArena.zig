@@ -390,7 +390,7 @@ fn rawAlloc(instVars: u12, arraySize: usize, hint: *?HeapAllocationPtr, comptime
 //     //    defer alloc.destroy(alloc0);
 //     try ee(alloc0.len, 100);
 // }
-// fn allocIndirect(self: *Self, sp:[*]Object, fieldsSize: usize, arraySize: usize) AllocReturn {
+// fn allocIndirect(self: *Self, sp:[*]Object, fieldsSize: usize, arraySize: usize) AllocResult {
 //     const array = @ptrCast(HeapObjectPtr,std.heap.page_allocator.alloc(Object, arraySize) catch @panic("page allocator failed"));
 //     var result = try GlobalArena.alloc(self,sp,hp,context,heapSize,0);
 //     const offs = @ptrCast([*]u64,result.allocated)+heapSize-2;

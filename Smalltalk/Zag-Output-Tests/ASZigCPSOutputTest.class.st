@@ -77,20 +77,20 @@ ASZigCPSOutputTest >> testZig_simpleBlock [
 	self
 		assert: output asString
 		equals:
-			'fn @"MsimpleBlock:1"(pc: PC, sp: SP, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) SP {
+			'fn @"MsimpleBlock:1"(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
 if(!sym.simpleBlock.hashEquals(selector))return @call(tailCall,dnu,.{pc,sp,process,context,selector,cache});
 ABLOCKvar sp_=sp.push(Object.from(42));
 context.setReturn(&MsimpleBlock.code[1]);
 const pc_=dispatch.lookup(Sym.@"value:", sp_.at(1).classIndex);
 return @call(tailCall,pc_.prim,.{pc_.next(),sp_, process, context, Sym.@"value:", cache });
 }
-fn @"MsimpleBlock:2"(pc: PC, sp: SP, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) SP {
+fn @"MsimpleBlock:2"(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
 const top_=sp.top;
 const result_=context.pop(process);
 var sp_=result_.sp;
 sp_.top=top_;
 const cContext_=result_.ctxt;
-return @call(tailCall, cContext.npc, .{ cContext.tpc, sp_, process, callerContext, selector, cache });
+return @call(tailCall, cContext.npc, .{ cContext.tpc, sp_, process, callerContext, extra });
 }
 var MsimpleBlock = compileMethod(Sym.i_1,nil,2,.{&@"MsimpleBlock:1",&@"MsimpleBlock:2", });'
 ]

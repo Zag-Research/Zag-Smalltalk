@@ -25,7 +25,7 @@ ASFindPrimitives >> primitives [
 	| dict |
 	primitives ifNotNil: [ ^ primitives ].
 	dict := Dictionary new.
-	class methodDict valuesDo: [ :method | 
+	class methodDict valuesDo: [ :method |
 		dict at: method primitive put: method ].
 	dict removeKey: 0.
 	^ primitives := dict associations asSortedCollection
@@ -34,20 +34,20 @@ ASFindPrimitives >> primitives [
 { #category : 'printing' }
 ASFindPrimitives >> printEmbedded: s [
 
-	self primitives do: [ :assoc | 
+	self primitives do: [ :assoc |
 		| selector |
 		selector := assoc value selector.
 		s
 			nextPutAll: '    pub fn @"';
 			nextPutAll: selector;
 			nextPutAll:
-				'"(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object {
+				'"(pc: [*]const Code, sp: [*]Object, process: *Process, extra: Extra) Result {
         sp['.
 		selector numArgs printOn: s.
 		s nextPutAll: '] = inlines.p'.
 		assoc key printOn: s.
 		s nextPutAll: '('.
-		selector numArgs to: 0 by: -1 do: [ :n | 
+		selector numArgs to: 0 by: -1 do: [ :n |
 			s nextPutAll: 'sp['.
 			n printOn: s.
 			s nextPutAll: ']'.
@@ -67,13 +67,13 @@ ASFindPrimitives >> printEmbedded: s [
 { #category : 'printing' }
 ASFindPrimitives >> printInlines: s [
 
-	self primitives do: [ :assoc | 
+	self primitives do: [ :assoc |
 		| str |
 		s nextPutAll: '    pub inline fn p'.
 		assoc key printOn: s.
 		s nextPutAll: '(self: Object'.
 		str := ''.
-		1 to: assoc value selector numArgs do: [ :n | 
+		1 to: assoc value selector numArgs do: [ :n |
 			| id |
 			id := 'other'.
 			n > 1 ifTrue: [ id := id , n printString ].
@@ -101,7 +101,6 @@ ASFindPrimitives >> printOn: s [
 const execute = @import("../execute.zig");
 const trace = execute.trace;
 const Context = execute.Context;
-const ContextPtr = *Context;
 const Code = execute.Code;
 const tailCall = execute.tailCall;
 const compileMethod = execute.compileMethod;
@@ -140,7 +139,7 @@ pub const primitives = struct {
 { #category : 'printing' }
 ASFindPrimitives >> printPrimitives: s [
 
-	self primitives do: [ :assoc | 
+	self primitives do: [ :assoc |
 		s nextPutAll: '    pub fn p'.
 		assoc key printOn: s.
 		s
@@ -157,6 +156,6 @@ ASFindPrimitives >> printPrimitives: s [
 { #category : 'printing' }
 ASFindPrimitives >> writeToTmpFile [
 
-	(File named: '/tmp/' , class name , '.zig') writeStreamDo: [ :stream | 
+	(File named: '/tmp/' , class name , '.zig') writeStreamDo: [ :stream |
 		self printOn: (ZnNewLineWriterStream on: stream) ]
 ]

@@ -65,6 +65,8 @@ pub const Object = packed struct(u64) {
     pub const highTagSmallInteger: HighTagType = Group.u(.smallInteger) >> 2;
     pub const PackedTagType = u3;
     pub const packedTagSmallInteger = 1;
+    pub const intTag = @import("zag.zig").intTag;
+    pub const symbolTag = @import("zag.zig").symbolTag;
     const TagAndClassType = u32;
     const tagAndClassBits = enumBits(Group) + enumBits(ClassIndex);
     comptime {
@@ -107,7 +109,7 @@ pub const Object = packed struct(u64) {
     inline fn oPtr(grp: Group, p: u48) object.Object {
         return @bitCast(grp.tag(p));
     }
-    pub inline fn isImmediateClass(self: object.Object, class: ClassIndex) bool {
+    pub inline fn isImmediateClass(self: object.Object, comptime class: ClassIndex) bool {
         return self.tagbits() == oImm(class, 0).tagbits();
     }
     inline fn oImm(c: ClassIndex, h: u32) object.Object {

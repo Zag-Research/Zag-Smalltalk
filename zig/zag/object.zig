@@ -163,7 +163,7 @@ pub const ObjectFunctions = struct {
     pub inline fn numArgs(self: Object) u4 {
         return symbol.symbolArity(self);
     }
-    pub inline //
+    pub //inline
     fn setField(self: Object, field: usize, value: Object) void {
         if (self.asObjectArray()) |ptr| ptr[field] = value;
     }
@@ -272,7 +272,7 @@ pub const ObjectFunctions = struct {
         if (sla.len > slb.len) return ord.gt;
         return ord.eq;
     }
-    pub inline //
+    pub //inline
     fn immediate_class(self: Object) ClassIndex {
         return self.which_class(false);
     }
@@ -319,6 +319,9 @@ pub const PackedObject = packed struct {
     pub inline fn from3(f1: u14, f2: u14, f3: u14) PackedObject {
         return .{ .tag = Object.from(0).tagbits(), .f1 = f1, .f2 = f2, .f3 = f3 };
     }
+    pub inline fn from(fs: []u14) PackedObject {
+        return .{ .tag = Object.from(0).tagbits(), .f1 = fs[0], .f2 = fs[1], .f3 = fs[2], .f4 = fs[3] };
+    }
     pub fn asU64(self: PackedObject) u64 {
         return @as(u64, @bitCast(self)) >> @bitSizeOf(Object.PackedTagType);
     }
@@ -338,6 +341,9 @@ pub const PackedObject = packed struct {
         return combine(u14, tup);
     }
     pub fn object14(tup: anytype) PackedObject {
+        return @bitCast((@as(u64, combine(u14, tup)) << @bitSizeOf(Object.PackedTagType)) + Object.packedTagSmallInteger);
+    }
+    pub fn classCase(tup: []const ClassIndex) PackedObject {
         return @bitCast((@as(u64, combine(u14, tup)) << @bitSizeOf(Object.PackedTagType)) + Object.packedTagSmallInteger);
     }
     test "combiners" {
