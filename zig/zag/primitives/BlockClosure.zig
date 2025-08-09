@@ -211,7 +211,7 @@ pub const threadedFns = struct {
             _ = .{ pc, sp, process, context, extra, unreachable };
         }
     };
-   pub const pushClosure = struct {
+    pub const pushClosure = struct {
         pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
             const structure: PackedObject = pc.packedObject();
             const stackedFields = structure.f1;

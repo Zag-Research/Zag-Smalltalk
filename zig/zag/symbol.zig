@@ -213,8 +213,7 @@ const initialSymbolStrings = heap.compileStrings(.{ // must be in exactly same o
     "new",                                 "self",                     "name",                   "class",                   "Class",           "Behavior",
     "ClassDescription",                    "Metaclass",                "SmallInteger",           "noFallback",
     // add any new values here
-    "fibonacci",
-                 "Object",
+                 "fibonacci",       "Object",
 });
 var symbolTable = SymbolTable.init(&globalAllocator);
 pub fn asString(string: Object) Object {
@@ -370,7 +369,7 @@ test "symbols match initialized symbol table" {
     try symbol.verify(symbols.size.asObject());
     try symbol.verify(symbols.Object.asObject());
     try expect(mem.eql(u8, "valueWithArguments:"[0..], try symbol.asString(symbols.@"valueWithArguments:".asObject()).arrayAsSlice(u8)));
-    std.debug.print("yourself: {x}\n", .{@as(u64,@bitCast(symbols.yourself.asObject()))});
+    std.debug.print("yourself: {x}\n", .{@as(u64, @bitCast(symbols.yourself.asObject()))});
     std.debug.print("verified: symbols match initialized symbol table\n", .{});
 }
 // these selectors will have special handling in a dispatch table

@@ -130,7 +130,7 @@ inline fn needsCheck(self: *align(1) const Self) bool {
 }
 fn fullCheck(pc: PC, sp: SP, process: *align(1) Self, context: *Context, extra: Extra) Result {
     std.debug.print("fullCheck: {}\n", .{extra});
-    return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, extra });
+    return @call(tailCall, pc.prev().prim(), .{ pc, sp, process, context, extra });
 }
 pub inline fn checkBump(self: *Self) *Self {
     if (self.needsCheck()) return self;

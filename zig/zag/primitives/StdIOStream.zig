@@ -58,8 +58,8 @@ pub const primitives = struct {
     }
 };
 const e = struct {
-    usingnamespace execute.controlPrimitives;
-    usingnamespace embedded;
+    // usingnamespace execute.controlPrimitives;
+    // usingnamespace embedded;
 };
 pub fn main() void {
     var prog = compileMethod(Sym.value, 0, 0, .{

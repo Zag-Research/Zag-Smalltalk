@@ -510,7 +510,7 @@ pub const threadedFunctions = struct {
                     @constCast(pc.prev().asCodePtr()).patchPrim(p);
                     return @call(tailCall, p, .{ pc, sp, process, context, extra });
                 }
-                std.debug.print("primitive {} ({}) doesn't have an inline primitive\n", .{primNumber, obj.symbol()});
+                std.debug.print("primitive {} ({}) doesn't have an inline primitive\n", .{ primNumber, obj.symbol() });
             } else {
                 std.debug.print("no primitive numbered: {}\n", .{primNumber});
             }
