@@ -36,6 +36,7 @@ pub const moduleName = "BlockClosure";
 const zModuleName = stringOf(moduleName).init().obj();
 pub const ThunkReturnSmallInteger = struct {
     pub fn primitive(_: PC, sp: SP, process: *Process, _: *Context, _: Extra) Result {
+        if (true) unreachable;
         const val = sp.top;
         trace("\nvalue: {x}", .{val});
         const result = Object.from(@as(i50, val.extraI()), null);

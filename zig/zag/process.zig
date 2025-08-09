@@ -40,6 +40,8 @@ const process_total_size = config.process_total_size;
 pub const alignment = @max(stack_mask_overflow, flagMask + 1);
 pub const stack_mask_overflow = zag.utilities.largerPowerOf2(Process.stack_size * @sizeOf(Object));
 pub const stack_mask = stack_mask_overflow - 1;
+pub const process_stack_size = Process.stack_size;
+pub const process_nursery_size = Process.nursery_size;
 const Process = extern struct {
     stack: [stack_size]Object align(alignment),
     h: Fields,
@@ -118,7 +120,7 @@ const othersFlag = countOverflowFlag << 1;
 const checkFlags = othersFlag | countOverflowFlag;
 const flagMask = checkFlags | countMask;
 const nonFlags = ~flagMask;
-pub inline fn check(self: *align(1) const Self, next: *const fn (programCounter: PC, stackPointer: SP, process: *Self, context: *Context, signature: Extra) Result) *const fn (programCounter: PC, stackPointer: SP, process: *Self, context: *Context, signature: Extra) Result {
+pub inline fn check(self: *align(1) const Self, next: *const fn (PC, SP, *Self, *Context, Extra) Result) *const fn (PC, SP, *Self, *Context, Extra) Result {
     return if (self.needsCheck()) &fullCheck else next;
 }
 inline fn needsCheck(self: *align(1) const Self) bool {

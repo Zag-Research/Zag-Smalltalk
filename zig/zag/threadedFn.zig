@@ -145,7 +145,7 @@ test "print threadedFns" {
 }
 
 pub fn initialize() void {}
-pub fn threadedFn(key: Enum) *const fn (programCounter: PC, stackPointer: SP, process: *Process, context: *Context, signature: Extra) Result {
+pub fn threadedFn(key: Enum) *const fn (PC, SP, *Process, *Context, Extra) Result {
     return functions[@intFromEnum(key)];
 }
 pub fn find(f: *const fn (programCounter: PC, stackPointer: SP, process: *Process, context: *Context, signature: Extra) Result) ?Enum {

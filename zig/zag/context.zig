@@ -83,12 +83,12 @@ pub const Extra = struct {
     }
     pub fn primitiveFailed(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
         if (config.logThreadExecution)
-            std.debug.print("primitiveFailed: {} {}\n", .{ extra, pc });
+            std.debug.print("primitiveFailed: {f} {f}\n", .{ extra, pc });
         return @call(tailCall, process.check(pc.prev().prim()), .{ pc, sp, process, context, extra.encoded() });
     }
     pub fn inlinePrimitiveFailed(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
         if (config.logThreadExecution)
-            std.debug.print("primitiveFailed: {} {}\n", .{ extra, pc });
+            std.debug.print("primitiveFailed: {f} {f}\n", .{ extra, pc });
         _ = .{ sp, process, context, @panic("inlinePrimitiveFailed") };
         //return @call(tailCall, process.check(pc.prev().prim()), .{ pc, sp, process, context, extra.encoded() });
     }
@@ -96,7 +96,7 @@ pub const Extra = struct {
         self: Extra,
         writer: anytype,
     ) !void {
-        if (self.int > 65535) {
+        if (self.int < 0x10000) {
             try writer.print("Extra{{{x}}}", .{self.int});
         } else if (self.getMethod()) |method| {
             try writer.print("Extra{{stack: {x} {*}}}", .{ self.int & stack_mask, method });
@@ -244,7 +244,7 @@ fn setReturn(self: *Context, tpc: PC) void {
     trace("\nsetReturn: {}", .{tpc});
     self.setReturnBoth(tpc.asThreadedFn(), tpc.next());
 }
-pub inline fn getNPc(self: *const Context) *const fn (programCounter: PC, stackPointer: SP, process: *Process, context: *Context, signature: Extra) Result {
+pub inline fn getNPc(self: *const Context) *const fn (PC, SP, *Process, *Context, Extra) Result {
     return self.npc;
 }
 pub inline fn setNPc(self: *Context, npc: *const fn (programCounter: PC, stackPointer: SP, process: *Process, context: *Context, signature: Extra) Result) void {

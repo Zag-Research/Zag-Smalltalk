@@ -1,5 +1,6 @@
 const std = @import("std");
 const builtin = @import("builtin");
+const Process = @import("process.zig");
 pub const is_test = builtin.is_test;
 pub const native_endian = builtin.target.cpu.arch.endian();
 pub const tailCall: std.builtin.CallModifier = if (show_error_stack) .never_inline else .always_tail;
@@ -43,21 +44,27 @@ const Encoding = enum {
 pub fn skipNotZag() !void {
     if (notZag) return error.SkipZigTest;
 }
-
-test "config" {
+pub fn printConfig() void {
     std.debug.print(
         \\Config:
         \\  objectEncoding = {}
         \\  max_classes    = {}
         \\  native_endian  = {}
         \\  git_version    = {s}
+        \\  stack_size     = {d}w
+        \\  nursery_size   = {d}w
         \\
     , .{
         objectEncoding,
         max_classes,
         native_endian,
         git_version,
+        Process.process_stack_size,
+        Process.process_nursery_size,
     });
+}
+test "printConfig" {
+    printConfig();
 }
 comptime {
     @setEvalBranchQuota(100000);

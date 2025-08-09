@@ -101,15 +101,15 @@ pub const PC = packed struct {
     fn packedObject(self: PC) PackedObject {
         if (logging) {
             @setRuntimeSafety(false);
-            std.debug.print("PC_packed:       {x:0>16}: {}\n", .{ @intFromPtr(self.code), self.code.packedObject });
+            std.debug.print("PC_packed:       {x:0>12}: {}\n", .{ @intFromPtr(self.code), self.code.packedObject });
         }
         return self.code.packedObject;
     }
     pub //inline
-    fn method(self: PC) *CompiledMethod {
+    fn method(self: PC) *const CompiledMethod {
         if (logging) {
             @setRuntimeSafety(false);
-            std.debug.print("PC_method:       {x:0>16}: {f}\n", .{ @intFromPtr(self.code), self.code.method });
+            std.debug.print("PC_method:       {x:0>12}: {}\n", .{ @intFromPtr(self.code), self.code.method });
         }
         return self.code.method;
     }
@@ -117,7 +117,7 @@ pub const PC = packed struct {
     fn codeAddress(self: PC) *const Code {
         if (logging) {
             @setRuntimeSafety(false);
-            std.debug.print("PC_codeAddress:  {x:0>16}: {f}\n", .{ @intFromPtr(self.code), self.code.codePtr });
+            std.debug.print("PC_codeAddress:  {x:0>12}: {f}\n", .{ @intFromPtr(self.code), self.code.codePtr });
         }
         return self.code.codePtr;
     }
@@ -126,23 +126,30 @@ pub const PC = packed struct {
         return .{ .code = self.codeAddress() };
     }
     pub //inline
-    fn asThreadedFn(self: PC) *const fn (programCounter: PC, stackPointer: SP, process: *Process, context: *Context, signature: Extra) Result {
-        std.debug.print("PC_asThreadedFn: {x:0>16}: {f}\n", .{ @intFromPtr(self.code), self });
+    fn asThreadedFn(self: PC) *const fn (PC, SP, *Process, *Context, Extra) Result {
+        std.debug.print("PC_asThreadedFn: {x:0>12}: {f}\n", .{ @intFromPtr(self.code), self });
         return self.code.prim();
     }
     pub //inline
-    fn prim(self: PC) *const fn (programCounter: PC, stackPointer: SP, process: *Process, context: *Context, signature: Extra) Result {
+    fn prim(self: PC) *const fn (PC, SP, *Process, *Context, Extra) Result {
+        return primOf(self.code);
+    }
+    inline fn primOf(code: *const Code) *const fn (PC, SP, *Process, *Context, Extra) Result {
         if (logging) {
             @setRuntimeSafety(false);
-            std.debug.print("PC_prim:         {x:0>16}: {?}\n", .{ @intFromPtr(self.code), @import("threadedFn.zig").find(self.code.prim()) });
+            if (@import("threadedFn.zig").find(code.prim())) |name| {
+                std.debug.print("PC_prim:         {x:0>12}: {}\n", .{ @intFromPtr(code), name });
+            } else {
+                std.debug.print("PC_prim:         {x:0>12}: {x}\n", .{ @intFromPtr(code), @intFromPtr(code.prim()) });
+            }
         }
-        return self.code.prim();
+        return code.prim();
     }
     pub //inline
     fn object(self: PC) Object {
         if (logging) {
             @setRuntimeSafety(false);
-            std.debug.print("PC_object:       {x:0>16}: {f}\n", .{ @intFromPtr(self.code), self.code.object });
+            std.debug.print("PC_object:       {x:0>12}: {f}\n", .{ @intFromPtr(self.code), self.code.object });
         }
         return self.code.object;
     }
@@ -159,7 +166,7 @@ pub const PC = packed struct {
     fn uint(self: PC) u64 {
         if (logging) {
             @setRuntimeSafety(false);
-            std.debug.print("PC_uint:         {x:0>16}: {f}\n", .{ @intFromPtr(self.code), self.code.object });
+            std.debug.print("PC_uint:         {x:0>12}: {f}\n", .{ @intFromPtr(self.code), self.code.object });
         }
         return self.code.object.to(u64);
     }
@@ -167,7 +174,7 @@ pub const PC = packed struct {
     fn int(self: PC) i64 {
         if (logging) {
             @setRuntimeSafety(false);
-            std.debug.print("PC_int:          {x:0>16}: {f}\n", .{ @intFromPtr(self.code), self.code.object });
+            std.debug.print("PC_int:          {x:0>12}: {f}\n", .{ @intFromPtr(self.code), self.code.object });
         }
         return self.code.object.to(i64);
     }
@@ -177,12 +184,8 @@ pub const PC = packed struct {
     pub inline fn prev(self: PC) PC {
         return asPC(self.array() - 1);
     }
-    pub inline fn prim2(self: PC) *const fn (programCounter: PC, stackPointer: SP, process: *Process, context: *Context, signature: Extra) Result {
-        if (logging) {
-            @setRuntimeSafety(false);
-            std.debug.print("PC_prim:         {x:0>16}: {?}\n", .{ @intFromPtr(self.code), @import("threadedFn.zig").find(self.array()[1].prim()) });
-        }
-        return self.array()[1].prim();
+    pub inline fn prim2(self: PC) *const fn (PC, SP, *Process, *Context, Extra) Result {
+        return primOf(&self.array()[1]);
     }
     pub inline fn next2(self: PC) PC {
         return asPC(self.array() + 2);
@@ -253,7 +256,7 @@ pub const Code = union(enum) {
         return Code{ .codePtr = @ptrCast(addr + @as(u64, @bitCast(offs))) };
     }
     pub //inline
-    fn prim(self: Code) *const fn (programCounter: PC, stackPointer: SP, process: *Process, context: *Context, signature: Extra) Result {
+    fn prim(self: Code) *const fn (PC, SP, *Process, *Context, Extra) Result {
         return self.threadedFn;
     }
     pub fn end(_: PC, sp: SP, process: *Process, context: *Context, _: Extra) Result { // not embedded
@@ -265,8 +268,8 @@ pub const Code = union(enum) {
     pub fn panic(_: PC, _: SP, _: *Process, _: *Context, _: Extra) Result { // not embedded
         @panic("not implemented");
     }
-    fn noOp(pc: PC, sp: SP, process: *Process, context: *Context, signature: Extra) Result {
-        return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, signature });
+    fn noOp(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
+        return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, extra });
     }
     pub fn format(
         self: *const Code,

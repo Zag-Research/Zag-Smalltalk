@@ -86,7 +86,9 @@ pub fn timing(args: []const []const u8, default: bool) !void {
     const print = std.debug.print;
     var stat = Stats(void, void, nRuns, 0, .milliseconds).init();
     for (args) |arg| {
-        if (eql(u8, arg, "Header")) {
+        if (eql(u8, arg, "Config")) {
+            zag.config.printConfig();
+        } else if (eql(u8, arg, "Header")) {
             print("for '{} fibonacci'\n", .{fibN});
             print("          Median   Mean   StdDev  SD/Mean ({} run{s}, {} warmup{s})\n", .{ stat.runs, if (stat.runs != 1) "s" else "", stat.warmups, if (stat.warmups != 1) "s" else "" });
         } else {
@@ -107,7 +109,7 @@ pub fn timing(args: []const []const u8, default: bool) !void {
     }
 }
 pub fn main() !void {
-    const do_all = [_][]const u8{ "Header", "Native", "Integer" };
+    const do_all = [_][]const u8{ "Config", "Header", "Native", "Integer" };
     // var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     // const allocator = gpa.allocator();
     const allocator = std.heap.page_allocator;

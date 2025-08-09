@@ -80,8 +80,7 @@ pub const classCase = struct {
                 // with the first line commented, this works
                 // with the second line commented instead, this fails
                 //std.debug.print("currentClass: {}, match: {}\n", .{ currentClass, match });
-                std.debug.print("currentClass: {}, match: {}, process: {*}\n", .{ currentClass, match, process });
-                //std.debug.print("currentClass: {}, match: {}, extra: {f}\n", .{ currentClass, match, extra });
+                std.debug.print("currentClass: {}, match: {}, extra: {f}\n", .{ currentClass, match, extra });
                 if (currentClass == match) {
                     newPc = newPc.targetPC();
                     std.debug.print("currentClass: extra: {f}\n", .{extra});
@@ -373,6 +372,7 @@ pub const store = struct {
 pub const callLabel = if (zag.config.is_test) struct {
     pub const hidden = true;
     pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, _: Extra) Result {
+        if (true) unreachable;
         const target = pc.targetPC();
         // skip the structure word
         context.setReturn(pc.next().next());

@@ -32,9 +32,9 @@ pub const addMethod = DispatchHandler.addMethod;
 const DispatchHandler = struct {
     const loadFactor = 70; // hashing load factor
     var dispatches = [_]*Dispatch{&Dispatch.empty} ** config.max_classes;
-    inline fn lookupMethodForClass(ci: ClassIndex, selector: Object) *const CompiledMethod {
-        trace(" (lookupMethodForClass) {} {}", .{ ci, selector });
-        if (dispatches[@intFromEnum(ci)].lookupMethod(selector, ci)) |method|
+    inline fn lookupMethodForClass(ci: ClassIndex, selector: Object, signature: Signature) *const CompiledMethod {
+        trace(" (lookupMethodForClass) {} {} {}", .{ ci, selector, signature });
+        if (dispatches[@intFromEnum(ci)].lookupMethod(selector, signature)) |method|
             return method;
         if (defaultForTest != null)
             return defaultForTest.loadMethodForClass(ci, selector);
@@ -152,9 +152,9 @@ const Dispatch = struct {
         return dm.matchOrEmpty(Signature.from(selector, ci));
     }
     //inline
-    fn lookupMethod(self: *const Self, selector: Object, ci: ClassIndex) ?*const CompiledMethod {
+    fn lookupMethod(self: *const Self, selector: Object, signature: Signature) ?*const CompiledMethod {
         const dm = self.dispatchMatch(selector);
-        return dm.match(Signature.from(selector, ci));
+        return dm.match(signature);
     }
     inline fn dispatchMatch(self: *const Self, selector: Object) *DispatchMatch {
         const index = getIndex(selector, self.nMethods);
@@ -426,20 +426,29 @@ pub const threadedFunctions = struct {
         const selector = pc.object();
         if (saveReturn == .Return) context.setReturn(pc.next2());
         const receiver = sp.at(selector.numArgs());
-        return receiver.get_class().lookupMethodForClass(selector);
+        const method = pc.next().method();
+        const class = receiver.get_class();
+        const signature = Signature.from(selector, class);
+        if (method.signature == signature) {
+            return method;
+        }
+        return class.lookupMethodForClass(selector, signature);
     }
     pub const send = struct {
-        pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, _: Extra) Result {
-            std.debug.print("send: {f}\n", .{pc});
+        pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
+            std.debug.print("send: {f} {f}\n", .{ pc, extra });
             const method = getMethod(pc, sp, context, .Return);
             const newPc = method.codePc();
+            // maybe create context
+            if (true) unreachable;
             return @call(tailCall, newPc.prim(), .{ newPc.next(), sp, process, context, Extra.forMethod(method, sp) });
         }
     };
     pub const tailSend = struct {
-        pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, _: Extra) Result {
+        pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
             const method = getMethod(pc, sp, context, .TailCall);
             const newPc = method.codePc();
+            _ = extra; // have to move parameters to self position
             if (true) unreachable;
             // return @call(tailCall, newPc.prim(), .{ newPc.next(), sp, process, context, Extra.forMethod(method) });
             // const method = tailGetMethod(pc, sp);
