@@ -36,59 +36,77 @@ prevCtxt: ?*Context,
 trapContextNumber: u64,
 contextData: *ContextData,
 const baseSize = @sizeOf(Self) / @sizeOf(Object);
-pub const Extra = struct {
-    int: u64,
+pub const Extra = packed struct {
+    addr: u48,
+    stack_offset: u16 = 0,
     const stack_mask = Process.stack_mask;
-    const is_encoded = stack_mask + 1;
+    const stack_size_type = zag.utilities.largeEnoughType(stack_mask);
+    const is_encoded: u16 = 0x8000;
     // Three states:
     //  - method is not encoded - is_encoded will not be set and low bits not zero
     //  - method is encoded - is_encoded will be set and low bits not zero
     //  - contextData - low bits zero
     pub fn forMethod(method: *const CompiledMethod, sp: SP) Extra {
         // guaranteed that the low bits of sp are not zero by design in Process
-        const stackOffset = @intFromPtr(sp) & stack_mask;
-        return .{ .int = @intFromPtr(method) << 16 | stackOffset };
+        const stackOffset: stack_size_type = @truncate(@intFromPtr(sp));
+        return .{ .addr = @truncate(@intFromPtr(method)), .stack_offset = stackOffset };
     }
     pub fn fromContextData(contextData: *const ContextData) Extra {
-        return .{ .int = @intFromPtr(contextData) << 16 };
+        return .{ .addr = @truncate(@intFromPtr(contextData)) };
     }
     pub fn getContextData(self: Extra) *ContextData {
-        return @ptrFromInt(self.int >> 16);
+        return @ptrFromInt(self.addr);
     }
     pub fn noContext(self: Extra) bool {
-        return self.int & stack_mask != 0;
+        return self.stack_offset != 0;
     }
     pub fn getMethod(self: Extra) ?*const CompiledMethod {
         if (self.noContext()) {
-            return @ptrFromInt(self.int >> 16);
+            return @ptrFromInt(self.addr);
         }
         return null;
     }
     pub fn addressIfNoContext(self: Extra, offset: usize, sp: SP) ?[*]Object {
-        const selfOffset = self.int & stack_mask;
+        const selfOffset = self.stack_offset;
         if (selfOffset != 0) {
+            trace("selfOffset: {d} {x}\n", .{selfOffset, self.addr});
             const stackOffset: [*]Object = @ptrFromInt((@intFromPtr(sp) & ~stack_mask) + selfOffset);
             return stackOffset + offset;
         }
         return null;
     }
+    /// Install a context
+    /// used by any threaded function that needs a context
+    /// note that `pc` is the program counter after the instruction that called `installContext`
+    pub fn installContextIfNone(extra: Extra, sp: SP, process: *Process, context: *Context) ?NewContext {
+        if (extra.getMethod()) |method| {
+            const newSp, const ctxt = context.push(sp, process, method);
+            return .{ .context = ctxt, .extra = Extra.fromContextData(ctxt.contextData), .sp = newSp };
+        }
+        return null;
+    }
+    const NewContext = struct {
+        context: *Context,
+        extra: Extra,
+        sp: SP,
+    };
     pub fn encoded(self: Extra) Extra {
-        return .{ .int = self.int | is_encoded };
+        return .{ .addr = self.addr, .stack_offset = self.stack_offset | is_encoded };
     }
     pub fn decoded(self: Extra) Extra {
-        return .{ .int = self.int & ~is_encoded };
+        return .{ .addr = self.addr, .stack_offset = self.stack_offset & ~is_encoded };
     }
     pub fn isEncoded(self: Extra) bool {
-        return self.int & is_encoded != 0;
+        return self.stack_offset & is_encoded != 0;
     }
     pub fn primitiveFailed(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
         if (config.logThreadExecution)
-            std.debug.print("primitiveFailed: {f} {f}\n", .{ extra, pc });
+            trace("primitiveFailed: {f} {f}\n", .{ extra, pc });
         return @call(tailCall, process.check(pc.prev().prim()), .{ pc, sp, process, context, extra.encoded() });
     }
     pub fn inlinePrimitiveFailed(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
         if (config.logThreadExecution)
-            std.debug.print("primitiveFailed: {f} {f}\n", .{ extra, pc });
+            trace("primitiveFailed: {f} {f}\n", .{ extra, pc });
         _ = .{ sp, process, context, @panic("inlinePrimitiveFailed") };
         //return @call(tailCall, process.check(pc.prev().prim()), .{ pc, sp, process, context, extra.encoded() });
     }
@@ -96,10 +114,8 @@ pub const Extra = struct {
         self: Extra,
         writer: anytype,
     ) !void {
-        if (self.int < 0x10000) {
-            try writer.print("Extra{{{x}}}", .{self.int});
-        } else if (self.getMethod()) |method| {
-            try writer.print("Extra{{stack: {x} {*}}}", .{ self.int & stack_mask, method });
+        if (self.getMethod()) |method| {
+            try writer.print("Extra{{.stack_offset = {x}, .method = {*}}}", .{ self.stack_offset, method });
         } else {
             try writer.print("Extra{{.contextData = {}}}", .{self.getContextData()});
         }
@@ -166,7 +182,7 @@ pub inline fn popTargetContext(target: *Context, process: *Process, result: Obje
 }
 pub inline fn pop(self: *Context, process: *Process) struct { SP, *Context } {
     _ = process;
-    std.debug.print("pop: 0x{x} {} {}", .{ @intFromPtr(self), self.header, self.header.hash16() });
+    trace("pop: 0x{x} {} {}", .{ @intFromPtr(self), self.header, self.header.hash16() });
     const wordsToDiscard = self.header.hash16();
     trace("\npop: 0x{x} {} {}", .{ @intFromPtr(self), self.header, wordsToDiscard });
     if (self.isOnStack())
@@ -235,13 +251,11 @@ pub inline fn getTPc(self: *const Context) PC {
     return self.tpc;
 }
 pub inline fn setReturnBoth(self: *Context, npc: *const fn (programCounter: PC, stackPointer: SP, process: *Process, context: *Context, signature: Extra) Result, tpc: PC) void {
-    trace("\nsetReturnBoth: {} {}", .{ npc, tpc });
     self.npc = npc;
     self.tpc = tpc;
 }
 pub //inline
 fn setReturn(self: *Context, tpc: PC) void {
-    trace("\nsetReturn: {}", .{tpc});
     self.setReturnBoth(tpc.asThreadedFn(), tpc.next());
 }
 pub inline fn getNPc(self: *const Context) *const fn (PC, SP, *Process, *Context, Extra) Result {
@@ -292,7 +306,7 @@ const Variable = packed struct {
     isLocal: bool,
     stackOffset: u8,
     objectIndices: u40,
-    fn variable(self: Object) Variable {
+    fn asVariable(self: Object) Variable {
         return @bitCast(self);
     }
     fn make(stackOffset: u8, localIndex: u7, options: Options, indices: []u10) Object {
@@ -308,53 +322,24 @@ const Variable = packed struct {
             .objectIndices = oi,
         });
     }
+    pub fn getAddress(v: Variable, sp: SP, extra: Extra) *Object {
+        var objs: [*]Object =
+            if (extra.addressIfNoContext(v.stackOffset, sp)) |stackOffsetAddress|
+                stackOffsetAddress
+            else
+                extra.getContextData().localAddress(v.localIndex);
+        var ref = v.objectIndices;
+        while (ref > 0) {
+            objs = objs[ref & 0x3ff].to([*]Object);
+            ref = ref >> 10;
+        }
+        return &objs[0];
+    }
     const Options = enum { Local, Parameter };
 };
-pub const getVariable = Variable.variable;
+pub const asVariable = Variable.asVariable;
 pub const makeVariable = Variable.make;
-pub fn oldAddress(v: Variable, sp: SP, extra: Extra) *Object {
-    var objs: [*]Object =
-        if (extra.addressIfNoContext(v.stackOffset, sp)) |stackOffsetAddress|
-            stackOffsetAddress
-        else
-            extra.getContextData().localAddress(v.localIndex);
-    var ref = v.objectIndices;
-    while (ref > 0) {
-        objs = objs[ref & 0x3ff].to([*]Object);
-        ref = ref >> 10;
-    }
-    return &objs[0];
-}
-//         if (variable.isLocal and extra.noContext())
-//    return @call(tailCall, Context.installContext, .{ pc, sp, process, context, extra });
-pub fn getAddress(self: *Context, v: Variable, sp: SP, process: *Process, extra: Extra) struct { *Object, *Context, Extra, SP } {
-    std.debug.print("getAddress called {f}\n", .{extra});
-    var objs: [*]Object, const newContext, const newExtra, const newStack =
-        if (extra.addressIfNoContext(v.stackOffset, sp)) |stackOffsetAddress|
-            .{ stackOffsetAddress, self, extra, sp }
-        else if (extra.getMethod()) |method| blk: { // means we don't have a context, so make one
-            const newSp, const ctxt = self.push(sp, process, method);
-            const contextData = ctxt.contextData;
-            const newExtra = Extra.fromContextData(contextData);
-            break :blk .{ contextData.localAddress(v.localIndex), ctxt, newExtra, newSp };
-        } else .{ extra.getContextData().localAddress(v.localIndex), self, extra, sp };
-    var ref = v.objectIndices;
-    while (ref > 0) {
-        objs = objs[ref & 0x3ff].to([*]Object);
-        ref = ref >> 10;
-    }
-    return .{ &objs[0], newContext, newExtra, newStack };
-}
-/// Install a context
-/// used by any threaded function that needs a context
-/// note that `pc` is the program counter of the instruction that called `installContext`
-pub fn installContext(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
-    if (extra.getMethod()) |method| {
-        const newSp, const ctxt = context.push(sp, process, method);
-        return @call(tailCall, pc.prev().prim(), .{ pc, newSp, process, ctxt, Extra.fromContextData(ctxt.contextData) });
-    }
-    return @call(tailCall, pc.prev().prim(), .{ pc, sp, process, context, extra });
-}
+
 pub const threadedFunctions = struct {
     const tf = zag.threadedFn.Enum;
     const expect = std.testing.expect;
@@ -363,8 +348,9 @@ pub const threadedFunctions = struct {
         /// and then re-execute the original operation; simply:
         /// return @call(tailCall, pushContext.threadedFn, .{ pc.prev(), sp, process, context, extra });
         pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
-            if (extra.noContext())
-                return @call(tailCall, installContext, .{ pc, sp, process, context, extra });
+            if (extra.installContextIfNone(sp, process, context)) |new| {
+                return @call(tailCall, process.check(pc.prim()), .{ pc.next(), new.sp, process, new.context, new.extra });
+            }
             return @call(tailCall, process.check(pc.prim()), .{ pc.next(), sp, process, context, extra });
         }
         test "pushContext" {
@@ -380,29 +366,29 @@ pub const threadedFunctions = struct {
         // test "init context" {
         //     //    const expectEqual = std.testing.expectEqual;
         //     //    const objs = comptime [_]Object{True,Object.from(42)};
-        //     std.debug.print("init: 1\n", .{});
+        //     trace("init: 1\n", .{});
         //     var result = execute.Execution.initTest("init context",.{});
-        //     std.debug.print("init: 2\n", .{});
+        //     trace("init: 2\n", .{});
         //     var c = result.ctxt;
-        //     std.debug.print("init: 3\n", .{});
+        //     trace("init: 3\n", .{});
         //     var process = &result.process;
-        //     std.debug.print("init: 4\n", .{});
+        //     trace("init: 4\n", .{});
         //     //c.print(process);
-        //     std.debug.print("init: 5\n", .{});
+        //     trace("init: 5\n", .{});
         //     //    try expectEqual(result.o()[3].u(),4);
         //     //    try expectEqual(result.o()[6],True);
         //     const sp = process.endOfStack();
-        //     std.debug.print("init: 6\n", .{});
+        //     trace("init: 6\n", .{});
         //     const newC = c.moveToHeap(sp, process);
-        //     std.debug.print("init: 7\n", .{});
+        //     trace("init: 7\n", .{});
         //     newC.print(process);
-        //     std.debug.print("init: 8\n", .{});
+        //     trace("init: 8\n", .{});
         // }
     };
     pub const pushThisContext = struct {
         pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
             if (extra.noContext())
-                return @call(tailCall, installContext, .{ pc, sp, process, context, extra });
+                return @call(tailCall, pushContext.threadedFn, .{ pc.prev(), sp, process, context, extra });
             const value = Object.from(context, null);
             if (sp.push(value)) |newSp| {
                 return @call(tailCall, process.check(pc.prim()), .{ pc.next(), newSp, process, context, extra });

@@ -195,6 +195,7 @@ pub const @"<=" = struct {
         }
         const newSp = sp.dropPut(Object.from(inlines.@"<="(receiver, sp.top) catch
             return @call(tailCall, PC.inlinePrimitiveFailed, .{ pc, sp, process, context, extra }), null));
+        trace("Inline primitive called, {f}\n", .{extra});
         return @call(tailCall, process.check(pc.prim2()), .{ pc.next2(), newSp, process, context, extra });
     }
 };

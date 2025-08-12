@@ -41,9 +41,10 @@ pub const Signature = packed struct {
         class: ClassIndex,
         padding: u8 = 0,
     };
-    pub const empty: Signature = .{ .int = 0 };
+    const emptyInt = 0;
+    pub const empty: Signature = .{ .int = emptyInt };
     pub fn isEmpty(self: Signature) bool {
-        return self.equals(empty);
+        return self.int == emptyInt;
     }
     pub fn hash(self: Signature) u32 {
         return @truncate(self.int);
@@ -92,7 +93,7 @@ pub const PC = packed struct {
     code: *const Code,
     pub const baseType = Code;
     const Self = @This();
-    const logging = true or config.logThreadExecution;
+    const logging = config.logThreadExecution;
     pub const inlinePrimitiveFailed = zag.dispatch.inlinePrimitiveFailed;
     pub fn init(code: *const Code) PC { // don't inline this as it triggers a zig bug!
         return .{ .code = code };
@@ -127,7 +128,9 @@ pub const PC = packed struct {
     }
     pub //inline
     fn asThreadedFn(self: PC) *const fn (PC, SP, *Process, *Context, Extra) Result {
-        std.debug.print("PC_asThreadedFn: {x:0>12}: {f}\n", .{ @intFromPtr(self.code), self });
+        if (logging) {
+            std.debug.print("PC_asThreadedFn: {x:0>12}: {f}\n", .{ @intFromPtr(self.code), self });
+        }
         return self.code.prim();
     }
     pub //inline
@@ -158,6 +161,9 @@ pub const PC = packed struct {
     }
     pub inline fn asCodePtr(self: PC) *const Code {
         return self.code;
+    }
+    pub inline fn patchPtr(self: PC) *Code {
+        return @constCast(self.code);
     }
     pub inline fn structure(self: PC) StackStructure {
         return self.code.structure;
@@ -233,6 +239,9 @@ pub const Code = union(enum) {
     }
     pub inline fn patchPrim(self: *Code, pp: *const fn (programCounter: PC, stackPointer: SP, process: *Process, context: *Context, signature: Extra) Result) void {
         self.* = Code{ .threadedFn = pp };
+    }
+    pub inline fn patchMethod(self: *Code, method: *const CompiledMethod) void {
+        self.* = Code{ .method = method };
     }
     pub //inline
     fn asObject(self: Code) Object {
@@ -350,9 +359,6 @@ pub const CompiledMethod = struct {
     pub fn execute(self: *Self, sp: SP, process: *Process, context: *Context, _: Extra) Result {
         const newExtra = Extra.forMethod(self, sp);
         const pc = PC.init(&self.code[1]);
-        trace("\nexecute: {}", .{pc});
-        //        trace(" {}", .{ new.sp });
-        trace(" {x}\n", .{@as(u64, @bitCast(self.signature))});
         return self.executeFn(pc, sp, process, context, newExtra);
     }
     // pub fn forDispatch(self: *Self, class: ClassIndex) void {
@@ -538,16 +544,14 @@ fn CompileTimeMethod(comptime counts: usize) type {
             return @as(*CompiledMethod, @ptrCast(@constCast(self)));
         }
         pub fn resolve(self: *Self, resolution: ?[]const Object) !void {
-            for (&self.code, &self.offsets, 0..) |*c, *isOffset, n| {
+            for (&self.code, &self.offsets) |*c, *isOffset| {
                 if (isOffset.*) {
                     isOffset.* = false;
                     const i = c.offset;
-                    trace("\nc[{}] = {}", .{ n, i });
                     if (i & 1 != 0) {
                         c.* = Code.codePtrOf(c, i >> 1);
                     } else {
                         const index: usize = @bitCast(i >> 1);
-                        trace(" index: {x}", .{index});
                         if (resolution) |literals| {
                             if (index >= literals.len) return error.Unresolved;
                             c.* = Code.objectOf(literals[index]);
@@ -646,18 +650,7 @@ test "compiling method" {
     //TODO    m.setLiterals(&[_]Object{Sym.value}, &[_]Object{Object.from(42)});
     const t = m.code[0..];
     try expectEqual(8, t.len);
-    if (config.debugging) {
-        @setRuntimeSafety(false);
-        trace("\nm: 0x{x:0>16}", .{@intFromPtr(&m)});
-        for (t, 0..) |tv, idx|
-            trace("\nt[{}]: 0x{x:0>16}", .{ idx, @as(u64, @bitCast(tv.object)) });
-    }
     try m.resolve(&.{True()});
-    if (config.debugging) {
-        @setRuntimeSafety(false);
-        for (t, 0..) |*tv, idx|
-            trace("\nt[{}]=0x{x:0>8}: 0x{x:0>16}", .{ idx, @intFromPtr(tv), tv.object.testU() });
-    }
     //    try expectEqual(t.prim,controlPrimitives.noop);
     try expectEqual(t[0].prim(), threadedFn.threadedFn(.branch));
     try expectEqual(t[1].codePtr, &m.code[4]);
@@ -903,7 +896,7 @@ pub const Execution = struct {
                 if (false) {
                     const ptr: [*]u64 = @ptrFromInt(@intFromPtr(&self.method));
                     for (ptr[0 .. @sizeOf(MethodType) / 8], 0..) |*v, idx|
-                        std.debug.print("[{:>2}:{x:0>16}]: {x:0>16}\n", .{ idx, @intFromPtr(v), v.* });
+                        trace("[{:>2}:{x:0>16}]: {x:0>16}\n", .{ idx, @intFromPtr(v), v.* });
                 }
                 _ = method.execute(self.getSp(), &self.process, self.getContext(), undefined);
             }
@@ -938,18 +931,7 @@ pub const Execution = struct {
         std.debug.print("ExecutionTest: {s}\n", .{title});
         var exe align(Process.alignment) = init(tup);
         exe.process.init(Nil());
-        const t = exe.method.code[0..];
-        if (config.debugging) {
-            @setRuntimeSafety(false);
-            for (t, 0..) |tv, idx|
-                trace("t[{}]: 0x{x:0>16}\n", .{ idx, @as(u64, @bitCast(tv.object)) });
-        }
         try exe.resolve(objects);
-        if (config.debugging) {
-            @setRuntimeSafety(false);
-            for (t, 0..) |*tv, idx|
-                trace("t[{}]=0x{x:0>8}: 0x{x:0>16}\n", .{ idx, @intFromPtr(tv), @as(u64, @bitCast(tv.object)) });
-        }
         try exe.execute(source);
         try std.testing.expect(exe.getContext() == &exe.ctxt);
         try validator(&exe, expected);
@@ -981,7 +963,7 @@ pub const Execution = struct {
             .code = undefined,
             .offsets = [_]bool{false} ** codes,
         });
-        std.debug.print("Sending: {f} to {f}\n", .{ selector, target });
+        trace("Sending: {f} to {f}\n", .{ selector, target });
         const method = &exe.method;
         method.code[0] = Code.primOf(f);
         method.code[1] = Code.objectOf(Sym.fibonacci);
