@@ -19,6 +19,18 @@ Class {
 	#package : 'Zag-LLVM'
 }
 
+{ #category : 'API' }
+ZagJITDispatcher >> add: aNumber to: selfValue [
+
+	^ gen add: aNumber to: selfValue.
+]
+
+{ #category : 'API' }
+ZagJITDispatcher >> and: valueRef1 with: valueRef2 [
+
+	^ gen and: valueRef1 with: valueRef2.
+]
+
 { #category : 'accessing' }
 ZagJITDispatcher >> driver [
 
@@ -83,6 +95,12 @@ ZagJITDispatcher >> makeImmediateClosure [
 	| value |
 	value := driver nextObject
 
+]
+
+{ #category : 'API' }
+ZagJITDispatcher >> or: int1 with: int2 [
+
+	^ gen or: int1 with: int2.
 ]
 
 { #category : 'primitives' }
