@@ -410,7 +410,7 @@ test "compiling method" {
     //    m.update(mref,mcmp);
     var t = m.code[0..];
     for (m.code, 0..) |v, idx| {
-        std.debug.print("t[{}] = {}\n", .{ idx, v });
+        trace("t[{}] = {}\n", .{ idx, v });
     }
     try expectEqual(t.len, 11);
     try expectEqual(t[0], b.return_tos);

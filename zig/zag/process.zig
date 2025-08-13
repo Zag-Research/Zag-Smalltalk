@@ -104,7 +104,6 @@ pub fn init(origin: *align(alignment) Self, process: Object) void {
     while (true) {
         self.h.next = allProcesses;
         self.h.id = if (allProcesses) |p| p.header().id + 1 else 1;
-        trace("\nprocess.init {x}", .{self.h.id});
         if (@cmpxchgWeak(?*Self, &allProcesses, self.h.next, origin, SeqCst, SeqCst) == null) break;
     }
     self.h.trapContextNumber = 0;
@@ -127,7 +126,7 @@ inline fn needsCheck(self: *align(1) const Self) bool {
     return (@intFromPtr(self) & checkFlags) != 0;
 }
 fn fullCheck(pc: PC, sp: SP, process: *align(1) Self, context: *Context, extra: Extra) Result {
-    std.debug.print("fullCheck: {f}\n", .{extra});
+    trace("fullCheck: {f}\n", .{extra});
     return @call(tailCall, pc.prev().prim(), .{ pc, sp, process, context, extra });
 }
 pub inline fn checkBump(self: *Self) *Self {
@@ -257,7 +256,6 @@ pub fn collectNursery(self: *align(1) Self, sp: SP, context: *Context, need: usi
 }
 fn collectNurseryPass(self: *align(1) Self, originalSp: SP, contextMutable: *Context, sizes: [Process.lastNurseryAge]usize, promoteAge: usize) void {
     _ = .{ sizes, promoteAge };
-    trace("collectNurseryPass: before\n", .{});
     var scan = self.header().otherHeap;
     var hp = scan;
     var context = contextMutable;
@@ -273,20 +271,16 @@ fn collectNurseryPass(self: *align(1) Self, originalSp: SP, contextMutable: *Con
         sp = context.callerStack();
         context = context.previous();
     }
-    trace("collectNurseryPass: after contexts\n", .{});
     // find references from the residual stack
     while (sp.lessThan(endStack)) {
         if (sp.top.asMemoryObject()) |pointer|
             hp = pointer.copyTo(hp, &sp.top);
         sp = sp.drop();
     }
-    trace("collectNurseryPass: after residual\n", .{});
     // find self referencesy
     var count: usize = 10;
     while (@intFromPtr(hp) > @intFromPtr(scan)) {
-        trace("collectNurseryPass: hp={*} scan={*}:{}\n", .{ hp, scan, scan[0] });
         if (scan[0].iterator()) |iter| {
-            trace("collectNurseryPass: iter={}\n", .{iter});
             var it = iter;
             while (it.next()) |objPtr| {
                 if (objPtr.asMemoryObject()) |pointer| {
@@ -300,7 +294,6 @@ fn collectNurseryPass(self: *align(1) Self, originalSp: SP, contextMutable: *Con
         scan = scan[0].skipForward();
         count = count - 1;
     }
-    trace("collectNurseryPass: after self references\n", .{});
     // swap heaps
     const head = self.header();
     const tempHeap = head.otherHeap;
@@ -318,40 +311,29 @@ test "nursery allocation" {
     var pr = &process;
     pr.init(Nil());
     const emptySize = Process.nursery_size;
-    trace("\nemptySize = {}\n", .{emptySize});
     try ee(Process.stack_size, 27);
     try ee(pr.freeNursery(), emptySize);
     var sp = pr.endOfStack();
     var initialContext = Context.init();
     var ar = try pr.alloc(ClassIndex.Class, 4, null, void, false);
-    trace("\nar = {}\n", .{ar});
     _ = ar.initAll();
     const o1 = ar.allocated;
     try ee(pr.freeNursery(), emptySize - 5);
     ar = try pr.alloc(ClassIndex.Class, 5, null, void, false);
-    trace("\nar = {}\n", .{ar});
     _ = ar.initAll();
     ar = try pr.alloc(ClassIndex.Class, 6, null, void, false);
     const o2 = ar.initAll();
-    trace("\nar = {}\n", .{ar});
     try ee(emptySize - 19, pr.freeNursery());
-    trace("\no1 = {} {x}\n", .{ o1, o1.asObject().testU() });
-    trace("\no2 = {*} {} \n", .{ o2, o2 });
-    trace(" {x}\n", .{o2.asObject().testU()});
     try o1.instVarPut(0, o2.asObject());
-    trace("\npoint\n", .{});
     sp = sp.push(o1.asObject()).?;
-    trace("\npoint\n", .{});
     const news, const newContext, _ = pr.spillStack(sp, &initialContext, Extra{ .int = 0 });
     try ee(sp, news);
     try ee(&initialContext, newContext);
-    trace("\npoint\n", .{});
     pr.collectNursery(sp, &initialContext, 0);
     try ee(emptySize - switch (config.objectEncoding) {
         .zag, .nan => 12,
         else => 7,
     }, pr.freeNursery());
-    trace("\nend\n", .{});
     // age test
     // o1 still contains corrected address of o2
     // add second reference to o2 and circulare ref to o1

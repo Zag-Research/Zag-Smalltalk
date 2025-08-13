@@ -46,12 +46,10 @@ fn ignore() !void {
 }
 pub const primitives = struct {
     pub fn p1(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result { // SmallInteger>>#+
-        trace("\n+: {any}", .{context.stack(sp, process)});
         if (!Sym.@"+".withClass(.SmallInteger).selectorEquals(selector)) {
             const dPc = cache.current();
             return @call(tailCall, process.check(dPc.prim()), .{ dPc.next(), sp, process, context, extra.next() });
         }
-        trace("\np1: {any}", .{context.stack(sp, process)});
         const newSp = sp.dropPut(inlines.p1(sp.next, sp.top) catch
             return @call(tailCall, process.check(pc.prim()), .{ pc.next(), sp, process, context, extra }));
         return @call(tailCall, process.check(context.npc), .{ context.tpc, newSp, process, context, undefined, undefined });

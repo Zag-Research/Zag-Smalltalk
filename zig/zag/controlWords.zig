@@ -72,26 +72,21 @@ pub const classCase = struct {
         const match = @intFromEnum(top.get_class());
         while (true) {
             var classes = newPc.packedObject().asU64();
-            trace("\nclassCase: {x}", .{classes});
             newPc = newPc.next();
             for (0..4) |_| {
                 const currentClass: u14 = @truncate(classes);
-                // ZIG BUG!!!!
-                // with the first line commented, this works
-                // with the second line commented instead, this fails
-                //std.debug.print("currentClass: {}, match: {}\n", .{ currentClass, match });
-                std.debug.print("currentClass: {}, match: {}, extra: {f}\n", .{ currentClass, match, extra });
+                trace("currentClass: {}, match: {}, extra: {f}\n", .{ currentClass, match, extra });
                 if (currentClass == match) {
                     newPc = newPc.targetPC();
-                    std.debug.print("currentClass: extra: {f}\n", .{extra});
+                    trace("currentClass: extra: {f}\n", .{extra});
                     return @call(tailCall, process.check(newPc.prim()), .{ newPc.next(), sp.drop(), process, context, extra });
                 }
                 if (currentClass == 0) {
-                    std.debug.print("currentClass: extra: {f}\n", .{extra});
+                    trace("currentClass: extra: {f}\n", .{extra});
                     return @call(tailCall, process.check(newPc.prim()), .{ newPc.next(), sp.drop(), process, context, extra });
                 }
                 if (currentClass == 0x3FFF) {
-                    std.debug.print("currentClass: extra: {f}\n", .{extra});
+                    trace("currentClass: extra: {f}\n", .{extra});
                     return @call(tailCall, process.check(newPc.prim()), .{ newPc.next(), sp, process, context, extra });
                 }
                 classes >>= 14;
@@ -231,10 +226,16 @@ pub const over = struct {
 };
 pub const pop = struct {
     pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
-        const variable = pc.object().variable();
-        const address, const newContext, const newExtra, const newSp = context.getAddress(variable, sp, process, extra);
-        address.* = newSp.top;
-        return @call(tailCall, process.check(pc.prim2()), .{ pc.next2(), newSp.drop(), process, newContext, newExtra });
+        const variable = pc.object().asVariable();
+        const result = sp.top;
+        if (extra.installContextIfNone(sp.drop(), process, context)) |new| {
+            const newSp = new.sp;
+            const newExtra = new.extra;
+            variable.getAddress(newSp, newExtra).* = result;
+            return @call(tailCall, process.check(pc.prim2()), .{ pc.next2(), newSp, process, new.context, newExtra });
+        }
+        variable.getAddress(sp, extra).* = result;
+        return @call(tailCall, process.check(pc.prim2()), .{ pc.next2(), sp.drop(), process, context, extra });
     }
 };
 pub const popAssociationValue = struct {
@@ -270,21 +271,28 @@ pub const popAssociationValue = struct {
 };
 pub const push = struct {
     pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
-        const variable = pc.object().variable();
-        const address, const newContext, const newExtra, const newSp = context.getAddress(variable, sp, process, extra);
-        const value = address.*;
-        std.debug.print("push: {f} {f}\n", .{ extra, newExtra });
-        if (newSp.push(value)) |newerSp| {
-            return @call(tailCall, process.check(pc.prim2()), .{ pc.next2(), newerSp, process, newContext, newExtra });
+        trace("Pushing variable...{f} {f}\n", .{pc, extra});
+        const variable = pc.object().asVariable();
+        if (variable.isLocal and extra.noContext()) {
+            if (sp.push(Nil())) |newSp| {
+                return @call(tailCall, process.check(pc.prim2()), .{ pc.next2(), newSp, process, context, extra });
+            } else {
+                const newSp, const newContext, const newExtra = process.spillStackAndPush(Nil(), sp, context, extra);
+                return @call(tailCall, process.check(pc.prim2()), .{ pc.next2(), newSp, process, newContext, newExtra });
+            }
+        }
+        const value = variable.getAddress(sp, extra).*;
+        if (sp.push(value)) |newSp| {
+            return @call(tailCall, process.check(pc.prim2()), .{ pc.next2(), newSp, process, context, extra });
         } else {
-            const newerSp, const newerContext, const newerExtra = process.spillStackAndPush(value, newSp, newContext, newExtra);
-            return @call(tailCall, process.check(pc.prim2()), .{ pc.next2(), newerSp, process, newerContext, newerExtra });
+            const newSp, const newContext, const newExtra = process.spillStackAndPush(value, sp, context, extra);
+            return @call(tailCall, process.check(pc.prim2()), .{ pc.next2(), newSp, process, newContext, newExtra });
         }
     }
-    test "pushStack" {
+    test "push" {
         if (true) return error.UnimplementedTest;
         try Execution.runTest(
-            "pushStack",
+            "push",
             .{ tf.pushLocal, 1, tf.pushLocal, 4 },
             &[_]Object{
                 Object.from(42, null),
@@ -339,11 +347,12 @@ pub const pushAssociationValue = struct {
 pub const pushLiteral = struct {
     pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
         const value = pc.object();
-        std.debug.print("pushLiteral: {f}\n", .{extra});
         if (sp.push(value)) |newSp| {
+            trace("pushLiteral: {f}\n", .{extra});
             return @call(tailCall, process.check(pc.prim2()), .{ pc.next2(), newSp, process, context, extra });
         } else {
             const newSp, const newContext, const newExtra = process.spillStackAndPush(value, sp, context, extra);
+            trace("pushLiteral: {f} {f}\n", .{extra, newExtra});
             return @call(tailCall, process.check(pc.prim2()), .{ pc.next2(), newSp, process, newContext, newExtra });
         }
     }
@@ -363,10 +372,16 @@ pub const pushLiteral = struct {
 };
 pub const store = struct {
     pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
-        const variable = pc.object().variable();
-        const address, const newContext, const newExtra, const newSp = context.getAddress(variable, sp, process, extra);
-        address.* = newSp.top;
-        return @call(tailCall, process.check(pc.prim2()), .{ pc.next2(), newSp.drop(), process, newContext, newExtra });
+        const variable = pc.object().asVariable();
+        const result = sp.top;
+        if (extra.installContextIfNone(sp, process, context)) |new| {
+            const newSp = new.sp;
+            const newExtra = new.extra;
+            variable.getAddress(newSp, newExtra).* = result;
+            return @call(tailCall, process.check(pc.prim2()), .{ pc.next2(), newSp, process, new.context, newExtra });
+        }
+        variable.getAddress(sp, extra).* = result;
+        return @call(tailCall, process.check(pc.prim2()), .{ pc.next2(), sp, process, context, extra });
     }
 };
 pub const callLabel = if (zag.config.is_test) struct {

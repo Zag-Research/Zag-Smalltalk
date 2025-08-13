@@ -398,6 +398,6 @@ pub const Object = packed struct(u64) {
     pub const setField = OF.setField;
     pub const to = OF.to;
     pub const toUnchecked = OF.toUnchecked;
-    pub const variable = zag.Context.getVariable;
+    pub const asVariable = zag.Context.asVariable;
     pub const PackedObject = object.PackedObject;
 };

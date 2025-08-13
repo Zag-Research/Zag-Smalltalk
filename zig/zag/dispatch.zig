@@ -33,7 +33,6 @@ const DispatchHandler = struct {
     const loadFactor = 70; // hashing load factor
     var dispatches = [_]*Dispatch{&Dispatch.empty} ** config.max_classes;
     inline fn lookupMethodForClass(ci: ClassIndex, selector: Object, signature: Signature) *const CompiledMethod {
-        trace(" (lookupMethodForClass) {} {} {}", .{ ci, selector, signature });
         if (dispatches[@intFromEnum(ci)].lookupMethod(selector, signature)) |method|
             return method;
         if (defaultForTest != null)
@@ -41,7 +40,7 @@ const DispatchHandler = struct {
         return loadMethodForClass(ci, selector);
     }
     fn loadMethodForClass(ci: ClassIndex, selector: Object) *const CompiledMethod {
-        std.debug.print("loadMethodForClass({} {f})\n", .{ ci, selector });
+        trace("loadMethodForClass({} {f})\n", .{ ci, selector });
         unreachable;
     }
     fn stats(index: ClassIndex) Dispatch.Stats {
@@ -53,7 +52,6 @@ const DispatchHandler = struct {
     fn addMethod(method: *const CompiledMethod) void {
         method.dump();
         const index = method.signature.getClassIndex();
-        //        trace("\naddMethod: {} {} {}", .{ index, method.selector(), method.codePtr() });
         if (dispatches[index].addIfAllocated(method)) return;
         while (true) {
             const dispatch = dispatches[index];
@@ -66,7 +64,7 @@ const DispatchHandler = struct {
                     if (dispatch.addMethodsTo(newDispatch, method)) {
                         dispatches[index] = newDispatch;
                         // for (newDispatch.methodsAllocatedSlice(), 0..) |*ptr,idx| {
-                        //     std.debug.print("[{}]: {*}\n", .{idx, ptr.method});
+                        //     trace("[{}]: {*}\n", .{idx, ptr.method});
                         // }
                         return;
                     }
@@ -77,7 +75,6 @@ const DispatchHandler = struct {
     fn alloc(words: usize) *Dispatch {
         const nMethods = smallestPrimeAtLeast(words);
         const nInstVars = (nMethods * @sizeOf(DispatchElement) + @offsetOf(Dispatch, "matches")) / @sizeOf(Object) - 1;
-        trace("\ninstVars: {}", .{nInstVars});
         const aR = globalArena.aHeapAllocator().alloc(.CompiledMethod, @intCast(nInstVars), null, Object, false);
         const newDispatch: *Dispatch = @alignCast(@ptrCast(aR.allocated));
         newDispatch.initialize(nMethods);
@@ -168,7 +165,6 @@ const Dispatch = struct {
             if (@cmpxchgWeak(DispatchState, &self.state, .clean, .beingUpdated, .seq_cst, .seq_cst)) |notClean| {
                 if (notClean == .dead) return error.DeadDispatch;
             } else break;
-            trace("\nlock: looping", .{});
         }
     }
     fn addIfAllocated(self: *Self, cmp: *const CompiledMethod) bool {
@@ -186,15 +182,12 @@ const Dispatch = struct {
         for (&self.dispatchMatch(signature.asSymbol()).elements) |*element| {
             if (element.match(signature)) |_| {
                 element.storeMethod(cmp); // replace this
-                trace(" - replaced existing", .{});
                 return true;
             } else if (element.isEmpty()) {
                 element.storeMethod(cmp);
-                trace(" - installed", .{});
                 return true;
             }
         }
-        trace(" - no free space", .{});
         return false;
     }
     fn fail(programCounter: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
@@ -347,7 +340,7 @@ fn doDispatch(tE: *Execution, dispatch: *Dispatch, extra: Extra) []Object {
 //     try std.testing.expectEqual(dispatch.add(@ptrCast(&code2)), error.Conflict);
 // }
 pub fn inlinePrimitiveFailed(pc: PC, sp: SP, process: *Process, context: *Context, _: Extra) Result {
-    std.debug.print("Inline primitive failed, sp: {}\n", .{sp});
+    trace("Inline primitive failed, sp: {}\n", .{sp});
     _ = pc.prev().prim();
     _ = .{ pc, sp, process, context, unreachable };
 }
@@ -355,13 +348,11 @@ pub const threadedFunctions = struct {
     const tf = zag.threadedFn.Enum;
     pub const returnSelf = struct {
         pub fn threadedFn(_: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
-            std.debug.print("returnSelf: {f}\n", .{extra});
+            trace("returnSelf: {f}\n", .{extra});
             if (extra.addressIfNoContext(0, sp)) |address| {
                 const newSp: SP = @ptrCast(address);
                 return @call(tailCall, process.check(context.npc), .{ context.tpc, newSp, process, context, Extra.fromContextData(context.contextData) });
             }
-            trace("\nreturnSelf: {} ", .{sp.top});
-            trace("{any} ", .{context.stack(sp, process)});
             const newSp, const callerContext = context.pop(process);
             return @call(tailCall, process.check(callerContext.getNPc()), .{ callerContext.getTPc(), newSp, process, callerContext, Extra.fromContextData(callerContext.contextData) });
         }
@@ -387,7 +378,7 @@ pub const threadedFunctions = struct {
     pub const returnTop = struct {
         pub fn threadedFn(_: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
             const top = sp.top;
-            std.debug.print("returnTop: {f} {f}\n", .{ top, extra });
+            trace("returnTop: {f} {f}\n", .{ top, extra });
             if (extra.addressIfNoContext(0, sp)) |address| {
                 const newSp: SP = @ptrCast(address);
                 newSp.top = top;
@@ -421,32 +412,38 @@ pub const threadedFunctions = struct {
             unreachable;
         }
     };
-    const SaveCase = enum { TailCall, Return };
-    fn getMethod(pc: PC, sp: SP, context: *Context, saveReturn: SaveCase) *const CompiledMethod {
+    fn getMethod(pc: PC, sp: SP) *const CompiledMethod {
         const selector = pc.object();
-        if (saveReturn == .Return) context.setReturn(pc.next2());
         const receiver = sp.at(selector.numArgs());
-        const method = pc.next().method();
+        const methodAddress = pc.next();
+        var method = methodAddress.method();
         const class = receiver.get_class();
+        const methodSignature = method.signature;
         const signature = Signature.from(selector, class);
-        if (method.signature == signature) {
+        if (methodSignature == signature)
             return method;
-        }
-        return class.lookupMethodForClass(selector, signature);
+        method = class.lookupMethodForClass(selector, signature);
+        if (methodSignature.isEmpty())
+            methodAddress.patchPtr().patchMethod(method);
+        return method;
     }
     pub const send = struct {
         pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
-            std.debug.print("send: {f} {f}\n", .{ pc, extra });
-            const method = getMethod(pc, sp, context, .Return);
+            trace("send: {f} {f}\n", .{ pc, extra });
+            const method = getMethod(pc, sp);
             const newPc = method.codePc();
-            // maybe create context
-            if (true) unreachable;
+            if (extra.installContextIfNone(sp, process, context)) |new| {
+                new.context.setReturn(pc.next2());
+                trace("sending...: method:{x} sp:{x} {f} original: {x} {f}\n", .{ @intFromPtr(method), @intFromPtr(new.sp), new.extra, @intFromPtr(sp), extra });
+                return @call(tailCall, process.check(newPc.prim()), .{ newPc.next(), new.sp, process, new.context, new.extra });
+            }
+            context.setReturn(pc.next2());
             return @call(tailCall, newPc.prim(), .{ newPc.next(), sp, process, context, Extra.forMethod(method, sp) });
         }
     };
     pub const tailSend = struct {
         pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
-            const method = getMethod(pc, sp, context, .TailCall);
+            const method = getMethod(pc, sp);
             const newPc = method.codePc();
             _ = extra; // have to move parameters to self position
             if (true) unreachable;

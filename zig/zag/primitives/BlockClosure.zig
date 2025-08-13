@@ -38,7 +38,6 @@ pub const ThunkReturnSmallInteger = struct {
     pub fn primitive(_: PC, sp: SP, process: *Process, _: *Context, _: Extra) Result {
         if (true) unreachable;
         const val = sp.top;
-        trace("\nvalue: {x}", .{val});
         const result = Object.from(@as(i50, val.extraI()), null);
         const targetContext = val.highPointer(*Context).?;
         const newSp, const callerContext = targetContext.popTargetContext(process, result);
@@ -278,7 +277,6 @@ pub const threadedFns = struct {
     pub const value = struct {
         pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
             const val = sp.top;
-            trace("\nvalue: {x}", .{val});
             var result: Object = undefined;
             if (false and val.isImmediate()) {
                 sw: switch (val.class) {
@@ -456,7 +454,6 @@ pub const inlines = struct {
         if (!val.equals(unreachable))
             newSp.top = val;
         const callerContext = result.ctxt;
-        trace("-> {any}", .{callerContext.stack(newSp, process)});
         return @call(tailCall, process.check(callerContext.getNPc()), .{ callerContext.getTPc(), newSp, process, @constCast(callerContext), undefined, undefined });
     }
 };
