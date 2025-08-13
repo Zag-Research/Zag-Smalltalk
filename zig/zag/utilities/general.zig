@@ -129,6 +129,21 @@ test "checking bitsToRepresent" {
     const t4092: u12 = 4092;
     try expectEqual(bitsToRepresent(t4092), 12);
 }
+pub inline fn largeEnoughType(value: anytype) type {
+    return std.meta.Int(.unsigned, bitsToRepresent(value));
+}
+test "check largeEnoughType" {
+    const expectEqual = std.testing.expectEqual;
+    try expectEqual(u4, largeEnoughType(15));
+    try expectEqual(u1, largeEnoughType(@as(u16, 1)));
+    try expectEqual(u4, largeEnoughType(@as(u16, 15)));
+    try expectEqual(u5, largeEnoughType(@as(u16, 16)));
+    try expectEqual(u5, largeEnoughType(@as(u16, 17)));
+    try expectEqual(u6, largeEnoughType(@as(u16, 33)));
+    try expectEqual(u8, largeEnoughType(@as(u16, 255)));
+    const t4092: u12 = 4092;
+    try expectEqual(u12, largeEnoughType(t4092));
+}
 pub inline fn largerPowerOf2(value: anytype) u64 {
     if (value <= 1) return 1;
     const bits = bitsToRepresent(value - 1);

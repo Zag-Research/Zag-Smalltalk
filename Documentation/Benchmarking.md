@@ -7,4 +7,4 @@ Integer benchmarks (fibonacci, integer benchmarks),
 
  [Clément Béra](https://clementbera.wordpress.com/ "Clément Béra") [on Cog optimizations](https://clementbera.wordpress.com/2014/08/12/arithmetic-inlined-and-special-selectors/) including how to turn them off (for benchmarking comparisons)
 
- 
+ [This](https://github.com/hashrocket/websocket-shootout/issues/44) bug/comment thread has nothing to do with our benchmarking, but still has a lot of good insights about benchmarking in general.

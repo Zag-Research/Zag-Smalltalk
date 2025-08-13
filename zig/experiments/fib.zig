@@ -1,144 +1,126 @@
 const std = @import("std");
 const zag = @import("zag");
+const Object = zag.Object;
 const Execution = zag.execute.Execution;
+const compileMethod = zag.execute.compileMethod;
 const tf = zag.threadedFn.Enum;
 const Sym = zag.symbol.symbols;
+const SmallInteger = zag.primitives.Smallinteger;
+fn fibNative(n: u32) u64 {
+    if (n < 2) return n;
+    var a: u64 = 0;
+    var b: u64 = 1;
+    var i: u32 = 2;
+    while (i <= n) : (i += 1) {
+        const c = a + b;
+        a = b;
+        b = c;
+    }
+    return b;
+}
 
-const intIncluded = true;
-
-const notIncluded = struct {
-    const included = false;
-};
-const fibInteger = if (intIncluded) struct {
+const fibInteger = struct {
     const included = true;
+    const name = "Integer";
     inline fn doTest() !void {
-        fibThreadMethod = @ptrCast(&fibThread);
-        fib.setLiterals(&[_]Object{sym.fibonacci}, empty, null);
+        fib.setLiterals(&[_]Object{Sym.fibonacci}, Object.empty, null);
         var n: u32 = 1;
         while (n <= testReps) : (n += 1) {
             var objs = [_]Object{Object.from(n)};
-            var te = TestExecution.new();
-            te.init();
-            const result = te.run(objs[0..], fibThreadMethod);
+            var exe = Execution.new();
+            exe.init();
+            const result = exe.run(objs[0..], &fib);
             std.debug.print("\nfib({}) = {any}", .{ n, result });
             try std.testing.expectEqual(result.len, 1);
-            try std.testing.expectEqual(result[0].toInt(), @as(i51, @truncate(fibNative.fib(n))));
+            if (result[0].nativeI()) |int| {
+                try std.testing.expectEqual(int, fibNative(n));
+            }
         }
     }
+    const self = zag.Context.makeVariable(0, 1, .Parameter, &.{});
+    const leq = SmallInteger.@"<=".inlined;
+    const plus = SmallInteger.@"+".inlined;
+    const minus = SmallInteger.@"-".inlined;
+    const classCase = Object.PackedObject.classCase;
+    const rawSymbol = zag.symbol.rawSymbol;
+    const nullMethod = zag.dispatch.nullMethod;
     var fib =
-        compileMethod(Sym.i_0, 0, 2, .none, .{
-            ":recurse",
-            tf.push, variable(0,1,.{}), // self
-            tf.pushLiteral, 2, //&e.pushLiteral, two,
-            tf.immediatePrimitive,
-            immediatePrimitive(@"<=",SmallInteger.@"<="), // <= know that self and 2 are definitely integers
-            tf.classCase,
-            classCase(.{ Sym.False }),
+        compileMethod(Sym.fibonacci, 0, .SmallInteger, .{
+            tf.push,                  self,
+            tf.pushLiteral,           2,
+            tf.inlinePrimitive,       leq,
+            tf.classCase,             classCase(&.{.False}),
             "label3",
-            tf.push, variable(0,1,.{}), // self
-            tf.returnTop,
-            ":label3",
-            tf.push, variable(0,1,.{}), // self
-            tf.pushLiteral, 1,
-            tf.immediatePrimitive,
-            immediatePrimitive(@"-",SmallInteger.@"-"),
-            tf.send,
-            "0fib",
-            nullMethod,
-            tf.push, variable(0,1,.{}), // self
-            tf.pushLiteral, 2,
-            tf.immediatePrimitive,
-            immediatePrimitive(@"-",SmallInteger.@"-"),
-            tf.send,
-            "0fib",
-            nullMethod,
-            tf.immediatePrimitive,
-            immediatePrimitive(@"+",SmallInteger.@"+"),
-            tf.returnTop,
+            tf.returnSelf,
+            ":label3",                tf.push,
+            self,                     tf.pushLiteral,
+            1,                        tf.inlinePrimitive,
+            minus,                    tf.send,
+            rawSymbol(.fibonacci, 0), &nullMethod,
+            tf.push,                  self,
+            tf.pushLiteral,           2,
+            tf.inlinePrimitive,       minus,
+            tf.send,                  rawSymbol(.fibonacci, 0),
+            &nullMethod,              tf.inlinePrimitive,
+            plus,                     tf.returnTop,
         });
-    var fibThreadMethod: CompiledMethodPtr = undefined;
-    fn runIt(_: usize) void {
-        fibThreadMethod = fib.asCompiledMethodPtr();
-        fib.setLiterals(&[_]Object{sym.fibonacci}, empty);
-        var objs = [_]Object{Object.from(runs)};
-        var te = TestExecution.new();
-        te.init();
-        _ = te.run(objs[0..], fibThreadMethod);
+    fn init() void {
+        fib.resolve(&[_]Object{}) catch unreachable;
+        zag.dispatch.addMethod(@ptrCast(&fib));
     }
-    test "fibThread" {
-        try fibThread.doTest();
+    fn runIt(_: usize, _: usize) usize {
+        if ((Execution.mainSendTo(Sym.fibonacci, Object.from(fibN, null)) catch unreachable).nativeU()) |result| {
+            std.debug.print("fib result: {}\n", .{result});
+            return result;
+        }
+        unreachable;
     }
-} else notIncluded;
-
+    test "fibInteger" {
+        try fibInteger.doTest();
+    }
+};
 const Stats = zag.Stats;
-pub fn timing(args: [][]const u8, default: bool) !void {
-    const nRuns = 5;
+pub fn timing(args: []const []const u8, default: bool) !void {
+    const nRuns = 1;
     const eql = std.mem.eql;
     const print = std.debug.print;
-    var stat = Stats(usize, nRuns, .milliseconds).init();
-    const cached = "";
+    var stat = Stats(void, void, nRuns, 0, .milliseconds).init();
     for (args) |arg| {
         if (eql(u8, arg, "Config")) {
-            print("Config {s}dispatch cache\n", .{"no "});
+            zag.config.printConfig();
         } else if (eql(u8, arg, "Header")) {
-            print("for '{} fibonacci'\n", .{runs});
-            print("          Median   Mean   StdDev  SD/Mean ({} runs)\n", .{nRuns});
-        } else if (fibNative.included and eql(u8, arg, "Native")) {
-            print("Native:  ", .{});
-            stat.reset();
-            stat.time(fibNative.runIt);
-            print("{?d:5}ms {d:5}ms {d:6.2}ms {d:5.1}%\n", .{ stat.median(), stat.mean(), stat.stdDev(), stat.stdDev() * 100 / @as(f64, @floatFromInt(stat.mean())) });
-        } else if (fibObject.included and eql(u8, arg, "Object")) {
-            print("Object:  ", .{});
-            stat.reset();
-            stat.time(fibObject.runIt);
-            print("{?d:5}ms {d:5}ms {d:6.2}ms {d:5.1}%\n", .{ stat.median(), stat.mean(), stat.stdDev(), stat.stdDev() * 100 / @as(f64, @floatFromInt(stat.mean())) });
-        } else if (fibCPS.included and eql(u8, arg, "CPS")) {
-            print("CPS:     ", .{});
-            stat.reset();
-            stat.time(fibCPS.runIt);
-            print("{?d:5}ms {d:5}ms {d:6.2}ms {d:5.1}%\n", .{ stat.median(), stat.mean(), stat.stdDev(), stat.stdDev() * 100 / @as(f64, @floatFromInt(stat.mean())) });
-        } else if (fibCPSSend.included and eql(u8, arg, "CPSSend")) {
-            print("CPSSend: ", .{});
-            stat.reset();
-            stat.time(fibCPSSend.runIt);
-            print("{?d:5}ms {d:5}ms {d:6.2}ms {d:5.1}% {s}\n", .{ stat.median(), stat.mean(), stat.stdDev(), stat.stdDev() * 100 / @as(f64, @floatFromInt(stat.mean())), cached });
-        } else if (fibThread.included and eql(u8, arg, "Thread")) {
-            print("Thread:  ", .{});
-            stat.reset();
-            stat.time(fibThread.runIt);
-            print("{?d:5}ms {d:5}ms {d:6.2}ms {d:5.1}%\n", .{ stat.median(), stat.mean(), stat.stdDev(), stat.stdDev() * 100 / @as(f64, @floatFromInt(stat.mean())) });
-        } else if (fibDispatch.included and eql(u8, arg, "Dispatch")) {
-            print("Dispatch:", .{});
-            stat.reset();
-            stat.time(fibDispatch.runIt);
-            print("{?d:5}ms {d:5}ms {d:6.2}ms {d:5.1}% {s}\n", .{ stat.median(), stat.mean(), stat.stdDev(), stat.stdDev() * 100 / @as(f64, @floatFromInt(stat.mean())), cached });
-            // } else if (fibByte.included and eql(u8,arg,"Byte")) {
-            //     print("Byte:    ", .{});
-            //     stat.reset();
-            //     stat.time(fibByte.runIt);
-            //     print("{?d:5}ms {d:5}ms {d:6.2}ms {d:5.1}%\n", .{ stat.median(), stat.mean(), stat.stdDev(), stat.stdDev()*100/@as(f64,@floatFromInt(stat.mean()))});
-
-        } else if (fibFull.included and eql(u8, arg, "Full")) {
-            print("Full:    ", .{});
-            stat.reset();
-            stat.time(fibFull.runIt);
-            print("{?d:5}ms {d:5}ms {d:6.2}ms {d:5.1}% {s}\n", .{ stat.median(), stat.mean(), stat.stdDev(), stat.stdDev() * 100 / @as(f64, @floatFromInt(stat.mean())), cached });
-        } else if (!default)
-            print("Unknown argument: {s}\n", .{arg});
+            print("for '{} fibonacci'\n", .{fibN});
+            print("          Median   Mean   StdDev  SD/Mean ({} run{s}, {} warmup{s})\n", .{ stat.runs, if (stat.runs != 1) "s" else "", stat.warmups, if (stat.warmups != 1) "s" else "" });
+        } else {
+            var anyRun = false;
+            inline for (&.{fibInteger}) |benchmark| {
+                if (benchmark.included and eql(u8, arg, benchmark.name)) {
+                    anyRun = true;
+                    print("{s:>9}", .{benchmark.name});
+                    benchmark.init();
+                    stat.reset();
+                    stat.time(benchmark.runIt, void);
+                    print("{?d:5}ms {d:5}ms {d:6.2}ms {d:5.1}%\n", .{ stat.median(), stat.mean(), stat.stdDev(), stat.stdDev() * 100 / @as(f64, @floatFromInt(stat.mean())) });
+                }
+            }
+            if (!default and !anyRun)
+                print("Unknown argument: {s}\n", .{arg});
+        }
     }
 }
 pub fn main() !void {
-    const do_all = [_][]const u8{ "Config", "Header", "Native", "Object", "CPS", "Thread", "Byte", "CPSSend", "Dispatch", "Full" };
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-    const allocator = gpa.allocator();
-    defer {
-        const deinit_status = gpa.deinit();
-        //fail test; can't try in defer as defer is executed after we return
-        if (deinit_status == .leak) @panic("TEST FAIL");
-    }
+    const do_all = [_][]const u8{ "Config", "Header", "Native", "Integer" };
+    // var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    // const allocator = gpa.allocator();
+    const allocator = std.heap.page_allocator;
+    // defer {
+    //     const deinit_status = gpa.deinit();
+    //     //fail test; can't try in defer as defer is executed after we return
+    //     if (deinit_status == .leak) @panic("TEST FAIL");
+    // }
     const args = try std.process.argsAlloc(allocator);
     const default = args.len <= 1;
     try timing(if (default) @constCast(do_all[0..]) else args[1..], default);
 }
-const runs: u6 = 40;
+const testReps = 10;
+const fibN: u6 = 3;

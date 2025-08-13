@@ -1,13 +1,16 @@
 pub const config = @import("config.zig");
 pub const InMemory = @import("object/inMemory.zig");
 pub const object = @import("object.zig");
+pub const Object = object.Object;
 pub const execute = @import("execute.zig");
 pub const Context = @import("context.zig");
 pub const Process = @import("process.zig");
 pub const heap = @import("heap.zig");
 pub const globalArena = @import("globalArena.zig");
 pub const symbol = @import("symbol.zig");
+pub const primitives = @import("primitives.zig").primitives;
 pub const utilities = @import("utilities.zig");
 pub const llvm = if (config.includeLLVM) @import("llvm-build-module") else null;
 pub const threadedFn = @import("threadedFn.zig");
-pub const Stats = utilities.stats.Stats;
+pub const Stats = utilities.Stats;
+pub const dispatch = @import("dispatch.zig");

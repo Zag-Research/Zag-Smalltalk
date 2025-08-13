@@ -12,25 +12,35 @@ const True = zag.object.True;
 const False = zag.object.False;
 const execute = zag.execute;
 const PC = execute.PC;
-const SP = execute.SP;
+const Result = execute.Result;
+const SP = Process.SP;
 const Execution = execute.Execution;
 const Process = zag.Process;
 const Context = zag.Context;
-const Extra = execute.Extra;
-const Result = execute.Result;
+const Extra = Context.Extra;
 const stringOf = zag.heap.CompileTimeString;
 const tf = zag.threadedFn.Enum;
 const Sym = zag.symbol.symbols;
 
+pub const primitives = struct {
+    pub const Smallinteger = @import("primitives/Smallinteger.zig");
+    pub const Array = @import("primitives/Array.zig");
+    pub const Object = @import("primitives/Object.zig");
+    pub const BlockClosure = @import("primitives/BlockClosure.zig");
+    pub const LLVM = @import("primitives/llvm-primitives.zig");
+    pub const Behavior = @import("primitives/Behavior.zig");
+    pub const Boolean = @import("primitives/Boolean.zig");
+};
+
 const modules = [_]Module{
     Module.init(testModule),
-    Module.init(@import("primitives/Object.zig")),
-    Module.init(@import("primitives/Array.zig")),
-    Module.init(@import("primitives/Smallinteger.zig")),
-    // Module.init(@import("primitives/Behavior.zig").module),
-    Module.init(@import("primitives/BlockClosure.zig")),
-    // Module.init(@import("primitives/Boolean.zig").module),
-    Module.init(if (config.includeLLVM) @import("primitives/llvm-primitives.zig") else struct {
+    Module.init(primitives.Object),
+    Module.init(primitives.Array),
+    Module.init(primitives.Smallinteger),
+    // Module.init(primitives.Behavior),
+    Module.init(primitives.BlockClosure),
+    // Module.init(primitives.Boolean),
+    Module.init(if (config.includeLLVM) primitives.LLVM else struct {
         const moduleName = "llvm";
     }),
     // Module.init(@import("dispatch.zig")),
@@ -493,14 +503,20 @@ pub const threadedFunctions = struct {
     };
     pub const inlinePrimitive = struct {
         pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
-            const primNumber = pc.object().primitive();
+            trace("inlinePrimitive: {f} {x}\n", .{extra, @intFromPtr(&threadedFn)});
+            const obj = pc.object();
+            const primNumber = obj.primitive();
             if (Module.findNumberedPrimitive(primNumber)) |prim| {
                 if (prim.inlinePrimitive) |p| {
-                    @constCast(pc.prev().asCodePtr()).patchPrim(p);
+                    pc.prev().patchPtr().patchPrim(p);
+                    trace("inlinePrimitive found: {} {f}\n", .{primNumber, extra});
                     return @call(tailCall, p, .{ pc, sp, process, context, extra });
                 }
+                std.debug.print("primitive {} ({f}) doesn't have an inline primitive\n", .{ primNumber, obj.symbol() });
+            } else {
+                std.debug.print("no primitive numbered: {}\n", .{primNumber});
             }
-            @panic("found primitive:error: need primitive:");
+            @panic("couldn't find inlinePrimitive:");
         }
         test "inlinePrimitive found" {
             var exe = Execution.initTest("inlinePrimitive: found", .{

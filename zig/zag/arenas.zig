@@ -23,7 +23,6 @@ const HeaderArray = @import("heap.zig").HeaderArray;
 const HeapPtr = @import("heap.zig").HeapPtr;
 const AllocErrors = @import("heap.zig").AllocErrors;
 const Context = @import("context.zig").Context;
-const ContextPtr = @import("context.zig").ContextPtr;
 const os = @import("os.zig");
 const blockAllocation = os.BlockAllocation(HeapAllocation).new();
 pub inline fn arenaFree(stackPointer: [*]const Object, heapPointer: HeaderArray) isize {
@@ -42,7 +41,7 @@ test "arenaFree" {
 const AllocResult = struct {
     sp: [*]Object,
     hp: HeaderArray,
-    context: ContextPtr,
+    context: *Context,
     age: Age,
     allocated: HeapPtr,
 };
@@ -96,14 +95,14 @@ pub const GlobalArena = struct {
         const self = @as(*Self, @ptrCast(@alignCast(@alignOf(Self), ctx)));
         _ = .{ self, buf, buf_align, ret_addr, @panic("freeForAllocator unimplemented") };
     }
-    fn allocIndirect(self: *Self, sp: [*]Object, hp: HeaderArray, context: ContextPtr, heapSize: usize, arraySize: usize) AllocReturn {
+    fn allocIndirect(self: *Self, sp: [*]Object, hp: HeaderArray, context: *Context, heapSize: usize, arraySize: usize) AllocResult {
         const array = @as(HeapPtr, @ptrCast(std.heap.page_allocator.alloc(Object, arraySize) catch @panic("page allocator failed")));
         var result = try GlobalArena.alloc(self, sp, hp, context, heapSize, 0);
         const offs = @as([*]u64, @ptrCast(result.allocated)) + heapSize - 2;
         offs[1] = @intFromPtr(array);
         return result;
     }
-    fn alloc(self: *Self, sp: [*]Object, hp: HeaderArray, context: ContextPtr, heapSize: usize, arraySize: usize) AllocReturn {
+    fn alloc(self: *Self, sp: [*]Object, hp: HeaderArray, context: *Context, heapSize: usize, arraySize: usize) AllocResult {
         const allocation = try self.rawAlloc(heapSize, arraySize);
         return .{
             .sp = sp,
@@ -127,7 +126,7 @@ pub const GlobalArena = struct {
         }
         return @as(HeapPtr, @ptrCast(allocation.ptr));
     }
-    fn collect(self: *Self, sp: [*]Object, hp: HeaderArray, context: ContextPtr) AllocErrors!void {
+    fn collect(self: *Self, sp: [*]Object, hp: HeaderArray, context: *Context) AllocErrors!void {
         _ = self;
         _ = sp;
         _ = hp;

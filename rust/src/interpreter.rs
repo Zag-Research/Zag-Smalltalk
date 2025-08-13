@@ -507,7 +507,7 @@ mod testsInterpreter {
     macro_rules! method {
         ($($e:expr),*) => {primary_init(classMethod,&[$( Object::from($e)),*])}        
     }
-    macro_rules! doReturn {
+    macro_rules! doResult {
         ($($e:expr),*) => {primary_init(classReturn,&[$( Object::from($e)),*])}        
     }
     macro_rules! send {

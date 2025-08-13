@@ -662,7 +662,7 @@ fn getSP() void {
             \\  syscall
             :: //[ptr] "r" (@ptrToInt(self.mapped.ptr)),
             //[len] "r" (self.mapped.len),
-            : "memory"),
+            : .{ .memory = true }),
         .aarch64, .aarch64_be, .aarch64_32 => asm volatile (
             \\  mov x8, #215
             \\  mov x0, %[ptr]
@@ -673,7 +673,7 @@ fn getSP() void {
             \\  svc 0
             :: //[ptr] "r" (@ptrToInt(self.mapped.ptr)),
             //[len] "r" (self.mapped.len),
-            : "memory"),
+            : .{ .memory = true }),
         else => |cpu_arch| @compileError("Unsupported arch: " ++ @tagName(cpu_arch)),
     }
 }

@@ -7,15 +7,15 @@ const trace = config.trace;
 const execute = zag.execute;
 const Code = execute.Code;
 const PC = execute.PC;
-const SP = execute.SP;
 const compileMethod = execute.compileMethod;
 const CompiledMethod = execute.CompiledMethod;
-const Extra = execute.Extra;
 const Result = execute.Result;
 const Execution = execute.Execution;
 const failed = Execution.failed;
 const Process = zag.Process;
+const SP = Process.SP;
 const Context = zag.Context;
+const Extra = Context.Extra;
 const object = zag.object;
 const Object = object.Object;
 const Compact = object.ClassIndex.Compact;
@@ -36,8 +36,8 @@ pub const moduleName = "BlockClosure";
 const zModuleName = stringOf(moduleName).init().obj();
 pub const ThunkReturnSmallInteger = struct {
     pub fn primitive(_: PC, sp: SP, process: *Process, _: *Context, _: Extra) Result {
+        if (true) unreachable;
         const val = sp.top;
-        trace("\nvalue: {x}", .{val});
         const result = Object.from(@as(i50, val.extraI()), null);
         const targetContext = val.highPointer(*Context).?;
         const newSp, const callerContext = targetContext.popTargetContext(process, result);
@@ -176,7 +176,7 @@ pub const threadedFns = struct {
         }
         fn validateFloat(exe: anytype, _: []const Object) Execution.ValidateErrors!void {
             switch (objectEncoding) {
-                .zag => try std.testing.expectEqualSlices(Object, &[_]Object{@bitCast(@as(u64, 0x0dffff0000000e71))}, exe.stack()),
+                .zag => try std.testing.expectEqualSlices(Object, &[_]Object{@bitCast(@as(u64, 0x0dffff0000000e69))}, exe.stack()),
                 else => return error.TestAborted,
             }
         }
@@ -211,7 +211,7 @@ pub const threadedFns = struct {
             _ = .{ pc, sp, process, context, extra, unreachable };
         }
     };
-   pub const pushClosure = struct {
+    pub const pushClosure = struct {
         pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
             const structure: PackedObject = pc.packedObject();
             const stackedFields = structure.f1;
@@ -277,7 +277,6 @@ pub const threadedFns = struct {
     pub const value = struct {
         pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
             const val = sp.top;
-            trace("\nvalue: {x}", .{val});
             var result: Object = undefined;
             if (false and val.isImmediate()) {
                 sw: switch (val.class) {
@@ -421,7 +420,7 @@ pub const inlines = struct {
         _ = .{ oldSp, process, val, unreachable };
     }
     var valueClosureMethod = CompiledMethod.init2(Sym.value, pushValue, tf.returnNoContext);
-    pub inline fn fullClosure(oldSp: SP, process: *Process, block: *CompiledMethod, context: *Context, extra: Extra) SP {
+    pub inline fn fullClosure(oldSp: SP, process: *Process, block: *CompiledMethod, context: *Context, extra: Extra) Result {
         // const flags = block.stackStructure.locals; // TODO: wrong
         // const fields = flags & 63;
         // const sp = process.allocStackSpace(oldSp, fields + 2 - (flags >> 7)) catch @panic("no stack");
@@ -455,7 +454,6 @@ pub const inlines = struct {
         if (!val.equals(unreachable))
             newSp.top = val;
         const callerContext = result.ctxt;
-        trace("-> {any}", .{callerContext.stack(newSp, process)});
         return @call(tailCall, process.check(callerContext.getNPc()), .{ callerContext.getTPc(), newSp, process, @constCast(callerContext), undefined, undefined });
     }
 };
@@ -482,7 +480,6 @@ pub fn generalClosureX(pc: PC, sp: SP, process: *Process, context: *Context, ext
 //     const ee = std.testing.expectEqual;
 //     var context = Context.init();
 //     const sp = process.endOfStack().push(value);
-//     var cache = execute.SendCacheStruct.init();
 //     const newSp = embedded.immutableClosure(Code.endThread, sp, process, &context, Nil, cache.dontCache());
 //     if (newSp != sp) {
 //         try ee(value.u(), newSp.next.u());
@@ -512,7 +509,6 @@ pub fn generalClosureX(pc: PC, sp: SP, process: *Process, context: *Context, ext
 //     const ee = std.testing.expectEqual;
 //     var context = Context.init();
 //     const sp = process.endOfStack().push(value);
-//     var cache = execute.SendCacheStruct.init();
 //     const newSp = embedded.immutableClosure(Code.endThread, sp, process, &context, Nil, cache.dontCache());
 //     if (newSp != sp) {
 //         try ee(value.u(), newSp.next.u());

@@ -36,6 +36,8 @@ pub const Object = packed struct(u64) {
     pub const highTagSmallInteger = {};
     pub const PackedTagType = u3;
     pub const packedTagSmallInteger = 1;
+    pub const intTag = @import("zag.zig").intTag;
+    pub const symbolTag = @import("zag.zig").symbolTag;
     pub inline fn untaggedI(self: object.Object) ?i64 {
         if (self.isInt()) return self.untaggedI_noCheck();
         return null;
@@ -52,7 +54,7 @@ pub const Object = packed struct(u64) {
     pub inline fn symbol40(self: object.Object) u40 {
         return @truncate(self.ref.data.unsigned);
     }
-    pub inline //
+    pub //inline
     fn nativeI(self: object.Object) ?i64 {
         if (self.isInt()) return self.rawI();
         return null;
@@ -85,7 +87,7 @@ pub const Object = packed struct(u64) {
     }
     pub const testU = rawU;
     pub const testI = rawI;
-    inline //
+    //inline
     fn rawU(self: object.Object) u64 {
         return self.ref.data.unsigned;
     }
@@ -101,13 +103,13 @@ pub const Object = packed struct(u64) {
     pub inline fn thunkImmediateValue(self: Self) Object {
         _ = .{ self, unreachable };
     }
-    pub inline fn isImmediateClass(self: Object, class: ClassIndex) bool {
+    pub inline fn isImmediateClass(self: Object, comptime class: ClassIndex) bool {
         return self.ref.header.classIndex == class;
     }
     pub inline fn isHeap(_: Object) bool {
         return true;
     }
-    pub inline //
+    pub //inline
     fn isInt(self: Object) bool {
         return self.ref.header.classIndex == .SmallInteger;
     }
@@ -161,7 +163,7 @@ pub const Object = packed struct(u64) {
     pub inline fn hash32(self: Object) u32 {
         return @truncate(self.ref.data.unsigned >> 8);
     }
-    pub inline //
+    pub //inline
     fn from(value: anytype, maybeProcess: ?*Process) Object {
         const T = @TypeOf(value);
         if (T == Object) return value;
@@ -227,7 +229,7 @@ pub const Object = packed struct(u64) {
         }
         @panic("Trying to convert Object to " ++ @typeName(T));
     }
-    pub inline //
+    pub //inline
     fn which_class(self: Object, _: bool) ClassIndex {
         return self.ref.header.classIndex;
     }

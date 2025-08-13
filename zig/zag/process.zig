@@ -11,6 +11,8 @@ const SeqCst = std.builtin.AtomicOrder.seq_cst;
 const object = zag.object;
 const Object = object.Object;
 const Nil = object.Nil;
+const True = object.True;
+const False = object.False;
 const ClassIndex = object.ClassIndex;
 const checkEqual = zag.utilities.checkEqual;
 //const dispatch = @import("dispatch.zig");
@@ -25,23 +27,21 @@ const Format = heap.Format;
 const allocationInfo = heap.AllocationInfo.calc;
 const AllocReturn = heap.AllocReturn;
 const Context = zag.Context;
-const ContextPtr = *Context;
+const Extra = Context.Extra;
 const execute = zag.execute;
-const SendCache = execute.SendCache;
 const Code = execute.Code;
 const PC = execute.PC;
-const SP = execute.SP;
-const Extra = execute.Extra;
 const Result = execute.Result;
-const CodeContextPtr = execute.CodeContextPtr;
 
 /// this is really a Process object with the low bits encoding additional information
 const Self = @This();
 m: [process_total_size]u8 align(1), // alignment explicitly stated to emphasize the difference from Process
-const process_total_size = if (config.is_test) 2048 else 64 * 1024; // must be more than HeapObject.maxLength*8 so externally allocated
+const process_total_size = config.process_total_size;
 pub const alignment = @max(stack_mask_overflow, flagMask + 1);
 pub const stack_mask_overflow = zag.utilities.largerPowerOf2(Process.stack_size * @sizeOf(Object));
 pub const stack_mask = stack_mask_overflow - 1;
+pub const process_stack_size = Process.stack_size;
+pub const process_nursery_size = Process.nursery_size;
 const Process = extern struct {
     stack: [stack_size]Object align(alignment),
     h: Fields,
@@ -74,12 +74,8 @@ const Process = extern struct {
 };
 pub fn format(
     orig: *const @This(),
-    comptime fmt: []const u8,
-    options: std.fmt.FormatOptions,
     writer: anytype,
 ) !void {
-    _ = fmt;
-    _ = options;
     const self = orig.ptr();
     try writer.print("process: {} .stack = {any}", .{ orig.header().id, orig.getStack(self.h.sp) });
     try writer.print(" .heap = {any}", .{orig.getHeap()});
@@ -108,7 +104,6 @@ pub fn init(origin: *align(alignment) Self, process: Object) void {
     while (true) {
         self.h.next = allProcesses;
         self.h.id = if (allProcesses) |p| p.header().id + 1 else 1;
-        trace("\nprocess.init {x}", .{self.h.id});
         if (@cmpxchgWeak(?*Self, &allProcesses, self.h.next, origin, SeqCst, SeqCst) == null) break;
     }
     self.h.trapContextNumber = 0;
@@ -124,14 +119,15 @@ const othersFlag = countOverflowFlag << 1;
 const checkFlags = othersFlag | countOverflowFlag;
 const flagMask = checkFlags | countMask;
 const nonFlags = ~flagMask;
-pub inline fn check(self: *align(1) const Self, next: *const fn (programCounter: PC, stackPointer: SP, process: *Self, context: *Context, signature: Extra) Result) *const fn (programCounter: PC, stackPointer: SP, process: *Self, context: *Context, signature: Extra) Result {
+pub inline fn check(self: *align(1) const Self, next: *const fn (PC, SP, *Self, *Context, Extra) Result) *const fn (PC, SP, *Self, *Context, Extra) Result {
     return if (self.needsCheck()) &fullCheck else next;
 }
 inline fn needsCheck(self: *align(1) const Self) bool {
     return (@intFromPtr(self) & checkFlags) != 0;
 }
-fn fullCheck(pc: PC, sp: SP, process: *align(1) Self, context: *Context, signature: Extra) Result {
-    return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, signature });
+fn fullCheck(pc: PC, sp: SP, process: *align(1) Self, context: *Context, extra: Extra) Result {
+    trace("fullCheck: {f}\n", .{extra});
+    return @call(tailCall, pc.prev().prim(), .{ pc, sp, process, context, extra });
 }
 pub inline fn checkBump(self: *Self) *Self {
     if (self.needsCheck()) return self;
@@ -161,7 +157,7 @@ pub inline fn getSp(self: *align(1) const Self) SP {
 pub inline fn freeStack(self: *align(1) const Self, sp: SP) usize {
     return (@intFromPtr(sp) - @intFromPtr(self.ptr())) / 8;
 }
-pub inline //
+pub //inline
 fn getStack(self: *align(1) const Self, sp: SP) []Object {
     //    return sp.slice((@intFromPtr(self.endOfStack()) - @intFromPtr(sp)) / @sizeOf(Object));
     return sp.sliceTo(self.endOfStack());
@@ -208,7 +204,7 @@ fn allocSpace(self: *align(1) Self, size: u11, sp: SP, context: *Context) HeapOb
     }
     _ = .{ sp, context, unreachable };
 }
-pub fn alloc(self: *align(1) Self, classIndex: ClassIndex, iVars: u11, indexed: ?usize, comptime element: type, makeWeak: bool) heap.AllocReturn {
+pub fn alloc(self: *align(1) Self, classIndex: ClassIndex, iVars: u11, indexed: ?usize, comptime element: type, makeWeak: bool) heap.AllocResult {
     const aI = allocationInfo(iVars, indexed, element, makeWeak);
     if (aI.objectSize(Process.maxNurseryObjectSize)) |size| {
         //std.debug.print("self: {x} self.header() {x} {} {x}\n", .{ @intFromPtr(self), @intFromPtr(self.header()), size, @intFromPtr(self.header().currHp) });
@@ -260,7 +256,6 @@ pub fn collectNursery(self: *align(1) Self, sp: SP, context: *Context, need: usi
 }
 fn collectNurseryPass(self: *align(1) Self, originalSp: SP, contextMutable: *Context, sizes: [Process.lastNurseryAge]usize, promoteAge: usize) void {
     _ = .{ sizes, promoteAge };
-    trace("collectNurseryPass: before\n", .{});
     var scan = self.header().otherHeap;
     var hp = scan;
     var context = contextMutable;
@@ -276,20 +271,16 @@ fn collectNurseryPass(self: *align(1) Self, originalSp: SP, contextMutable: *Con
         sp = context.callerStack();
         context = context.previous();
     }
-    trace("collectNurseryPass: after contexts\n", .{});
     // find references from the residual stack
     while (sp.lessThan(endStack)) {
         if (sp.top.asMemoryObject()) |pointer|
             hp = pointer.copyTo(hp, &sp.top);
         sp = sp.drop();
     }
-    trace("collectNurseryPass: after residual\n", .{});
     // find self referencesy
     var count: usize = 10;
     while (@intFromPtr(hp) > @intFromPtr(scan)) {
-        trace("collectNurseryPass: hp={*} scan={*}:{}\n", .{ hp, scan, scan[0] });
         if (scan[0].iterator()) |iter| {
-            trace("collectNurseryPass: iter={}\n", .{iter});
             var it = iter;
             while (it.next()) |objPtr| {
                 if (objPtr.asMemoryObject()) |pointer| {
@@ -303,7 +294,6 @@ fn collectNurseryPass(self: *align(1) Self, originalSp: SP, contextMutable: *Con
         scan = scan[0].skipForward();
         count = count - 1;
     }
-    trace("collectNurseryPass: after self references\n", .{});
     // swap heaps
     const head = self.header();
     const tempHeap = head.otherHeap;
@@ -321,40 +311,29 @@ test "nursery allocation" {
     var pr = &process;
     pr.init(Nil());
     const emptySize = Process.nursery_size;
-    trace("\nemptySize = {}\n", .{emptySize});
     try ee(Process.stack_size, 27);
     try ee(pr.freeNursery(), emptySize);
     var sp = pr.endOfStack();
     var initialContext = Context.init();
     var ar = try pr.alloc(ClassIndex.Class, 4, null, void, false);
-    trace("\nar = {}\n", .{ar});
     _ = ar.initAll();
     const o1 = ar.allocated;
     try ee(pr.freeNursery(), emptySize - 5);
     ar = try pr.alloc(ClassIndex.Class, 5, null, void, false);
-    trace("\nar = {}\n", .{ar});
     _ = ar.initAll();
     ar = try pr.alloc(ClassIndex.Class, 6, null, void, false);
     const o2 = ar.initAll();
-    trace("\nar = {}\n", .{ar});
     try ee(emptySize - 19, pr.freeNursery());
-    trace("\no1 = {} {x}\n", .{ o1, o1.asObject().testU() });
-    trace("\no2 = {*} {} \n", .{ o2, o2 });
-    trace(" {x}\n", .{o2.asObject().testU()});
     try o1.instVarPut(0, o2.asObject());
-    trace("\npoint\n", .{});
     sp = sp.push(o1.asObject()).?;
-    trace("\npoint\n", .{});
     const news, const newContext, _ = pr.spillStack(sp, &initialContext, Extra{ .int = 0 });
     try ee(sp, news);
     try ee(&initialContext, newContext);
-    trace("\npoint\n", .{});
     pr.collectNursery(sp, &initialContext, 0);
     try ee(emptySize - switch (config.objectEncoding) {
         .zag, .nan => 12,
         else => 7,
     }, pr.freeNursery());
-    trace("\nend\n", .{});
     // age test
     // o1 still contains corrected address of o2
     // add second reference to o2 and circulare ref to o1
@@ -379,6 +358,96 @@ test "check flag" {
     try testing.expect(!pr.needsCheck());
     pr = pr.checkBump();
     try testing.expect(pr.needsCheck());
+}
+pub const SP = *Stack;
+pub const initStack = Stack.from;
+const Stack = struct {
+    top: Object,
+    next: Object,
+    third: Object,
+    comptime {
+        std.debug.assert(@offsetOf(Stack, "top") == 0);
+        std.debug.assert(@offsetOf(Stack, "next") == @sizeOf(Object));
+        std.debug.assert(@offsetOf(Stack, "third") == @sizeOf(Object) * 2);
+    }
+    pub inline fn lessThan(self: SP, other: anytype) bool {
+        return @intFromPtr(self) < @intFromPtr(other);
+    }
+    fn from(self: anytype) SP {
+        return @ptrCast(self);
+    }
+    pub inline fn push(self: SP, v: Object) ?SP {
+        if (self.reserve(1)) |newSp| {
+            newSp.top = @bitCast(v);
+            return newSp;
+        }
+        return null;
+    }
+    pub inline fn pushRawInt(self: SP, v: u64) ?SP {
+        if (self.reserve(1)) |newSp| {
+            newSp.top = @bitCast(v);
+            return newSp;
+        }
+        return null;
+    }
+    pub inline fn dropPut(self: SP, v: Object) SP {
+        self.next = v;
+        return self.unreserve(1);
+    }
+    pub inline fn drop(self: SP) SP {
+        return self.unreserve(1);
+    }
+    pub inline fn reserve(self: SP, n: anytype) ?SP {
+        const selfInt = @intFromPtr(self);
+        const newInt = selfInt - @sizeOf(Object) * n;
+        if (n == 1 and newInt & stack_mask > 0) {
+            return @ptrFromInt(newInt);
+        } else if ((selfInt & stack_mask_overflow) == (newInt & stack_mask_overflow)) {
+            return @ptrFromInt(newInt);
+        } else return null;
+    }
+    pub inline fn safeReserve(self: SP, n: usize) SP {
+        return @ptrFromInt(@intFromPtr(self) - @sizeOf(Object) * n);
+    }
+    pub inline fn unreserve(self: SP, n: usize) SP {
+        return @ptrFromInt(@intFromPtr(self) + @sizeOf(Object) * n);
+    }
+    pub inline fn delta(self: SP, other: SP) usize {
+        return (@intFromPtr(other) - @intFromPtr(self)) / @sizeOf(Object);
+    }
+    pub inline fn array(self: SP) [*]Object {
+        return @ptrCast(self);
+    }
+    pub inline fn slice(self: SP, n: usize) []Object {
+        return self.array()[0..n];
+    }
+    pub //inline
+    fn sliceTo(self: SP, a_ptr: anytype) []Object {
+        const i_ptr = @intFromPtr(a_ptr);
+        return self.slice(((i_ptr - @intFromPtr(self))) / @sizeOf(Object));
+    }
+    pub inline fn at(self: SP, n: usize) Object {
+        return self.array()[n];
+    }
+    pub inline fn atPut(self: SP, n: usize, o: Object) void {
+        self.array()[n] = o;
+    }
+};
+test "Stack" {
+    std.debug.print("Test: Stack\n", .{});
+    var process: Self align(alignment) = new();
+    process.init(Nil());
+    const ee = std.testing.expectEqual;
+    var stack: [11]Object = undefined;
+    const sp0 = @as(SP, @ptrCast(&stack[10]));
+    sp0.top = True();
+    try ee(True(), stack[10]);
+    const sp1 = sp0.push(False()).?;
+    try ee(True(), stack[10]);
+    try ee(False(), stack[9]);
+    _ = sp1.drop().push(Object.from(42, &process));
+    try ee(Object.from(42, &process).to(i64), 42);
+    try ee(stack[9].to(i64), 42);
 }
 pub const threadedFunctions = struct {
     pub const pushThisProcess = struct {

@@ -60,13 +60,12 @@ pub const ClassIndex = enum(u16) {
     BlockAssignLocal,
     ThunkInstance,
     BlockAssignInstance,
-    PICPointer,
     ThunkHeap,
     ThunkImmediate,
     ThunkFloat,
-    SmallInteger,
     False,
     True,
+    SmallInteger,
     Symbol,
     Character,
     LLVM,
@@ -119,13 +118,12 @@ pub const ClassIndex = enum(u16) {
         BlockAssignLocal,
         ThunkInstance,
         BlockAssignInstance,
-        PICPointer,
         ThunkHeap,
         ThunkImmediate,
         ThunkFloat,
-        SmallInteger,
         False,
         True,
+        SmallInteger,
         Symbol,
         Character,
         LLVM,
@@ -165,7 +163,7 @@ pub const ObjectFunctions = struct {
     pub inline fn numArgs(self: Object) u4 {
         return symbol.symbolArity(self);
     }
-    pub inline //
+    pub //inline
     fn setField(self: Object, field: usize, value: Object) void {
         if (self.asObjectArray()) |ptr| ptr[field] = value;
     }
@@ -274,7 +272,7 @@ pub const ObjectFunctions = struct {
         if (sla.len > slb.len) return ord.gt;
         return ord.eq;
     }
-    pub inline //
+    pub //inline
     fn immediate_class(self: Object) ClassIndex {
         return self.which_class(false);
     }
@@ -288,11 +286,8 @@ pub const ObjectFunctions = struct {
     }
     pub fn format(
         self: Object,
-        comptime fmt: []const u8,
-        options: std.fmt.FormatOptions,
         writer: anytype,
     ) !void {
-        _ = options;
         if (self.nativeI()) |i| {
             try writer.print("{d}", .{i});
         } else if (self.equals(False())) {
@@ -308,7 +303,6 @@ pub const ObjectFunctions = struct {
         } else {
             try writer.print("{{?0x{x:0>16}}}", .{@as(u64, @bitCast(self))});
         }
-        if (fmt.len == 1 and fmt[0] == 'x') try writer.print("(0x{x:0>16})", .{@as(u64, @bitCast(self))});
     }
     pub const alignment = @alignOf(u64);
 };
@@ -320,6 +314,9 @@ pub const PackedObject = packed struct {
     f4: std.meta.Int(.unsigned, 64 - 42 - @bitSizeOf(Object.PackedTagType)) = 0,
     pub inline fn from3(f1: u14, f2: u14, f3: u14) PackedObject {
         return .{ .tag = Object.from(0).tagbits(), .f1 = f1, .f2 = f2, .f3 = f3 };
+    }
+    pub inline fn from(fs: []u14) PackedObject {
+        return .{ .tag = Object.from(0).tagbits(), .f1 = fs[0], .f2 = fs[1], .f3 = fs[2], .f4 = fs[3] };
     }
     pub fn asU64(self: PackedObject) u64 {
         return @as(u64, @bitCast(self)) >> @bitSizeOf(Object.PackedTagType);
@@ -342,11 +339,14 @@ pub const PackedObject = packed struct {
     pub fn object14(tup: anytype) PackedObject {
         return @bitCast((@as(u64, combine(u14, tup)) << @bitSizeOf(Object.PackedTagType)) + Object.packedTagSmallInteger);
     }
+    pub fn classCase(tup: []const ClassIndex) PackedObject {
+        return @bitCast((@as(u64, combine(u14, tup)) << @bitSizeOf(Object.PackedTagType)) + Object.packedTagSmallInteger);
+    }
     test "combiners" {
         std.debug.print("Test: combiners\n", .{});
         const expectEqual = std.testing.expectEqual;
         try expectEqual(16384 + 2, combine14(.{ 2, 1 }));
-        try expectEqual(294927, combine14([_]ClassIndex{ .SmallInteger, .Symbol }));
+        try expectEqual(0x44010, combine14([_]ClassIndex{ .SmallInteger, .Symbol }));
     }
 };
 
@@ -418,7 +418,7 @@ test "order" {
             const ee = std.testing.expectEqual;
             const sl1 = slice1()[0].buf;
             try ee(42, sl1[1]);
-            try ee(121, sl1[0]);
+            try ee(129, sl1[0]);
             try ee(0, sl1[2]);
             @setRuntimeSafety(false);
             const buf2 = (Buf{

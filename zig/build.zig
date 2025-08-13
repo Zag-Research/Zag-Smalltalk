@@ -185,7 +185,6 @@ pub fn build(b: *std.Build) void {
                 .{ .name = "zag", .module = mod },
             },
         }),
-        .optimize = .ReleaseFast,
     });
     //b.step("fib", "Compile fib").dependOn(&b.installArtifact(fib).step);
     b.installArtifact(fib);

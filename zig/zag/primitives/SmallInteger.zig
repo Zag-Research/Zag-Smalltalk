@@ -7,8 +7,8 @@ const execute = zag.execute;
 const Context = zag.Context;
 const Code = execute.Code;
 const PC = execute.PC;
-const SP = execute.SP;
-const Extra = execute.Extra;
+const SP = Process.SP;
+const Extra = Context.Extra;
 const Result = execute.Result;
 const Execution = execute.Execution;
 const CompiledMethod = execute.CompiledMethod;
@@ -19,6 +19,7 @@ const Nil = object.Nil;
 const True = object.True;
 const False = object.False;
 const Sym = zag.symbol.symbols;
+const rawSymbol = zag.symbol.rawSymbol;
 const heap = zag.heap;
 const empty = &[0]Object{};
 const tf = zag.threadedFn.Enum;
@@ -26,36 +27,36 @@ const tf = zag.threadedFn.Enum;
 pub const moduleName = "SmallInteger";
 pub fn init() void {}
 pub const inlines = struct {
-    pub fn p1(self: Object, other: Object, maybeProcess: ?*Process) !Object { // INLINED - Add
+    pub fn @"+"(self: Object, other: Object, maybeProcess: ?*Process) !Object { // INLINED - Add
         if (other.untaggedI()) |untagged| {
             const result, const overflow = @addWithOverflow(self.taggedI_noCheck(), untagged);
             if (overflow == 0) return Object.fromTaggedI(result, maybeProcess);
         }
         return error.primitiveError;
     }
-    pub inline fn p_negated(self: Object, maybeProcess: ?*Process) !Object { // Negate
+    pub inline fn negated(self: Object, maybeProcess: ?*Process) !Object { // Negate
         const result, const overflow = @subWithOverflow(Object.tagged0, self.untaggedI_noCheck());
         if (overflow == 0) return Object.fromTaggedI(result, maybeProcess);
         return error.primitiveError;
     }
-    pub inline fn p2(self: Object, other: Object, maybeProcess: ?*Process) !Object { // Subtract
+    pub inline fn @"-"(self: Object, other: Object, maybeProcess: ?*Process) !Object { // Subtract
         if (other.untaggedI()) |untagged| {
             const result, const overflow = @subWithOverflow(self.taggedI_noCheck(), untagged);
             if (overflow == 0) return Object.fromTaggedI(result, maybeProcess);
         }
         return error.primitiveError;
     }
-    pub inline fn p3(self: Object, other: Object) !bool { // LessThan
+    pub inline fn @"<"(self: Object, other: Object) !bool { // LessThan
         if (other.taggedI()) |tagged|
             return self.taggedI_noCheck() < tagged;
         return error.primitiveError;
     }
-    pub inline fn p4(self: Object, other: Object) !bool { // GreaterThan
+    pub inline fn @">"(self: Object, other: Object) !bool { // GreaterThan
         if (other.taggedI()) |tagged|
             return self.taggedI_noCheck() > tagged;
         return error.primitiveError;
     }
-    pub inline fn p5(self: Object, other: Object) !bool { // LessOrEqual
+    pub inline fn @"<="(self: Object, other: Object) !bool { // LessOrEqual
         if (other.taggedI()) |tagged|
             return self.taggedI_noCheck() <= tagged;
         return error.primitiveError;
@@ -63,17 +64,17 @@ pub const inlines = struct {
     pub fn p5N(self: Object, other: Object) bool { // INLINED - LessOrEqual when both known SmallIntegers
         return self.taggedI_noCheck() <= other.taggedI_noCheck();
     }
-    pub inline fn p6(self: Object, other: Object) !bool { // GreaterOrEqual
+    pub inline fn @">="(self: Object, other: Object) !bool { // GreaterOrEqual
         if (other.taggedI()) |tagged|
             return self.taggedI_noCheck() >= tagged;
         return error.primitiveError;
     }
-    pub inline fn p7(self: Object, other: Object) !bool { // Equal
+    pub inline fn @"="(self: Object, other: Object) !bool { // Equal
         if (other.taggedI()) |tagged|
             return self.taggedI_noCheck() == tagged;
         return error.primitiveError;
     }
-    pub inline fn p8(self: Object, other: Object) !bool { // NotEqual
+    pub inline fn @"<>"(self: Object, other: Object) !bool { // NotEqual
         if (other.taggedI()) |tagged|
             return self.taggedI_noCheck() != tagged;
         return error.primitiveError;
@@ -82,7 +83,7 @@ pub const inlines = struct {
         @setRuntimeSafety(false);
         return @as(u64, @intCast(if (x < 0) -x else x));
     }
-    pub inline fn p9(self: Object, other: Object, maybeProcess: ?*Process) !Object { // Multiply
+    pub inline fn @"*"(self: Object, other: Object, maybeProcess: ?*Process) !Object { // Multiply
         if (other.nativeI()) |untagged| {
             const result, const overflow = @mulWithOverflow(self.untaggedI_noCheck(), untagged);
             if (overflow == 0) return Object.fromUntaggedI(result, maybeProcess);
@@ -117,10 +118,11 @@ test "inline primitives" {
 }
 pub const @"+" = struct {
     pub const number = 1;
+    pub const inlined = rawSymbol(.@"+", number);
     pub fn primitive(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result { // SmallInteger>>#+
-        const newSp = sp.dropPut(inlines.p1(sp.next, sp.top, process) catch
+        const newSp = sp.dropPut(inlines.@"+"(sp.next, sp.top, process) catch
             return @call(tailCall, Extra.primitiveFailed, .{ pc, sp, process, context, extra }));
-        return @call(tailCall, process.check(context.npc), .{ context.tpc, newSp, process, context, undefined });
+        return @call(tailCall, process.check(context.npc), .{ context.tpc, newSp, process, context, unreachable });
     }
     test "simple add" {
         try Execution.runTest(
@@ -150,31 +152,68 @@ pub const @"+" = struct {
             },
         );
     }
+    pub fn inlinePrimitive(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
+        const receiver = sp.next;
+        if (!receiver.isInt()) {
+            return @call(tailCall, PC.inlinePrimitiveFailed, .{ pc, sp, process, context, extra });
+        }
+        const newSp = sp.dropPut(inlines.@"+"(receiver, sp.top, process) catch
+            return @call(tailCall, PC.inlinePrimitiveFailed, .{ pc, sp, process, context, extra }));
+        return @call(tailCall, process.check(pc.prim2()), .{ pc.next2(), newSp, process, context, extra });
+    }
 };
 pub const @"-" = struct {
     pub const number = 2;
+    pub const inlined = rawSymbol(.@"-", number);
     pub fn primitive(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result { // SmallInteger>>#-
-        const newSp = sp.dropPut(inlines.p2(sp.next, sp.top, process) catch
+        const newSp = sp.dropPut(inlines.@"-"(sp.next, sp.top, process) catch
             return @call(tailCall, Extra.primitiveFailed, .{ pc, sp, process, context, extra }));
-        return @call(tailCall, process.check(context.npc), .{ context.tpc, newSp, process, context, undefined });
+        return @call(tailCall, process.check(context.npc), .{ context.tpc, newSp, process, context, unreachable });
+    }
+    pub fn inlinePrimitive(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
+        const receiver = sp.next;
+        if (!receiver.isInt()) {
+            return @call(tailCall, PC.inlinePrimitiveFailed, .{ pc, sp, process, context, extra });
+        }
+        const newSp = sp.dropPut(inlines.@"-"(receiver, sp.top, process) catch
+            return @call(tailCall, PC.inlinePrimitiveFailed, .{ pc, sp, process, context, extra }));
+        return @call(tailCall, process.check(pc.prim2()), .{ pc.next2(), newSp, process, context, extra });
     }
 };
-pub fn p7(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result { // at:
-    _ = .{ pc, sp, process, context, extra, unreachable };
-}
 pub const @"<=" = struct {
     pub const number = 5;
+    pub const inlined = rawSymbol(.@"<=", number);
     pub fn primitive(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result { // SmallInteger>>#<=
-        const newSp = sp.dropPut(Object.from(inlines.p5(sp.next, sp.top) catch
+        const newSp = sp.dropPut(Object.from(inlines.@"<="(sp.next, sp.top) catch
             return @call(tailCall, Extra.primitiveFailed, .{ pc, sp, process, context, extra }), null));
-        return @call(tailCall, process.check(context.npc), .{ pc, newSp, process, context, undefined });
+        return @call(tailCall, process.check(context.npc), .{ context.tpc, newSp, process, context, unreachable });
+    }
+    pub fn inlinePrimitive(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
+        const receiver = sp.next;
+        if (!receiver.isInt()) {
+            return @call(tailCall, PC.inlinePrimitiveFailed, .{ pc, sp, process, context, extra });
+        }
+        const newSp = sp.dropPut(Object.from(inlines.@"<="(receiver, sp.top) catch
+            return @call(tailCall, PC.inlinePrimitiveFailed, .{ pc, sp, process, context, extra }), null));
+        trace("Inline primitive called, {f}\n", .{extra});
+        return @call(tailCall, process.check(pc.prim2()), .{ pc.next2(), newSp, process, context, extra });
     }
 };
 pub const @"*" = struct {
     pub const number = 9;
+    pub const inlined = rawSymbol(.@"*", number);
     pub fn primitive(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result { // SmallInteger>>#*
-        const newSp = sp.dropPut(Object.from(inlines.p9(sp.next, sp.top, process) catch
+        const newSp = sp.dropPut(Object.from(inlines.@"*"(sp.next, sp.top, process) catch
             return @call(tailCall, Extra.primitiveFailed, .{ pc, sp, process, context, extra }), null));
-        return @call(tailCall, process.check(context.npc), .{ pc, newSp, process, context, undefined });
+        return @call(tailCall, process.check(context.npc), .{ context.tpc, newSp, process, context, unreachable });
+    }
+    pub fn inlinePrimitive(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
+        const receiver = sp.next;
+        if (!receiver.isInt()) {
+            return @call(tailCall, PC.inlinePrimitiveFailed, .{ pc, sp, process, context, extra });
+        }
+        const newSp = sp.dropPut(inlines.@"*"(receiver, sp.top, process) catch
+            return @call(tailCall, PC.inlinePrimitiveFailed, .{ pc, sp, process, context, extra }));
+        return @call(tailCall, process.check(pc.prim2()), .{ pc.next2(), newSp, process, context, extra });
     }
 };

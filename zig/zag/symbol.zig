@@ -26,7 +26,10 @@ pub inline fn symbolArity(obj: object.Object) u4 {
 inline fn hash_of(index: u24, arity: u4) u32 {
     return @as(u24, index *% inversePhi24) | (@as(u32, arity) << 24);
 }
-
+pub fn rawSymbol(sym: SymbolsEnum, primitive: u24) Object {
+    const int = @intFromEnum(sym);
+    return @bitCast(@as(u64, hash_of(int & 0xff, int >> 8)) << 8 | @as(u64, primitive) << 40 | Object.symbolTag);
+}
 const SymbolsEnum = enum(u16) {
     @"=" = 0x100 + 1,
     value = 2,
@@ -80,6 +83,7 @@ const SymbolsEnum = enum(u16) {
     Metaclass,
     SmallInteger,
     noFallback,
+    fibonacci,
     Object,
     _,
     const staticSymbols = blk: {
@@ -169,7 +173,9 @@ const SymbolsStruct = struct {
     pub const Metaclass = symbol0(40);
     pub const SmallInteger = symbol0(51);
     pub const noFallback = symbol0(52);
+    pub const fibonacci = symbol0(53);
     pub const Object = symbol0(lastPredefinedSymbol); // always have this the last initial symbol so the tests verify all the counts are correct
+    pub const i_0 = symbol0(65535);
     inline fn fromHash32(hash: u32) object.Object {
         return object.Object.makeImmediate(.Symbol, hash);
     }
@@ -192,7 +198,7 @@ const SymbolsStruct = struct {
         return symbol_of(index, 4);
     }
 };
-const lastPredefinedSymbol = 53;
+const lastPredefinedSymbol = 54;
 comptime {
     std.debug.assert(initialSymbolStrings.len == lastPredefinedSymbol);
 }
@@ -207,7 +213,7 @@ const initialSymbolStrings = heap.compileStrings(.{ // must be in exactly same o
     "new",                                 "self",                     "name",                   "class",                   "Class",           "Behavior",
     "ClassDescription",                    "Metaclass",                "SmallInteger",           "noFallback",
     // add any new values here
-                 "Object",
+                 "fibonacci",       "Object",
 });
 var symbolTable = SymbolTable.init(&globalAllocator);
 pub fn asString(string: Object) Object {
@@ -344,8 +350,8 @@ test "symbols match initialized symbol table" {
     try expectEqual(0, symbolArity(symbols.Object.asObject()));
     switch (config.objectEncoding) {
         .zag => {
-            try expectEqual(3246132625, symbols.Object.testU());
-            try expectEqual(8885783185, symbols.@"value:value:".testU());
+            try expectEqual(0x5FB38689, symbols.Object.testU());
+            try expectEqual(0x211A24A89, symbols.@"value:value:".testU());
         },
         else => {},
     }
@@ -363,6 +369,8 @@ test "symbols match initialized symbol table" {
     try symbol.verify(symbols.size.asObject());
     try symbol.verify(symbols.Object.asObject());
     try expect(mem.eql(u8, "valueWithArguments:"[0..], try symbol.asString(symbols.@"valueWithArguments:".asObject()).arrayAsSlice(u8)));
+    std.debug.print("yourself: {x}\n", .{@as(u64, @bitCast(symbols.yourself.asObject()))});
+    std.debug.print("verified: symbols match initialized symbol table\n", .{});
 }
 // these selectors will have special handling in a dispatch table
 // if anding a selector with QuickSelectorsMask == QuickSelectorsMatch

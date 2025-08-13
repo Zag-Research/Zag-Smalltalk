@@ -35,7 +35,7 @@ const Units = enum {
         };
     }
 };
-pub fn Stats(comptime Arg: type, comptime K: type, comptime runs: comptime_int, comptime units: Units) type {
+pub fn Stats(comptime Arg: type, comptime K: type, runs: comptime_int, warmups: ?comptime_int, comptime units: Units) type {
     const T = if (K == void) u64 else K;
     const A = if (Arg == void) u64 else Arg;
     return struct {
@@ -46,12 +46,13 @@ pub fn Stats(comptime Arg: type, comptime K: type, comptime runs: comptime_int, 
         sum: T = 0,
         sumsq: T = 0,
         proof: usize = 0,
+        runs: usize = runs,
+        warmups: usize = if (warmups) |w| w else @min(3, @max(1, (runs + 1) / 3)),
         const Self = @This();
         const isInt = switch (@typeInfo(T)) {
             .int => true,
             else => false,
         };
-        const warmups = @min(3, @max(1, (runs + 1) / 3));
         const scale = units.scale();
         pub fn init() Self {
             return .{};
@@ -62,18 +63,18 @@ pub fn Stats(comptime Arg: type, comptime K: type, comptime runs: comptime_int, 
             self.sumsq = 0;
         }
         pub fn run(self: *Self, runner: *const fn (usize) T) void {
-            for (0..warmups) |_| _ = runner(0);
-            for (1..runs + 1) |runNumber| {
+            for (0..self.warmups) |_| _ = runner(0);
+            for (1..self.runs + 1) |runNumber| {
                 self.addData(runner(runNumber));
             }
         }
-        pub fn time(self: *Self, runner: *const fn (comptime A, usize) usize, comptime param: anytype) void {
-            for (0..warmups) |_| {
+        pub fn time(self: *Self, runner: *const fn (A, usize) usize, comptime param: anytype) void {
+            for (0..self.warmups) |_| {
                 self.proof = @call(.never_inline, runner, .{ if (A == u64) 0 else param, self.proof });
             }
             var timer = std.time.Timer.start() catch @panic("no timer available");
             var diff: usize = 0;
-            for (0..runs) |runNumber| {
+            for (0..self.runs) |runNumber| {
                 self.proof = @call(.never_inline, runner, .{ if (A == u64) runNumber + 1 else param, self.proof });
                 diff = timer.lap() / scale;
                 self.addData(diff);
@@ -120,8 +121,6 @@ pub fn Stats(comptime Arg: type, comptime K: type, comptime runs: comptime_int, 
         }
         pub fn format(
             self: *const Self,
-            comptime fmt: []const u8,
-            options: std.fmt.FormatOptions,
             writer: anytype,
         ) !void {
             if (self.noData()) {
@@ -129,7 +128,7 @@ pub fn Stats(comptime Arg: type, comptime K: type, comptime runs: comptime_int, 
             } else {
                 const opts: []const u8 = comptime if (isInt) "{}" else "{d:.2}";
                 var percent = false;
-                inline for (if (fmt.len == 0) "n--m--x--s" else fmt) |f| {
+                inline for ("n--m--x--s") |f| {
                     switch (f) {
                         'n' => try writer.print(opts, .{self.minValue}),
                         'm' => try writer.print(opts, .{self.mean()}),
@@ -146,8 +145,6 @@ pub fn Stats(comptime Arg: type, comptime K: type, comptime runs: comptime_int, 
                                 } else {
                                     try writer.print("{d:.1}%", .{self.stdDev() * 100 / divisor});
                                 }
-                            } else if (options.precision == null) {
-                                try writer.print("{d}", .{self.stdDev()});
                             } else try writer.print("{d:.2}", .{self.stdDev()});
                         },
                         // change % to give a percentile or express stdDev as a percentage
@@ -164,7 +161,7 @@ pub fn Stats(comptime Arg: type, comptime K: type, comptime runs: comptime_int, 
 test "simple int stats" {
     const expectEqual = @import("std").testing.expectEqual;
     const expect = @import("std").testing.expect;
-    var stat = Stats(void, usize, 0, .units).init();
+    var stat = Stats(void, usize, 0, null, .units).init();
     stat.addData(2);
     stat.addData(4);
     try expectEqual(stat.min(), 2);
@@ -178,7 +175,7 @@ test "simple int stats" {
 }
 test "simple int stats with values" {
     const expectEqual = @import("std").testing.expectEqual;
-    var stat = Stats(void, usize, 10, .units).init();
+    var stat = Stats(void, usize, 10, null, .units).init();
     stat.addData(2);
     stat.addData(4);
     try expectEqual(stat.min(), 2);
@@ -196,7 +193,7 @@ fn testRunner(run: usize) usize {
 }
 test "simple int stats with runner" {
     const expectEqual = @import("std").testing.expectEqual;
-    var stat = Stats(void, usize, 3, .units).init();
+    var stat = Stats(void, usize, 3, null, .units).init();
     stat.run(testRunner);
     try expectEqual(stat.min(), 2);
     try expectEqual(stat.max(), 4);
@@ -206,7 +203,7 @@ test "simple int stats with runner" {
 }
 test "larger int stats with runner" {
     const expectEqual = @import("std").testing.expectEqual;
-    var stat = Stats(void, usize, 10, .units).init();
+    var stat = Stats(void, usize, 10, null, .units).init();
     stat.run(testRunner);
     try expectEqual(stat.min(), 2);
     try expectEqual(stat.max(), 16);
@@ -218,7 +215,7 @@ test "larger int stats with runner" {
 test "simple float stats" {
     const expectEqual = @import("std").testing.expectEqual;
     const expect = @import("std").testing.expect;
-    var stat = Stats(void, f64, 0, .units).init();
+    var stat = Stats(void, f64, 0, null, .units).init();
     stat.addData(2.0);
     stat.addData(4.0);
     try expectEqual(stat.min(), 2.0);
@@ -231,12 +228,12 @@ test "simple float stats" {
     //    std.debug.print("\nstats {<FOO>nmxs}",.{stat});
     _ = .{ expect, buf, buf2 }; //    try expect(std.mem.eql(u8,try std.fmt.bufPrint(buf2[0..],"2--3--4--1",.{}),try std.fmt.bufPrint(buf[0..], "{}",.{stat})));
 }
-fn timeRunner(comptime _: usize, proof: usize) usize {
+fn timeRunner(_: usize, proof: usize) usize {
     return proof;
 }
 test "simple timed stats" {
     const expect = @import("std").testing.expect;
-    var stat = Stats(usize, void, 3, .nanoseconds).init();
+    var stat = Stats(usize, void, 3, null, .nanoseconds).init();
     stat.time(timeRunner, 0);
     try expect(stat.max() > 0);
     try expect(stat.mean() > 0);

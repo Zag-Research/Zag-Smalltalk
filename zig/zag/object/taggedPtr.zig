@@ -28,7 +28,7 @@ pub const TaggedPtrObject = packed struct(u64) {
     pub inline fn thunkImmediateValue(self: Self) Object {
         _ = .{ self, unreachable };
     }
-    pub inline fn isImmediateClass(_: Object, _: ClassIndex.Compact) bool {
+    pub inline fn isImmediateClass(_: Object, comptime _: ClassIndex.Compact) bool {
         return false;
     }
     pub inline fn isHeap(_: Object) bool {

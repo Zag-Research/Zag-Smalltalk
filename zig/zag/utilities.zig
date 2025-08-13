@@ -4,6 +4,7 @@ pub const undoPhi = general.undoPhi;
 pub const bitsToRepresent = general.bitsToRepresent;
 pub const smallerPowerOf2 = general.smallerPowerOf2;
 pub const largerPowerOf2 = general.largerPowerOf2;
+pub const largeEnoughType = general.largeEnoughType;
 pub const Treap = @import("utilities/treap.zig").Treap;
 const primes = @import("utilities/primes.zig");
 pub const next_prime_larger_than = primes.next_prime_larger_than;

@@ -2,10 +2,8 @@ const std = @import("std");
 const config = @import("../config.zig");
 const tailCall = config.tailCall;
 const trace = config.trace;
-const execute = @import("../execute.zig");
-const SendCache = execute.SendCache;
-const Context = execute.Context;
-const ContextPtr = *Context;
+const execute = zag.execute;
+const Context = zag.Context;
 const Code = execute.Code;
 const PC = execute.PC;
 const SP = execute.SP;
@@ -47,21 +45,19 @@ fn ignore() !void {
     try stdout.print("The user entered: {s}\n", .{input});
 }
 pub const primitives = struct {
-    pub fn p1(pc: PC, sp: SP, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) SP { // SmallInteger>>#+
-        trace("\n+: {any}", .{context.stack(sp, process)});
+    pub fn p1(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result { // SmallInteger>>#+
         if (!Sym.@"+".withClass(.SmallInteger).selectorEquals(selector)) {
             const dPc = cache.current();
-            return @call(tailCall, process.check(dPc.prim()), .{ dPc.next(), sp, process, context, selector, cache.next() });
+            return @call(tailCall, process.check(dPc.prim()), .{ dPc.next(), sp, process, context, extra.next() });
         }
-        trace("\np1: {any}", .{context.stack(sp, process)});
         const newSp = sp.dropPut(inlines.p1(sp.next, sp.top) catch
-            return @call(tailCall, process.check(pc.prim()), .{ pc.next(), sp, process, context, selector, cache }));
+            return @call(tailCall, process.check(pc.prim()), .{ pc.next(), sp, process, context, extra }));
         return @call(tailCall, process.check(context.npc), .{ context.tpc, newSp, process, context, undefined, undefined });
     }
 };
 const e = struct {
-    usingnamespace execute.controlPrimitives;
-    usingnamespace embedded;
+    // usingnamespace execute.controlPrimitives;
+    // usingnamespace embedded;
 };
 pub fn main() void {
     var prog = compileMethod(Sym.value, 0, 0, .{

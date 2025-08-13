@@ -69,20 +69,20 @@ pub const ByteCode = enum(i8) {
     exit,
     _,
     const Self = @This();
-    fn interpretReturn(pc: PC, sp: SP, process: *Process, context: *Context, _: Object, _: SendCache) SP {
+    fn interpretReturn(pc: PC, sp: SP, process: *Process, context: *Context, _: Object, _: Extra) Result {
         trace("\ninterpretReturn: 0x{x}", .{@intFromPtr(context.method)});
         return @call(tailCall, interpret, .{ pc, sp, process, context, @as(Object, @bitCast(@intFromPtr(context.method))), undefined });
     }
-    fn interpretFn(pc: PC, sp: SP, process: *Process, context: *Context, selector: Object, cache: SendCache) SP {
+    fn interpretFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
         const method = pc.compiledMethodPtr(1); // must be first word in method, pc already bumped
         trace("\ninterpretFn: {} {} {} 0x{x}", .{ method.selector, selector, pc, @intFromPtr(method) });
         if (!method.selector.selectorEquals(selector)) {
             const dPc = cache.current();
-            return @call(tailCall, dPc.prim, .{ dPc.next(), sp, process, context, selector, cache.next() });
+            return @call(tailCall, dPc.prim, .{ dPc.next(), sp, process, context, extra.next() });
         }
         return @call(tailCall, interpret, .{ pc, sp, process, context, @as(Object, @bitCast(@intFromPtr(method))), undefined });
     }
-    fn interpret(_pc: PC, _sp: SP, process: *Process, _context: *Context, _method: Object, cache: SendCache) SP {
+    fn interpret(_pc: PC, _sp: SP, process: *Process, _context: *Context, _method: Object, extra: Extra) Result {
         var pc: [*]align(1) const ByteCode = @as([*]align(1) const ByteCode, @ptrCast(_pc));
         var sp = _sp;
         var context = _context;
@@ -410,7 +410,7 @@ test "compiling method" {
     //    m.update(mref,mcmp);
     var t = m.code[0..];
     for (m.code, 0..) |v, idx| {
-        std.debug.print("t[{}] = {}\n", .{ idx, v });
+        trace("t[{}] = {}\n", .{ idx, v });
     }
     try expectEqual(t.len, 11);
     try expectEqual(t[0], b.return_tos);

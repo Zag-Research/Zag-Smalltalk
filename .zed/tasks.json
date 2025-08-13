@@ -15,9 +15,9 @@
   },
   {
     "label": "test-default",
-    "command": "zig build test -freference-trace=20",
-    "cwd": "$ZED_WORKTREE_ROOT/zig",
-    "hide": "on_success",
+    "command": "zig test -freference-trace=20 root.zig",
+    "cwd": "$ZED_WORKTREE_ROOT/zig/zag",
+    //"hide": "on_success",
   },
   {
     "label": "test-llvm",
@@ -33,7 +33,7 @@
   },
   {
     "label": "fib",
-    "command": "zig build && taskpolicy -l5 -t5 time ./zig-out/bin/fib",
+    "command": "zig build -freference-trace=5 && taskpolicy -l5 -t5 time ./zig-out/bin/fib",
     "cwd": "$ZED_WORKTREE_ROOT/zig",
   },
   {

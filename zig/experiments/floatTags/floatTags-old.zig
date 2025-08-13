@@ -58,8 +58,6 @@ pub const Object = packed struct {
     }
     pub fn format(
         self: Object,
-        comptime fmt: []const u8,
-        options: std.fmt.FormatOptions,
         writer: anytype,
     ) !void {
         _ = options;

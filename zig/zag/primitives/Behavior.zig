@@ -4,12 +4,12 @@ const config = zag.config;
 const tailCall = config.tailCall;
 const trace = config.trace;
 const execute = zag.execute;
-const SendCache = execute.SendCache;
-const Context = execute.Context;
-const ContextPtr = *Context;
+const Context = zag.Context;
+const Extra = Context.Extra;
 const Code = execute.Code;
 const PC = execute.PC;
-const SP = execute.SP;
+const Result = execute.Result;
+const SP = Process.SP;
 const compileMethod = execute.compileMethod;
 const CompiledMethodPtr = execute.CompiledMethodPtr;
 const Process = zag.Process;
@@ -37,18 +37,18 @@ pub const inlines = struct {
 };
 pub const embedded = struct {
     const fallback = execute.fallback;
-    pub fn @"new:"(pc: PC, sp: SP, process: *Process, context: ContextPtr, _: Object, _: SendCache) SP {
+    pub fn @"new:"(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
         sp[1] = inlines.p71(sp[1], sp[0]) catch return @call(tailCall, process.check(fallback), .{ pc, sp, process, context, undefined, undefined });
-        return @call(tailCall, process.check(pc[0].prim), .{ pc + 1, sp + 1, process, context, undefined, undefined });
+        return @call(tailCall, process.check(pc[0].prim), .{ pc + 1, sp + 1, process, context, extra });
     }
 };
 pub const primitives = struct {
-    pub fn p70(pc: PC, sp: SP, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) SP { // basicNew
-        _ = .{ pc, sp, process, context, selector, cache };
+    pub fn p70(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result { // basicNew
+        _ = .{ pc, sp, process, context, extra };
         unreachable;
     }
-    pub fn p71(pc: PC, sp: SP, process: *Process, context: ContextPtr, selector: Object, cache: SendCache) SP { // basicNew:
-        _ = .{ pc, sp, process, context, selector, cache };
+    pub fn p71(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result { // basicNew:
+        _ = .{ pc, sp, process, context, extra };
         unreachable;
     }
 };
@@ -57,6 +57,6 @@ fn testExecute(method: CompiledMethodPtr) []Object {
     te.init();
     var objs = [_]Object{};
     const result = te.run(objs[0..], method);
-    std.debug.print("result = {any}\n", .{result});
+    trace("result = {any}\n", .{result});
     return result;
 }

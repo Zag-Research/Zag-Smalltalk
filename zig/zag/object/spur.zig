@@ -39,11 +39,13 @@ pub const Object = packed union {
     pub const True = Object.from(&InMemory.True, null);
     pub const Nil = Object.from(&InMemory.Nil, null);
     pub const LowTagType = TagAndClassType;
-    pub const lowTagSmallInteger = makeImmediate(.smallInteger, 0).tagbits();
+    pub const lowTagSmallInteger = makeImmediate(.SmallInteger, 0).tagbits();
     pub const HighTagType = void;
     pub const highTagSmallInteger = {};
     pub const PackedTagType = u3;
     pub const packedTagSmallInteger = @intFromEnum(Group.smallInteger);
+    pub const intTag = @import("zag.zig").intTag;
+    pub const symbolTag = @import("zag.zig").symbolTag;
     const TagAndClassType = u3;
 
     pub inline fn tagbits(self: Self) TagAndClassType {
@@ -124,7 +126,7 @@ pub const Object = packed union {
         return !self.isHeap();
     }
 
-    pub inline fn isImmediateClass(self: object.Object, class: ClassIndex) bool {
+    pub inline fn isImmediateClass(self: object.Object, comptime class: ClassIndex) bool {
         if (self.isHeap()) return false;
         if (self.isInt()) return class == .SmallInteger;
         if (self.isFloat()) return class == .Float;
