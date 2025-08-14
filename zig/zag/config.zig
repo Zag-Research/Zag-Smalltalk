@@ -19,7 +19,7 @@ pub const max_classes = 256;
 // must be more than HeapObject.maxLength*8 so externally allocated
 pub const process_total_size = if (is_test) 2048 else 64 * 1024;
 
-pub const debugging = false;
+pub const debugging = true;
 pub const logThreadExecution = debugging;
 const show_error_stack = debugging;
 const show_trace = debugging;

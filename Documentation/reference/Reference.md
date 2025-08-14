@@ -145,6 +145,9 @@ The name is escaping me....something like Micro Systems....
 ## LLVM
 - [LLVM on asm syntax](https://releases.llvm.org/10.0.0/docs/LangRef.html#inline-asm-constraint-string) and [GCC on extended asm](https://gcc.gnu.org/onlinedocs/gcc/Extended-Asm.html)
 
+## Compiling
+- [Sea of Nodes](https://github.com/SeaOfNodes) [talk](https://www.youtube.com/watch?v=NxiKlnUtyio)
+
 ## Atomics and Locks
 - [Rust Atomics and Locks](https://marabos.nl/atomics/) most of which applies to Zig
 - [Understanding Memory Ordering in Rust](https://emschwartz.me/understanding-memory-ordering-in-rust/) ditto (refers to Chapter 3 of the above)
@@ -162,7 +165,9 @@ The name is escaping me....something like Micro Systems....
 ## Miscellaneous
 - [Hidden Heroes](https://hiddenheroes.netguru.com/)
 - [Probability Theory: The Logic of Science](https://www.lesswrong.com/posts/KN3BYDkWei9ADXnBy/e-t-jaynes-probability-theory-the-logic-of-science-i)
+- [Detailed Primer on Data Statistics](https://lakens.github.io/statistical_inferences/)
 - [Why Japanese Developers Write Code Completely Differently (And Why It Works Better)](https://medium.com/@sohail_saifi/why-japanese-developers-write-code-completely-differently-and-why-it-works-better-de84d6244fab)
+- [Hash Function Prospector](https://github.com/skeeto/hash-prospector?tab=readme-ov-file)
 
 ### Rust
 - [Learn Rust](https://www.rust-lang.org/learn)
@@ -197,6 +202,7 @@ The name is escaping me....something like Micro Systems....
 - [labguage doc](https://doc.rust-lang.org/nightly/reference/expressions/if-expr.html)
 - [conditional compilation](https://doc.rust-lang.org/reference/conditional-compilation.html)
 
+### Pharo
 - Build [pharo-vm](https://github.com/pharo-project/pharo-vm) command: `cmake -DFLAVOUR=StackVM -S pharo-vm -B build`
 - **Building C object CMakeFiles/PharoVMCore.dir/generated/64/vm/src/gcc3x-interp.c.o**
 ```

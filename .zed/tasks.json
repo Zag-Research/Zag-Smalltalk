@@ -41,4 +41,9 @@
     "command": "zig build-exe -O ReleaseFast branchPrediction.zig && taskpolicy -l5 -t5 time ./branchPrediction",
     "cwd": "$ZED_WORKTREE_ROOT/zig",
   },
+  {
+    "label": "sacTest",
+    "command": "cc -o sacTest sacTest.c halfsiphash.c && ./sacTest",
+    "cwd": "$ZED_WORKTREE_ROOT/c",
+  },
 ]

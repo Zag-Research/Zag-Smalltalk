@@ -45,7 +45,7 @@ const fibInteger = struct {
     const rawSymbol = zag.symbol.rawSymbol;
     const nullMethod = zag.dispatch.nullMethod;
     var fib =
-        compileMethod(Sym.fibonacci, 0, .SmallInteger, .{
+        compileMethod(Sym.fibonacci, 1, .SmallInteger, .{
             tf.push,                  self,
             tf.pushLiteral,           2,
             tf.inlinePrimitive,       leq,
@@ -69,10 +69,12 @@ const fibInteger = struct {
         zag.dispatch.addMethod(@ptrCast(&fib));
     }
     fn runIt(_: usize, _: usize) usize {
-        if ((Execution.mainSendTo(Sym.fibonacci, Object.from(fibN, null)) catch unreachable).nativeU()) |result| {
+        const obj = Execution.mainSendTo(Sym.fibonacci, Object.from(fibN, null)) catch unreachable;
+        if (obj.nativeU()) |result| {
             std.debug.print("fib result: {}\n", .{result});
             return result;
         }
+        std.debug.print("fib object: {f}\n", .{obj});
         unreachable;
     }
     test "fibInteger" {
@@ -123,4 +125,4 @@ pub fn main() !void {
     try timing(if (default) @constCast(do_all[0..]) else args[1..], default);
 }
 const testReps = 10;
-const fibN: u6 = 3;
+const fibN: u6 = 2;

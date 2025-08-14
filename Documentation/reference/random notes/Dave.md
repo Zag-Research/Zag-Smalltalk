@@ -13,3 +13,9 @@ lldb zig-out/bin/zag
 gdb zig-out/bin/zag
 ```
 See [this blog](https://ziggit.dev/t/debugging-zig-with-a-debugger/7160) which [references this one](https://ziggit.dev/t/zig-debugging-with-lldb/3931)
+
+[Store AST as SQLite](https://git.sr.ht/~robheghan/glogg/tree/main/item/src/schema.js)
+
+[Detailed Primer on Data Statistics](https://lakens.github.io/statistical_inferences/)
+
+[Hash Function Prospector](https://github.com/skeeto/hash-prospector?tab=readme-ov-file)

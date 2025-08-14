@@ -54,3 +54,4 @@ zig-out/
 /JanTest.zig
 .zig-cache/
 *.ll
+c/sacTest

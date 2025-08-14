@@ -898,6 +898,7 @@ pub const Execution = struct {
                     for (ptr[0 .. @sizeOf(MethodType) / 8], 0..) |*v, idx|
                         trace("[{:>2}:{x:0>16}]: {x:0>16}\n", .{ idx, @intFromPtr(v), v.* });
                 }
+                trace("Executing method {*}\n", .{self.getSp()});
                 _ = method.execute(self.getSp(), &self.process, self.getContext(), undefined);
             }
             pub fn matchStack(self: *const Self, expected: []const Object) !void {
@@ -957,7 +958,7 @@ pub const Execution = struct {
         var exe = ExeType.new(.{
             .header = header,
             .signature = Signature.fromNameClass(Sym.yourself, .testClass),
-            .stackStructure = .{ .locals = 0, .selfOffset = 0 },
+            .stackStructure = .{ .locals = 0, .selfOffset = 1 },
             .executeFn = f,
             .jitted = f,
             .code = undefined,
@@ -971,6 +972,7 @@ pub const Execution = struct {
         method.code[3] = Code.endCode;
         const args = [_]Object{target};
         exe.execute(&args) catch unreachable;
+        std.debug.print("Result: {any}\n", .{exe.stack()});
         return exe.stack()[0];
     }
 };

@@ -49,6 +49,7 @@ const ZagImageHeader = struct {
     symTable: Object,
     codeAddresses: Object,
     const magicTag: u64 = 0x6567616D4967615A; // "ZagImage" in little-endian
+    const intHash = std.hash.int;
 };
 var zagImageHeader: ZagImageHeader = undefined;
 fn usage() void {

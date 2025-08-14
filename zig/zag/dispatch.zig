@@ -354,12 +354,13 @@ pub const threadedFunctions = struct {
                 return @call(tailCall, process.check(context.npc), .{ context.tpc, newSp, process, context, Extra.fromContextData(context.contextData) });
             }
             const newSp, const callerContext = context.pop(process);
+            trace("returnSelf: {*}\n", .{ sp });
             return @call(tailCall, process.check(callerContext.getNPc()), .{ callerContext.getTPc(), newSp, process, callerContext, Extra.fromContextData(callerContext.contextData) });
         }
-        test "returnSelfNoContext" {
+        test "returnSelf" {
             if (true) return error.NotImplemented;
             try Execution.runTest(
-                "returnSelfNoContext",
+                "returnSelf",
                 .{
                     tf.pushLiteral,
                     91,
@@ -385,6 +386,7 @@ pub const threadedFunctions = struct {
                 return @call(tailCall, process.check(context.npc), .{ context.tpc, newSp, process, context, Extra.fromContextData(context.contextData) });
             }
             const newSp, const callerContext = context.pop(process);
+            trace("returnTop: {f} {}\n", .{ top, sp });
             newSp.top = top;
             return @call(tailCall, process.check(callerContext.npc), .{ callerContext.tpc, newSp, process, context, Extra.fromContextData(callerContext.contextData) });
         }

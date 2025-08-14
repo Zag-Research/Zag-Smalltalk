@@ -125,6 +125,7 @@ pub const ContextData = struct {
     header: HeapHeader,
     contextData: [1]Object,
     fn init(self: *ContextData, locals: u11, selfOffset: u11, length: u11) void {
+        trace("ContextData.init {} {}\n", .{selfOffset, locals});
         self.header = HeapHeader.headerOnStack(.ContextData, selfOffset, length);
         @setRuntimeSafety(false);
         for (self.contextData[0..locals]) |*local| {
@@ -182,12 +183,13 @@ pub inline fn popTargetContext(target: *Context, process: *Process, result: Obje
 }
 pub inline fn pop(self: *Context, process: *Process) struct { SP, *Context } {
     _ = process;
-    trace("pop: 0x{x} {} {}", .{ @intFromPtr(self), self.header, self.header.hash16() });
-    const wordsToDiscard = self.header.hash16();
-    trace("\npop: 0x{x} {} {}", .{ @intFromPtr(self), self.header, wordsToDiscard });
-    if (self.isOnStack())
+    const wordsToDiscard = self.contextData.header.hash16();
+    trace("pop: 0x{x} {} {}\n", .{ @intFromPtr(self), self.header, self.contextData });
+    if (self.isOnStack()) {
+        trace("pop: 0x{x} {} {}\n", .{ @intFromPtr(self), self.header, wordsToDiscard });
         return .{ @as(SP, @ptrCast(self)).unreserve(wordsToDiscard - 1), self.previous() };
-    trace("\npop: {*}", .{self});
+    }
+    trace("pop: {*}\n", .{self});
     @panic("incomplete");
     // const itemsToKeep = self.temps[wordsToDiscard-baseSize..self.size];
     // const newSp = process.endOfStack() - itemsToKeep.len;
@@ -202,6 +204,7 @@ pub fn push(self: *Context, sp: SP, process: *Process, method: *const CompiledMe
     const spForLocals = sp.safeReserve(locals + 1);
     const contextData: *ContextData = @ptrCast(spForLocals);
     const length: u11 = @truncate(spForLocals.delta(self.endOfStack() orelse process.endOfStack()) - 1);
+    std.debug.print("push: 0x{x} {} {} {}\n", .{ @intFromPtr(self), self.header, length, stackStructure });
     contextData.init(locals, stackStructure.selfOffset, length);
     const newSp = spForLocals.safeReserve(baseSize);
     const ctxt = @as(*align(@alignOf(Self)) Context, @ptrCast(@alignCast(newSp)));
