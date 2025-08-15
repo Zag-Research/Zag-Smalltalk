@@ -125,4 +125,4 @@ pub fn main() !void {
     try timing(if (default) @constCast(do_all[0..]) else args[1..], default);
 }
 const testReps = 10;
-const fibN: u6 = 2;
+const fibN: u6 = 3;

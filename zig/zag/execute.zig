@@ -479,13 +479,16 @@ fn CompileTimeMethod(comptime counts: usize) type {
         //     if (checkEqual(@offsetOf(CompiledMethod, "code"), @offsetOf(Self, "code"))) |s|
         //         @compileError("CompiledMethod prefix not the same as CompileTimeMethod == " ++ s);
         // }
+        fn dump(self: *Self) void {
+            @as(*CompiledMethod, @ptrCast(self)).dump();
+        }
         pub fn init(name: anytype, comptime locals: u11, function: ?*const fn (programCounter: PC, stackPointer: SP, process: *Process, context: *Context, signature: Extra) Result, class: ClassIndex, tup: anytype) Self {
             const header = comptime HeapHeader.calc(.CompiledMethod, codeOffsetInUnits + codes, 0, Age.static, null, Object, false) catch @compileError("method too big");
             const f = function orelse &Code.noOp;
             var method = Self{
                 .header = header,
                 .signature = Signature.fromNameClass(name, class),
-                .stackStructure = .{ .locals = locals, .selfOffset = locals + name.numArgs() },
+                .stackStructure = StackStructure{ .locals = locals, .selfOffset = locals + name.numArgs() },
                 .executeFn = f,
                 .jitted = f,
                 .code = undefined,
@@ -900,6 +903,7 @@ pub const Execution = struct {
                 }
                 trace("Executing method {*}\n", .{self.getSp()});
                 _ = method.execute(self.getSp(), &self.process, self.getContext(), undefined);
+                trace("returned {*}\n", .{self.getSp()});
             }
             pub fn matchStack(self: *const Self, expected: []const Object) !void {
                 const result = self.stack();
@@ -971,8 +975,9 @@ pub const Execution = struct {
         method.code[2] = Code.methodOf(&zag.dispatch.nullMethod);
         method.code[3] = Code.endCode;
         const args = [_]Object{target};
+        method.dump();
         exe.execute(&args) catch unreachable;
-        std.debug.print("Result: {any}\n", .{exe.stack()});
+        std.debug.print("Result: {*} {any}\n", .{ exe.getSp(), exe.stack()});
         return exe.stack()[0];
     }
 };

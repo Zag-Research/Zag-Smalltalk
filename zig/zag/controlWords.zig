@@ -75,18 +75,17 @@ pub const classCase = struct {
             newPc = newPc.next();
             for (0..4) |_| {
                 const currentClass: u14 = @truncate(classes);
-                trace("currentClass: {}, match: {}, extra: {f}\n", .{ currentClass, match, extra });
                 if (currentClass == match) {
                     newPc = newPc.targetPC();
-                    trace("currentClass: extra: {f}\n", .{extra});
+                    trace("classCase: match {*} extra: {f}\n", .{ sp, extra });
                     return @call(tailCall, process.check(newPc.prim()), .{ newPc.next(), sp.drop(), process, context, extra });
                 }
                 if (currentClass == 0) {
-                    trace("currentClass: extra: {f}\n", .{extra});
+                    trace("classCase: 0 {*} extra: {f}\n", .{ sp, extra });
                     return @call(tailCall, process.check(newPc.prim()), .{ newPc.next(), sp.drop(), process, context, extra });
                 }
                 if (currentClass == 0x3FFF) {
-                    trace("currentClass: extra: {f}\n", .{extra});
+                    trace("classCase: 3fff {*} extra: {f}\n", .{ sp, extra });
                     return @call(tailCall, process.check(newPc.prim()), .{ newPc.next(), sp, process, context, extra });
                 }
                 classes >>= 14;
@@ -271,7 +270,7 @@ pub const popAssociationValue = struct {
 };
 pub const push = struct {
     pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
-        trace("Pushing variable...{f} {f}\n", .{pc, extra});
+        trace("Pushing variable...{*} {f} {f}\n", .{sp, pc, extra });
         const variable = pc.object().asVariable();
         if (variable.isLocal and extra.noContext()) {
             if (sp.push(Nil())) |newSp| {
@@ -348,11 +347,11 @@ pub const pushLiteral = struct {
     pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
         const value = pc.object();
         if (sp.push(value)) |newSp| {
-            trace("pushLiteral: {f}\n", .{extra});
+            trace("pushLiteral: {*} {f}\n", .{ newSp, extra });
             return @call(tailCall, process.check(pc.prim2()), .{ pc.next2(), newSp, process, context, extra });
         } else {
             const newSp, const newContext, const newExtra = process.spillStackAndPush(value, sp, context, extra);
-            trace("pushLiteral: {f} {f}\n", .{extra, newExtra});
+            trace("pushLiteral: {*} {f} {f}\n", .{ newSp, extra, newExtra });
             return @call(tailCall, process.check(pc.prim2()), .{ pc.next2(), newSp, process, newContext, newExtra });
         }
     }

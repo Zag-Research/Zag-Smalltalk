@@ -218,7 +218,7 @@ fn dummyCompiledMethod(signature: Signature) CompiledMethod {
         .signature = signature,
     };
 }
-pub const nullMethod = dummyCompiledMethod(@bitCast(@as(u64, 1)));
+pub const nullMethod = dummyCompiledMethod(Signature.empty);
 const defaultForTest = if (config.is_test) struct {
     var called: bool = false;
     const dummyMethod = dummyCompiledMethod(Signature.from(symbols.value, ClassIndex.Object));
@@ -348,13 +348,13 @@ pub const threadedFunctions = struct {
     const tf = zag.threadedFn.Enum;
     pub const returnSelf = struct {
         pub fn threadedFn(_: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
-            trace("returnSelf: {f}\n", .{extra});
             if (extra.addressIfNoContext(0, sp)) |address| {
                 const newSp: SP = @ptrCast(address);
+                trace("returnSelf: {*}->{*} {f}\n", .{ sp, newSp, extra });
                 return @call(tailCall, process.check(context.npc), .{ context.tpc, newSp, process, context, Extra.fromContextData(context.contextData) });
             }
             const newSp, const callerContext = context.pop(process);
-            trace("returnSelf: {*}\n", .{ sp });
+            trace("returnSelf: {*}->{*}\n", .{ sp, newSp });
             return @call(tailCall, process.check(callerContext.getNPc()), .{ callerContext.getTPc(), newSp, process, callerContext, Extra.fromContextData(callerContext.contextData) });
         }
         test "returnSelf" {
@@ -379,9 +379,9 @@ pub const threadedFunctions = struct {
     pub const returnTop = struct {
         pub fn threadedFn(_: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
             const top = sp.top;
-            trace("returnTop: {f} {f}\n", .{ top, extra });
             if (extra.addressIfNoContext(0, sp)) |address| {
                 const newSp: SP = @ptrCast(address);
+                trace("returnTop: {f} {*} {*} {f}\n", .{ top, sp, newSp, extra });
                 newSp.top = top;
                 return @call(tailCall, process.check(context.npc), .{ context.tpc, newSp, process, context, Extra.fromContextData(context.contextData) });
             }
@@ -422,11 +422,16 @@ pub const threadedFunctions = struct {
         const class = receiver.get_class();
         const methodSignature = method.signature;
         const signature = Signature.from(selector, class);
-        if (methodSignature == signature)
+        if (methodSignature == signature) {
+            trace("getMethod: cached {f} {any}\n", .{ signature, method });
             return method;
+        }
         method = class.lookupMethodForClass(selector, signature);
-        if (methodSignature.isEmpty())
+        if (methodSignature.isEmpty()) {
+            trace("getMethod: patch {f} {any}\n", .{ signature, method });
             methodAddress.patchPtr().patchMethod(method);
+        } else
+            trace("getMethod: alt {f} {any}\n", .{ signature, method });
         return method;
     }
     pub const send = struct {
@@ -436,7 +441,10 @@ pub const threadedFunctions = struct {
             const newPc = method.codePc();
             if (extra.installContextIfNone(sp, process, context)) |new| {
                 new.context.setReturn(pc.next2());
-                trace("sending...: method:{x} sp:{x} {f} original: {x} {f}\n", .{ @intFromPtr(method), @intFromPtr(new.sp), new.extra, @intFromPtr(sp), extra });
+                trace("sending...: sp:{x}->{x} {f}->{f} method:{x}\n", .{ @intFromPtr(sp), @intFromPtr(new.sp), extra, new.extra, @intFromPtr(method) });
+                trace("endOfStack(): {*} {*}\n", .{ process.endOfStack(), sp });
+                for (process.getStack(new.sp)) |*obj|
+                    trace("[{x:0>10}]: {x:0>16}\n", .{ @intFromPtr(obj), @as(u64, @bitCast(obj.*))});
                 return @call(tailCall, process.check(newPc.prim()), .{ newPc.next(), new.sp, process, new.context, new.extra });
             }
             context.setReturn(pc.next2());

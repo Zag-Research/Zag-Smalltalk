@@ -80,8 +80,8 @@ pub const Extra = packed struct {
     /// note that `pc` is the program counter after the instruction that called `installContext`
     pub fn installContextIfNone(extra: Extra, sp: SP, process: *Process, context: *Context) ?NewContext {
         if (extra.getMethod()) |method| {
-            const newSp, const ctxt = context.push(sp, process, method);
-            return .{ .context = ctxt, .extra = Extra.fromContextData(ctxt.contextData), .sp = newSp };
+            const ctxt = context.push(sp, process, method);
+            return .{ .context = ctxt, .extra = Extra.fromContextData(ctxt.contextData), .sp = @ptrCast(ctxt) };
         }
         return null;
     }
@@ -117,7 +117,7 @@ pub const Extra = packed struct {
         if (self.getMethod()) |method| {
             try writer.print("Extra{{.stack_offset = {x}, .method = {*}}}", .{ self.stack_offset, method });
         } else {
-            try writer.print("Extra{{.contextData = {}}}", .{self.getContextData()});
+            try writer.print("Extra{{.contextData = {*}}}", .{self.getContextData()});
         }
     }
 };
@@ -182,15 +182,14 @@ pub inline fn popTargetContext(target: *Context, process: *Process, result: Obje
     return .{ newSp, newTarget };
 }
 pub inline fn pop(self: *Context, process: *Process) struct { SP, *Context } {
-    _ = process;
     const wordsToDiscard = self.contextData.header.hash16();
-    trace("pop: 0x{x} {} {}\n", .{ @intFromPtr(self), self.header, self.contextData });
     if (self.isOnStack()) {
-        trace("pop: 0x{x} {} {}\n", .{ @intFromPtr(self), self.header, wordsToDiscard });
-        return .{ @as(SP, @ptrCast(self)).unreserve(wordsToDiscard - 1), self.previous() };
+        const newSp = @as(SP, @ptrCast(self.contextData)).unreserve(wordsToDiscard);
+        trace("popContext: {*} {*} {} {f}\n", .{ newSp, self, wordsToDiscard, newSp.top });
+        return .{ newSp, self.previous() };
     }
-    trace("pop: {*}\n", .{self});
-    @panic("incomplete");
+    trace("popContext: {*}\n", .{self});
+    _ = .{ process, @panic("incomplete") };
     // const itemsToKeep = self.temps[wordsToDiscard-baseSize..self.size];
     // const newSp = process.endOfStack() - itemsToKeep.len;
     // for (itemsToKeep,0..) | obj,index | {
@@ -198,22 +197,22 @@ pub inline fn pop(self: *Context, process: *Process) struct { SP, *Context } {
     // }
     // return .{.sp=newSp,.ctxt=self.previous()};
 }
-pub fn push(self: *Context, sp: SP, process: *Process, method: *const CompiledMethod) struct { SP, *Context } {
+pub fn push(self: *Context, sp: SP, process: *Process, method: *const CompiledMethod) *Context {
     const stackStructure = method.stackStructure;
     const locals = stackStructure.locals;
-    const spForLocals = sp.safeReserve(locals + 1);
-    const contextData: *ContextData = @ptrCast(spForLocals);
-    const length: u11 = @truncate(spForLocals.delta(self.endOfStack() orelse process.endOfStack()) - 1);
-    std.debug.print("push: 0x{x} {} {} {}\n", .{ @intFromPtr(self), self.header, length, stackStructure });
+    const spForContextData = sp.safeReserve(locals + 1);
+    const contextData: *ContextData = @ptrCast(spForContextData);
+    const length: u11 = @truncate(spForContextData.delta(self.endOfStack() orelse process.endOfStack()) - 1);
     contextData.init(locals, stackStructure.selfOffset, length);
-    const newSp = spForLocals.safeReserve(baseSize);
-    const ctxt = @as(*align(@alignOf(Self)) Context, @ptrCast(@alignCast(newSp)));
+    const newSp = spForContextData.safeReserve(baseSize);
+    std.debug.print("pushContext: {*} {*}->{*} {} {} {}\n", .{ self, sp, newSp, self.header, length, stackStructure });
+    const ctxt: *align(@alignOf(Self)) Context = @ptrCast(@alignCast(newSp));
+    ctxt.header = HeapHeader.headerOnStack(.Context, stackStructure.selfOffset, baseSize);
+    ctxt.method = method;
     ctxt.prevCtxt = self;
     ctxt.trapContextNumber = process.header().trapContextNumber;
-    ctxt.method = method;
     ctxt.contextData = contextData;
-    ctxt.header = HeapHeader.headerOnStack(.Context, 0, baseSize);
-    return .{ newSp.safeReserve(1), ctxt };
+    return ctxt;
 }
 pub fn moveToHeap(self: *const Context, sp: SP, process: *Process) *Context {
     _ = self;
@@ -242,7 +241,7 @@ inline fn tempSize(self: *const Context, process: *const Process) usize {
 }
 pub fn stack(self: *const Self, sp: SP, process: *const Process) []Object {
     if (self.isOnStack())
-        return sp.slice((@intFromPtr(self.endOfStack() orelse process.endOfStack()) - @intFromPtr(sp)) / @sizeOf(Object) - 1);
+        return sp.slice((@intFromPtr(self) - @intFromPtr(sp)) / @sizeOf(Object) - 1);
     return process.getStack(sp);
 }
 // pub inline fn allLocals(self: *const Context, process: *const Process) []Object {
