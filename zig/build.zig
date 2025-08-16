@@ -5,11 +5,11 @@ pub fn build(b: *std.Build) void {
     const options = b.addOptions();
     const llvm_module = build_llvm_module(b, target, optimize);
 
-    const mod = b.createModule(.{
+    const zag = b.createModule(.{
         .root_source_file = b.path("zag/zag.zig"),
         .target = target,
     });
-    mod.addOptions("options", options);
+    zag.addOptions("options", options);
     const exe = b.addExecutable(.{
         .name = "zag",
         .root_module = b.createModule(.{
@@ -17,7 +17,7 @@ pub fn build(b: *std.Build) void {
             .target = target,
             .optimize = optimize,
             .imports = &.{
-                .{ .name = "zag", .module = mod },
+                .{ .name = "zag", .module = zag },
             },
         }),
     });
@@ -30,18 +30,20 @@ pub fn build(b: *std.Build) void {
     if (b.args) |args| {
         run_cmd.addArgs(args);
     }
-    const mod_tests = b.addTest(.{
-        .root_module = mod,
+    const tests = b.addTest(.{
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("zag/root.zig"),
+            .target = target,
+            .optimize = optimize,
+            .imports = &.{
+                .{ .name = "zag", .module = zag },
+            },
+        }),
     });
-    mod_tests.root_module.addOptions("options", options);
-    const run_mod_tests = b.addRunArtifact(mod_tests);
-    const exe_tests = b.addTest(.{
-        .root_module = exe.root_module,
-    });
-    const run_exe_tests = b.addRunArtifact(exe_tests);
+    tests.root_module.addOptions("options", options);
+    const run_tests = b.addRunArtifact(tests);
     const test_step = b.step("test", "Run tests");
-    test_step.dependOn(&run_mod_tests.step);
-    test_step.dependOn(&run_exe_tests.step);
+    test_step.dependOn(&run_tests.step);
 
     var includeLLVM = false;
     if (b.option(bool, "llvm", "Include LLVM in build") orelse false) {
@@ -52,7 +54,7 @@ pub fn build(b: *std.Build) void {
     options.addOption([]const u8, "git_version", git_version);
 
     if (includeLLVM) {
-        mod.addImport("llvm-build-module", llvm_module);
+        zag.addImport("llvm-build-module", llvm_module);
         exe.root_module.addImport("llvm-build-module", llvm_module);
     }
 
@@ -63,12 +65,26 @@ pub fn build(b: *std.Build) void {
             .target = target,
             .optimize = optimize,
             .imports = &.{
-                .{ .name = "zag", .module = mod },
+                .{ .name = "zag", .module = zag },
             },
         }),
     });
     //b.step("fib", "Compile fib").dependOn(&b.installArtifact(fib).step);
     b.installArtifact(fib);
+
+    const fib_check = b.addExecutable(.{
+        .name = "fib",
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("experiments/fib.zig"),
+            .target = target,
+            .optimize = optimize,
+            .imports = &.{
+                .{ .name = "zag", .module = zag },
+            },
+        }),
+    });
+    const check = b.step("check", "Check if foo compiles");
+    check.dependOn(&fib_check.step);
 }
 
 fn build_llvm_module(b: *std.Build, target: std.Build.ResolvedTarget, optimize: std.builtin.OptimizeMode) *std.Build.Module {

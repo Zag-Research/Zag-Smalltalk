@@ -51,7 +51,7 @@ const Sym = struct {
     const ss = heap.compileStrings(.{
         "fibonacci",
     });
-    usingnamespace symbol.symbols;
+    //usingnamespace symbol.symbols;
     fn init() Sym {
         return .{
             .fibonacci = symbol.intern(ss[0].asObject()),

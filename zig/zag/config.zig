@@ -7,11 +7,7 @@ pub const tailCall: std.builtin.CallModifier = if (show_error_stack) .never_inli
 pub fn trace(comptime format: anytype, values: anytype) void {
     if (show_trace) std.debug.print(format, values);
 }
-const accept_options = !is_test;
-const options = if (accept_options) @import("options") else struct {
-    const includeLLVM = false;
-    const git_version = "no options flags";
-};
+const options = @import("options");
 pub const includeLLVM = options.includeLLVM;
 pub const git_version = options.git_version;
 pub const objectEncoding: Encoding = .zag;
