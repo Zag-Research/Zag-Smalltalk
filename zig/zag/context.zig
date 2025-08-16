@@ -42,6 +42,7 @@ pub const Extra = packed struct {
     const stack_mask = Process.stack_mask;
     const stack_size_type = zag.utilities.largeEnoughType(stack_mask);
     const is_encoded: u16 = 0x8000;
+    pub const none: Extra = .{ .addr = 0, .stack_offset = 0 };
     // Three states:
     //  - method is not encoded - is_encoded will not be set and low bits not zero
     //  - method is encoded - is_encoded will be set and low bits not zero
@@ -69,8 +70,8 @@ pub const Extra = packed struct {
     pub fn addressIfNoContext(self: Extra, offset: usize, sp: SP) ?[*]Object {
         const selfOffset = self.stack_offset;
         if (selfOffset != 0) {
-            trace("selfOffset: {d} {x}\n", .{selfOffset, self.addr});
             const stackOffset: [*]Object = @ptrFromInt((@intFromPtr(sp) & ~stack_mask) + selfOffset);
+            trace("addressIfNoContext: {x} {x} {*}\n", .{ selfOffset, self.addr, stackOffset + offset });
             return stackOffset + offset;
         }
         return null;
@@ -125,7 +126,7 @@ pub const ContextData = struct {
     header: HeapHeader,
     contextData: [1]Object,
     fn init(self: *ContextData, locals: u11, selfOffset: u11, length: u11) void {
-        trace("ContextData.init {} {}\n", .{selfOffset, locals});
+        trace("ContextData.init {} {}\n", .{ selfOffset, locals });
         self.header = HeapHeader.headerOnStack(.ContextData, selfOffset, length);
         @setRuntimeSafety(false);
         for (self.contextData[0..locals]) |*local| {
@@ -240,9 +241,7 @@ inline fn tempSize(self: *const Context, process: *const Process) usize {
     return (@intFromPtr(self.previous().endOfStack() orelse process.endOfStack()) - @intFromPtr(self.contextData)) / @sizeOf(Object) - 1;
 }
 pub fn stack(self: *const Self, sp: SP, process: *const Process) []Object {
-    if (self.isOnStack())
-        return sp.slice((@intFromPtr(self) - @intFromPtr(sp)) / @sizeOf(Object) - 1);
-    return process.getStack(sp);
+    return sp.slice((@intFromPtr(self.endOfStack() orelse process.endOfStack()) - @intFromPtr(sp)) / @sizeOf(Object));
 }
 // pub inline fn allLocals(self: *const Context, process: *const Process) []Object {
 //     const size = self.tempSize(process);

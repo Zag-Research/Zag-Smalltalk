@@ -221,7 +221,7 @@ pub fn alloc(self: *align(1) Self, classIndex: ClassIndex, iVars: u11, indexed: 
             };
         }
     }
-    return error.NeedNurseryCollection;
+    @panic("NeedNurseryCollection");
 }
 pub fn allocStackX(self: *align(1) Self, oldSp: SP, classIndex: ClassIndex, iVars: u11, indexed: ?usize, comptime element: type) !SP {
     const aI = allocationInfo(iVars, indexed, element, false);
@@ -315,18 +315,18 @@ test "nursery allocation" {
     try ee(pr.freeNursery(), emptySize);
     var sp = pr.endOfStack();
     var initialContext = Context.init();
-    var ar = try pr.alloc(ClassIndex.Class, 4, null, void, false);
+    var ar = pr.alloc(ClassIndex.Class, 4, null, void, false);
     _ = ar.initAll();
     const o1 = ar.allocated;
     try ee(pr.freeNursery(), emptySize - 5);
-    ar = try pr.alloc(ClassIndex.Class, 5, null, void, false);
+    ar = pr.alloc(ClassIndex.Class, 5, null, void, false);
     _ = ar.initAll();
-    ar = try pr.alloc(ClassIndex.Class, 6, null, void, false);
+    ar = pr.alloc(ClassIndex.Class, 6, null, void, false);
     const o2 = ar.initAll();
     try ee(emptySize - 19, pr.freeNursery());
     try o1.instVarPut(0, o2.asObject());
     sp = sp.push(o1.asObject()).?;
-    const news, const newContext, _ = pr.spillStack(sp, &initialContext, Extra{ .int = 0 });
+    const news, const newContext, _ = pr.spillStack(sp, &initialContext, Extra.none);
     try ee(sp, news);
     try ee(&initialContext, newContext);
     pr.collectNursery(sp, &initialContext, 0);

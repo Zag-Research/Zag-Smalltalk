@@ -61,9 +61,6 @@ pub const inlines = struct {
             return self.taggedI_noCheck() <= tagged;
         return error.primitiveError;
     }
-    pub fn p5N(self: Object, other: Object) bool { // INLINED - LessOrEqual when both known SmallIntegers
-        return self.taggedI_noCheck() <= other.taggedI_noCheck();
-    }
     pub inline fn @">="(self: Object, other: Object) !bool { // GreaterOrEqual
         if (other.taggedI()) |tagged|
             return self.taggedI_noCheck() >= tagged;
@@ -79,10 +76,6 @@ pub const inlines = struct {
             return self.taggedI_noCheck() != tagged;
         return error.primitiveError;
     }
-    inline fn unsafeAbs(x: i64) u64 {
-        @setRuntimeSafety(false);
-        return @as(u64, @intCast(if (x < 0) -x else x));
-    }
     pub inline fn @"*"(self: Object, other: Object, maybeProcess: ?*Process) !Object { // Multiply
         if (other.nativeI()) |untagged| {
             const result, const overflow = @mulWithOverflow(self.untaggedI_noCheck(), untagged);
@@ -95,26 +88,23 @@ pub const inlines = struct {
 test "inline primitives" {
     try config.skipNotZag();
     const expectEqual = std.testing.expectEqual;
-    try expectEqual(Object.from(12, null), inlines.p9(Object.from(3, null), Object.from(4, null), null));
-    try expectEqual(error.primitiveError, inlines.p9(Object.from(0x1_0000_0000, null), Object.from(0x100_0000, null), null));
-    try expectEqual(error.primitiveError, inlines.p9(Object.from(0x1_0000_0000, null), Object.from(0x80_0000, null), null));
-    try expectEqual(Object.from(-0x80_0000_0000_0000, null), inlines.p9(Object.from(0x1_0000_0000, null), Object.from(-0x80_0000, null), null));
-    try expectEqual(Object.from(0x20_0000_0000_0000, null), inlines.p9(Object.from(0x1_0000_0000, null), Object.from(0x20_0000, null), null));
-    try expectEqual(Object.from(0x3f_ffff_0000_0000, null), inlines.p9(Object.from(0x1_0000_0000, null), Object.from(0x3f_ffff, null), null));
-    try expectEqual(Object.from(0, null), inlines.p_negated(Object.from(0, null), null));
-    try expectEqual(Object.from(-42, null), inlines.p_negated(Object.from(42, null), null));
-    try expectEqual(Object.from(0x7f_ffff_ffff_ffff, null), inlines.p_negated(Object.from(-0x7f_ffff_ffff_ffff, null), null));
-    try expectEqual(Object.from(-0x7f_ffff_ffff_ffff, null), inlines.p_negated(Object.from(0x7f_ffff_ffff_ffff, null), null));
-    try expectEqual(error.primitiveError, inlines.p_negated(Object.from(-0x80_0000_0000_0000, null), null));
-    try expectEqual(true, try inlines.p5(Object.from(0, null), Object.from(0, null)));
-    try expectEqual(true, try inlines.p5(Object.from(0, null), Object.from(1, null)));
-    try expectEqual(false, try inlines.p5(Object.from(1, null), Object.from(0, null)));
-    try expectEqual(true, inlines.p5N(Object.from(0, null), Object.from(0, null)));
-    try expectEqual(true, inlines.p5N(Object.from(0, null), Object.from(1, null)));
-    try expectEqual(false, inlines.p5N(Object.from(1, null), Object.from(0, null)));
-    try expectEqual(true, try inlines.p6(Object.from(0, null), Object.from(0, null)));
-    try expectEqual(false, try inlines.p6(Object.from(0, null), Object.from(1, null)));
-    try expectEqual(true, try inlines.p6(Object.from(1, null), Object.from(0, null)));
+    try expectEqual(Object.from(12, null), inlines.@"*"(Object.from(3, null), Object.from(4, null), null));
+    try expectEqual(error.primitiveError, inlines.@"*"(Object.from(0x1_0000_0000, null), Object.from(0x100_0000, null), null));
+    try expectEqual(error.primitiveError, inlines.@"*"(Object.from(0x1_0000_0000, null), Object.from(0x80_0000, null), null));
+    try expectEqual(Object.from(-0x80_0000_0000_0000, null), inlines.@"*"(Object.from(0x1_0000_0000, null), Object.from(-0x80_0000, null), null));
+    try expectEqual(Object.from(0x20_0000_0000_0000, null), inlines.@"*"(Object.from(0x1_0000_0000, null), Object.from(0x20_0000, null), null));
+    try expectEqual(Object.from(0x3f_ffff_0000_0000, null), inlines.@"*"(Object.from(0x1_0000_0000, null), Object.from(0x3f_ffff, null), null));
+    try expectEqual(Object.from(0, null), inlines.negated(Object.from(0, null), null));
+    try expectEqual(Object.from(-42, null), inlines.negated(Object.from(42, null), null));
+    try expectEqual(Object.from(0x7f_ffff_ffff_ffff, null), inlines.negated(Object.from(-0x7f_ffff_ffff_ffff, null), null));
+    try expectEqual(Object.from(-0x7f_ffff_ffff_ffff, null), inlines.negated(Object.from(0x7f_ffff_ffff_ffff, null), null));
+    try expectEqual(error.primitiveError, inlines.negated(Object.from(-0x80_0000_0000_0000, null), null));
+    try expectEqual(true, try inlines.@"<="(Object.from(0, null), Object.from(0, null)));
+    try expectEqual(true, try inlines.@"<="(Object.from(0, null), Object.from(1, null)));
+    try expectEqual(false, try inlines.@"<="(Object.from(1, null), Object.from(0, null)));
+    try expectEqual(true, try inlines.@">="(Object.from(0, null), Object.from(0, null)));
+    try expectEqual(false, try inlines.@">="(Object.from(0, null), Object.from(1, null)));
+    try expectEqual(true, try inlines.@">="(Object.from(1, null), Object.from(0, null)));
 }
 pub const @"+" = struct {
     pub const number = 1;
@@ -155,6 +145,8 @@ pub const @"+" = struct {
     pub fn inlinePrimitive(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
         const receiver = sp.next;
         if (!receiver.isInt()) {
+            trace("SmallInteger>>#inlinePrimitive: {f}", .{ receiver });
+            if (true) unreachable;
             return @call(tailCall, PC.inlinePrimitiveFailed, .{ pc, sp, process, context, extra });
         }
         const newSp = sp.dropPut(inlines.@"+"(receiver, sp.top, process) catch
@@ -191,6 +183,8 @@ pub const @"<=" = struct {
     pub fn inlinePrimitive(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
         const receiver = sp.next;
         if (!receiver.isInt()) {
+            trace("SmallInteger>>#inlinePrimitive: <= {f}\n", .{ receiver });
+            if (true) unreachable;
             return @call(tailCall, PC.inlinePrimitiveFailed, .{ pc, sp, process, context, extra });
         }
         const newSp = sp.dropPut(Object.from(inlines.@"<="(receiver, sp.top) catch

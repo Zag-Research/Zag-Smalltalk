@@ -93,6 +93,7 @@ pub const ClassIndex = enum(u16) {
     BlockClosureValue,
     LLVMPrimitives,
     LLVMGenerator,
+    leaveObjectOnStack = 0x3fff,
     testClass = config.max_classes - 1,
     replace7 = 0xffff - 7,
     replace6,
@@ -336,10 +337,7 @@ pub const PackedObject = packed struct {
     pub fn combine14(tup: anytype) comptime_int {
         return combine(u14, tup);
     }
-    pub fn object14(tup: anytype) PackedObject {
-        return @bitCast((@as(u64, combine(u14, tup)) << @bitSizeOf(Object.PackedTagType)) + Object.packedTagSmallInteger);
-    }
-    pub fn classCase(tup: []const ClassIndex) PackedObject {
+    pub fn classes(tup: []const ClassIndex) PackedObject {
         return @bitCast((@as(u64, combine(u14, tup)) << @bitSizeOf(Object.PackedTagType)) + Object.packedTagSmallInteger);
     }
     test "combiners" {
@@ -397,8 +395,8 @@ test "printing" {
     var buf: [80]u8 = undefined;
     var fbs = std.io.fixedBufferStream(&buf);
     const stream = fbs.writer();
-    try stream.print("{}\n", .{Object.from(42, null)});
-    try stream.print("{}\n", .{symbol.symbols.yourself.asObject()});
+    try stream.print("{f}\n", .{Object.from(42, null)});
+    try stream.print("{f}\n", .{symbol.symbols.yourself.asObject()});
     try std.testing.expectEqualSlices(u8, "42\n#yourself\n", fbs.getWritten());
 }
 const Buf = blk: {

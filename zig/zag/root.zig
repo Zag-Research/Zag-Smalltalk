@@ -1,18 +1,7 @@
-pub const config = @import("config.zig");
-pub const InMemory = @import("object/inMemory.zig");
-pub const object = @import("object.zig");
-pub const execute = @import("execute.zig");
-pub const Context = @import("context.zig");
-pub const Process = @import("process.zig");
-pub const heap = @import("heap.zig");
-pub const globalArena = @import("globalArena.zig");
-pub const symbol = @import("symbol.zig");
-pub const utilities = @import("utilities.zig");
-pub const llvm = if (config.includeLLVM) @import("llvm-build-module") else null;
-pub const threadedFn = @import("threadedFn.zig");
+const zag = @import("zag.zig");
 test "root test" {
-    _ = config;
-    _ = symbol;
-    _ = llvm;
-    _ = threadedFn;
+    _ = zag.config;
+    _ = zag.symbol;
+    _ = zag.llvm;
+    _ = zag.threadedFn;
 }

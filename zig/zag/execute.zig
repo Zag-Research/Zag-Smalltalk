@@ -268,6 +268,13 @@ pub const Code = union(enum) {
     fn prim(self: Code) *const fn (PC, SP, *Process, *Context, Extra) Result {
         return self.threadedFn;
     }
+    fn endM(_: PC, sp: SP, process: *Process, context: *Context, _: Extra) Result { // not embedded
+        trace("endM: {*} {?*}\n", .{ context, context.prevCtxt });
+        process.setContext(context);
+        process.setSp(sp);
+        return sp;
+    }
+    pub const endMain = primOf(endM);
     pub fn end(_: PC, sp: SP, process: *Process, context: *Context, _: Extra) Result { // not embedded
         process.setContext(context);
         process.setSp(sp);
@@ -880,10 +887,13 @@ pub const Execution = struct {
             pub fn stack(self: *const Self) []Object {
                 return self.process.getContext().stack(self.process.getSp(), &self.process);
             }
+            pub fn fullStack(self: *const Self) []Object {
+                return self.process.getStack(self.process.getSp());
+            }
             pub fn getHeap(self: *const Self) []HeapObject {
                 return self.process.getHeap();
             }
-            pub fn getProcess(self: *const Self) *Process {
+            pub fn getProcess(self: *const Self) *const Process {
                 return &self.process;
             }
             pub fn getContext(self: *const Self) *Context {
@@ -915,14 +925,14 @@ pub const Execution = struct {
         std.debug.print("ExecutionTest: {s}\n", .{title});
         return init(tup);
     }
-    fn init(tup: anytype) Executer(countNonLabels(tup)) {
+    fn init(comptime tup: anytype) Executer(countNonLabels(tup)) {
         const ExeType = Executer(countNonLabels(tup));
         return ExeType.new(compileMethod(Sym.yourself, 0, .testClass, tup));
     }
     pub fn runTest(title: []const u8, tup: anytype, source: []const Object, expected: []const Object) !void {
         return runTestWithObjects(title, tup, Object.empty, source, expected);
     }
-    pub fn runTestWithObjects(title: []const u8, tup: anytype, objects: []const Object, source: []const Object, expected: []const Object) !void {
+    pub fn runTestWithObjects(title: []const u8, comptime tup: anytype, objects: []const Object, source: []const Object, expected: []const Object) !void {
         try runWithValidator(title, tup, &validate, objects, source, expected);
     }
     pub const ValidateErrors = error{
@@ -932,7 +942,7 @@ pub const Execution = struct {
     pub fn runTestWithValidator(title: []const u8, tup: anytype, validator: *const fn (anytype, []const Object) ValidateErrors!void, source: []const Object, expected: []const Object) !void {
         return runWithValidator(title, tup, validator, Object.empty, source, expected);
     }
-    fn runWithValidator(title: []const u8, tup: anytype, validator: *const fn (anytype, []const Object) ValidateErrors!void, objects: []const Object, source: []const Object, expected: []const Object) !void {
+    fn runWithValidator(title: []const u8, comptime tup: anytype, validator: *const fn (anytype, []const Object) ValidateErrors!void, objects: []const Object, source: []const Object, expected: []const Object) !void {
         std.debug.print("ExecutionTest: {s}\n", .{title});
         var exe align(Process.alignment) = init(tup);
         exe.process.init(Nil());
@@ -954,30 +964,33 @@ pub const Execution = struct {
     }
 
     pub fn mainSendTo(selector: Object, target: Object) !Object {
-        const codes = 4;
+        const codes = 5;
         const ExeType = Executer(codes);
         const MethodType = ExeType.MethodType;
         const header = comptime HeapHeader.calc(.CompiledMethod, MethodType.codeOffsetInUnits + codes, 0, Age.aStruct, null, Object, false) catch unreachable;
-        const f = zag.dispatch.threadedFunctions.send.threadedFn;
+        const send = zag.dispatch.threadedFunctions.send.threadedFn;
+        const returnTop = zag.dispatch.threadedFunctions.returnTop.threadedFn;
         var exe = ExeType.new(.{
             .header = header,
             .signature = Signature.fromNameClass(Sym.yourself, .testClass),
             .stackStructure = .{ .locals = 0, .selfOffset = 1 },
-            .executeFn = f,
-            .jitted = f,
+            .executeFn = send,
+            .jitted = send,
             .code = undefined,
             .offsets = [_]bool{false} ** codes,
         });
         trace("Sending: {f} to {f}\n", .{ selector, target });
         const method = &exe.method;
-        method.code[0] = Code.primOf(f);
+        method.code[0] = Code.primOf(send);
         method.code[1] = Code.objectOf(Sym.fibonacci);
         method.code[2] = Code.methodOf(&zag.dispatch.nullMethod);
-        method.code[3] = Code.endCode;
+        method.code[3] = Code.primOf(returnTop);
+        method.code[4] = Code.endCode;
         const args = [_]Object{target};
+//        exe.getContext().npc = Code.end;
         method.dump();
         exe.execute(&args) catch unreachable;
-        std.debug.print("Result: {*} {any}\n", .{ exe.getSp(), exe.stack()});
-        return exe.stack()[0];
+        std.debug.print("Result: {*} {*}\n", .{ exe.getSp(), exe.getProcess().endOfStack() });
+        return exe.fullStack()[0];
     }
 };

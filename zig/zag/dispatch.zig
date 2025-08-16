@@ -35,7 +35,7 @@ const DispatchHandler = struct {
     inline fn lookupMethodForClass(ci: ClassIndex, selector: Object, signature: Signature) *const CompiledMethod {
         if (dispatches[@intFromEnum(ci)].lookupMethod(selector, signature)) |method|
             return method;
-        if (defaultForTest != null)
+        if (defaultForTest != void)
             return defaultForTest.loadMethodForClass(ci, selector);
         return loadMethodForClass(ci, selector);
     }
@@ -230,22 +230,23 @@ const defaultForTest = if (config.is_test) struct {
     fn reset() void {
         called = false;
     }
-} else null;
+} else void;
 test "add/lookup" {
     const selector = symbols.@"value:";
     const class = ClassIndex.Object;
-    const emptyMethod = dummyCompiledMethod(Signature.from(selector, class));
+    const sig = Signature.from(selector, class);
+    const emptyMethod = dummyCompiledMethod(sig);
     addMethod(&emptyMethod);
-    try std.testing.expectEqual(lookupMethodForClass(class, selector), &emptyMethod);
+    try std.testing.expectEqual(class.lookupMethodForClass(selector, sig), &emptyMethod);
     const altMethod = dummyCompiledMethod(Signature.from(selector, class));
     addMethod(&altMethod);
-    try std.testing.expectEqual(lookupMethodForClass(class, selector), &altMethod);
+    try std.testing.expectEqual(class.lookupMethodForClass(selector, sig), &altMethod);
     const stats = DispatchHandler.stats(class);
     try std.testing.expectEqual(1, stats.active);
     try std.testing.expectEqual(5, stats.nMethods);
     try std.testing.expectEqual(7, stats.total);
     defaultForTest.called = false;
-    try std.testing.expectEqual(lookupMethodForClass(class, symbols.@"new:"), &defaultForTest.dummyMethod);
+    try std.testing.expectEqual(class.lookupMethodForClass(symbols.@"new:", Signature.from(symbols.@"new:", class)), &defaultForTest.dummyMethod);
     try std.testing.expectEqual(true, defaultForTest.called);
     //@"value:" @"new:" @"ifNotNil:" @"~=" @">=" all hash to 4 with a dispatch table of size 5
     //return error.TestFailed;
@@ -351,10 +352,14 @@ pub const threadedFunctions = struct {
             if (extra.addressIfNoContext(0, sp)) |address| {
                 const newSp: SP = @ptrCast(address);
                 trace("returnSelf: {*}->{*} {f}\n", .{ sp, newSp, extra });
+                for (process.getStack(newSp)) |*obj|
+                    trace("[{x:0>10}]: {x:0>16}\n", .{ @intFromPtr(obj), @as(u64, @bitCast(obj.*))});
                 return @call(tailCall, process.check(context.npc), .{ context.tpc, newSp, process, context, Extra.fromContextData(context.contextData) });
             }
             const newSp, const callerContext = context.pop(process);
             trace("returnSelf: {*}->{*}\n", .{ sp, newSp });
+            for (process.getStack(newSp)) |*obj|
+                trace("[{x:0>10}]: {x:0>16}\n", .{ @intFromPtr(obj), @as(u64, @bitCast(obj.*))});
             return @call(tailCall, process.check(callerContext.getNPc()), .{ callerContext.getTPc(), newSp, process, callerContext, Extra.fromContextData(callerContext.contextData) });
         }
         test "returnSelf" {
@@ -383,11 +388,15 @@ pub const threadedFunctions = struct {
                 const newSp: SP = @ptrCast(address);
                 trace("returnTop: {f} {*} {*} {f}\n", .{ top, sp, newSp, extra });
                 newSp.top = top;
+                for (process.getStack(newSp)) |*obj|
+                    trace("[{x:0>10}]: {x:0>16}\n", .{ @intFromPtr(obj), @as(u64, @bitCast(obj.*))});
                 return @call(tailCall, process.check(context.npc), .{ context.tpc, newSp, process, context, Extra.fromContextData(context.contextData) });
             }
             const newSp, const callerContext = context.pop(process);
             trace("returnTop: {f} {}\n", .{ top, sp });
             newSp.top = top;
+            for (process.getStack(newSp)) |*obj|
+                trace("[{x:0>10}]: {x:0>16}\n", .{ @intFromPtr(obj), @as(u64, @bitCast(obj.*))});
             return @call(tailCall, process.check(callerContext.npc), .{ callerContext.tpc, newSp, process, context, Extra.fromContextData(callerContext.contextData) });
         }
         test "returnTopNoContext" {
@@ -441,12 +450,14 @@ pub const threadedFunctions = struct {
             const newPc = method.codePc();
             if (extra.installContextIfNone(sp, process, context)) |new| {
                 new.context.setReturn(pc.next2());
-                trace("sending...: sp:{x}->{x} {f}->{f} method:{x}\n", .{ @intFromPtr(sp), @intFromPtr(new.sp), extra, new.extra, @intFromPtr(method) });
-                trace("endOfStack(): {*} {*}\n", .{ process.endOfStack(), sp });
+                trace("sending...NC: sp:{x}->{x} {f}->{f} method:{x}\n", .{ @intFromPtr(sp), @intFromPtr(new.sp), extra, new.extra, @intFromPtr(method) });
                 for (process.getStack(new.sp)) |*obj|
                     trace("[{x:0>10}]: {x:0>16}\n", .{ @intFromPtr(obj), @as(u64, @bitCast(obj.*))});
                 return @call(tailCall, process.check(newPc.prim()), .{ newPc.next(), new.sp, process, new.context, new.extra });
             }
+            trace("sending...: sp:{x} {f} method:{x}\n", .{ @intFromPtr(sp), extra, @intFromPtr(method) });
+            for (process.getStack( sp)) |*obj|
+                trace("[{x:0>10}]: {x:0>16}\n", .{ @intFromPtr(obj), @as(u64, @bitCast(obj.*))});
             context.setReturn(pc.next2());
             return @call(tailCall, newPc.prim(), .{ newPc.next(), sp, process, context, Extra.forMethod(method, sp) });
         }

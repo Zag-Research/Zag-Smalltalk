@@ -41,7 +41,7 @@ const fibInteger = struct {
     const leq = SmallInteger.@"<=".inlined;
     const plus = SmallInteger.@"+".inlined;
     const minus = SmallInteger.@"-".inlined;
-    const classCase = Object.PackedObject.classCase;
+    const classes = Object.PackedObject.classes;
     const rawSymbol = zag.symbol.rawSymbol;
     const nullMethod = zag.dispatch.nullMethod;
     var fib =
@@ -49,9 +49,8 @@ const fibInteger = struct {
             tf.push,                  self,
             tf.pushLiteral,           2,
             tf.inlinePrimitive,       leq,
-            tf.classCase,             classCase(&.{.False}),
-            "label3",
-            tf.returnSelf,
+            tf.classCase,             classes(&.{.False}),
+            "label3",                 tf.returnSelf,
             ":label3",                tf.push,
             self,                     tf.pushLiteral,
             1,                        tf.inlinePrimitive,
@@ -125,4 +124,4 @@ pub fn main() !void {
     try timing(if (default) @constCast(do_all[0..]) else args[1..], default);
 }
 const testReps = 10;
-const fibN: u6 = 3;
+const fibN: u6 = 4;

@@ -94,11 +94,12 @@ pub const classCase = struct {
         }
     }
     test "classCase match" {
+        const classes = Object.PackedObject.classes;
         try Execution.runTest(
             "classCase match",
             .{
                 tf.classCase,
-                classCase(.{.True}),
+                comptime classes(&.{.True}),
                 "true",
                 tf.pushLiteral,
                 17,
@@ -114,11 +115,12 @@ pub const classCase = struct {
         );
     }
     test "classCase no match" {
+        const classes = Object.PackedObject.classes;
         try Execution.runTest(
             "classCase no match",
             .{
                 tf.classCase,
-                classCase(.{.True}),
+                comptime classes(&.{ .True, .False }),
                 "true",
                 tf.pushLiteral,
                 42,
@@ -134,11 +136,12 @@ pub const classCase = struct {
         );
     }
     test "classCase no match - leave" {
+        const classes = Object.PackedObject.classes;
         try Execution.runTest(
             "classCase no match - leave",
             .{
                 tf.classCase,
-                object14(.{ ClassIndex.True, 0x3fff }),
+                comptime classes(&.{ .True, .leaveObjectOnStack }),
                 "true",
                 tf.branch,
                 "end",
@@ -270,8 +273,8 @@ pub const popAssociationValue = struct {
 };
 pub const push = struct {
     pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
-        trace("Pushing variable...{*} {f} {f}\n", .{sp, pc, extra });
         const variable = pc.object().asVariable();
+        trace("Pushing variable...{*} {f} {f} {}\n", .{ sp, pc, extra, variable });
         if (variable.isLocal and extra.noContext()) {
             if (sp.push(Nil())) |newSp| {
                 return @call(tailCall, process.check(pc.prim2()), .{ pc.next2(), newSp, process, context, extra });
@@ -280,7 +283,9 @@ pub const push = struct {
                 return @call(tailCall, process.check(pc.prim2()), .{ pc.next2(), newSp, process, newContext, newExtra });
             }
         }
-        const value = variable.getAddress(sp, extra).*;
+        const address = variable.getAddress(sp, extra);
+        const value = address.*;
+        trace(" .... {*} {f}\n", .{ address, value });
         if (sp.push(value)) |newSp| {
             return @call(tailCall, process.check(pc.prim2()), .{ pc.next2(), newSp, process, context, extra });
         } else {
