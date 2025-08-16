@@ -44,7 +44,7 @@ const modules = [_]Module{
         const moduleName = "llvm";
     }),
     // Module.init(@import("dispatch.zig")),
-    Module.init(@import("controlWords.zig").module),
+    Module.init(zag.controlWords.module),
 };
 
 const Module = struct {
@@ -503,13 +503,13 @@ pub const threadedFunctions = struct {
     };
     pub const inlinePrimitive = struct {
         pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
-            trace("inlinePrimitive: {f} {x}\n", .{extra, @intFromPtr(&threadedFn)});
+            trace("inlinePrimitive: {f} {x}\n", .{ extra, @intFromPtr(&threadedFn) });
             const obj = pc.object();
             const primNumber = obj.primitive();
             if (Module.findNumberedPrimitive(primNumber)) |prim| {
                 if (prim.inlinePrimitive) |p| {
                     pc.prev().patchPtr().patchPrim(p);
-                    trace("inlinePrimitive found: {} {f}\n", .{primNumber, extra});
+                    trace("inlinePrimitive found: {} {f}\n", .{ primNumber, extra });
                     return @call(tailCall, p, .{ pc, sp, process, context, extra });
                 }
                 std.debug.print("primitive {} ({f}) doesn't have an inline primitive\n", .{ primNumber, obj.symbol() });

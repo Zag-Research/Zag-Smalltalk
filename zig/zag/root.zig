@@ -1,4 +1,4 @@
-const zag = @import("zag.zig");
+const zag = @import("zag");
 test "root test" {
     _ = zag.config;
     _ = zag.symbol;

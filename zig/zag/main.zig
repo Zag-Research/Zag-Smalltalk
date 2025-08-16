@@ -1,5 +1,5 @@
 const std = @import("std");
-const zag = @import("zag.zig");
+const zag = @import("zag");
 const assert = std.debug.assert;
 const config = zag.config;
 const InMemory = zag.inMemory;
@@ -211,7 +211,7 @@ pub fn main() !void {
         } else if (std.mem.orderZ(u8, arg, "-h") == .eq or std.mem.orderZ(u8, arg, "--help") == .eq) {
             usage();
         } else {
-            _ = @import("controlWords.zig").drop.threadedFn;
+            _ = zag.controlWords.drop.threadedFn;
             // try loadAndRun(arg);
         }
         while (argsIterator.next()) |extra|
