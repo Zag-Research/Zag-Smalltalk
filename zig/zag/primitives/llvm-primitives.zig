@@ -60,11 +60,11 @@ const LLVMValueMetadataEntry = LLVMtype.LLVMValueMetadataEntry;
 const LLVMValueRef = LLVMtype.LLVMValueRef;
 const llvmClass = @intFromEnum(object.ClassIndex.LLVM);
 
-// Execution of tests: call `zig build test -Dllvm
-// JITDriver (future)     =>  Traverses through each threaded word in a compiled method's code array and
-//                            sends the word as a message to the JITDispatcher.
+// Execution of tests: call `zig build test -Dllvm`
+// JITDriver (future)     => Traverses through each threaded word in a compiled method's code array and
+//                           sends the word as a message to the JITDispatcher.
 // JITDispatcher (future) => Contains logic that orchastrates which primitives to send to the
-//                           JITPrimitiveGEnerator class. Defined on the Smalltalk side.
+//                           JITPrimitiveGenerator class. Defined on the Smalltalk side.
 //                           Contains sp, driver, and gen instance variables.
 // JITPrimitiveGenerator  => Contains direct LLVM primitive calls.
 //                           Contains builder, module and context instance variables.
@@ -171,9 +171,9 @@ pub const makeJITPrimitiveGenerator = if (config.notZag) struct {} else struct {
         return @call(tailCall, process.check(context.npc.f), .{ context.tpc, new_sp, process, context, undefined });
     }
     test "makeJITPrimitiveGenerator" {
-        // TODO: Couple primitive 900 here
+        // TODO: Refactor this test later
         var exe = Execution.initTest("llvm primitiveGenerator", .{
-            // tf.inlinePrimitive, 900,
+            tf.inlinePrimitive, 900,
             tf.inlinePrimitive, 901,
         });
         try exe.execute(&[_]Object{}); // initial stack
@@ -190,13 +190,47 @@ pub const makeJITPrimitiveGenerator = if (config.notZag) struct {} else struct {
 
 pub const @"createThreadedSig:methodName" = if (config.objectEncoding != .zag) struct {} else struct {};
 
-pub const freeJITResources = if (config.objectEncoding != .zag) struct {} else struct {
-    pub const number = 454;
+pub const freeBuilder = if (config.objectEncoding != .zag) struct {} else struct {
+    pub const number = 952; // pick an unused opcode
     pub fn primitive(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
-        // TODO: Free allocator, LLVM JIT instance, module
-        // context and builder become invalid after being passed to the JIT instance
-        _ = .{ pc, sp, process, context, extra };
-        @panic("not implemented");
+        // Free only the IR builder. The ORC LLJIT in the driver owns (and later itself disposes) modules/contexts
+        // once a ThreadSafeModule has been added
+        const primitiveGeneratorj = sp.top;
+        const jit: JITPrimitiveGeneratorRef = PrimitiveGeneratorRef.asLLVM(primitiveGeneratorj) catch return @call(tailCall, Extra.primitiveFailed, .{ pc, sp, process, context, extra });
+        if (jit.builder != null) {
+            llvm.core.LLVMDisposeBuilder(jit.builder);
+            jit.builder = null;
+        }
+        return @call(tailCall, process.check(context.npc.f), .{ context.tpc, sp, process, context, undefined });
+    }
+};
+
+pub const @"shiftLeftArithmeticly:" = if (config.objectEncoding != .zag) struct {} else struct {
+    pub const number = 960; // pick unique opcode
+    pub fn primitive(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
+        if (isTestMode) return @call(tailCall, Extra.primitiveFailed, .{ pc, sp, process, context, extra });
+        return @call(tailCall, process.check(context.npc.f), .{ context.tpc, sp, process, context, undefined });
+    }
+};
+
+pub const @"shiftRightArithmeticly:" = if (config.objectEncoding != .zag) struct {} else struct {
+    pub const number = 961;
+    // pub fn primitive(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {}
+};
+
+pub const @"or:with:" = if (config.objectEncoding != .zag) struct {} else struct {
+    pub const number = 960; // pick unique opcode
+    pub fn primitive(_: PC, sp: SP, process: *Process, context: *Context, _: Extra) Result {
+        const selfObj = sp.at(3);
+        const primitiveGenerator: JITPrimitiveGeneratorRef = PrimitiveGeneratorRef.asLLVM(selfObj);
+
+        const objA = ValueRef.asLLVM(sp.second);
+        const objB = ValueRef.asLLVM(sp.top);
+
+        const result = llvm.core.LLVMBuildOr(primitiveGenerator.builder, objA, objB, "or");
+        const newSp = sp.unreserve(2);
+        newSp.top = ValueRef.asObject(result);
+        return @call(tailCall, process.check(context.npc.f), .{ context.tpc, newSp, process, context, undefined });
     }
 };
 
@@ -204,15 +238,19 @@ pub const @"register:plus:asName:" = if (config.objectEncoding != .zag) struct {
     pub fn primitive(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
         if (isTestMode) return @call(tailCall, Extra.primitiveFailed, .{ pc, sp, process, context, extra });
         const self = sp.at(4);
-        const jitPrimitiveGenerate: JITPrimitiveGeneratorRef = PrimitiveGeneratorRef.asLLVM(self);
-        const builder = BuilderRef.asLLVM(jitPrimitiveGenerate.module) catch return @call(tailCall, Extra.primitiveFailed, .{ pc, sp, process, context, extra });
-        const registerToModify = ValueRef.asLLVM(sp.third) catch return @call(tailCall, Extra.primitiveFailed, .{ pc, sp, process, context, extra });
+        const regToModify = ValueRef.asLLVM(sp.third) catch return @call(tailCall, Extra.primitiveFailed, .{ pc, sp, process, context, extra });
         const offset = sp.next.to(i64);
         const name = sp.top.arrayAsSlice(u8) catch return @call(tailCall, Extra.primitiveFailed, .{ pc, sp, process, context, extra });
-        const newSp = sp.unreserve(3);
-        const module = ModuleRef.asLLVM(jitPrimitiveGenerate.context) catch return @call(tailCall, Extra.primitiveFailed, .{ pc, sp, process, context, extra });
+
+        const jitPrimitiveGenerate: JITPrimitiveGeneratorRef = PrimitiveGeneratorRef.asLLVM(self);
+        const module = ModuleRef.asLLVM(jitPrimitiveGenerate.module) catch return @call(tailCall, Extra.primitiveFailed, .{ pc, sp, process, context, extra });
+        const builder = BuilderRef.asLLVM(jitPrimitiveGenerate.builder) catch return @call(tailCall, Extra.primitiveFailed, .{ pc, sp, process, context, extra });
+
+        // `TagObject` will be created by the `@"createThreadedSig:methodName` primitive
         const tagObjectTy = llvm.core.LLVMGetTypeByName(module, "TagObject");
-        sp.top = ValueRef.asObject(singleIndexGEP(@ptrCast(builder), tagObjectTy, registerToModify, offset, name));
+        const newSp = sp.unreserve(3);
+        const incrementedReg = singleIndexGEP(@ptrCast(builder), tagObjectTy, regToModify, offset, name);
+        newSp.top = ValueRef.asObject(incrementedReg);
         return @call(tailCall, process.check(context.npc.f), .{ context.tpc, newSp, process, context, undefined });
     }
 };
@@ -247,57 +285,3 @@ inline fn singleIndexGEP(builder: LLVMBuilderRef, elementType: LLVMTypeRef, base
     const idx_ptr: [*c]llvm.types.LLVMValueRef = @constCast(@ptrCast(&idx[0]));
     return llvm.core.LLVMBuildGEP2(builder, elementType, base, idx_ptr, 1, @ptrCast(name));
 }
-
-// ------ OLD TESTS -------
-// test "simple llvm" {
-//     std.debug.print("Test: simple llvm\n", .{});
-//     const expectEqual = std.testing.expectEqual;
-//     Process.resetForTest();
-//     const pl = if (true) &p.pushLiteral else llvmPLCM;
-//     var method = compileMethod(Sym.yourself, 0, 0, .testClass, .{
-//         pl,                    0,
-//         &p.returnTopNoContext,
-//     });
-//     var te = Execution.new();
-//     te.init(null);
-//     var objs = [_]Object{ Nil, True };
-//     const result = te.run(objs[0..], &method);
-//     try expectEqual(result.len, 3);
-//     try expectEqual(result[0], Object.from(0));
-//     try expectEqual(result[1], Nil);
-//     try expectEqual(result[2], True);
-// }
-// test "llvm external" {
-//     std.debug.print("Test: llvm external\n", .{});
-//     const expectEqual = std.testing.expectEqual;
-//     Process.resetForTest();
-//     const pl = if (true) &p.pushLiteral else llvmPLCM;
-//     var method = compileMethod(Sym.yourself, 1, 0, .testClass, .{
-//         ":label1",        &p.pushLiteral,
-//         42,               &p.popLocal,
-//         0,                &p.pushLocal,
-//         0,                pl,
-//         0,                &p.pushLiteral,
-//         true,             &p.classCase,
-//         ClassIndex.False, "label3",
-//         &p.branch,        "label2",
-//         ":label3",        &p.pushLocal,
-//         0,                ":label4",
-//         &p.returnTop,     ":label2",
-//         pl,               0,
-//         &p.branch,        "label4",
-//     });
-//     method.resolve();
-//     const debugging = false;
-//     if (debugging) {
-//         @setRuntimeSafety(false);
-//         for (&method.code, 0..) |*tv, idx|
-//             trace("\nt[{}]=0x{x:0>8}: 0x{x:0>16}", .{ idx, @intFromPtr(tv), tv.object.rawU() });
-//     }
-//     var objs = [_]Object{ Nil, Nil, Nil };
-//     var te = Execution.new();
-//     te.init(null);
-//     const result = te.run(objs[0..], &method);
-//     try expectEqual(result.len, 1);
-//     try expectEqual(result[0], Object.from(0));
-// }
