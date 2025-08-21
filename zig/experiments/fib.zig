@@ -106,7 +106,9 @@ pub fn timing(args: []const []const u8, default: bool) !void {
                     benchmark.init();
                     stat.reset();
                     stat.time(benchmark.runIt, void);
-                    print("{?d:5}ms {d:5}ms {d:6.2}ms {d:5.1}%\n", .{ stat.median(), stat.mean(), stat.stdDev(), stat.stdDev() * 100 / @as(f64, @floatFromInt(stat.mean())) });
+                    print("{?d:5}ms {d:5}ms {d:6.2}ms {d:5.1}%\n",
+                        .{ stat.median(), stat.mean(), stat.stdDev(),
+                           if (stat.mean() != 0) stat.stdDev() * 100 / @as(f64, @floatFromInt(stat.mean())) else 0.0 });
                 }
             }
             if (!default and !anyRun)
@@ -132,4 +134,4 @@ const testRun = zag.config.debug;
 const testReps = if (testRun) 1 else 10;
 const fibN: u6 = if (testRun) 5 else 40;
 const nRuns = if (testRun) 1 else 5;
-const warmups = if (zag.config.is_test) 0 else null;
+const warmups = if (testRun) 0 else null;
