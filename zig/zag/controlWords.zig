@@ -67,6 +67,7 @@ pub const branch = struct {
 };
 pub const classCase = struct {
     pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
+        process.dumpStack(sp, "classCase");
         var newPc = pc;
         const top = sp.top;
         const match = @intFromEnum(top.get_class());
@@ -273,6 +274,7 @@ pub const popAssociationValue = struct {
 };
 pub const push = struct {
     pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
+        process.dumpStack(sp, "push");
         const variable = pc.object().asVariable();
         trace("Pushing variable...{*} {f} {f} {}\n", .{ sp, pc, extra, variable });
         if (variable.isLocal and extra.noContext()) {
@@ -350,6 +352,7 @@ pub const pushAssociationValue = struct {
 };
 pub const pushLiteral = struct {
     pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
+        process.dumpStack(sp, "pushLiteral");
         const value = pc.object();
         if (sp.push(value)) |newSp| {
             trace("pushLiteral: {*} {f}\n", .{ newSp, extra });

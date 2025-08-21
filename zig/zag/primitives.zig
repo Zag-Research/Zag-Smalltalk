@@ -503,6 +503,7 @@ pub const threadedFunctions = struct {
     };
     pub const inlinePrimitive = struct {
         pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
+            process.dumpStack(sp, "inlinePrimitive");
             trace("inlinePrimitive: {f} {x}\n", .{ extra, @intFromPtr(&threadedFn) });
             const obj = pc.object();
             const primNumber = obj.primitive();

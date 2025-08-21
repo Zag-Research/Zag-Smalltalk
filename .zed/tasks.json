@@ -33,7 +33,12 @@
   },
   {
     "label": "fib",
-    "command": "zig build -freference-trace=5 && taskpolicy -l5 -t5 time ./zig-out/bin/fib",
+    "command": "zig build -freference-trace=5 && ./zig-out/bin/fib",
+    "cwd": "$ZED_WORKTREE_ROOT/zig",
+  },
+  {
+    "label": "time fib",
+    "command": "zig build -Doptimize=ReleaseFast && taskpolicy -l5 -t5 time ./zig-out/bin/fib",
     "cwd": "$ZED_WORKTREE_ROOT/zig",
   },
   {

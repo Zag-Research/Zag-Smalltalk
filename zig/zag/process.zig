@@ -146,6 +146,7 @@ pub inline fn setSp(self: *align(1) Self, sp: SP) void {
     self.header().sp = sp;
 }
 pub inline fn getContext(self: *align(1) const Self) *Context {
+    trace("process.getContext\n", .{});
     return self.header().context;
 }
 pub inline fn setContext(self: *align(1) Self, context: *Context) void {
@@ -157,10 +158,15 @@ pub inline fn getSp(self: *align(1) const Self) SP {
 pub inline fn freeStack(self: *align(1) const Self, sp: SP) usize {
     return (@intFromPtr(sp) - @intFromPtr(self.ptr())) / 8;
 }
-pub //inline
+pub inline//
 fn getStack(self: *align(1) const Self, sp: SP) []Object {
     //    return sp.slice((@intFromPtr(self.endOfStack()) - @intFromPtr(sp)) / @sizeOf(Object));
     return sp.sliceTo(self.endOfStack());
+}
+pub fn dumpStack(self: *align(1) const Self, sp: SP, why: []const u8) void {
+    trace("dumpStack ({s})\n", .{ why });
+    for (self.getStack(sp)) |*obj|
+        trace("[{x:0>10}]: {x:0>16}\n", .{ @intFromPtr(obj), @as(u64, @bitCast(obj.*))});
 }
 pub inline fn canAllocStackSpace(self: *align(1) Self, sp: SP, words: usize) bool {
     const newSp = sp.reserve(words);
@@ -178,7 +184,7 @@ pub fn spillStackAndPush(self: *align(1) Self, value: Object, sp: SP, context: *
     return .{ newSp, newContext, newExtra };
 }
 pub fn spillStackAndReserve(self: *align(1) Self, reserve: usize, sp: SP, context: *Context, extra: Extra) struct { SP, *Context, Extra } {
-    const newSp, const newContext, const newExtra = self.spillStackAndReserve(reserve, sp, context, extra);
+    const newSp, const newContext, const newExtra = self.spillStack(sp, context, extra);
     return .{ newSp.safeReserve(reserve), newContext, newExtra };
 }
 pub fn spillStack(self: *align(1) Self, sp: SP, context: *Context, extra: Extra) struct { SP, *Context, Extra } {
@@ -421,7 +427,7 @@ const Stack = struct {
     pub inline fn slice(self: SP, n: usize) []Object {
         return self.array()[0..n];
     }
-    pub //inline
+    pub inline//
     fn sliceTo(self: SP, a_ptr: anytype) []Object {
         const i_ptr = @intFromPtr(a_ptr);
         return self.slice(((i_ptr - @intFromPtr(self))) / @sizeOf(Object));

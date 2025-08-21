@@ -54,7 +54,7 @@ pub const Object = packed struct(u64) {
     pub inline fn symbol40(self: object.Object) u40 {
         return @truncate(self.ref.data.unsigned);
     }
-    pub //inline
+    pub inline//
     fn nativeI(self: object.Object) ?i64 {
         if (self.isInt()) return self.rawI();
         return null;
@@ -87,7 +87,7 @@ pub const Object = packed struct(u64) {
     }
     pub const testU = rawU;
     pub const testI = rawI;
-    //inline
+    inline//
     fn rawU(self: object.Object) u64 {
         return self.ref.data.unsigned;
     }
@@ -109,7 +109,7 @@ pub const Object = packed struct(u64) {
     pub inline fn isHeap(_: Object) bool {
         return true;
     }
-    pub //inline
+    pub inline//
     fn isInt(self: Object) bool {
         return self.ref.header.classIndex == .SmallInteger;
     }
@@ -163,7 +163,7 @@ pub const Object = packed struct(u64) {
     pub inline fn hash32(self: Object) u32 {
         return @truncate(self.ref.data.unsigned >> 8);
     }
-    pub //inline
+    pub inline//
     fn from(value: anytype, maybeProcess: ?*Process) Object {
         const T = @TypeOf(value);
         if (T == Object) return value;
@@ -229,7 +229,7 @@ pub const Object = packed struct(u64) {
         }
         @panic("Trying to convert Object to " ++ @typeName(T));
     }
-    pub //inline
+    pub inline//
     fn which_class(self: Object, _: bool) ClassIndex {
         return self.ref.header.classIndex;
     }

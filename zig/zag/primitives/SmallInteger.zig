@@ -143,9 +143,10 @@ pub const @"+" = struct {
         );
     }
     pub fn inlinePrimitive(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
+        process.dumpStack(sp, "+");
         const receiver = sp.next;
         if (!receiver.isInt()) {
-            trace("SmallInteger>>#inlinePrimitive: {f}", .{ receiver });
+            trace("SmallInteger>>#inlinePrimitive: + {f}", .{ receiver });
             if (true) unreachable;
             return @call(tailCall, PC.inlinePrimitiveFailed, .{ pc, sp, process, context, extra });
         }
@@ -163,8 +164,10 @@ pub const @"-" = struct {
         return @call(tailCall, process.check(context.npc), .{ context.tpc, newSp, process, context, unreachable });
     }
     pub fn inlinePrimitive(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
+        process.dumpStack(sp, "-");
         const receiver = sp.next;
         if (!receiver.isInt()) {
+            trace("SmallInteger>>#inlinePrimitive: - {f}\n", .{ receiver });
             return @call(tailCall, PC.inlinePrimitiveFailed, .{ pc, sp, process, context, extra });
         }
         const newSp = sp.dropPut(inlines.@"-"(receiver, sp.top, process) catch
@@ -181,6 +184,7 @@ pub const @"<=" = struct {
         return @call(tailCall, process.check(context.npc), .{ context.tpc, newSp, process, context, unreachable });
     }
     pub fn inlinePrimitive(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
+        process.dumpStack(sp, "<=");
         const receiver = sp.next;
         if (!receiver.isInt()) {
             trace("SmallInteger>>#inlinePrimitive: <= {f}\n", .{ receiver });
@@ -204,6 +208,7 @@ pub const @"*" = struct {
     pub fn inlinePrimitive(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
         const receiver = sp.next;
         if (!receiver.isInt()) {
+            trace("SmallInteger>>#inlinePrimitive: * {f}\n", .{ receiver });
             return @call(tailCall, PC.inlinePrimitiveFailed, .{ pc, sp, process, context, extra });
         }
         const newSp = sp.dropPut(inlines.@"*"(receiver, sp.top, process) catch

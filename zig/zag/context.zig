@@ -67,22 +67,21 @@ pub const Extra = packed struct {
         }
         return null;
     }
+    inline fn selfAddress(self: Extra, sp: SP) [*]Object {
+        return @ptrFromInt((@intFromPtr(sp) & ~stack_mask) + self.stack_offset);
+    }
     pub fn addressIfNoContext(self: Extra, offset: usize, sp: SP) ?[*]Object {
-        const selfOffset = self.stack_offset;
-        if (selfOffset != 0) {
-            const stackOffset: [*]Object = @ptrFromInt((@intFromPtr(sp) & ~stack_mask) + selfOffset);
-            trace("addressIfNoContext: {x} {x} {*}\n", .{ selfOffset, self.addr, stackOffset + offset });
-            return stackOffset + offset;
+        if (self.stack_offset != 0) {
+            return self.selfAddress(sp) - offset;
         }
         return null;
     }
     /// Install a context
     /// used by any threaded function that needs a context
-    /// note that `pc` is the program counter after the instruction that called `installContext`
-    pub fn installContextIfNone(extra: Extra, sp: SP, process: *Process, context: *Context) ?NewContext {
-        if (extra.getMethod()) |method| {
-            const ctxt = context.push(sp, process, method);
-            return .{ .context = ctxt, .extra = Extra.fromContextData(ctxt.contextData), .sp = @ptrCast(ctxt) };
+    pub fn installContextIfNone(self: Extra, sp: SP, process: *Process, context: *Context) ?NewContext {
+        if (self.getMethod()) |method| {
+            const newSp, const ctxt = context.push(sp, process, method, self);
+            return .{ .context = ctxt, .extra = fromContextData(ctxt.contextData), .sp = newSp };
         }
         return null;
     }
@@ -142,6 +141,14 @@ pub const ContextData = struct {
     fn localAddress(self: *ContextData, r: usize) [*]Object {
         return self.objects() + r;
     }
+    fn selfAddress(self: *ContextData) SP {
+        trace("ContextData = {*}", .{ self});
+        trace("ContextData.header = {any}", .{self.header});
+        const wordsToDiscard = self.header.hash16();
+        const newSp = @as(SP, @ptrCast(self)).unreserve(wordsToDiscard);
+        trace("contextData.selfAddress: {*} {*} {} {f}\n", .{ newSp, self, wordsToDiscard, newSp.top });
+        return newSp;
+    }
 };
 pub fn init() Self {
     var result: Self = undefined;
@@ -159,18 +166,14 @@ pub fn format(
     self: *const Context,
     writer: anytype,
 ) !void {
-    try writer.print("context: {{", .{});
+    try writer.print("Context{{", .{});
     //    try writer.print(".header: {}", .{self.header});
-    //    try writer.print(".method: {}", .{self.method});
-    try writer.print(".npc: {}", .{self.npc});
-    try writer.print(".tpc: {}", .{self.tpc});
-    try writer.print(".trapContextNumber: {}", .{self.trapContextNumber});
+    try writer.print(".method={f}", .{self.method});
+    try writer.print(", .npc={x}", .{@intFromPtr(self.npc)});
+    try writer.print(", .tpc={f}", .{self.tpc});
+    try writer.print(", .trapContextNumber={}", .{self.trapContextNumber});
     if (self.prevCtxt) |ctxt|
         try writer.print(" prev: 0x{x}", .{@intFromPtr(ctxt)});
-    if (false) {
-        @setRuntimeSafety(false);
-        try writer.print(" temps: {any}", .{self.temps[0..self.size]});
-    }
     try writer.print("}}", .{});
 }
 inline fn headerOf(self: *const Context) *HeapHeader {
@@ -183,10 +186,9 @@ pub inline fn popTargetContext(target: *Context, process: *Process, result: Obje
     return .{ newSp, newTarget };
 }
 pub inline fn pop(self: *Context, process: *Process) struct { SP, *Context } {
-    const wordsToDiscard = self.contextData.header.hash16();
     if (self.isOnStack()) {
-        const newSp = @as(SP, @ptrCast(self.contextData)).unreserve(wordsToDiscard);
-        trace("popContext: {*} {*} {} {f}\n", .{ newSp, self, wordsToDiscard, newSp.top });
+        const newSp = self.contextData.selfAddress();
+        trace("popContext: {*}, {x}\n", .{self, @intFromPtr(newSp)});
         return .{ newSp, self.previous() };
     }
     trace("popContext: {*}\n", .{self});
@@ -198,22 +200,35 @@ pub inline fn pop(self: *Context, process: *Process) struct { SP, *Context } {
     // }
     // return .{.sp=newSp,.ctxt=self.previous()};
 }
-pub fn push(self: *Context, sp: SP, process: *Process, method: *const CompiledMethod) *Context {
+pub fn push(self: *Context, sp: SP, process: *Process, method: *const CompiledMethod, extra: Extra) struct { SP, *Context } {
     const stackStructure = method.stackStructure;
     const locals = stackStructure.locals;
-    const spForContextData = sp.safeReserve(locals + 1);
-    const contextData: *ContextData = @ptrCast(spForContextData);
-    const length: u11 = @truncate(spForContextData.delta(self.endOfStack() orelse process.endOfStack()) - 1);
-    contextData.init(locals, stackStructure.selfOffset, length);
-    const newSp = spForContextData.safeReserve(baseSize);
-    std.debug.print("pushContext: {*} {*}->{*} {} {} {}\n", .{ self, sp, newSp, self.header, length, stackStructure });
-    const ctxt: *align(@alignOf(Self)) Context = @ptrCast(@alignCast(newSp));
-    ctxt.header = HeapHeader.headerOnStack(.Context, stackStructure.selfOffset, baseSize);
-    ctxt.method = method;
-    ctxt.prevCtxt = self;
-    ctxt.trapContextNumber = process.header().trapContextNumber;
-    ctxt.contextData = contextData;
-    return ctxt;
+    const selfOffset = stackStructure.selfOffset;
+    if (sp.reserve(locals + 1 + baseSize)) |newSp | {
+        const selfAddress = extra.selfAddress(sp);
+        const sizeToMove = sp.delta(@ptrCast(selfAddress - (selfOffset - locals) + 1));
+        const contextDataAddr = selfAddress - selfOffset;
+        const contextAddr = contextDataAddr - baseSize;
+        trace("context push: selfAddress={*} contextAddr={*} newSp={*} sp={*} sizeToMove={} stackStructure={} selfOffset={}\n",
+            .{selfAddress, contextAddr, newSp, sp, sizeToMove, stackStructure, selfOffset});
+        std.debug.assert(contextAddr == newSp.array() + sizeToMove);
+        for (newSp.array()[0..sizeToMove], sp.array()[0..sizeToMove]) | *target, *source | {
+            target.* = source.*;
+        }
+        const contextData: *ContextData = @ptrCast(contextDataAddr);
+        const length: u11 = @truncate((@intFromPtr(self.endOfStack() orelse process.endOfStack()) - @intFromPtr(contextDataAddr)) / @sizeOf(Object) - 1);
+        contextData.init(locals, stackStructure.selfOffset, length);
+        const ctxt: *align(@alignOf(Self)) Context = @ptrCast(contextAddr);
+        trace("pushContext: {*} {*}->{*} {} {} {}\n", .{ self, sp, newSp, self.header, length, stackStructure });
+        ctxt.header = HeapHeader.headerOnStack(.Context, stackStructure.selfOffset, baseSize);
+        ctxt.method = method;
+        ctxt.prevCtxt = self;
+        ctxt.trapContextNumber = process.header().trapContextNumber;
+        ctxt.contextData = contextData;
+        return .{ newSp, ctxt };
+    }
+    const newSp, const newContext, const newExtra = process.spillStack(sp, self, extra);
+    return newContext.push(newSp, process, method, newExtra);
 }
 pub fn moveToHeap(self: *const Context, sp: SP, process: *Process) *Context {
     _ = self;
@@ -255,7 +270,7 @@ pub inline fn setReturnBoth(self: *Context, npc: *const fn (programCounter: PC, 
     self.npc = npc;
     self.tpc = tpc;
 }
-pub //inline
+pub inline//
 fn setReturn(self: *Context, tpc: PC) void {
     self.setReturnBoth(tpc.asThreadedFn(), tpc.next());
 }
@@ -311,16 +326,16 @@ const Variable = packed struct {
         return @bitCast(self);
     }
     fn make(stackOffset: u8, localIndex: u7, options: Options, indices: []u10) Object {
-        var oi: u40 = 0;
+        var oi: usize = 0;
         for (indices, 0..) |index, shift| {
-            oi = oi | index << 10 * shift;
+            oi = oi | @as(usize, index) << @truncate(10 * shift);
         }
         return @bitCast(Variable{
             .lowBits = Object.intTag,
             .localIndex = localIndex,
             .isLocal = options == .Local,
             .stackOffset = stackOffset,
-            .objectIndices = oi,
+            .objectIndices = @truncate(oi),
         });
     }
     pub fn getAddress(v: Variable, sp: SP, extra: Extra) *Object {

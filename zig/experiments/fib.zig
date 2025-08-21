@@ -45,7 +45,7 @@ const fibInteger = struct {
     const rawSymbol = zag.symbol.rawSymbol;
     const nullMethod = zag.dispatch.nullMethod;
     var fib =
-        compileMethod(Sym.fibonacci, 1, .SmallInteger, .{
+        compileMethod(Sym.fibonacci, 0, .SmallInteger, .{
             tf.push,                  self,
             tf.pushLiteral,           2,
             tf.inlinePrimitive,       leq,
@@ -65,12 +65,12 @@ const fibInteger = struct {
         });
     fn init() void {
         fib.resolve(&[_]Object{}) catch unreachable;
+        fib.initExecute();
         zag.dispatch.addMethod(@ptrCast(&fib));
     }
     fn runIt(_: usize, _: usize) usize {
         const obj = Execution.mainSendTo(Sym.fibonacci, Object.from(fibN, null)) catch unreachable;
         if (obj.nativeU()) |result| {
-            std.debug.print("fib result: {}\n", .{result});
             return result;
         }
         std.debug.print("fib object: {f}\n", .{obj});
@@ -82,10 +82,9 @@ const fibInteger = struct {
 };
 const Stats = zag.Stats;
 pub fn timing(args: []const []const u8, default: bool) !void {
-    const nRuns = 1;
     const eql = std.mem.eql;
     const print = std.debug.print;
-    var stat = Stats(void, void, nRuns, 0, .milliseconds).init();
+    var stat = Stats(void, void, nRuns, warmups, .milliseconds).init();
     for (args) |arg| {
         if (eql(u8, arg, "Config")) {
             zag.config.printConfig();
@@ -123,5 +122,8 @@ pub fn main() !void {
     const default = args.len <= 1;
     try timing(if (default) @constCast(do_all[0..]) else args[1..], default);
 }
-const testReps = 10;
-const fibN: u6 = 4;
+const testRun = false;
+const testReps = if (testRun) 1 else 10;
+const fibN: u6 = if (testRun) 5 else 40;
+const nRuns = if (testRun) 1 else 5;
+const warmups = if (zag.config.is_test) 0 else null;

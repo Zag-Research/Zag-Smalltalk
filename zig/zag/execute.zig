@@ -98,7 +98,7 @@ pub const PC = packed struct {
     pub fn init(code: *const Code) PC { // don't inline this as it triggers a zig bug!
         return .{ .code = code };
     }
-    pub //inline
+    pub inline//
     fn packedObject(self: PC) PackedObject {
         if (logging) {
             @setRuntimeSafety(false);
@@ -106,15 +106,15 @@ pub const PC = packed struct {
         }
         return self.code.packedObject;
     }
-    pub //inline
+    pub inline//
     fn method(self: PC) *const CompiledMethod {
         if (logging) {
             @setRuntimeSafety(false);
-            std.debug.print("PC_method:       {x:0>12}: {}\n", .{ @intFromPtr(self.code), self.code.method });
+            std.debug.print("PC_method:       {x:0>12}: {f}\n", .{ @intFromPtr(self.code), self.code.method });
         }
         return self.code.method;
     }
-    pub //inline
+    pub inline//
     fn codeAddress(self: PC) *const Code {
         if (logging) {
             @setRuntimeSafety(false);
@@ -122,18 +122,18 @@ pub const PC = packed struct {
         }
         return self.code.codePtr;
     }
-    pub //inline
+    pub inline//
     fn targetPC(self: PC) PC {
         return .{ .code = self.codeAddress() };
     }
-    pub //inline
+    pub inline//
     fn asThreadedFn(self: PC) *const fn (PC, SP, *Process, *Context, Extra) Result {
         if (logging) {
             std.debug.print("PC_asThreadedFn: {x:0>12}: {f}\n", .{ @intFromPtr(self.code), self });
         }
         return self.code.prim();
     }
-    pub //inline
+    pub inline//
     fn prim(self: PC) *const fn (PC, SP, *Process, *Context, Extra) Result {
         return primOf(self.code);
     }
@@ -148,7 +148,7 @@ pub const PC = packed struct {
         }
         return code.prim();
     }
-    pub //inline
+    pub inline//
     fn object(self: PC) Object {
         if (logging) {
             @setRuntimeSafety(false);
@@ -168,7 +168,7 @@ pub const PC = packed struct {
     pub inline fn structure(self: PC) StackStructure {
         return self.code.structure;
     }
-    pub //inline
+    pub inline//
     fn uint(self: PC) u64 {
         if (logging) {
             @setRuntimeSafety(false);
@@ -176,7 +176,7 @@ pub const PC = packed struct {
         }
         return self.code.object.to(u64);
     }
-    pub //inline
+    pub inline//
     fn int(self: PC) i64 {
         if (logging) {
             @setRuntimeSafety(false);
@@ -243,7 +243,7 @@ pub const Code = union(enum) {
     pub inline fn patchMethod(self: *Code, method: *const CompiledMethod) void {
         self.* = Code{ .method = method };
     }
-    pub //inline
+    pub inline//
     fn asObject(self: Code) Object {
         //        @setRuntimeSafety(false);
         return self.object;
@@ -264,7 +264,7 @@ pub const Code = union(enum) {
         const addr = @as([*]Code, @ptrCast(code)) + 1;
         return Code{ .codePtr = @ptrCast(addr + @as(u64, @bitCast(offs))) };
     }
-    pub //inline
+    pub inline//
     fn prim(self: Code) *const fn (PC, SP, *Process, *Context, Extra) Result {
         return self.threadedFn;
     }
@@ -300,7 +300,7 @@ pub const Code = union(enum) {
                     try writer.print("{*}", .{tFn});
                 }
             },
-            .method => |method| try writer.print("method({})", .{method}),
+            .method => |method| try writer.print("method({f})", .{method}),
             .codePtr => |codePtr| try writer.print("codePtr({x:0>12})", .{@intFromPtr(codePtr)}),
             .offset => |offset| try writer.print("offset({})", .{offset}),
             .packedObject => |packedObject| try writer.print("packedObject({})", .{packedObject}),
@@ -330,6 +330,13 @@ pub const CompiledMethod = struct {
         std.debug.assert(@offsetOf(Self, "header") == 0);
     }
     const codeOffsetInObjects = codeOffset / 8;
+    pub fn format(
+        self: CompiledMethod,
+        writer: anytype,
+    ) !void {
+        try writer.print("CompiledMethod{{.stackStructure={}, .signature={f}, .executeFn={x}}}",
+            .{ self.stackStructure, self.signature, @intFromPtr(self.executeFn) });
+    }
     pub fn dump(self: *const Self) void {
         std.debug.print("Header:           {}\n", .{self.header});
         std.debug.print("Stack Structure:  {}\n", .{self.stackStructure});
@@ -363,15 +370,13 @@ pub const CompiledMethod = struct {
             .code = .{ Code.primOf(methodFn), undefined }, //TODO: should be something like primitiveFailed
         };
     }
-    pub fn execute(self: *Self, sp: SP, process: *Process, context: *Context, _: Extra) Result {
+    pub fn execute(self: *const Self, sp: SP, process: *Process, context: *Context) Result {
         const newExtra = Extra.forMethod(self, sp);
         const pc = PC.init(&self.code[1]);
+        trace("executing: pc={f} {f} executeFn={*} ({?}) newExtra={f}\n",
+            .{ pc, self.signature, self.executeFn, @import("threadedFn.zig").find(self.executeFn), newExtra });
         return self.executeFn(pc, sp, process, context, newExtra);
     }
-    // pub fn forDispatch(self: *Self, class: ClassIndex) void {
-    //     self.signature.setClass(class);
-    //     addMethod(self);
-    // }
     inline fn asHeapObjectPtr(self: *const Self) HeapObjectConstPtr {
         return @ptrCast(self);
     }
@@ -386,24 +391,6 @@ pub const CompiledMethod = struct {
     }
     pub inline fn selectorHash32X(self: *const Self) u32 {
         return @truncate(self.signature.rawU());
-    }
-    pub fn formatXXX(
-        self: *const Self,
-        writer: anytype,
-    ) !void {
-        return self.write(writer);
-    }
-    pub fn write(
-        self: *const Self,
-        writer: anytype,
-    ) !void {
-        const realHO = self.header().realHeapObject();
-        const all = @as([]Code, @ptrCast(realHO.asSlice() catch unreachable));
-        const refs = realHO.arrayAsSlice(Object) catch unreachable;
-        const locals = self.stackStructure.h0;
-        const maxStackNeeded = self.stackStructure.h1;
-        const selfOffset = @intFromEnum(self.stackStructure.classIndex);
-        try writer.print("\nCMethod: {} locals:{} maxStack:{} selfOffset:{} realHO:{} {any} ({any})", .{ self.selector, locals, maxStackNeeded, selfOffset, realHO, all[codeOffsetInObjects .. all.len - refs.len], refs });
     }
     pub fn asFakeObject(self: *const Self) Object {
         return @as(Object, @bitCast(@intFromPtr(self)));
@@ -495,7 +482,7 @@ fn CompileTimeMethod(comptime counts: usize) type {
             var method = Self{
                 .header = header,
                 .signature = Signature.fromNameClass(name, class),
-                .stackStructure = StackStructure{ .locals = locals, .selfOffset = locals + name.numArgs() },
+                .stackStructure = StackStructure{ .locals = locals, .selfOffset = locals + name.numArgs() + 1 },
                 .executeFn = f,
                 .jitted = f,
                 .code = undefined,
@@ -552,6 +539,9 @@ fn CompileTimeMethod(comptime counts: usize) type {
         }
         pub inline fn asCompiledMethodPtr(self: *const Self) *CompiledMethod {
             return @as(*CompiledMethod, @ptrCast(@constCast(self)));
+        }
+        pub fn initExecute(self: *Self) void {
+            self.executeFn = self.code[0].prim();
         }
         pub fn resolve(self: *Self, resolution: ?[]const Object) !void {
             for (&self.code, &self.offsets) |*c, *isOffset| {
@@ -854,12 +844,11 @@ test "compileRaw" {
 pub const Execution = struct {
     const failedObject: packed struct { x: u64 } = .{ .x = undefined };
     pub const failed: Object = @bitCast(failedObject);
-    fn Executer(size: comptime_int) type {
+    fn Executer(MethodType: type) type {
         return struct {
             process: Process align(Process.alignment),
             ctxt: Context,
             method: MethodType,
-            const MethodType = CompileTimeMethod(size);
             const Self = @This();
             pub fn new(method: MethodType) Self {
                 return Self{
@@ -869,6 +858,7 @@ pub const Execution = struct {
                 };
             }
             pub fn init(self: *Self, stackObjects: ?[]const Object) void {
+                self.process.setContext(&self.ctxt);
                 self.process.init(Nil());
                 if (stackObjects) |source| {
                     self.initStack(source);
@@ -882,7 +872,6 @@ pub const Execution = struct {
             }
             pub fn resolve(self: *Self, objects: []const Object) !void {
                 try self.method.resolve(objects);
-                self.process.setContext(&self.ctxt);
             }
             pub fn stack(self: *const Self) []Object {
                 return self.process.getContext().stack(self.process.getSp(), &self.process);
@@ -896,24 +885,17 @@ pub const Execution = struct {
             pub fn getProcess(self: *const Self) *const Process {
                 return &self.process;
             }
-            pub fn getContext(self: *const Self) *Context {
+            pub fn getContext(self: *Self) *Context {
+                trace("Executer.getContext\n", .{});
                 return self.process.getContext();
             }
             pub fn getSp(self: *const Self) SP {
                 return self.process.getSp();
             }
-            pub fn execute(self: *Self, source: []const Object) !void {
-                const method: *CompiledMethod = self.method.asCompiledMethodPtr();
-                self.init(source);
-                try self.resolve(Object.empty);
-                if (false) {
-                    const ptr: [*]u64 = @ptrFromInt(@intFromPtr(&self.method));
-                    for (ptr[0 .. @sizeOf(MethodType) / 8], 0..) |*v, idx|
-                        trace("[{:>2}:{x:0>16}]: {x:0>16}\n", .{ idx, @intFromPtr(v), v.* });
-                }
+            pub fn execute(self: *Self, method: *const CompiledMethod) void {
                 trace("Executing method {*}\n", .{self.getSp()});
-                _ = method.execute(self.getSp(), &self.process, self.getContext(), undefined);
-                trace("returned {*}\n", .{self.getSp()});
+                _ = method.execute(self.getSp(), &self.process, self.getContext());
+                self.getProcess().dumpStack(self.getSp(), "return from execution");
             }
             pub fn matchStack(self: *const Self, expected: []const Object) !void {
                 const result = self.stack();
@@ -926,7 +908,7 @@ pub const Execution = struct {
         return init(tup);
     }
     fn init(comptime tup: anytype) Executer(countNonLabels(tup)) {
-        const ExeType = Executer(countNonLabels(tup));
+        const ExeType = Executer(CompileTimeMethod(countNonLabels(tup)));
         return ExeType.new(compileMethod(Sym.yourself, 0, .testClass, tup));
     }
     pub fn runTest(title: []const u8, tup: anytype, source: []const Object, expected: []const Object) !void {
@@ -947,7 +929,7 @@ pub const Execution = struct {
         var exe align(Process.alignment) = init(tup);
         exe.process.init(Nil());
         try exe.resolve(objects);
-        try exe.execute(source);
+        exe.execute(source, exe.method);
         try std.testing.expect(exe.getContext() == &exe.ctxt);
         try validator(&exe, expected);
     }
@@ -963,34 +945,53 @@ pub const Execution = struct {
         try std.testing.expectEqualSlices(Object, expected, result);
     }
 
-    pub fn mainSendTo(selector: Object, target: Object) !Object {
-        const codes = 5;
+    pub fn mainSendToX(selector: Object, target: Object) !Object {
+        const codes = 7;
         const ExeType = Executer(codes);
         const MethodType = ExeType.MethodType;
         const header = comptime HeapHeader.calc(.CompiledMethod, MethodType.codeOffsetInUnits + codes, 0, Age.aStruct, null, Object, false) catch unreachable;
+        const push = zag.controlWords.push.threadedFn;
         const send = zag.dispatch.threadedFunctions.send.threadedFn;
         const returnTop = zag.dispatch.threadedFunctions.returnTop.threadedFn;
+        const self = Context.makeVariable(0, 1, .Parameter, &.{});
         var exe = ExeType.new(.{
             .header = header,
             .signature = Signature.fromNameClass(Sym.yourself, .testClass),
             .stackStructure = .{ .locals = 0, .selfOffset = 1 },
-            .executeFn = send,
-            .jitted = send,
+            .executeFn = push,
+            .jitted = push,
             .code = undefined,
             .offsets = [_]bool{false} ** codes,
         });
         trace("Sending: {f} to {f}\n", .{ selector, target });
         const method = &exe.method;
-        method.code[0] = Code.primOf(send);
-        method.code[1] = Code.objectOf(Sym.fibonacci);
-        method.code[2] = Code.methodOf(&zag.dispatch.nullMethod);
-        method.code[3] = Code.primOf(returnTop);
-        method.code[4] = Code.endCode;
+        method.code[0] = Code.primOf(push);
+        method.code[1] = Code.objectOf(self);
+        method.code[2] = Code.primOf(send);
+        method.code[3] = Code.objectOf(Sym.fibonacci);
+        method.code[4] = Code.methodOf(&zag.dispatch.nullMethod);
+        method.code[5] = Code.primOf(returnTop);
+        method.code[6] = Code.endCode;
         const args = [_]Object{target};
-//        exe.getContext().npc = Code.end;
         method.dump();
-        exe.execute(&args) catch unreachable;
-        std.debug.print("Result: {*} {*}\n", .{ exe.getSp(), exe.getProcess().endOfStack() });
+        exe.execute(&args, method);
+        return exe.fullStack()[0];
+    }
+
+    pub fn mainSendTo(selector: Object, receiver: Object) !Object {
+        var exe = Executer(void).new({});
+        trace("Sending: {f} to {f}\n", .{ selector, receiver });
+        exe.init(&[_]Object{receiver});
+        trace("context1: {f}\n", .{exe.getContext()});
+        exe.getContext().npc = Code.end;
+        trace("context2: {f}\n", .{exe.getContext()});
+        const class = receiver.get_class();
+        trace("Class: {}\n", .{class});
+        const signature = Signature.from(selector, class);
+        trace("Signature: {f}\n", .{signature});
+        const method = class.lookupMethodForClass(selector, signature);
+        trace("Method: {f}\n", .{method});
+        exe.execute(method);
         return exe.fullStack()[0];
     }
 };
