@@ -163,7 +163,7 @@ fn getStack(self: *align(1) const Self, sp: SP) []Object {
     //    return sp.slice((@intFromPtr(self.endOfStack()) - @intFromPtr(sp)) / @sizeOf(Object));
     return sp.sliceTo(self.endOfStack());
 }
-pub fn dumpStack(self: *align(1) const Self, sp: SP, why: []const u8) void {
+pub inline fn dumpStack(self: *align(1) const Self, sp: SP, why: []const u8) void {
     trace("dumpStack ({s})\n", .{ why });
     for (self.getStack(sp)) |*obj|
         trace("[{x:0>10}]: {x:0>16}\n", .{ @intFromPtr(obj), @as(u64, @bitCast(obj.*))});

@@ -2,6 +2,7 @@ const std = @import("std");
 const builtin = @import("builtin");
 const Process = @import("process.zig");
 pub const is_test = builtin.is_test;
+pub const debug = builtin.mode == .Debug;
 pub const native_endian = builtin.target.cpu.arch.endian();
 pub const tailCall: std.builtin.CallModifier = if (show_error_stack) .never_inline else .always_tail;
 pub fn trace(comptime format: anytype, values: anytype) void {

@@ -10,7 +10,7 @@ fn fibNative(n: u32) u64 {
     if (n < 2) return n;
     var a: u64 = 0;
     var b: u64 = 1;
-    var i: u32 = 2;
+    var i: u32 = 1;
     while (i <= n) : (i += 1) {
         const c = a + b;
         a = b;
@@ -67,6 +67,12 @@ const fibInteger = struct {
         fib.resolve(&[_]Object{}) catch unreachable;
         fib.initExecute();
         zag.dispatch.addMethod(@ptrCast(&fib));
+        const threaded = runIt(0,0);
+        const native = fibNative(fibN);
+        if (threaded != native) {
+            std.debug.print("threaded={}, native={}\n", .{ threaded, native });
+            unreachable;
+        }
     }
     fn runIt(_: usize, _: usize) usize {
         const obj = Execution.mainSendTo(Sym.fibonacci, Object.from(fibN, null)) catch unreachable;
@@ -122,7 +128,7 @@ pub fn main() !void {
     const default = args.len <= 1;
     try timing(if (default) @constCast(do_all[0..]) else args[1..], default);
 }
-const testRun = false;
+const testRun = zag.config.debug;
 const testReps = if (testRun) 1 else 10;
 const fibN: u6 = if (testRun) 5 else 40;
 const nRuns = if (testRun) 1 else 5;
