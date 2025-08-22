@@ -67,11 +67,16 @@ const fibInteger = struct {
         fib.resolve(&[_]Object{}) catch unreachable;
         fib.initExecute();
         zag.dispatch.addMethod(@ptrCast(&fib));
-        const threaded = runIt(0,0);
-        const native = fibNative(fibN);
-        if (threaded != native) {
-            std.debug.print("threaded={}, native={}\n", .{ threaded, native });
-            unreachable;
+        if (zag.config.show_trace) {
+            std.debug.print("\n", .{});
+            fib.dump();
+        } else {
+            const threaded = runIt(0,0);
+            const native = fibNative(fibN);
+            if (threaded != native) {
+                std.debug.print("threaded={}, native={}\n", .{ threaded, native });
+                unreachable;
+            }
         }
     }
     fn runIt(_: usize, _: usize) usize {
@@ -130,8 +135,8 @@ pub fn main() !void {
     const default = args.len <= 1;
     try timing(if (default) @constCast(do_all[0..]) else args[1..], default);
 }
-const testRun = zag.config.debug;
+const testRun = zag.config.debug or zag.config.show_trace;
 const testReps = if (testRun) 1 else 10;
-const fibN: u6 = if (testRun) 5 else 40;
+const fibN = if (testRun) 5 else 40;
 const nRuns = if (testRun) 1 else 5;
 const warmups = if (testRun) 0 else null;

@@ -52,6 +52,16 @@ pub fn build(b: *std.Build) void {
     options.addOption(bool, "includeLLVM", includeLLVM);
     const git_version = b.run(&.{ "git", "log", "--pretty=format:%cI-%h", "-1" });
     options.addOption([]const u8, "git_version", git_version);
+    const compile_date = b.run(&.{ "date", "+%Y-%m-%dT%H:%M:%S%z" });
+    options.addOption([]const u8, "compile_date", std.mem.trim(u8, compile_date, " \n\r"));
+    const Encoding = @import("zag/encoding.zig").Encoding;
+    const encoding = b.option(Encoding, "encoding", "Object encoding") orelse .zag;
+    options.addOption(Encoding, "objectEncoding", encoding);
+    const max_classes = b.option(u16, "maxClasses", "Maximum number of classes") orelse 255;
+    options.addOption(u16, "maxClasses", max_classes);
+    const trace = b.option(bool, "trace", "trace execution") orelse false;
+    options.addOption(bool, "trace", trace);
+
 
     if (includeLLVM) {
         zag.addImport("llvm-build-module", llvm_module);

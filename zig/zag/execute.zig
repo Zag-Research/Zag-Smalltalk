@@ -473,7 +473,7 @@ fn CompileTimeMethod(comptime counts: usize) type {
         //     if (checkEqual(@offsetOf(CompiledMethod, "code"), @offsetOf(Self, "code"))) |s|
         //         @compileError("CompiledMethod prefix not the same as CompileTimeMethod == " ++ s);
         // }
-        fn dump(self: *Self) void {
+        pub fn dump(self: *Self) void {
             @as(*CompiledMethod, @ptrCast(self)).dump();
         }
         pub fn init(name: anytype, comptime locals: u11, function: ?*const fn (programCounter: PC, stackPointer: SP, process: *Process, context: *Context, signature: Extra) Result, class: ClassIndex, tup: anytype) Self {
@@ -886,14 +886,12 @@ pub const Execution = struct {
                 return &self.process;
             }
             pub fn getContext(self: *Self) *Context {
-                trace("Executer.getContext\n", .{});
                 return self.process.getContext();
             }
             pub fn getSp(self: *const Self) SP {
                 return self.process.getSp();
             }
             pub fn execute(self: *Self, method: *const CompiledMethod) void {
-                trace("Executing method {*}\n", .{self.getSp()});
                 _ = method.execute(self.getSp(), &self.process, self.getContext());
                 self.getProcess().dumpStack(self.getSp(), "return from execution");
             }
@@ -945,52 +943,14 @@ pub const Execution = struct {
         try std.testing.expectEqualSlices(Object, expected, result);
     }
 
-    pub fn mainSendToX(selector: Object, target: Object) !Object {
-        const codes = 7;
-        const ExeType = Executer(codes);
-        const MethodType = ExeType.MethodType;
-        const header = comptime HeapHeader.calc(.CompiledMethod, MethodType.codeOffsetInUnits + codes, 0, Age.aStruct, null, Object, false) catch unreachable;
-        const push = zag.controlWords.push.threadedFn;
-        const send = zag.dispatch.threadedFunctions.send.threadedFn;
-        const returnTop = zag.dispatch.threadedFunctions.returnTop.threadedFn;
-        const self = Context.makeVariable(0, 1, .Parameter, &.{});
-        var exe = ExeType.new(.{
-            .header = header,
-            .signature = Signature.fromNameClass(Sym.yourself, .testClass),
-            .stackStructure = .{ .locals = 0, .selfOffset = 1 },
-            .executeFn = push,
-            .jitted = push,
-            .code = undefined,
-            .offsets = [_]bool{false} ** codes,
-        });
-        trace("Sending: {f} to {f}\n", .{ selector, target });
-        const method = &exe.method;
-        method.code[0] = Code.primOf(push);
-        method.code[1] = Code.objectOf(self);
-        method.code[2] = Code.primOf(send);
-        method.code[3] = Code.objectOf(Sym.fibonacci);
-        method.code[4] = Code.methodOf(&zag.dispatch.nullMethod);
-        method.code[5] = Code.primOf(returnTop);
-        method.code[6] = Code.endCode;
-        const args = [_]Object{target};
-        method.dump();
-        exe.execute(&args, method);
-        return exe.fullStack()[0];
-    }
-
     pub fn mainSendTo(selector: Object, receiver: Object) !Object {
         var exe = Executer(void).new({});
         trace("Sending: {f} to {f}\n", .{ selector, receiver });
         exe.init(&[_]Object{receiver});
-        trace("context1: {f}\n", .{exe.getContext()});
         exe.getContext().npc = Code.end;
-        trace("context2: {f}\n", .{exe.getContext()});
         const class = receiver.get_class();
-        trace("Class: {}\n", .{class});
         const signature = Signature.from(selector, class);
-        trace("Signature: {f}\n", .{signature});
         const method = class.lookupMethodForClass(selector, signature);
-        trace("Method: {f}\n", .{method});
         exe.execute(method);
         return exe.fullStack()[0];
     }

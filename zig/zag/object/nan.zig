@@ -13,8 +13,7 @@ const HeapObjectPtr = heap.HeapObjectPtr;
 const HeapObjectConstPtr = heap.HeapObjectConstPtr;
 const HeapHeader = heap.HeapHeader;
 pub const Object = packed struct(u64) {
-    h0: u16, // align(8),
-    h1: u16,
+    hash: u32,
     classIndex: ClassIndex,
     tag: Group,
     pub const Group = enum(u16) {
@@ -65,8 +64,8 @@ pub const Object = packed struct(u64) {
     pub const highTagSmallInteger: HighTagType = Group.u(.smallInteger) >> 2;
     pub const PackedTagType = u3;
     pub const packedTagSmallInteger = 1;
-    pub const intTag = @import("zag.zig").intTag;
-    pub const symbolTag = @import("zag.zig").symbolTag;
+    pub const intTag = @import("zag.zig").Object.intTag;
+    pub const symbolTag = @import("zag.zig").Object.symbolTag;
     const TagAndClassType = u32;
     const tagAndClassBits = enumBits(Group) + enumBits(ClassIndex);
     comptime {
@@ -74,7 +73,7 @@ pub const Object = packed struct(u64) {
     }
     pub const testU = rawU;
     pub const testI = rawI;
-    fn rawU(self: Object) u64 {
+    pub fn rawU(self: Object) u64 {
         return @bitCast(self);
     }
     fn rawI(self: Object) i64 {
@@ -124,6 +123,9 @@ pub const Object = packed struct(u64) {
     pub inline fn isSymbol(self: object.Object) bool {
         return self.tagbits() == comptime object.Object.makeImmediate(.Symbol, 0).tagbits();
     }
+    pub inline fn isImmediate(self: object.Object) bool {
+        return self.tag == .immediates;
+    }
     const nonIndexSymbol = 0xffffffff800000ff;
     inline fn indexNumber(self: object.Object) u24 {
         return @truncate(self.rawU() & nonIndexSymbol >> 8);
@@ -150,6 +152,9 @@ pub const Object = packed struct(u64) {
     }
     pub inline fn hash32(self: object.Object) u32 {
         return @truncate(self.rawU());
+    }
+    pub inline fn symbolDirectHash(self: object.Object) u32 {
+        return @truncate(@as(u64, @bitCast(self)));
     }
     pub inline fn withOffsetx(self: object.Object, offset: u32) object.Object {
         return cast(@as(u64, offset) << 32 | self.hash32());
@@ -390,6 +395,10 @@ pub const Object = packed struct(u64) {
     pub const setField = OF.setField;
     pub const to = OF.to;
     pub const toUnchecked = OF.toUnchecked;
+    pub const asVariable = zag.Context.asVariable;
+    pub const PackedObject = object.PackedObject;
+    pub const primitive = @import("zag.zig").Object.primitive;
+    pub const symbol = @import("zag.zig").Object.symbol;
 };
 test "all generated NaNs are positive" {
     // test that all things that generate NaN generate positive ones

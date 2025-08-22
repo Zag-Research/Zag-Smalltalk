@@ -30,6 +30,16 @@
     "cwd": "$ZED_WORKTREE_ROOT/zig",
   },
   {
+    "label": "trace fib",
+    "command": "zig build -Dtrace -Doptimize=Debug -freference-trace=5 && ./zig-out/bin/fib",
+    "cwd": "$ZED_WORKTREE_ROOT/zig",
+  },
+  {
+    "label": "trace fib NaN",
+    "command": "zig build -Dtrace -Dencoding=nan -Doptimize=Debug -freference-trace=5 && ./zig-out/bin/fib",
+    "cwd": "$ZED_WORKTREE_ROOT/zig",
+  },
+  {
     "label": "time fib",
     "command": "zig build -Doptimize=ReleaseFast && ./zig-out/bin/fib",
     //"command": "zig build -Doptimize=ReleaseFast && taskpolicy -l5 -t5 time ./zig-out/bin/fib",

@@ -100,13 +100,11 @@ pub const Extra = packed struct {
         return self.stack_offset & is_encoded != 0;
     }
     pub fn primitiveFailed(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
-        if (config.logThreadExecution)
-            trace("primitiveFailed: {f} {f}\n", .{ extra, pc });
+        trace("primitiveFailed: {f} {f}\n", .{ extra, pc });
         return @call(tailCall, process.check(pc.prev().prim()), .{ pc, sp, process, context, extra.encoded() });
     }
     pub fn inlinePrimitiveFailed(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
-        if (config.logThreadExecution)
-            trace("primitiveFailed: {f} {f}\n", .{ extra, pc });
+        trace("primitiveFailed: {f} {f}\n", .{ extra, pc });
         _ = .{ sp, process, context, @panic("inlinePrimitiveFailed") };
         //return @call(tailCall, process.check(pc.prev().prim()), .{ pc, sp, process, context, extra.encoded() });
     }

@@ -336,7 +336,7 @@ pub const threadedFns = struct {
     pub const valueColon = struct {
         pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, _: Extra) Result {
             const val = sp.next;
-            if (val.isImmediate()) {
+            if (false and val.isImmediate()) {
                 switch (val.class) {
                     .BlockAssignLocal, .BlockAssignInstance => {
                         const closure = val.to(heap.HeapObjectPtr);

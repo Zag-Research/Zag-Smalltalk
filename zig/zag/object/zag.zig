@@ -118,7 +118,7 @@ pub const Object = packed struct(u64) {
     pub inline fn extraValue(self: object.Object) object.Object {
         return @bitCast(self.nativeI_noCheck() >> 8);
     }
-    pub inline fn withPrimitive(self: object.Object, prim: u64) object.Object {
+    pub inline fn withPrimitive(self: Self, prim: u64) object.Object {
         return @bitCast(self.rawU() | prim << 40);
     }
     pub inline fn primitive(self: object.Object) u64 {
@@ -129,7 +129,7 @@ pub const Object = packed struct(u64) {
     }
     pub const testU = rawU;
     pub const testI = rawI;
-    inline fn rawU(self: object.Object) u64 {
+    inline fn rawU(self: Self) u64 {
         return @bitCast(self);
     }
     inline fn rawI(self: object.Object) i64 {

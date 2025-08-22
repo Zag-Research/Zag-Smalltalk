@@ -806,9 +806,6 @@ pub const HeapObject = packed struct {
     pub inline fn getClass(self: HeapObjectConstPtr) ClassIndex {
         return self.header.classIndex;
     }
-    pub inline fn forwardedX(self: HeapObjectConstPtr) HeapObjectConstPtr {
-        return self.header().forwardedTo() orelse self;
-    }
     pub inline fn copyTo(self: HeapObjectPtr, hp: [*]HeapObject, reference: *Object) [*]HeapObject {
         const head = self.header;
         if (head.forwardedTo()) |_| { // already forwarded

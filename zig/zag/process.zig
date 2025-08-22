@@ -146,7 +146,6 @@ pub inline fn setSp(self: *align(1) Self, sp: SP) void {
     self.header().sp = sp;
 }
 pub inline fn getContext(self: *align(1) const Self) *Context {
-    trace("process.getContext\n", .{});
     return self.header().context;
 }
 pub inline fn setContext(self: *align(1) Self, context: *Context) void {
