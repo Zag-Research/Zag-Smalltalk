@@ -205,17 +205,36 @@ pub const freeBuilder = if (config.objectEncoding != .zag) struct {} else struct
     }
 };
 
-pub const @"shiftLeftArithmeticly:" = if (config.objectEncoding != .zag) struct {} else struct {
+pub const @"shiftLeftArithmeticly:by:" = if (config.objectEncoding != .zag) struct {} else struct {
     pub const number = 960; // pick unique opcode
-    pub fn primitive(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
-        if (isTestMode) return @call(tailCall, Extra.primitiveFailed, .{ pc, sp, process, context, extra });
-        return @call(tailCall, process.check(context.npc.f), .{ context.tpc, sp, process, context, undefined });
+    pub fn primitive(_: PC, sp: SP, process: *Process, context: *Context, _: Extra) Result {
+        const selfObj = sp.at(3);
+        const primitiveGenerator: JITPrimitiveGeneratorRef = PrimitiveGeneratorRef.asLLVM(selfObj);
+
+        const value = ValueRef.asLLVM(sp.second);
+        const offset = ValueRef.asLLVM(sp.top);
+
+        const result = llvm.core.LLVMBuildShl(primitiveGenerator.builder, value, offset, "shift-left");
+        const newSp = sp.unreserve(2);
+        newSp.top = ValueRef.asObject(result);
+        return @call(tailCall, process.check(context.npc.f), .{ context.tpc, newSp, process, context, undefined });
     }
 };
 
-pub const @"shiftRightArithmeticly:" = if (config.objectEncoding != .zag) struct {} else struct {
+pub const @"shiftRightArithmeticly:by:" = if (config.objectEncoding != .zag) struct {} else struct {
     pub const number = 961;
-    // pub fn primitive(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {}
+    pub fn primitive(_: PC, sp: SP, process: *Process, context: *Context, _: Extra) Result {
+        const selfObj = sp.at(3);
+        const primitiveGenerator: JITPrimitiveGeneratorRef = PrimitiveGeneratorRef.asLLVM(selfObj);
+
+        const value = ValueRef.asLLVM(sp.second);
+        const offset = ValueRef.asLLVM(sp.top);
+
+        const result = llvm.core.LLVMBuildAShr(primitiveGenerator.builder, value, offset, "shift-right");
+        const newSp = sp.unreserve(2);
+        newSp.top = ValueRef.asObject(result);
+        return @call(tailCall, process.check(context.npc.f), .{ context.tpc, newSp, process, context, undefined });
+    }
 };
 
 pub const @"or:with:" = if (config.objectEncoding != .zag) struct {} else struct {
@@ -235,7 +254,7 @@ pub const @"or:with:" = if (config.objectEncoding != .zag) struct {} else struct
     }
 };
 
-pub const @"register:plus:asName:" = if (config.objectEncoding != .zag) struct {} else struct {
+pub const @"register:plus:name:" = if (config.objectEncoding != .zag) struct {} else struct {
     pub fn primitive(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
         if (isTestMode) return @call(tailCall, Extra.primitiveFailed, .{ pc, sp, process, context, extra });
         const self = sp.at(4);
