@@ -224,6 +224,7 @@ pub const @"or:with:" = if (config.objectEncoding != .zag) struct {} else struct
         const selfObj = sp.at(3);
         const primitiveGenerator: JITPrimitiveGeneratorRef = PrimitiveGeneratorRef.asLLVM(selfObj);
 
+        // NOTE: Primitive that checks if top two things on the stack are the same type should be called before this
         const objA = ValueRef.asLLVM(sp.second);
         const objB = ValueRef.asLLVM(sp.top);
 
@@ -255,6 +256,22 @@ pub const @"register:plus:asName:" = if (config.objectEncoding != .zag) struct {
     }
 };
 
+pub const @"add:to:" = if (config.objectEncoding != .zag) struct {} else struct {
+    pub fn primitive(_: PC, sp: SP, process: *Process, context: *Context, _: Extra) Result {
+        const selfObj = sp.at(3);
+        const primitiveGenerator: JITPrimitiveGeneratorRef = PrimitiveGeneratorRef.asLLVM(selfObj);
+
+        // NOTE: Primitive that checks if top two things on the stack are the same type should be called before this (e.g. verifySmallInterger:)
+        const objA = ValueRef.asLLVM(sp.second);
+        const objB = ValueRef.asLLVM(sp.top);
+
+        const result = llvm.core.LLVMBuildAdd(primitiveGenerator.builder, objA, objB, "add");
+        const newSp = sp.unreserve(2);
+        newSp.top = ValueRef.asObject(result);
+        return @call(tailCall, process.check(context.npc.f), .{ context.tpc, newSp, process, context, undefined });
+    }
+};
+
 pub const newLabel = struct {
     pub fn primitive(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
         if (isTestMode) return @call(tailCall, Extra.primitiveFailed, .{ pc, sp, process, context, extra });
@@ -265,13 +282,6 @@ pub const newLabel = struct {
 pub const @"literalToRegister:" = if (config.objectEncoding != .zag) struct {} else struct {
     pub fn primitive(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
         // const valueToPush = sp.top;
-        if (isTestMode) return @call(tailCall, Extra.primitiveFailed, .{ pc, sp, process, context, extra });
-        return @call(tailCall, process.check(context.npc.f), .{ context.tpc, sp, process, context, undefined });
-    }
-};
-
-pub const @"add:to:" = if (config.objectEncoding != .zag) struct {} else struct {
-    pub fn primitive(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
         if (isTestMode) return @call(tailCall, Extra.primitiveFailed, .{ pc, sp, process, context, extra });
         return @call(tailCall, process.check(context.npc.f), .{ context.tpc, sp, process, context, undefined });
     }
