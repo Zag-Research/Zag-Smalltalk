@@ -3,9 +3,9 @@ Trait {
 	#instVars : [
 		'inContext'
 	],
-	#category : 'Zag-Core-CodeGen',
+	#category : 'Zag-Core-Operations',
 	#package : 'Zag-Core',
-	#tag : 'CodeGen'
+	#tag : 'Operations'
 }
 
 { #category : 'initialization' }
@@ -17,7 +17,6 @@ ASCContextDependentOperations >> initialize [
 
 { #category : 'initialization' }
 ASCContextDependentOperations >> setInContext [
-
 	inContext := true
 ]
 

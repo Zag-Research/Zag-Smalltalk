@@ -12,6 +12,11 @@ Class {
 	#tag : 'Operations'
 }
 
+{ #category : 'instance creation' }
+ASCVariableOperations >> contextStartsAt: contextOffset [
+	variableLocation contextStartsAt: contextOffset 
+]
+
 { #category : 'printing' }
 ASCVariableOperations >> inspectZagASTOn: aStream [
 

@@ -15,6 +15,11 @@ Class {
 	#tag : 'Operations'
 }
 
+{ #category : 'instance creation' }
+ASCPushVariable >> contextStartsAt: contextOffset [
+	variableLocation contextStartsAt: contextOffset 
+]
+
 { #category : 'callgraph' }
 ASCPushVariable >> dotStringOn: aStream [
 

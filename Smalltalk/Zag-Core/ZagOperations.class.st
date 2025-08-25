@@ -29,6 +29,10 @@ ZagOperations >> children [
 ]
 
 { #category : 'instance creation' }
+ZagOperations >> contextStartsAt: contextOffset [
+]
+
+{ #category : 'instance creation' }
 ZagOperations >> creates: aStackElement [
 
 	aStackElement location creator: self.

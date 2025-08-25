@@ -495,12 +495,12 @@ ASCBasicBlock >> printOn: aStream [
 ASCBasicBlock >> propagateContextFreeFor: aStackContext [
 
 	contextStartsAt ifNil: [
-		contextStartsAt := NoContext.
-		(operations anySatisfy: [ :operation |
-			 operation needsContext: aStackContext ]) ifTrue: [
-			self insertContext.
-			aStackContext required.
-			^ false ] ].
+			contextStartsAt := NoContext.
+			(operations anySatisfy: [ :operation |
+				 operation needsContext: aStackContext ]) ifTrue: [
+					self insertContext.
+					aStackContext required.
+					^ false ] ].
 	^ contextStartsAt = ContextInherited
 ]
 
@@ -628,8 +628,9 @@ ASCBasicBlock >> sendTail: aSymbol targetClass: target [
 { #category : 'initialization' }
 ASCBasicBlock >> setInContextForOperations [
 
-	operations withIndexDo: [ :each :idx |
-		each setInContext: idx >= contextStartsAt ]
+	operations do: [ :op | op contextStartsAt: contextStartsAt ]
+	"operations withIndexDo: [ :each :idx |
+		each setInContext: idx >= contextStartsAt ]"
 ]
 
 { #category : 'initialization' }

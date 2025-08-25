@@ -601,6 +601,28 @@ ASCompilerInlineTest >> testRecursiveSum [
 ]
 
 { #category : 'tests' }
+ASCompilerInlineTest >> testSimplePopExample [
+	"simplePopExample
+	^ 35"
+
+	self
+		assertEquivalentSending: #simplePopExample
+		to: ASCompileTestClass1 new
+]
+
+{ #category : 'tests' }
+ASCompilerInlineTest >> testSimplePushPopExample [
+	"simplePushPopExample
+	| x |
+	x := 35.
+	^x"
+
+	self
+		assertEquivalentSending: #simplePushPopExample
+		to: ASCompileTestClass1 new
+]
+
+{ #category : 'tests' }
 ASCompilerInlineTest >> testWhileTrueInlined [
 	"whileTrue
 

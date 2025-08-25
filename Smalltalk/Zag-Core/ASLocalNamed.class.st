@@ -4,10 +4,19 @@ I am a named stack variable but am found in a parents stack.
 Class {
 	#name : 'ASLocalNamed',
 	#superclass : 'ASStackNamed',
+	#instVars : [
+		'offsetInContext'
+	],
 	#category : 'Zag-Core-Stack',
 	#package : 'Zag-Core',
 	#tag : 'Stack'
 }
+
+{ #category : 'code generation' }
+ASLocalNamed >> contextStartsAt: contextOffset [
+
+	offsetInContext := offset * 10 + contextOffset
+]
 
 { #category : 'accessing' }
 ASLocalNamed >> countParameters [
@@ -32,6 +41,11 @@ ASLocalNamed >> isLocal [
 ASLocalNamed >> mergeWith: aStackElement [
 
 	location stackValue: (location stackValue mergeWith: aStackElement stackValue)
+]
+
+{ #category : 'accessing' }
+ASLocalNamed >> offsetInContext [
+	^ offsetInContext
 ]
 
 { #category : 'code generation' }

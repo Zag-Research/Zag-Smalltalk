@@ -7,5 +7,5 @@ ASCPushVariable >> interpretFor: anInterpreter [
 		  ((inContext and: [ variableLocation isInContext ])
 			   ifTrue: [ anInterpreter contextAt: variableLocation offset ]
 			   ifFalse: [
-			   anInterpreter stackAt: stackOffset - variableLocation offset ])
+			   anInterpreter stackAt: variableLocation offset negated ])
 ]

@@ -357,6 +357,18 @@ ASCompileTestClass1 >> simpleBlock [
 ]
 
 { #category : 'testing - examples' }
+ASCompileTestClass1 >> simplePopExample [
+	^ 35
+]
+
+{ #category : 'testing - examples' }
+ASCompileTestClass1 >> simplePushPopExample [
+	| x |
+	x := 35.
+	^x
+]
+
+{ #category : 'testing - examples' }
 ASCompileTestClass1 >> tailRecursiveMethod [
 
 	^ self tailRecursiveMethod

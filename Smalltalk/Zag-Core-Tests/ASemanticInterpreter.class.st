@@ -191,8 +191,8 @@ ASemanticInterpreter >> pop [
 { #category : 'accessing' }
 ASemanticInterpreter >> pop: anObject into: offset [
 
-	stackPointer := stackPointer - 1. "remove the value on the top of the stack"
-	^ stackArray at: stackPointer put: anObject
+	stackPointer := stackPointer + 1. "remove the value on the top of the stack"
+	^ stackArray at: stackArray size - offset put: anObject
 ]
 
 { #category : 'primitive execution' }
@@ -319,10 +319,11 @@ ASemanticInterpreter >> restructureStack: anInteger [
 ]
 
 { #category : 'handling' }
-ASemanticInterpreter >> return: anObject selfContext: selfOffset [ 
-	stackPointer := stackPointer + selfOffset + 1.
+ASemanticInterpreter >> return: anObject selfContext: contextOffset [
+
+	stackPointer := stackArray size + contextOffset + 1.
 	stackArray at: stackPointer put: anObject.
-	pc := context sendingContext returnPC 
+	pc := context sendingContext returnPC
 ]
 
 { #category : 'handling' }

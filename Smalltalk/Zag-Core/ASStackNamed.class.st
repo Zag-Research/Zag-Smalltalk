@@ -29,6 +29,10 @@ ASStackNamed >> at: aSymbol [
 	^ next at: aSymbol
 ]
 
+{ #category : 'API' }
+ASStackNamed >> contextStartsAt: contextOffset [
+]
+
 { #category : 'displaying' }
 ASStackNamed >> displayStringOn: stream [
 
