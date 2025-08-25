@@ -32,6 +32,9 @@ $ make install
 - [HydraVM](http://www.hydravm.org/hydra)
 - [GraalVM](https://www.graalvm.org)
 
+### Editors
+- [Why Zed IDE Outshines VS Code, Cursor, and Others: A Developer’s Guide](https://medium.com/@vignarajj/why-zed-ide-outshines-vs-code-cursor-and-others-a-developers-guide-7af334fa4392) - includes how to set up [LMStudio](https://lmstudio.ai) to give you local, private AI (also useful outside of Zed)
+- [VSCodium](https://vscodium.com/) - VSCode without Microsoft monitoring
 ### WUFFS
 - [wuffs](https://github.com/google/wuffs/tree/main/doc/std) is a buffer-safe library for transcoding arbitrary input, including:
 	- [Compression Decoders](https://github.com/google/wuffs/blob/main/doc/std/compression-decoders.md).
