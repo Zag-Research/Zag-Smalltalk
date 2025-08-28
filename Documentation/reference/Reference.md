@@ -31,6 +31,7 @@ $ make install
 - [Ken Dickey's Crosstalk](https://github.com/KenDickey/Crosstalk/blob/master/DispatchNotes.md)
 - [HydraVM](http://www.hydravm.org/hydra)
 - [GraalVM](https://www.graalvm.org)
+- [Lambda Calculus explained in video](https://www.youtube.com/watch?v=RcVA8Nj6HEo)
 
 ### Editors
 - [Why Zed IDE Outshines VS Code, Cursor, and Others: A Developer’s Guide](https://medium.com/@vignarajj/why-zed-ide-outshines-vs-code-cursor-and-others-a-developers-guide-7af334fa4392) - includes how to set up [LMStudio](https://lmstudio.ai) to give you local, private AI (also useful outside of Zed)
