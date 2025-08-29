@@ -19,7 +19,7 @@ const Nil = object.Nil;
 const True = object.True;
 const False = object.False;
 const Sym = zag.symbol.symbols;
-const rawSymbol = zag.symbol.rawSymbol;
+const signature = zag.symbol.signature;
 const heap = zag.heap;
 const empty = &[0]Object{};
 const tf = zag.threadedFn.Enum;
@@ -108,7 +108,7 @@ test "inline primitives" {
 }
 pub const @"+" = struct {
     pub const number = 1;
-    pub const inlined = rawSymbol(.@"+", number);
+    pub const inlined = signature(.@"+", number);
     pub fn primitive(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result { // SmallInteger>>#+
         const newSp = sp.dropPut(inlines.@"+"(sp.next, sp.top, process) catch
             return @call(tailCall, Extra.primitiveFailed, .{ pc, sp, process, context, extra }));
@@ -146,7 +146,7 @@ pub const @"+" = struct {
         process.dumpStack(sp, "+");
         const receiver = sp.next;
         if (!receiver.isInt()) {
-            trace("SmallInteger>>#inlinePrimitive: + {f}", .{ receiver });
+            trace("SmallInteger>>#inlinePrimitive: + {f}", .{receiver});
             if (true) unreachable;
             return @call(tailCall, PC.inlinePrimitiveFailed, .{ pc, sp, process, context, extra });
         }
@@ -157,7 +157,7 @@ pub const @"+" = struct {
 };
 pub const @"-" = struct {
     pub const number = 2;
-    pub const inlined = rawSymbol(.@"-", number);
+    pub const inlined = signature(.@"-", number);
     pub fn primitive(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result { // SmallInteger>>#-
         const newSp = sp.dropPut(inlines.@"-"(sp.next, sp.top, process) catch
             return @call(tailCall, Extra.primitiveFailed, .{ pc, sp, process, context, extra }));
@@ -167,7 +167,7 @@ pub const @"-" = struct {
         process.dumpStack(sp, "-");
         const receiver = sp.next;
         if (!receiver.isInt()) {
-            trace("SmallInteger>>#inlinePrimitive: - {f}\n", .{ receiver });
+            trace("SmallInteger>>#inlinePrimitive: - {f}\n", .{receiver});
             return @call(tailCall, PC.inlinePrimitiveFailed, .{ pc, sp, process, context, extra });
         }
         const newSp = sp.dropPut(inlines.@"-"(receiver, sp.top, process) catch
@@ -177,7 +177,7 @@ pub const @"-" = struct {
 };
 pub const @"<=" = struct {
     pub const number = 5;
-    pub const inlined = rawSymbol(.@"<=", number);
+    pub const inlined = signature(.@"<=", number);
     pub fn primitive(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result { // SmallInteger>>#<=
         const newSp = sp.dropPut(Object.from(inlines.@"<="(sp.next, sp.top) catch
             return @call(tailCall, Extra.primitiveFailed, .{ pc, sp, process, context, extra }), null));
@@ -187,7 +187,7 @@ pub const @"<=" = struct {
         process.dumpStack(sp, "<=");
         const receiver = sp.next;
         if (!receiver.isInt()) {
-            trace("SmallInteger>>#inlinePrimitive: <= {f}\n", .{ receiver });
+            trace("SmallInteger>>#inlinePrimitive: <= {f}\n", .{receiver});
             if (true) unreachable;
             return @call(tailCall, PC.inlinePrimitiveFailed, .{ pc, sp, process, context, extra });
         }
@@ -199,7 +199,7 @@ pub const @"<=" = struct {
 };
 pub const @"*" = struct {
     pub const number = 9;
-    pub const inlined = rawSymbol(.@"*", number);
+    pub const inlined = signature(.@"*", number);
     pub fn primitive(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result { // SmallInteger>>#*
         const newSp = sp.dropPut(Object.from(inlines.@"*"(sp.next, sp.top, process) catch
             return @call(tailCall, Extra.primitiveFailed, .{ pc, sp, process, context, extra }), null));
@@ -208,7 +208,7 @@ pub const @"*" = struct {
     pub fn inlinePrimitive(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
         const receiver = sp.next;
         if (!receiver.isInt()) {
-            trace("SmallInteger>>#inlinePrimitive: * {f}\n", .{ receiver });
+            trace("SmallInteger>>#inlinePrimitive: * {f}\n", .{receiver});
             return @call(tailCall, PC.inlinePrimitiveFailed, .{ pc, sp, process, context, extra });
         }
         const newSp = sp.dropPut(inlines.@"*"(receiver, sp.top, process) catch

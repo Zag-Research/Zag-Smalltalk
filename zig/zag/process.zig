@@ -157,15 +157,15 @@ pub inline fn getSp(self: *align(1) const Self) SP {
 pub inline fn freeStack(self: *align(1) const Self, sp: SP) usize {
     return (@intFromPtr(sp) - @intFromPtr(self.ptr())) / 8;
 }
-pub inline//
+pub inline //
 fn getStack(self: *align(1) const Self, sp: SP) []Object {
     //    return sp.slice((@intFromPtr(self.endOfStack()) - @intFromPtr(sp)) / @sizeOf(Object));
     return sp.sliceTo(self.endOfStack());
 }
 pub inline fn dumpStack(self: *align(1) const Self, sp: SP, why: []const u8) void {
-    trace("dumpStack ({s})\n", .{ why });
+    trace("dumpStack ({s})\n", .{why});
     for (self.getStack(sp)) |*obj|
-        trace("[{x:0>10}]: {x:0>16}\n", .{ @intFromPtr(obj), @as(u64, @bitCast(obj.*))});
+        trace("[{x:0>10}]: {x:0>16}\n", .{ @intFromPtr(obj), @as(u64, @bitCast(obj.*)) });
 }
 pub inline fn canAllocStackSpace(self: *align(1) Self, sp: SP, words: usize) bool {
     const newSp = sp.reserve(words);
@@ -426,7 +426,7 @@ const Stack = struct {
     pub inline fn slice(self: SP, n: usize) []Object {
         return self.array()[0..n];
     }
-    pub inline//
+    pub inline //
     fn sliceTo(self: SP, a_ptr: anytype) []Object {
         const i_ptr = @intFromPtr(a_ptr);
         return self.slice(((i_ptr - @intFromPtr(self))) / @sizeOf(Object));

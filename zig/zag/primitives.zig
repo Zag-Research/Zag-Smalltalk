@@ -505,7 +505,7 @@ pub const threadedFunctions = struct {
         pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
             process.dumpStack(sp, "inlinePrimitive");
             trace("inlinePrimitive: {f} {x}\n", .{ extra, @intFromPtr(&threadedFn) });
-            const obj = pc.object();
+            const obj = pc.signature();
             const primNumber = obj.primitive();
             if (Module.findNumberedPrimitive(primNumber)) |prim| {
                 if (prim.inlinePrimitive) |p| {
@@ -513,7 +513,7 @@ pub const threadedFunctions = struct {
                     trace("inlinePrimitive found: {} {f}\n", .{ primNumber, extra });
                     return @call(tailCall, p, .{ pc, sp, process, context, extra });
                 }
-                std.debug.print("primitive {} ({f}) doesn't have an inline primitive\n", .{ primNumber, obj.symbol() });
+                std.debug.print("primitive {} ({f}) doesn't have an inline primitive\n", .{ primNumber, obj });
             } else {
                 std.debug.print("no primitive numbered: {}\n", .{primNumber});
             }
@@ -561,7 +561,7 @@ pub const threadedFunctions = struct {
     };
     pub const inlinePrimitiveModule = struct {
         pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
-            const primNumber = pc.object().primitive();
+            const primNumber = pc.signature().primitive();
             if (Module.findNumberedPrimitive(primNumber)) |prim| {
                 if (prim.inlinePrimitive) |p| {
                     @constCast(pc.prev().asCodePtr()).patchPrim(p);

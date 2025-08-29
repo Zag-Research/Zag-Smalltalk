@@ -32,15 +32,16 @@ pub const addMethod = DispatchHandler.addMethod;
 const DispatchHandler = struct {
     const loadFactor = 70; // hashing load factor
     var dispatches = [_]*Dispatch{&Dispatch.empty} ** config.max_classes;
-    inline fn lookupMethodForClass(ci: ClassIndex, selector: Object, signature: Signature) *const CompiledMethod {
-        if (dispatches[@intFromEnum(ci)].lookupMethod(selector, signature)) |method|
+    inline fn lookupMethodForClass(ci: ClassIndex, signature: Signature) *const CompiledMethod {
+        trace("lookupMethodForClass({} {f})\n", .{ ci, signature });
+        if (dispatches[@intFromEnum(ci)].lookupMethod(signature)) |method|
             return method;
-        if (defaultForTest != void)
-            return defaultForTest.loadMethodForClass(ci, selector);
-        return loadMethodForClass(ci, selector);
+        return loadMethodForClass(ci, signature);
     }
-    fn loadMethodForClass(ci: ClassIndex, selector: Object) *const CompiledMethod {
-        trace("loadMethodForClass({} {f})\n", .{ ci, selector });
+    fn loadMethodForClass(ci: ClassIndex, signature: Signature) *const CompiledMethod {
+        if (defaultForTest != void)
+            return defaultForTest.loadMethodForClass(ci, signature);
+        trace("loadMethodForClass({} {f})\n", .{ ci, signature });
         unreachable;
     }
     fn stats(index: ClassIndex) Dispatch.Stats {
@@ -51,6 +52,7 @@ const DispatchHandler = struct {
     }
     fn addMethod(method: *const CompiledMethod) void {
         const index = method.signature.getClassIndex();
+        trace("[addMethod] signature: {f}\n", .{method.signature});
         if (dispatches[index].addIfAllocated(method)) return;
         while (true) {
             const dispatch = dispatches[index];
@@ -143,21 +145,21 @@ const Dispatch = struct {
         }
         return newDispatch.add(method);
     }
-    inline fn lookupAddress(self: *const Self, selector: Object, ci: ClassIndex) ?*DispatchElement {
+    inline fn lookupAddressX(self: *const Self, selector: Object, ci: ClassIndex) ?*DispatchElement {
         const dm = self.dispatchMatch(selector);
         return dm.matchOrEmpty(Signature.from(selector, ci));
     }
-    inline//
-    fn lookupMethod(self: *const Self, selector: Object, signature: Signature) ?*const CompiledMethod {
-        const dm = self.dispatchMatch(selector);
+    inline //
+    fn lookupMethod(self: *const Self, signature: Signature) ?*const CompiledMethod {
+        const dm = self.dispatchMatch(signature);
         return dm.match(signature);
     }
-    inline fn dispatchMatch(self: *const Self, selector: Object) *DispatchMatch {
-        const index = getIndex(selector, self.nMethods);
+    inline fn dispatchMatch(self: *const Self, signature: Signature) *DispatchMatch {
+        const index = getIndex(signature, self.nMethods);
         return @ptrCast(self.methods() + index);
     }
-    inline fn getIndex(selector: Object, size: u64) u64 {
-        return selector.symbolDirectHash() * size >> 32;
+    inline fn getIndex(signature: Signature, size: u64) u64 {
+        return signature.hash() * size >> 32;
     }
     fn lock(self: *Self) !void {
         while (true) {
@@ -178,7 +180,7 @@ const Dispatch = struct {
         defer {
             self.state = .clean;
         }
-        for (&self.dispatchMatch(signature.asSymbol()).elements) |*element| {
+        for (&self.dispatchMatch(signature).elements) |*element| {
             if (element.match(signature)) |_| {
                 element.storeMethod(cmp); // replace this
                 return true;
@@ -236,16 +238,16 @@ test "add/lookup" {
     const sig = Signature.from(selector, class);
     const emptyMethod = dummyCompiledMethod(sig);
     addMethod(&emptyMethod);
-    try std.testing.expectEqual(class.lookupMethodForClass(selector, sig), &emptyMethod);
+    try std.testing.expectEqual(class.lookupMethodForClass(sig), &emptyMethod);
     const altMethod = dummyCompiledMethod(Signature.from(selector, class));
     addMethod(&altMethod);
-    try std.testing.expectEqual(class.lookupMethodForClass(selector, sig), &altMethod);
+    try std.testing.expectEqual(class.lookupMethodForClass(sig), &altMethod);
     const stats = DispatchHandler.stats(class);
     try std.testing.expectEqual(1, stats.active);
     try std.testing.expectEqual(5, stats.nMethods);
     try std.testing.expectEqual(7, stats.total);
     defaultForTest.called = false;
-    try std.testing.expectEqual(class.lookupMethodForClass(symbols.@"new:", Signature.from(symbols.@"new:", class)), &defaultForTest.dummyMethod);
+    try std.testing.expectEqual(class.lookupMethodForClass(Signature.from(symbols.@"new:", class)), &defaultForTest.dummyMethod);
     try std.testing.expectEqual(true, defaultForTest.called);
     //@"value:" @"new:" @"ifNotNil:" @"~=" @">=" all hash to 4 with a dispatch table of size 5
     //return error.TestFailed;
@@ -419,18 +421,18 @@ pub const threadedFunctions = struct {
         }
     };
     fn getMethod(pc: PC, sp: SP) *const CompiledMethod {
-        const selector = pc.object();
+        const selector = pc.signature();
         const receiver = sp.at(selector.numArgs());
         const methodAddress = pc.next();
         var method = methodAddress.method();
         const class = receiver.get_class();
         const methodSignature = method.signature;
-        const signature = Signature.from(selector, class);
+        const signature = selector.withClass(class);
         if (methodSignature == signature) {
             //trace("getMethod: cached {f} {any}\n", .{ signature, method });
             return method;
         }
-        method = class.lookupMethodForClass(selector, signature);
+        method = class.lookupMethodForClass(signature);
         if (methodSignature.isEmpty()) {
             //trace("getMethod: patch {f} {any}\n", .{ signature, method });
             methodAddress.patchPtr().patchMethod(method);
@@ -446,8 +448,7 @@ pub const threadedFunctions = struct {
             const method = getMethod(pc, sp);
             const newPc = method.codePc();
             const newSp, const newContext =
-                if (extra.installContextIfNone(sp, process, context)) |new| .{ new.sp, new.context }
-                else .{ sp, context };
+                if (extra.installContextIfNone(sp, process, context)) |new| .{ new.sp, new.context } else .{ sp, context };
             //trace("sending...: sp:{x} {f} method:{x}\n", .{ @intFromPtr(sp), extra, @intFromPtr(method) });
             process.dumpStack(newSp, "send maybe new");
             newContext.setReturn(pc.next2());
@@ -499,7 +500,7 @@ const DispatchMethod = struct {
     inline fn storeMethod(self: *Self, replacement: *const CompiledMethod) void {
         self.method = replacement;
     }
-    inline//
+    inline //
     fn match(self: *DispatchMethod, signature: Signature) ?*const CompiledMethod {
         const method = self.method;
         if (method.signature == signature)
@@ -525,7 +526,7 @@ const DispatchMatch = struct {
     elements: [matchSize]DispatchElement,
     const matchSize = 3;
     const empty = DispatchMatch{ .elements = [_]DispatchElement{DispatchElement.empty} ** matchSize };
-    inline//
+    inline //
     fn match(self: *DispatchMatch, signature: Signature) ?*const CompiledMethod {
         inline for (&self.elements) |*element| {
             if (element.match(signature)) |method| {

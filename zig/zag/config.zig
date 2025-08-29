@@ -2,7 +2,7 @@ const std = @import("std");
 const builtin = @import("builtin");
 const Process = @import("process.zig");
 pub const is_test = builtin.is_test;
-pub const debug = builtin.mode == .Debug;
+pub const debugMode = builtin.mode == .Debug;
 pub const native_endian = builtin.target.cpu.arch.endian();
 pub const tailCall: std.builtin.CallModifier = if (show_error_stack) .never_inline else .always_tail;
 pub fn trace(comptime format: anytype, values: anytype) void {
@@ -55,10 +55,10 @@ pub fn printConfig() void {
         Process.process_nursery_size,
     });
     if (show_trace) {
-        std.debug.print("Trace enabled\n", .{});
+        std.debug.print("  Trace enabled\n", .{});
     }
     if (show_error_stack) {
-        std.debug.print("Error stack enabled\n", .{});
+        std.debug.print("  Error stack enabled\n", .{});
     }
 }
 test "printConfig" {

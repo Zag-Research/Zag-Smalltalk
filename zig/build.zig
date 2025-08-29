@@ -62,7 +62,6 @@ pub fn build(b: *std.Build) void {
     const trace = b.option(bool, "trace", "trace execution") orelse false;
     options.addOption(bool, "trace", trace);
 
-
     if (includeLLVM) {
         zag.addImport("llvm-build-module", llvm_module);
         exe.root_module.addImport("llvm-build-module", llvm_module);

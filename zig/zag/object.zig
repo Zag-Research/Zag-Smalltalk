@@ -69,6 +69,7 @@ pub const ClassIndex = enum(u16) {
     Symbol,
     Character,
     LLVM,
+    Signature,
     reserved = 31,
     UndefinedObject,
     Context,
@@ -128,6 +129,7 @@ pub const ClassIndex = enum(u16) {
         Symbol,
         Character,
         LLVM,
+        Signature,
         pub inline fn classIndex(cp: Compact) ClassIndex {
             return @enumFromInt(@intFromEnum(cp));
         }
@@ -135,7 +137,7 @@ pub const ClassIndex = enum(u16) {
     pub inline fn compact(ci: ClassIndex) Compact {
         return @enumFromInt(@intFromEnum(ci));
     }
-    pub const lookupMethodForClass = @import("dispatch.zig").lookupMethodForClass;
+    pub const lookupMethodForClass = zag.dispatch.lookupMethodForClass;
 };
 comptime {
     std.debug.assert(@intFromEnum(ClassIndex.replace0) == 0xffff);
@@ -164,7 +166,7 @@ pub const ObjectFunctions = struct {
     pub inline fn numArgs(self: Object) u4 {
         return symbol.symbolArity(self);
     }
-    pub inline//
+    pub inline //
     fn setField(self: Object, field: usize, value: Object) void {
         if (self.asObjectArray()) |ptr| ptr[field] = value;
     }
@@ -273,7 +275,7 @@ pub const ObjectFunctions = struct {
         if (sla.len > slb.len) return ord.gt;
         return ord.eq;
     }
-    pub inline//
+    pub inline //
     fn immediate_class(self: Object) ClassIndex {
         return self.which_class(false);
     }
@@ -297,8 +299,8 @@ pub const ObjectFunctions = struct {
             try writer.print("true", .{});
         } else if (self.symbolHash()) |_| {
             try writer.print("#{s}", .{symbol.asString(self).arrayAsSlice(u8) catch "???"});
-            // if (self.classFromSymbolPlus()) |c|
-            //     try writer.print("=>{}", .{c});
+        } else if (self.signature()) |signature| {
+            try writer.print("{f}", .{signature});
         } else if (self == Nil()) {
             try writer.print("nil", .{});
         } else {

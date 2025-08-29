@@ -42,7 +42,7 @@ const fibInteger = struct {
     const plus = SmallInteger.@"+".inlined;
     const minus = SmallInteger.@"-".inlined;
     const classes = Object.PackedObject.classes;
-    const rawSymbol = zag.symbol.rawSymbol;
+    const signature = zag.symbol.signature;
     const nullMethod = zag.dispatch.nullMethod;
     var fib =
         compileMethod(Sym.fibonacci, 0, .SmallInteger, .{
@@ -55,11 +55,11 @@ const fibInteger = struct {
             self,                     tf.pushLiteral,
             1,                        tf.inlinePrimitive,
             minus,                    tf.send,
-            rawSymbol(.fibonacci, 0), &nullMethod,
+            signature(.fibonacci, 0), &nullMethod,
             tf.push,                  self,
             tf.pushLiteral,           2,
             tf.inlinePrimitive,       minus,
-            tf.send,                  rawSymbol(.fibonacci, 0),
+            tf.send,                  signature(.fibonacci, 0),
             &nullMethod,              tf.inlinePrimitive,
             plus,                     tf.returnTop,
         });
@@ -71,7 +71,7 @@ const fibInteger = struct {
             std.debug.print("\n", .{});
             fib.dump();
         } else {
-            const threaded = runIt(0,0);
+            const threaded = runIt(0, 0);
             const native = fibNative(fibN);
             if (threaded != native) {
                 std.debug.print("threaded={}, native={}\n", .{ threaded, native });
@@ -111,9 +111,7 @@ pub fn timing(args: []const []const u8, default: bool) !void {
                     benchmark.init();
                     stat.reset();
                     stat.time(benchmark.runIt, void);
-                    print("{?d:5}ms {d:5}ms {d:6.2}ms {d:5.1}%\n",
-                        .{ stat.median(), stat.mean(), stat.stdDev(),
-                           if (stat.mean() != 0) stat.stdDev() * 100 / @as(f64, @floatFromInt(stat.mean())) else 0.0 });
+                    print("{?d:5}ms {d:5}ms {d:6.2}ms {d:5.1}%\n", .{ stat.median(), stat.mean(), stat.stdDev(), if (stat.mean() != 0) stat.stdDev() * 100 / @as(f64, @floatFromInt(stat.mean())) else 0.0 });
                 }
             }
             if (!default and !anyRun)
@@ -135,7 +133,7 @@ pub fn main() !void {
     const default = args.len <= 1;
     try timing(if (default) @constCast(do_all[0..]) else args[1..], default);
 }
-const testRun = zag.config.debug or zag.config.show_trace;
+const testRun = zag.config.debugMode or zag.config.show_trace;
 const testReps = if (testRun) 1 else 10;
 const fibN = if (testRun) 5 else 40;
 const nRuns = if (testRun) 1 else 5;

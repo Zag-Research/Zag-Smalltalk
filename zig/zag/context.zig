@@ -140,7 +140,7 @@ pub const ContextData = struct {
         return self.objects() + r;
     }
     fn selfAddress(self: *ContextData) SP {
-        trace("ContextData = {*}", .{ self});
+        trace("ContextData = {*}", .{self});
         trace("ContextData.header = {any}", .{self.header});
         const wordsToDiscard = self.header.hash16();
         const newSp = @as(SP, @ptrCast(self)).unreserve(wordsToDiscard);
@@ -186,7 +186,7 @@ pub inline fn popTargetContext(target: *Context, process: *Process, result: Obje
 pub inline fn pop(self: *Context, process: *Process) struct { SP, *Context } {
     if (self.isOnStack()) {
         const newSp = self.contextData.selfAddress();
-        trace("popContext: {*}, {x}\n", .{self, @intFromPtr(newSp)});
+        trace("popContext: {*}, {x}\n", .{ self, @intFromPtr(newSp) });
         return .{ newSp, self.previous() };
     }
     trace("popContext: {*}\n", .{self});
@@ -202,15 +202,14 @@ pub fn push(self: *Context, sp: SP, process: *Process, method: *const CompiledMe
     const stackStructure = method.stackStructure;
     const locals = stackStructure.locals;
     const selfOffset = stackStructure.selfOffset;
-    if (sp.reserve(locals + 1 + baseSize)) |newSp | {
+    if (sp.reserve(locals + 1 + baseSize)) |newSp| {
         const selfAddress = extra.selfAddress(sp);
         const sizeToMove = sp.delta(@ptrCast(selfAddress - (selfOffset - locals) + 1));
         const contextDataAddr = selfAddress - selfOffset;
         const contextAddr = contextDataAddr - baseSize;
-        trace("context push: selfAddress={*} contextAddr={*} newSp={*} sp={*} sizeToMove={} stackStructure={} selfOffset={}\n",
-            .{selfAddress, contextAddr, newSp, sp, sizeToMove, stackStructure, selfOffset});
+        trace("context push: selfAddress={*} contextAddr={*} newSp={*} sp={*} sizeToMove={} stackStructure={} selfOffset={}\n", .{ selfAddress, contextAddr, newSp, sp, sizeToMove, stackStructure, selfOffset });
         std.debug.assert(contextAddr == newSp.array() + sizeToMove);
-        for (newSp.array()[0..sizeToMove], sp.array()[0..sizeToMove]) | *target, *source | {
+        for (newSp.array()[0..sizeToMove], sp.array()[0..sizeToMove]) |*target, *source| {
             target.* = source.*;
         }
         const contextData: *ContextData = @ptrCast(contextDataAddr);
@@ -268,7 +267,7 @@ pub inline fn setReturnBoth(self: *Context, npc: *const fn (programCounter: PC, 
     self.npc = npc;
     self.tpc = tpc;
 }
-pub inline//
+pub inline //
 fn setReturn(self: *Context, tpc: PC) void {
     self.setReturnBoth(tpc.asThreadedFn(), tpc.next());
 }

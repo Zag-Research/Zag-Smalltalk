@@ -52,7 +52,6 @@ pub const Object = packed struct(u64) {
     pub const PackedTagType = u8;
     pub const packedTagSmallInteger = intTag;
     pub const intTag = oImm(.SmallInteger, 0).tagbits();
-    pub const symbolTag = oImm(.Symbol, 0).tagbits();
     const TagAndClassType = u8;
     const tagAndClassBits = enumBits(Group) + enumBits(ClassIndex.Compact);
     comptime {
@@ -120,12 +119,6 @@ pub const Object = packed struct(u64) {
     }
     pub inline fn withPrimitive(self: Self, prim: u64) object.Object {
         return @bitCast(self.rawU() | prim << 40);
-    }
-    pub inline fn primitive(self: object.Object) u64 {
-        return self.rawU() >> 40;
-    }
-    pub inline fn symbol(self: object.Object) object.Object {
-        return @bitCast(self.rawU() & 0xffffffffff);
     }
     pub const testU = rawU;
     pub const testI = rawI;
@@ -247,9 +240,6 @@ pub const Object = packed struct(u64) {
     }
     pub inline fn hash32(self: object.Object) u32 {
         return @truncate(self.hash);
-    }
-    pub inline fn symbolDirectHash(self: object.Object) u32 {
-        return @truncate(@as(u64, @bitCast(self)));
     }
     inline fn encode(x: f64) !object.Object {
         const u = math.rotl(u64, @bitCast(x), 4) + 2;
@@ -400,4 +390,5 @@ pub const Object = packed struct(u64) {
     pub const toUnchecked = OF.toUnchecked;
     pub const asVariable = zag.Context.asVariable;
     pub const PackedObject = object.PackedObject;
+    pub const signature = zag.execute.Signature.signature;
 };
