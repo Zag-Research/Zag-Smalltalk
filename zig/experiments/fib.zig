@@ -6,7 +6,9 @@ const compileMethod = zag.execute.compileMethod;
 const tf = zag.threadedFn.Enum;
 const Sym = zag.symbol.symbols;
 const SmallInteger = zag.primitives.Smallinteger;
-fn fibNative(n: u32) u64 {
+const Float = zag.primitives.Float;
+
+fn fibCheck(n: u32) u64 {
     if (n < 2) return n;
     var a: u64 = 0;
     var b: u64 = 1;
@@ -19,24 +21,37 @@ fn fibNative(n: u32) u64 {
     return b;
 }
 
+const fibNative = struct {
+    const included = true;
+    const name = "Native";
+    fn init() void {}
+    fn runIt(_: usize, _: usize) usize {
+        _ = fib(fibN);
+        return 0;
+    }
+    fn fib(n: u64) u64 {
+        if (n <= 2) return n;
+        return fib(n - 1) + fib(n - 2);
+    }
+};
+
+const fibNativeFloat = struct {
+    const included = true;
+    const name = "NativeF";
+    fn init() void {}
+    fn runIt(_: usize, _: usize) usize {
+        _ = fib(@floatFromInt(fibN));
+        return 0;
+    }
+    fn fib(n: f64) f64 {
+        if (n <= 2) return n;
+        return fib(n - 1) + fib(n - 2);
+    }
+};
+
 const fibInteger = struct {
     const included = true;
     const name = "Integer";
-    inline fn doTest() !void {
-        fib.setLiterals(&[_]Object{Sym.fibonacci}, Object.empty, null);
-        var n: u32 = 1;
-        while (n <= testReps) : (n += 1) {
-            var objs = [_]Object{Object.from(n)};
-            var exe = Execution.new();
-            exe.init();
-            const result = exe.run(objs[0..], &fib);
-            std.debug.print("\nfib({}) = {any}", .{ n, result });
-            try std.testing.expectEqual(result.len, 1);
-            if (result[0].nativeI()) |int| {
-                try std.testing.expectEqual(int, fibNative(n));
-            }
-        }
-    }
     const self = zag.Context.makeVariable(0, 1, .Parameter, &.{});
     const leq = SmallInteger.@"<=".inlined;
     const plus = SmallInteger.@"+".inlined;
@@ -50,8 +65,8 @@ const fibInteger = struct {
             tf.pushLiteral,           2,
             tf.inlinePrimitive,       leq,
             tf.classCase,             classes(&.{.False}),
-            "label3",                 tf.returnSelf,
-            ":label3",                tf.push,
+            "false",                  tf.returnSelf,
+            ":false",                 tf.push,
             self,                     tf.pushLiteral,
             1,                        tf.inlinePrimitive,
             minus,                    tf.send,
@@ -72,7 +87,7 @@ const fibInteger = struct {
             fib.dump();
         } else {
             const threaded = runIt(0, 0);
-            const native = fibNative(fibN);
+            const native = fibCheck(fibN);
             if (threaded != native) {
                 std.debug.print("threaded={}, native={}\n", .{ threaded, native });
                 unreachable;
@@ -87,8 +102,168 @@ const fibInteger = struct {
         std.debug.print("fib object: {f}\n", .{obj});
         unreachable;
     }
-    test "fibInteger" {
-        try fibInteger.doTest();
+};
+
+const fibInteger0 = struct {
+    const included = true;
+    const name = "Integer0";
+    const self = zag.Context.makeVariable(0, 1, .Parameter, &.{});
+    const leq = SmallInteger.@"<=".inlined;
+    const plus = SmallInteger.@"+".inlined;
+    const minus = SmallInteger.@"-".inlined;
+    const classes = Object.PackedObject.classes;
+    const signature = zag.symbol.signature;
+    const nullMethod = zag.dispatch.nullMethod;
+    var fib =
+        compileMethod(Sym.fibonacci, 0, .SmallInteger, .{
+            tf.push,                  self,
+            tf.pushLiteral,           2,
+            tf.inlinePrimitive,       leq,
+            tf.classCase,             classes(&.{.False}),
+            "false",                  tf.returnSelf,
+            ":false",                 tf.push,
+            self,                     tf.pushLiteral,
+            1,                        tf.inlinePrimitive,
+            minus,                    tf.send0,
+            signature(.fibonacci, 0), &nullMethod,
+            tf.push,                  self,
+            tf.pushLiteral,           2,
+            tf.inlinePrimitive,       minus,
+            tf.send0,                 signature(.fibonacci, 0),
+            &nullMethod,              tf.inlinePrimitive,
+            plus,                     tf.returnTop,
+        });
+    fn init() void {
+        fib.resolve(&[_]Object{}) catch unreachable;
+        fib.initExecute();
+        zag.dispatch.addMethod(@ptrCast(&fib));
+        if (zag.config.show_trace) {
+            std.debug.print("\n", .{});
+            fib.dump();
+        } else {
+            const threaded = runIt(0, 0);
+            const native = fibCheck(fibN);
+            if (threaded != native) {
+                std.debug.print("threaded={}, native={}\n", .{ threaded, native });
+                unreachable;
+            }
+        }
+    }
+    fn runIt(_: usize, _: usize) usize {
+        const obj = Execution.mainSendTo(Sym.fibonacci, Object.from(fibN, null)) catch unreachable;
+        if (obj.nativeU()) |result| {
+            return result;
+        }
+        std.debug.print("fib object: {f}\n", .{obj});
+        unreachable;
+    }
+};
+
+const fibIntegerBr = struct {
+    const included = true;
+    const name = "IntegerBr";
+    const self = zag.Context.makeVariable(0, 1, .Parameter, &.{});
+    const leq = SmallInteger.@"<=".inlined;
+    const plus = SmallInteger.@"+".inlined;
+    const minus = SmallInteger.@"-".inlined;
+    const classes = Object.PackedObject.classes;
+    const signature = zag.symbol.signature;
+    const nullMethod = zag.dispatch.nullMethod;
+    var fib =
+        compileMethod(Sym.fibonacci, 0, .SmallInteger, .{
+            tf.push,                  self,
+            tf.pushLiteral,           2,
+            tf.inlinePrimitive,       leq,
+            tf.branchFalse,
+            "false",                  tf.returnSelf,
+            ":false",                 tf.push,
+            self,                     tf.pushLiteral,
+            1,                        tf.inlinePrimitive,
+            minus,                    tf.send0,
+            signature(.fibonacci, 0), &nullMethod,
+            tf.push,                  self,
+            tf.pushLiteral,           2,
+            tf.inlinePrimitive,       minus,
+            tf.send0,                 signature(.fibonacci, 0),
+            &nullMethod,              tf.inlinePrimitive,
+            plus,                     tf.returnTop,
+        });
+    fn init() void {
+        fib.resolve(&[_]Object{}) catch unreachable;
+        fib.initExecute();
+        zag.dispatch.addMethod(@ptrCast(&fib));
+        if (zag.config.show_trace) {
+            std.debug.print("\n", .{});
+            fib.dump();
+        } else {
+            const threaded = runIt(0, 0);
+            const native = fibCheck(fibN);
+            if (threaded != native) {
+                std.debug.print("threaded={}, native={}\n", .{ threaded, native });
+                unreachable;
+            }
+        }
+    }
+    fn runIt(_: usize, _: usize) usize {
+        const obj = Execution.mainSendTo(Sym.fibonacci, Object.from(fibN, null)) catch unreachable;
+        if (obj.nativeU()) |result| {
+            return result;
+        }
+        std.debug.print("fib object: {f}\n", .{obj});
+        unreachable;
+    }
+};
+
+const fibFloat = struct {
+    const included = true;
+    const name = "Float";
+    const self = zag.Context.makeVariable(0, 1, .Parameter, &.{});
+    const leq = Float.@"<=".inlined;
+    const plus = Float.@"+".inlined;
+    const minus = Float.@"-".inlined;
+    const classes = Object.PackedObject.classes;
+    const signature = zag.symbol.signature;
+    const nullMethod = zag.dispatch.nullMethod;
+    var fib =
+        compileMethod(Sym.fibonacci, 0, .Float, .{
+            tf.push,                  self,
+            tf.pushLiteral,           2.0,
+            tf.inlinePrimitive,       leq,
+            tf.classCase,             classes(&.{.False}),
+            "false",                  tf.returnSelf,
+            ":false",                 tf.push,
+            self,                     tf.pushLiteral,
+            1.0,                      tf.inlinePrimitive,
+            minus,                    tf.send,
+            signature(.fibonacci, 0), &nullMethod,
+            tf.push,                  self,
+            tf.pushLiteral,           2.0,
+            tf.inlinePrimitive,       minus,
+            tf.send,                  signature(.fibonacci, 0),
+            &nullMethod,              tf.inlinePrimitive,
+            plus,                     tf.returnTop,
+        });
+    fn init() void {
+        fib.resolve(&[_]Object{}) catch unreachable;
+        fib.initExecute();
+        zag.dispatch.addMethod(@ptrCast(&fib));
+        if (zag.config.show_trace) {
+            std.debug.print("\n", .{});
+            fib.dump();
+        } else {
+            const obj = Execution.mainSendTo(Sym.fibonacci, Object.from(fibN, null)) catch unreachable;
+            if (obj.nativeF()) |threaded| {
+                const native: f64 = @floatFromInt(fibCheck(fibN));
+                if (threaded != native) {
+                    std.debug.print("threaded={}, native={}\n", .{ threaded, native });
+                    unreachable;
+                }
+            }
+        }
+    }
+    fn runIt(_: usize, _: usize) usize {
+        _ = Execution.mainSendTo(Sym.fibonacci, Object.from(fibN, null)) catch unreachable;
+        return 0;
     }
 };
 const Stats = zag.Stats;
@@ -104,7 +279,7 @@ pub fn timing(args: []const []const u8, default: bool) !void {
             print("          Median   Mean   StdDev  SD/Mean ({} run{s}, {} warmup{s})\n", .{ stat.runs, if (stat.runs != 1) "s" else "", stat.warmups, if (stat.warmups != 1) "s" else "" });
         } else {
             var anyRun = false;
-            inline for (&.{fibInteger}) |benchmark| {
+            inline for (&.{fibNative, fibNativeFloat, fibInteger, fibInteger0, fibIntegerBr, fibFloat}) |benchmark| {
                 if (benchmark.included and eql(u8, arg, benchmark.name)) {
                     anyRun = true;
                     print("{s:>9}", .{benchmark.name});
@@ -117,10 +292,15 @@ pub fn timing(args: []const []const u8, default: bool) !void {
             if (!default and !anyRun)
                 print("Unknown argument: {s}\n", .{arg});
         }
-    }
+   }
 }
 pub fn main() !void {
-    const do_all = [_][]const u8{ "Config", "Header", "Native", "Integer" };
+    const do_all = [_][]const u8{ "Config", "Header", "Native", "NativeF",
+        //"Float",
+        "Integer",
+        "Integer0",
+        "IntegerBr",
+    };
     // var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     // const allocator = gpa.allocator();
     const allocator = std.heap.page_allocator;

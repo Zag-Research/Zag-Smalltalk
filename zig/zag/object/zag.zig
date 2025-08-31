@@ -14,6 +14,8 @@ const HeapObjectPtr = heap.HeapObjectPtr;
 const HeapObjectConstPtr = heap.HeapObjectConstPtr;
 const Process = zag.Process;
 const InMemory = zag.InMemory;
+const encode = @import("floatZag.zig").encode;
+const decode = @import("floatZag.zig").decode;
 pub const Object = packed struct(u64) {
     tag: Group,
     class: ClassIndex.Compact,
@@ -52,6 +54,7 @@ pub const Object = packed struct(u64) {
     pub const PackedTagType = u8;
     pub const packedTagSmallInteger = intTag;
     pub const intTag = oImm(.SmallInteger, 0).tagbits();
+    pub const immediatesTag = @intFromEnum(Group.immediates);
     const TagAndClassType = u8;
     const tagAndClassBits = enumBits(Group) + enumBits(ClassIndex.Compact);
     comptime {
@@ -109,6 +112,15 @@ pub const Object = packed struct(u64) {
     }
     inline fn nativeU_noCheck(self: object.Object) u64 {
         return self.hash;
+    }
+    pub inline fn nativeF(self: object.Object) ?f64 {
+        if (self.isImmediateDouble()) return self.toDoubleNoCheck();
+        if (self.isMemoryDouble()) return self.toDoubleFromMemory();
+        return null;
+    }
+    inline fn nativeF_noCheck(self: object.Object) f64 {
+        if (self.tag == .heap) return self.toDoubleFromMemory();
+        return self.toDoubleNoCheck();
     }
     pub inline fn symbolHash(self: object.Object) ?u40 {
         if (self.isImmediateClass(.Symbol)) return @truncate(self.hash);
@@ -227,7 +239,7 @@ pub const Object = packed struct(u64) {
         return self.rawU() & 0xffff_ffff_fff8;
     }
     pub inline fn toDoubleNoCheck(self: object.Object) f64 {
-        return decode(self);
+        return decode(@bitCast(self));
     }
     pub inline fn toDoubleFromMemory(self: object.Object) f64 {
         return self.to(*InMemory.MemoryFloat).*.value;
@@ -241,17 +253,12 @@ pub const Object = packed struct(u64) {
     pub inline fn hash32(self: object.Object) u32 {
         return @truncate(self.hash);
     }
-    inline fn encode(x: f64) !object.Object {
-        const u = math.rotl(u64, @bitCast(x), 4) + 2;
-        if (u & 6 != 0)
-            return @bitCast(u);
-        if (math.isNan(x)) return object.Object.from(&InMemory.nanMemObject, null);
-        if (math.inf(f64) == x) return object.Object.from(&InMemory.pInfMemObject);
-        if (math.inf(f64) == -x) return object.Object.from(&InMemory.nInfMemObject);
-        return error.Unencodable;
-    }
-    inline fn decode(self: object.Object) f64 {
-        return @bitCast(math.rotr(u64, self.rawU() - 2, 4));
+
+    fn memoryFloat(value: f64, maybeProcess: ?*Process) object.Object {
+        if (math.isNan(value)) return object.Object.from(&InMemory.nanMemObject, null);
+        if (math.inf(f64) == value) return object.Object.from(&InMemory.pInfMemObject);
+        if (math.inf(f64) == -value) return object.Object.from(&InMemory.nInfMemObject);
+        return InMemory.float(value, maybeProcess);
     }
 
     pub inline fn from(value: anytype, maybeProcess: ?*Process) object.Object {
@@ -259,9 +266,9 @@ pub const Object = packed struct(u64) {
         if (T == object.Object) return value;
         switch (@typeInfo(T)) {
             .int, .comptime_int => return oImm(.SmallInteger, @as(u56, @bitCast(@as(i56, value)))),
-            .float => return encode(value) catch {
-                unreachable;
-            },
+            .float => return @bitCast(encode(value) catch {
+                return memoryFloat(value, maybeProcess);
+            }),
             .comptime_float => return from(@as(f64, value), maybeProcess),
             .bool => return if (value) object.Object.True() else object.Object.False(),
             .null => return object.Object.Nil(),

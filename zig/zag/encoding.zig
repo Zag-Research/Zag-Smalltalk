@@ -1,6 +1,7 @@
 const std = @import("std");
 pub const Encoding = enum {
     zag,
+    zagAlt,
     nan,
     spur,
     taggedPtr,

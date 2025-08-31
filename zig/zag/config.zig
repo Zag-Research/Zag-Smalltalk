@@ -23,11 +23,11 @@ const show_error_stack = debugging;
 pub const show_trace = debugging or options.trace;
 
 pub const immediateIntegers = switch (objectEncoding) {
-    .zag, .nan, .spur => true,
+    .zag, .nan, .spur, .zagAlt => true,
     else => false,
 };
 pub const immediateSymbols = switch (objectEncoding) {
-    .zag, .nan => true,
+    .zag, .nan, .zagAlt => true,
     else => false,
 };
 pub const notZag = objectEncoding != .zag;

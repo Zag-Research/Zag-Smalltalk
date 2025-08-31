@@ -24,6 +24,7 @@ const Sym = zag.symbol.symbols;
 
 pub const primitives = struct {
     pub const Smallinteger = @import("primitives/Smallinteger.zig");
+    pub const Float = @import("primitives/Float.zig");
     pub const Array = @import("primitives/Array.zig");
     pub const Object = @import("primitives/Object.zig");
     pub const BlockClosure = @import("primitives/BlockClosure.zig");
@@ -37,9 +38,10 @@ const modules = [_]Module{
     Module.init(primitives.Object),
     Module.init(primitives.Array),
     Module.init(primitives.Smallinteger),
+    Module.init(primitives.Float),
     // Module.init(primitives.Behavior),
     Module.init(primitives.BlockClosure),
-    // Module.init(primitives.Boolean),
+    Module.init(primitives.Boolean),
     Module.init(if (config.includeLLVM) primitives.LLVM else struct {
         const moduleName = "llvm";
     }),
@@ -504,9 +506,9 @@ pub const threadedFunctions = struct {
     pub const inlinePrimitive = struct {
         pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
             process.dumpStack(sp, "inlinePrimitive");
-            trace("inlinePrimitive: {f} {x}\n", .{ extra, @intFromPtr(&threadedFn) });
             const obj = pc.signature();
             const primNumber = obj.primitive();
+            trace("inlinePrimitive: {f} {}\n", .{ obj, primNumber });
             if (Module.findNumberedPrimitive(primNumber)) |prim| {
                 if (prim.inlinePrimitive) |p| {
                     pc.prev().patchPtr().patchPrim(p);
@@ -617,7 +619,7 @@ pub const primitiveThreadedFunctions = .{
     // @import("primitives/Smallinteger.zig").threadedFns,
     // @import("primitives/Behavior.zig").threadedFns,
     @import("primitives/BlockClosure.zig").threadedFns,
-        // @import("primitives/Boolean.zig").threadedFns,
+    @import("primitives/Boolean.zig").threadedFns,
 };
 pub fn init() void {
     @import("primitives/Array.zig").init();

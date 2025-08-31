@@ -28,6 +28,11 @@ inline fn hash_of(index: u24, arity: u4) u32 {
     return @as(u24, index *% inversePhi24) | (@as(u32, arity) << 24);
 }
 pub const signature = SymbolsEnum.signature;
+pub fn fromHash(hash: u64) Object {
+    const index: u24 = @truncate(hash * undoPhi24);
+    std.debug.print("signature: hash = {x} index = {x}\n", .{hash, index});
+    return @as(SymbolsEnum, @enumFromInt(index)).asObject();
+}
 const SymbolsEnum = enum(u32) {
     value = 1,
     @"=" = 0x1000000 + 2,
@@ -86,20 +91,70 @@ const SymbolsEnum = enum(u32) {
     _,
     const staticSymbols = blk: {
         var symbolArray = [_]PointedObject{undefined} ** lastPredefinedSymbol;
-        const arities = [_]u4{
-            1, 0, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-            1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2,
-            2, 2, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        const symbolEnums = [_]SymbolsEnum{
+            .value,
+            .@"=",
+            .@"value:",
+            .@"cull:",
+            .@"doesNotUnderstand:",
+            .@"at:",
+            .@"new:",
+            .@"valueWithArguments:",
+            .@"ifTrue:",
+            .@"ifFalse:",
+            .@"ifNil:",
+            .@"ifNotNil:",
+            .@"perform:",
+            .@"+",
+            .@"-",
+            .@"*",
+            .@"~=",
+            .@"==",
+            .@"~~",
+            .@"<",
+            .@"<=",
+            .@",>=",
+            .@">",
+            .@"at:put:",
+            .@"value:value:",
+            .@"cull:cull:",
+            .@"ifTrue:ifFalse",
+            .@"ifFalse:ifTrue:",
+            .@"ifNil:ifNotNil",
+            .@"ifNotNil:ifNil:",
+            .@"perform:with:",
+            .@"perform:withArguments:",
+            .@"value:value:value:",
+            .@"cull:cull:cull:",
+            .@"perform:with:with:",
+            .@"perform:withArguments:inSuperclass:",
+            .@"value:value:value:value:",
+            .@"cull:cull:cull:cull:",
+            .@"perform:with:with:with:",
+            .yourself,
+            .size,
+            .negated,
+            .new,
+            .self,
+            .name,
+            .class,
+            .Class,
+            .Behavior,
+            .ClassDescription,
+            .Metaclass,
+            .SmallInteger,
+            .noFallback,
+            .fibonacci,
+            .Object,
         };
-        for (symbolArray[0..], arities, 1..) |*sym, arity, i|
-            initSymbol(sym, i, arity);
+        for (symbolArray[0..], symbolEnums) |*sym, symbol|
+            initSymbol(sym, symbol);
         break :blk symbolArray;
     };
-    fn initSymbol(sym: *PointedObject, symbolNumber: u24, arity: u4) void {
-        const hash: u64 = hash_of(symbolNumber, arity);
+    fn initSymbol(sym: *PointedObject, symbol: SymbolsEnum) void {
+        const hash: u64 = symbol.symbolHash().?;
         sym.header = HeapHeader{ .classIndex = .Symbol, .hash = @truncate(hash), .format = .notIndexable, .age = .static, .length = 1 };
-        sym.data.unsigned = (hash << 8) + Object.symbolTag;
+        sym.data.unsigned = hash | @as(u64,symbol.numArgs()) << 24;
     }
     pub inline fn numArgs(self: SymbolsEnum) u4 {
         return @truncate(@intFromEnum(self) >> 24);

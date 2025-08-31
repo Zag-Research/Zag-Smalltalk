@@ -61,15 +61,15 @@ pub const ClassIndex = enum(u16) {
     ThunkInstance,
     BlockAssignInstance,
     ThunkHeap,
+    LLVM,
     ThunkImmediate,
     ThunkFloat,
-    False,
-    True,
     SmallInteger,
     Symbol,
-    Character,
-    LLVM,
     Signature,
+    False,
+    True,
+    Character,
     reserved = 31,
     UndefinedObject,
     Context,
@@ -121,15 +121,15 @@ pub const ClassIndex = enum(u16) {
         ThunkInstance,
         BlockAssignInstance,
         ThunkHeap,
+        LLVM,
         ThunkImmediate,
         ThunkFloat,
-        False,
-        True,
         SmallInteger,
         Symbol,
-        Character,
-        LLVM,
         Signature,
+        False,
+        True,
+        Character,
         pub inline fn classIndex(cp: Compact) ClassIndex {
             return @enumFromInt(@intFromEnum(cp));
         }
@@ -143,12 +143,14 @@ comptime {
     std.debug.assert(@intFromEnum(ClassIndex.replace0) == 0xffff);
     std.testing.expectEqual(@intFromEnum(ClassIndex.ThunkReturnLocal), 1) catch unreachable;
     //    std.debug.assert(std.meta.hasUniqueRepresentation(Object));
-    for (@typeInfo(ClassIndex.Compact).@"enum".fields, @typeInfo(ClassIndex).@"enum".fields[0..@typeInfo(ClassIndex.Compact).@"enum".fields.len]) |ci, cci| {
+    for (@typeInfo(ClassIndex.Compact).@"enum".fields,
+        @typeInfo(ClassIndex).@"enum".fields[0..@typeInfo(ClassIndex.Compact).@"enum".fields.len]) |ci, cci| {
         std.testing.expectEqual(ci, cci) catch unreachable;
     }
 }
 pub const Object = switch (config.objectEncoding) {
     .zag => @import("object/zag.zig").Object,
+    .zagAlt => struct {},
     .nan => @import("object/nan.zig").Object,
     .spur => @import("object/spur.zig").Object,
     .taggedPtr => @import("object/taggedPtr.zig").Object,

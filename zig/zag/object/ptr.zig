@@ -37,7 +37,7 @@ pub const Object = packed struct(u64) {
     pub const PackedTagType = u3;
     pub const packedTagSmallInteger = 1;
     pub const intTag = @import("zag.zig").intTag;
-    pub const symbolTag = @import("zag.zig").symbolTag;
+    pub const immediatesTag = 1;
     pub inline fn untaggedI(self: object.Object) ?i64 {
         if (self.isInt()) return self.untaggedI_noCheck();
         return null;

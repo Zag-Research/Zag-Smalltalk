@@ -65,6 +65,7 @@ pub const Object = packed struct(u64) {
     pub const PackedTagType = u3;
     pub const packedTagSmallInteger = 1;
     pub const intTag = @import("zag.zig").Object.intTag;
+    pub const immediatesTag = 1;
     const TagAndClassType = u32;
     const tagAndClassBits = enumBits(Group) + enumBits(ClassIndex);
     comptime {

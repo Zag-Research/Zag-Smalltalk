@@ -57,7 +57,11 @@ const DispatchHandler = struct {
         while (true) {
             const dispatch = dispatches[index];
             if (dispatch.lock()) |_| {
-                defer dispatch.state = .dead;
+                defer {
+                    if (dispatch != &Dispatch.empty)
+                        dispatch.state = .dead;
+                }
+                trace("locked {} {}\n", .{index, dispatch});
                 var numMethods: usize = 3;
                 while (true) {
                     numMethods = @max(numMethods, dispatch.nMethods + 1) * 100 / loadFactor;
@@ -223,9 +227,9 @@ pub const nullMethod = dummyCompiledMethod(Signature.empty);
 const defaultForTest = if (config.is_test) struct {
     var called: bool = false;
     const dummyMethod = dummyCompiledMethod(Signature.from(symbols.value, ClassIndex.Object));
-    fn loadMethodForClass(ci: ClassIndex, selector: Object) *const CompiledMethod {
+    fn loadMethodForClass(ci: ClassIndex, signature: Signature) *const CompiledMethod {
         called = true;
-        _ = .{ ci, selector };
+        _ = .{ ci, signature };
         return &dummyMethod;
     }
     fn reset() void {
@@ -420,9 +424,7 @@ pub const threadedFunctions = struct {
             unreachable;
         }
     };
-    fn getMethod(pc: PC, sp: SP) *const CompiledMethod {
-        const selector = pc.signature();
-        const receiver = sp.at(selector.numArgs());
+    inline fn getMethod(pc: PC, selector: Signature, receiver: Object) *const CompiledMethod {
         const methodAddress = pc.next();
         var method = methodAddress.method();
         const class = receiver.get_class();
@@ -434,7 +436,7 @@ pub const threadedFunctions = struct {
         }
         method = class.lookupMethodForClass(signature);
         if (methodSignature.isEmpty()) {
-            //trace("getMethod: patch {f} {any}\n", .{ signature, method });
+            trace("getMethod: patch {f} {any}\n", .{ signature, method });
             methodAddress.patchPtr().patchMethod(method);
         } else {
             //trace("getMethod: alt {f} {any}\n", .{ signature, method });
@@ -445,7 +447,23 @@ pub const threadedFunctions = struct {
         pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
             process.dumpStack(sp, "send");
             trace("send: {f} {f}\n", .{ pc, extra });
-            const method = getMethod(pc, sp);
+            const signature = pc.signature();
+            const method = getMethod(pc, signature, sp.at(signature.numArgs()));
+            const newPc = method.codePc();
+            const newSp, const newContext =
+                if (extra.installContextIfNone(sp, process, context)) |new| .{ new.sp, new.context } else .{ sp, context };
+            //trace("sending...: sp:{x} {f} method:{x}\n", .{ @intFromPtr(sp), extra, @intFromPtr(method) });
+            process.dumpStack(newSp, "send maybe new");
+            newContext.setReturn(pc.next2());
+            return @call(tailCall, newPc.prim(), .{ newPc.next(), newSp, process, newContext, Extra.forMethod(method, newSp) });
+        }
+    };
+    pub const send0 = struct {
+        pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
+            process.dumpStack(sp, "send");
+            trace("send0: {f} {f}\n", .{ pc, extra });
+            const signature = pc.signature();
+            const method = getMethod(pc, signature, sp.top);
             const newPc = method.codePc();
             const newSp, const newContext =
                 if (extra.installContextIfNone(sp, process, context)) |new| .{ new.sp, new.context } else .{ sp, context };
@@ -457,7 +475,8 @@ pub const threadedFunctions = struct {
     };
     pub const tailSend = struct {
         pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
-            const method = getMethod(pc, sp);
+            const signature = pc.signature();
+            const method = getMethod(pc, signature, sp.at(signature.numArgs()));
             const newPc = method.codePc();
             _ = extra; // have to move parameters to self position
             if (true) unreachable;

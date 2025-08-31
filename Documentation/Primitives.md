@@ -51,6 +51,7 @@ pub const "somePrimitiveName" = struct {
         } else |_| {}
         return @call(tailCall, Extra.primitiveFailed, .{ pc, sp, process, context, extra });
     }
+    test "some test" {}
 };
 
 ```

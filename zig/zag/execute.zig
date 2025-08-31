@@ -46,15 +46,14 @@ pub const Signature = packed struct {
         selector: u32,
         class: ClassIndex,
         padding: u8 = 0,
-        const sigTag: u8 = @truncate(@intFromEnum(ClassIndex.Signature) << 3 | 1);
+        const sigTag: u8 = @truncate(@intFromEnum(ClassIndex.Signature) << 3 | Object.immediatesTag);
         fn isTagged(self: Create) bool {
             return self.tag == sigTag;
         }
     };
-    const emptyInt = 0;
-    pub const empty: Signature = .{ .int = emptyInt };
+    pub const empty: Signature = .{ .int = 0 };
     pub fn isEmpty(self: Signature) bool {
-        return self.int == emptyInt;
+        return self.int == empty.int;
     }
     pub fn hash(self: Signature) u32 {
         return @truncate(self.int);
@@ -74,12 +73,6 @@ pub const Signature = packed struct {
     pub fn numArgs(self: Signature) u8 {
         return @truncate(self.int >> 32);
     }
-    fn isIndexSymbol(self: Signature) bool {
-        return self.numArgs() == 0xff;
-    }
-    fn indexNumber(self: Signature) u24 {
-        return @truncate(self.int >> 8);
-    }
     pub fn signature(self: Object) ?Signature {
         const sig: Create = @bitCast(self);
         if (sig.isTagged())
@@ -87,10 +80,10 @@ pub const Signature = packed struct {
         return null;
     }
     fn asObject(self: Signature) Object {
-        return @bitCast(self.int);
+        return @bitCast(self);
     }
     pub inline fn asSymbol(self: Signature) Object {
-        return @bitCast(self.int & 0xffffffffff);
+        return symbol.fromHash((self.int & 0xffffff00) >> 8);
     }
     pub inline fn primitive(self: Signature) u64 {
         return self.int >> 40;
@@ -106,7 +99,11 @@ pub const Signature = packed struct {
         self: Signature,
         writer: anytype,
     ) !void {
-        try writer.print("Signature{{{f},{}}}", .{ self.asSymbol(), self.getClass() });
+        if (self.isEmpty()) {
+            try writer.print("Signature{{empty}}", .{});
+        } else {
+            try writer.print("Signature{{{f},{}}}", .{ self.asSymbol(), self.getClass() });
+        }
     }
 };
 pub const PC = packed struct {
@@ -337,6 +334,7 @@ pub const Code = union(enum) {
             .offset => |offset| try writer.print("offset({})", .{offset}),
             .packedObject => |packedObject| try writer.print("packedObject({})", .{packedObject}),
             .structure => |structure| try writer.print("structure({})", .{structure}),
+            .signature => |signature| try writer.print("signature({f})", .{signature}),
         }
     }
 };
@@ -536,7 +534,7 @@ fn CompileTimeMethod(comptime counts: usize) type {
                         code[n] = Code.primOf(threadedFn.threadedFn(field));
                         n = n + 1;
                     },
-                    Object, bool, @TypeOf(null), comptime_int => {
+                    Object, bool, @TypeOf(null), comptime_int, comptime_float => {
                         code[n] = Code.objectOf(field);
                         n = n + 1;
                     },
