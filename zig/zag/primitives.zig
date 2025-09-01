@@ -23,8 +23,8 @@ const tf = zag.threadedFn.Enum;
 const Sym = zag.symbol.symbols;
 
 pub const primitives = struct {
-    pub const Smallinteger = @import("primitives/Smallinteger.zig");
     pub const Float = @import("primitives/Float.zig");
+    pub const SmallInteger = @import("primitives/SmallInteger.zig");
     pub const Array = @import("primitives/Array.zig");
     pub const Object = @import("primitives/Object.zig");
     pub const BlockClosure = @import("primitives/BlockClosure.zig");
