@@ -5,7 +5,7 @@ const Execution = zag.execute.Execution;
 const compileMethod = zag.execute.compileMethod;
 const tf = zag.threadedFn.Enum;
 const Sym = zag.symbol.symbols;
-const SmallInteger = zag.primitives.Smallinteger;
+const SmallInteger = zag.primitives.SmallInteger;
 const Float = zag.primitives.Float;
 
 fn fibCheck(n: u32) u64 {
@@ -25,7 +25,7 @@ const fibNative = struct {
     const included = true;
     const name = "Native";
     fn init() void {}
-    fn runIt(_: usize, _: usize) usize {
+    fn runIt(comptime _: void, _: usize) usize {
         _ = fib(fibN);
         return 0;
     }
@@ -39,7 +39,7 @@ const fibNativeFloat = struct {
     const included = true;
     const name = "NativeF";
     fn init() void {}
-    fn runIt(_: usize, _: usize) usize {
+    fn runIt(comptime _: void, _: usize) usize {
         _ = fib(@floatFromInt(fibN));
         return 0;
     }
@@ -86,7 +86,7 @@ const fibInteger = struct {
             std.debug.print("\n", .{});
             fib.dump();
         } else {
-            const threaded = runIt(0, 0);
+            const threaded = runIt({}, 0);
             const native = fibCheck(fibN);
             if (threaded != native) {
                 std.debug.print("threaded={}, native={}\n", .{ threaded, native });
@@ -94,7 +94,7 @@ const fibInteger = struct {
             }
         }
     }
-    fn runIt(_: usize, _: usize) usize {
+    fn runIt(comptime _: void, _: usize) usize {
         const obj = Execution.mainSendTo(Sym.fibonacci, Object.from(fibN, null)) catch unreachable;
         if (obj.nativeU()) |result| {
             return result;
@@ -141,7 +141,7 @@ const fibInteger0 = struct {
             std.debug.print("\n", .{});
             fib.dump();
         } else {
-            const threaded = runIt(0, 0);
+            const threaded = runIt({}, 0);
             const native = fibCheck(fibN);
             if (threaded != native) {
                 std.debug.print("threaded={}, native={}\n", .{ threaded, native });
@@ -149,7 +149,7 @@ const fibInteger0 = struct {
             }
         }
     }
-    fn runIt(_: usize, _: usize) usize {
+    fn runIt(comptime _: void, _: usize) usize {
         const obj = Execution.mainSendTo(Sym.fibonacci, Object.from(fibN, null)) catch unreachable;
         if (obj.nativeU()) |result| {
             return result;
@@ -196,7 +196,7 @@ const fibIntegerBr = struct {
             std.debug.print("\n", .{});
             fib.dump();
         } else {
-            const threaded = runIt(0, 0);
+            const threaded = runIt({}, 0);
             const native = fibCheck(fibN);
             if (threaded != native) {
                 std.debug.print("threaded={}, native={}\n", .{ threaded, native });
@@ -204,7 +204,7 @@ const fibIntegerBr = struct {
             }
         }
     }
-    fn runIt(_: usize, _: usize) usize {
+    fn runIt(comptime _: void, _: usize) usize {
         const obj = Execution.mainSendTo(Sym.fibonacci, Object.from(fibN, null)) catch unreachable;
         if (obj.nativeU()) |result| {
             return result;
@@ -261,7 +261,7 @@ const fibFloat = struct {
             }
         }
     }
-    fn runIt(_: usize, _: usize) usize {
+    fn runIt(comptime _: void, _: usize) usize {
         _ = Execution.mainSendTo(Sym.fibonacci, Object.from(fibN, null)) catch unreachable;
         return 0;
     }
@@ -285,8 +285,8 @@ pub fn timing(args: []const []const u8, default: bool) !void {
                     print("{s:>9}", .{benchmark.name});
                     benchmark.init();
                     stat.reset();
-                    stat.time(benchmark.runIt, void);
-                    print("{?d:5}ms {d:5}ms {d:6.2}ms {d:5.1}%\n", .{ stat.median(), stat.mean(), stat.stdDev(), if (stat.mean() != 0) stat.stdDev() * 100 / @as(f64, @floatFromInt(stat.mean())) else 0.0 });
+                    stat.time(benchmark.runIt, {});
+                    print("{?d:5}ms {d:5}ms {d:6.2}ms {?d:5.1}%\n", .{ stat.median(), stat.mean(), stat.stdDev(), stat.stDevPercent() });
                 }
             }
             if (!default and !anyRun)

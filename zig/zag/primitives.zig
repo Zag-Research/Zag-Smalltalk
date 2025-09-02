@@ -37,7 +37,7 @@ const modules = [_]Module{
     Module.init(testModule),
     Module.init(primitives.Object),
     Module.init(primitives.Array),
-    Module.init(primitives.Smallinteger),
+    Module.init(primitives.SmallInteger),
     Module.init(primitives.Float),
     // Module.init(primitives.Behavior),
     Module.init(primitives.BlockClosure),

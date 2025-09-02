@@ -81,6 +81,20 @@ pub fn build(b: *std.Build) void {
     //b.step("fib", "Compile fib").dependOn(&b.installArtifact(fib).step);
     b.installArtifact(fib);
 
+    const branchPrediction = b.addExecutable(.{
+        .name = "branchPrediction",
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("experiments/branchPrediction.zig"),
+            .target = target,
+            .optimize = optimize,
+            .imports = &.{
+                .{ .name = "zag", .module = zag },
+            },
+        }),
+    });
+    //b.step("branchPrediction", "Compile branchPrediction").dependOn(&b.installArtifact(branchPrediction).step);
+    b.installArtifact(branchPrediction);
+
     const fib_check = b.addExecutable(.{
         .name = "fib",
         .root_module = b.createModule(.{

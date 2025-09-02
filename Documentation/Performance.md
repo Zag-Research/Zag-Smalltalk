@@ -1,4 +1,10 @@
+## Instructions per Cycle
 
+[StackOverflow on pipeline stalls](https://stackoverflow.com/questions/22165299/what-are-stalled-cycles-frontend-and-stalled-cycles-backend-in-perf-stat-resul)
+
+## Cache misses
+
+## Branch Prediction
 Branch prediction is based on the current PC, so a threaded word for send will have jumps to the various locations from a fixed location, so branch prediction becomes useless. Localizing branches is probably the biggest win from Copy&Patch JIT. Could do a very simple experiment on C&P by when it is about to do the jump, instead jump to a fixed point that does the indirect jump - whatever slowdown we see would be the failure of branch prediction.
 
 
