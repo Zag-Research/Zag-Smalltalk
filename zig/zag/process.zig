@@ -38,7 +38,7 @@ const Self = @This();
 m: [process_total_size]u8 align(1), // alignment explicitly stated to emphasize the difference from Process
 const process_total_size = config.process_total_size;
 pub const alignment = @max(stack_mask_overflow, flagMask + 1);
-pub const stack_mask_overflow = zag.utilities.largerPowerOf2(Process.stack_size * @sizeOf(Object));
+const stack_mask_overflow = zag.utilities.largerPowerOf2(Process.stack_size * @sizeOf(Object));
 pub const stack_mask = stack_mask_overflow - 1;
 pub const process_stack_size = Process.stack_size;
 pub const process_nursery_size = Process.nursery_size;
@@ -407,7 +407,7 @@ const Stack = struct {
         const newInt = selfInt - @sizeOf(Object) * n;
         if (n == 1 and newInt & stack_mask > 0) {
             return @ptrFromInt(newInt);
-        } else if ((selfInt & stack_mask_overflow) == (newInt & stack_mask_overflow)) {
+        } else if (((selfInt ^ newInt) & stack_mask_overflow) == 0) {
             return @ptrFromInt(newInt);
         } else return null;
     }

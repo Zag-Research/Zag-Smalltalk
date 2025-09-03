@@ -48,6 +48,9 @@ pub fn Stats(comptime Arg: type, comptime K: type, runs: comptime_int, warmups: 
         runs: usize = runs,
         warmups: usize = if (warmups) |w| w else @min(3, @max(1, (runs + 1) / 3)),
         const Self = @This();
+        pub fn print(self: *Self) void {
+            std.debug.print("sum={} sumsq={} n={} values={any}\n", .{ self.sum, self.sumsq, self.n, self.values });
+        }
         const isInt = switch (@typeInfo(T)) {
             .int => true,
             else => false,

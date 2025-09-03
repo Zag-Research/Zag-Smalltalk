@@ -131,7 +131,7 @@ pub const ContextData = struct {
         }
     }
     fn objects(self: *ContextData) [*]Object {
-        return @ptrFromInt(@intFromPtr(self));
+        return @ptrCast(self);
     }
     fn slice(self: *ContextData) []Object {
         return self.objects()[1 .. self.header.length + 1];
