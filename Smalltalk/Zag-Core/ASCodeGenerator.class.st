@@ -234,16 +234,23 @@ ASCodeGenerator >> inlinePrimitive: aCompiledMethod for: aClass from: anASCSend 
 
 	| primitive |
 	primitive := aCompiledMethod primitive.
-	returnBlock := self makeReturnBlock.
-	(primitive between: 201 and: 210) ifTrue: [
-			^ self
+	
+	"inline permutations of 'value' sent to a blockClosure"
+	(primitive between: 201 and: 210) ifTrue: [ | aNewBlock |
+		returnBlock := self makeReturnBlock.
+			aNewBlock := self
 				  inlineValue: aCompiledMethod numArgs
 				  for: aClass
-				  next: returnBlock ].
+				  next: returnBlock.
+			^ self branch: aNewBlock ].
+	"inline a embeded operation to handle any other primitive call"
 	code replaceOperation: (ASCEmbed new
 			 selector: aCompiledMethod selector;
 			 primitive: primitive).
-	self branch: returnBlock
+
+	"Daniel what do we return here?"
+	"^ code next"
+	
 ]
 
 { #category : 'inlining' }

@@ -425,6 +425,17 @@ fibonacci_accumulator: accumulator prev: prev
 ]
 
 { #category : 'tests' }
+ASCompilerInlineTest >> testFibonacciWithInlining [
+	"
+fibonacci
+
+	self < 2 ifTrue: [ ^ self ].
+	^ (self - 1) fibonacci + (self - 2) fibonacci"
+	
+	self assertEquivalentSending: #fibonacci arguments: #() to: 4 inlineDepth: 1
+]
+
+{ #category : 'tests' }
 ASCompilerInlineTest >> testFibonacci_fast_forCorrectness [
 
 	self assert: 0 fibonacci_fast equals: 0 fibonacci.

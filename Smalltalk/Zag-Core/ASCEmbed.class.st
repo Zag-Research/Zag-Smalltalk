@@ -58,6 +58,22 @@ ASCEmbed >> inspectZagASTOn: aStream [
 		print: selector.
 ]
 
+{ #category : 'as yet unclassified' }
+ASCEmbed >> interpretFor: anASemanticInterpreter [ 
+		
+	| numArgs args target |
+	self halt.
+	"consume the num args off the stack"
+	numArgs := selector numArgs.
+	args := OrderedCollection new.
+	[ numArgs > 0 ] whileTrue: [ args add: anASemanticInterpreter pop. numArgs := numArgs -1].
+	target := anASemanticInterpreter pop.
+	
+	"perform the primitive
+	put the result of primitive on stack"
+	anASemanticInterpreter push: (target perform: selector  withArguments: args )
+]
+
 { #category : 'instance creation' }
 ASCEmbed >> nextBasicBlocks [
 	^nil
