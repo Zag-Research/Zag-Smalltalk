@@ -1,7 +1,10 @@
 Here are papers and talks about Zag-Smalltalk
-- [VMIL-2023 paper: Revisiting Dynamic Dispatch for Modern Architectures](VMIL-2023.pdf)
+- [IWST 2025: Encoding for Objects Matters](IWST-2025.pdf)
+- [VMIL 2024: Inlined Code Generation for Smalltalk](VMIL-2024.pdf) [talk](VMIL-2024-talk.pdf)
+- [VMIL 2023 paper: Revisiting Dynamic Dispatch for Modern Architectures](VMIL-2023.pdf)
 - [IWST 2023: Threaded-Execution and CPS Provide Smooth Switching Among Execution Modes](IWST-2023.pdf)
 - [MoreVMs 2023: Threaded Execution as a Dual to Native Code](MoreVMs-2023.pdf)
 - [VMIL 2022 talk: Toward a Dynamic Language Toolkit](VMIL-2022-talk.pdf)
 - [IWST 2022: Design Principles for a High-Performance Smalltalk](IWST-2022.pdf)
-- [Slides from a recent talk at UK Smalltalk](https://sarg.torontomu.ca/dmason/UKSt2022-11-30.pdf)
+- [Slides from a 2022 talk at UK Smalltalk](https://sarg.torontomu.ca/dmason/UKSt2022-11-30.pdf)
+- [IWST 2018: Pharo Smalltalk as a Basis For Development for the JVM](IWST-2018.pdf)

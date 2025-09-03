@@ -31,7 +31,11 @@ $ make install
 - [Ken Dickey's Crosstalk](https://github.com/KenDickey/Crosstalk/blob/master/DispatchNotes.md)
 - [HydraVM](http://www.hydravm.org/hydra)
 - [GraalVM](https://www.graalvm.org)
+- [Lambda Calculus explained in video](https://www.youtube.com/watch?v=RcVA8Nj6HEo)
 
+### Editors
+- [Why Zed IDE Outshines VS Code, Cursor, and Others: A Developer’s Guide](https://medium.com/@vignarajj/why-zed-ide-outshines-vs-code-cursor-and-others-a-developers-guide-7af334fa4392) - includes how to set up [LMStudio](https://lmstudio.ai) to give you local, private AI (also useful outside of Zed)
+- [VSCodium](https://vscodium.com/) - VSCode without Microsoft monitoring
 ### WUFFS
 - [wuffs](https://github.com/google/wuffs/tree/main/doc/std) is a buffer-safe library for transcoding arbitrary input, including:
 	- [Compression Decoders](https://github.com/google/wuffs/blob/main/doc/std/compression-decoders.md).
@@ -129,6 +133,13 @@ The name is escaping me....something like Micro Systems....
 - [Algorithmica](https://en.algorithmica.org/hpc/)
 - [What Every Programmer Should Know About Memory](http://people.freebsd.org/~lstewart/articles/cpumemory.pdf)
 - [Concerns of Self-Modifying-Code on ARM](https://dl.acm.org/doi/10.1145/3546568)
+- [perf on Linux](https://www.brendangregg.com/perf.html) sampling performance
+	- to enable:
+		- `sudo apt install linux-perf` (or `linux-tools-common` on older Linux systems)
+		- create `/etc/sysctl.d/local-perf.conf` and add the line: `kernel.perf_event_paranoid = -1`
+		- then do `sudo sysctl -p`
+		- verify by `perf stat -- sleep 1`
+- [valgrind on Linux](https://valgrind.org/) detailed simulated performance
 #### x86_64
 - [x86-64 instructions](http://linasm.sourceforge.net/docs/instructions/)
 - [x86-64](https://devblogs.microsoft.com/oldnewthing/20220831-00/?p=107077) [x86-64 Instructions and ABI (PDF)](https://www.classes.cs.uchicago.edu/archive/2009/spring/22620-1/docs/handout-03.pdf) [Intel syntax: Introduction to x64 Assembly (PDF)](https://www.intel.com/content/dam/develop/external/us/en/documents/introduction-to-x64-assembly-181178.pdf) 

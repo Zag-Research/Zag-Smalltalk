@@ -65,7 +65,7 @@ pub const Object = packed struct(u64) {
     pub const PackedTagType = u3;
     pub const packedTagSmallInteger = 1;
     pub const intTag = @import("zag.zig").Object.intTag;
-    pub const symbolTag = @import("zag.zig").Object.symbolTag;
+    pub const immediatesTag = 1;
     const TagAndClassType = u32;
     const tagAndClassBits = enumBits(Group) + enumBits(ClassIndex);
     comptime {
@@ -212,8 +212,8 @@ pub const Object = packed struct(u64) {
     inline fn nativeU_noCheck(self: object.Object) u64 {
         return self.rawU() << 14 >> 14;
     }
-    pub inline fn symbolHash(self: object.Object) ?u56 {
-        if (self.isImmediateClass(.Symbol)) return self.hash32();
+    pub inline fn symbolHash(self: object.Object) ?u24 {
+        if (self.isImmediateClass(.Symbol)) return @truncate(self.hash32());
         return null;
     }
     pub inline fn extraValue(self: object.Object) object.Object {
@@ -399,6 +399,7 @@ pub const Object = packed struct(u64) {
     pub const PackedObject = object.PackedObject;
     pub const primitive = @import("zag.zig").Object.primitive;
     pub const symbol = @import("zag.zig").Object.symbol;
+    pub const signature = zag.execute.Signature.signature;
 };
 test "all generated NaNs are positive" {
     // test that all things that generate NaN generate positive ones

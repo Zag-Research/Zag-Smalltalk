@@ -14,6 +14,7 @@ const HeapHeader = heap.HeapHeader;
 const Treap = zag.utilities.Treap;
 const inversePhi24 = zag.utilities.inversePhi(u24);
 const undoPhi24 = zag.utilities.undoPhi(u24);
+const Signature = zag.execute.Signature;
 pub var globalAllocator = std.heap.page_allocator; //@import("globalArena.zig").allocator();
 
 pub const symbols = if (Object.inMemorySymbols) SymbolsEnum else SymbolsStruct;
@@ -26,17 +27,18 @@ pub inline fn symbolArity(obj: object.Object) u4 {
 inline fn hash_of(index: u24, arity: u4) u32 {
     return @as(u24, index *% inversePhi24) | (@as(u32, arity) << 24);
 }
-pub fn rawSymbol(sym: SymbolsEnum, primitive: u24) Object {
-    const int = @intFromEnum(sym);
-    return @bitCast(@as(u64, hash_of(int & 0xff, int >> 8)) << 8 | @as(u64, primitive) << 40 | Object.symbolTag);
+pub const signature = SymbolsEnum.signature;
+pub fn fromHash(hash: u64) Object {
+    const index: u24 = @truncate(hash * undoPhi24);
+    std.debug.print("signature: hash = {x} index = {x}\n", .{hash, index});
+    return @as(SymbolsEnum, @enumFromInt(index)).asObject();
 }
-const SymbolsEnum = enum(u16) {
-    @"=" = 0x100 + 1,
-    value = 2,
-    @"value:" = 0x100 + 3,
-    @"cull:" = 0x100 + 4,
-    yourself = 5,
-    @"doesNotUnderstand:" = 0x100 + 6,
+const SymbolsEnum = enum(u32) {
+    value = 1,
+    @"=" = 0x1000000 + 2,
+    @"value:",
+    @"cull:",
+    @"doesNotUnderstand:",
     @"at:",
     @"new:",
     @"valueWithArguments:",
@@ -45,7 +47,7 @@ const SymbolsEnum = enum(u16) {
     @"ifNil:",
     @"ifNotNil:",
     @"perform:",
-    @"+" = 0x100 + 15,
+    @"+",
     @"-",
     @"*",
     @"~=",
@@ -54,8 +56,8 @@ const SymbolsEnum = enum(u16) {
     @"<",
     @"<=",
     @",>=",
-    @">",
-    @"at:put:" = 0x200 + 25,
+    @">" = 0x1000000 + 23,
+    @"at:put:" = 0x2000000 + 24,
     @"value:value:",
     @"cull:cull:",
     @"ifTrue:ifFalse",
@@ -63,15 +65,16 @@ const SymbolsEnum = enum(u16) {
     @"ifNil:ifNotNil",
     @"ifNotNil:ifNil:",
     @"perform:with:",
-    @"perform:withArguments:",
-    @"value:value:value:" = 0x300 + 34,
+    @"perform:withArguments:" = 0x2000000 + 32,
+    @"value:value:value:" = 0x3000000 + 33,
     @"cull:cull:cull:",
     @"perform:with:with:",
-    @"perform:withArguments:inSuperclass:",
-    @"value:value:value:value:" = 0x400 + 38,
+    @"perform:withArguments:inSuperclass:" = 0x3000000 + 36,
+    @"value:value:value:value:" = 0x4000000 + 37,
     @"cull:cull:cull:cull:",
     @"perform:with:with:with:",
-    size = 41,
+    yourself = 40,
+    size,
     negated,
     new,
     self,
@@ -88,36 +91,90 @@ const SymbolsEnum = enum(u16) {
     _,
     const staticSymbols = blk: {
         var symbolArray = [_]PointedObject{undefined} ** lastPredefinedSymbol;
-        const arities = [_]u4{
-            1, 0, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-            1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2,
-            2, 2, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        const symbolEnums = [_]SymbolsEnum{
+            .value,
+            .@"=",
+            .@"value:",
+            .@"cull:",
+            .@"doesNotUnderstand:",
+            .@"at:",
+            .@"new:",
+            .@"valueWithArguments:",
+            .@"ifTrue:",
+            .@"ifFalse:",
+            .@"ifNil:",
+            .@"ifNotNil:",
+            .@"perform:",
+            .@"+",
+            .@"-",
+            .@"*",
+            .@"~=",
+            .@"==",
+            .@"~~",
+            .@"<",
+            .@"<=",
+            .@",>=",
+            .@">",
+            .@"at:put:",
+            .@"value:value:",
+            .@"cull:cull:",
+            .@"ifTrue:ifFalse",
+            .@"ifFalse:ifTrue:",
+            .@"ifNil:ifNotNil",
+            .@"ifNotNil:ifNil:",
+            .@"perform:with:",
+            .@"perform:withArguments:",
+            .@"value:value:value:",
+            .@"cull:cull:cull:",
+            .@"perform:with:with:",
+            .@"perform:withArguments:inSuperclass:",
+            .@"value:value:value:value:",
+            .@"cull:cull:cull:cull:",
+            .@"perform:with:with:with:",
+            .yourself,
+            .size,
+            .negated,
+            .new,
+            .self,
+            .name,
+            .class,
+            .Class,
+            .Behavior,
+            .ClassDescription,
+            .Metaclass,
+            .SmallInteger,
+            .noFallback,
+            .fibonacci,
+            .Object,
         };
-        for (symbolArray[0..], arities, 1..) |*sym, arity, i|
-            initSymbol(sym, i, arity);
+        for (symbolArray[0..], symbolEnums) |*sym, symbol|
+            initSymbol(sym, symbol);
         break :blk symbolArray;
     };
-    fn initSymbol(sym: *PointedObject, symbolNumber: u24, arity: u4) void {
-        const hash: u64 = hash_of(symbolNumber, arity);
+    fn initSymbol(sym: *PointedObject, symbol: SymbolsEnum) void {
+        const hash: u64 = symbol.symbolHash().?;
         sym.header = HeapHeader{ .classIndex = .Symbol, .hash = @truncate(hash), .format = .notIndexable, .age = .static, .length = 1 };
-        sym.data.unsigned = (hash << 8) + 1;
+        sym.data.unsigned = hash | @as(u64,symbol.numArgs()) << 24;
     }
     pub inline fn numArgs(self: SymbolsEnum) u4 {
-        return @truncate(@intFromEnum(self) >> 8);
+        return @truncate(@intFromEnum(self) >> 24);
     }
-    pub inline fn symbolHash(self: SymbolsEnum) ?u56 {
-        return @as(u24, @as(u8, @truncate(@intFromEnum(self)))) *% inversePhi24;
+    pub inline fn symbolHash(self: SymbolsEnum) ?u24 {
+        return @as(u24, @truncate(@intFromEnum(self))) *% inversePhi24;
     }
     pub inline fn immediate_class(_: SymbolsEnum) object.ClassIndex {
         return .Symbol;
     }
     pub fn asObject(self: SymbolsEnum) Object {
         const O = packed struct { sym: *const PointedObject };
-        return @bitCast(O{ .sym = &staticSymbols[@as(u8, @truncate(@intFromEnum(self))) - 1] });
+        return @bitCast(O{ .sym = &staticSymbols[@as(u24, @truncate(@intFromEnum(self))) - 1] });
     }
     inline fn symbol_of(index: u24, _: u4) Object {
         return @as(SymbolsEnum, @enumFromInt(index)).asObject();
+    }
+    fn signature(sym: SymbolsEnum, primitive: u16) Signature {
+        const int = @intFromEnum(sym);
+        return Signature.fromHashPrimitive(hash_of(int & 0xffffff, int >> 24), primitive);
     }
 };
 const SymbolsStruct = struct {

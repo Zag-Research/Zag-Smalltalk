@@ -11,6 +11,13 @@
             "cwd": "${workspaceFolder}",
             "environment": [],
             "preLaunchTask": "build"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug fib",
+            "program": "${workspaceFolder}/zig-out/bin/fib",
+            "cwd": "${workspaceFolder}"
         }
     ]
 }

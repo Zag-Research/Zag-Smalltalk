@@ -8,6 +8,8 @@ const HeapHeader = heap.HeapHeader;
 const HeapObjectPtr = heap.HeapObjectPtr;
 const HeapObjectConstPtr = heap.HeapObjectConstPtr;
 const InMemory = zag.InMemory;
+const encode = @import("floatSpur.zig").encode;
+const decode = @import("floatSpur.zig").decode;
 
 pub const Object = packed union {
     ref: *InMemory.PointedObject,
@@ -43,9 +45,9 @@ pub const Object = packed union {
     pub const HighTagType = void;
     pub const highTagSmallInteger = {};
     pub const PackedTagType = u3;
-    pub const packedTagSmallInteger = @intFromEnum(Group.smallInteger);
-    pub const intTag = @import("zag.zig").intTag;
-    pub const symbolTag = @import("zag.zig").symbolTag;
+    pub const packedTagSmallInteger = intTag;
+    pub const intTag = @intFromEnum(Group.smallInteger);
+    pub const immediatesTag = 1;
     const TagAndClassType = u3;
 
     pub inline fn tagbits(self: Self) TagAndClassType {
@@ -158,46 +160,6 @@ pub const Object = packed union {
         return self.isImmediateFloat();
     }
 
-    const SIGN_MASK: u64 = 0x8000000000000000;
-    const EXPONENT_MASK: u64 = 0x7FF0000000000000;
-    const MANTISSA_MASK: u64 = 0x000FFFFFFFFFFFFF;
-    const EXPONENT_BIAS = 896;
-    const MAX_EXPONENT = EXPONENT_BIAS + 0xFF;
-
-    // immediate float: [exponent(8)][mantissa(52)][sign(1)][tag(3)]
-    pub fn encode(value: f64) !Object {
-        const bits: u64 = @bitCast(value);
-        const sign = (bits & SIGN_MASK) >> 63;
-        const exponent = (bits & EXPONENT_MASK) >> 52;
-        const mantissa = bits & MANTISSA_MASK;
-
-        if (exponent == 0) {
-            return if (mantissa == 0) Object.makeImmediate(.float, 0) else error.Unencodable;
-        }
-
-        if (exponent == 0x7FF or exponent <= EXPONENT_BIAS or exponent >= MAX_EXPONENT) {
-            return error.Unencodable;
-        }
-
-        const adjusted_exponent = exponent - EXPONENT_BIAS;
-        return Object.makeImmediate(.float, @truncate((adjusted_exponent << 53) | (mantissa << 1) | sign));
-    }
-
-    pub fn decode(self: Object) f64 {
-        if (!self.isFloat()) {
-            @panic("Attempting to decode non-float object as float");
-        }
-
-        const hash = self.immediate.hash;
-        if (hash == 0) return 0.0;
-
-        const sign: u64 = hash & 1;
-        const mantissa: u64 = (hash >> 1) & MANTISSA_MASK;
-        const adjusted_exponent: u64 = hash >> 53;
-
-        const exponent = adjusted_exponent + EXPONENT_BIAS;
-        return @bitCast((sign << 63) | (exponent << 52) | mantissa);
-    }
 
     pub inline fn isFloat(self: Object) bool {
         return (self.rawU() & TagMask) == FloatTag;

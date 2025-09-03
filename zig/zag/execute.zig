@@ -41,19 +41,31 @@ pub const Signature = packed struct {
         class: ClassIndex,
         padding: u8 = 0,
     };
-    const emptyInt = 0;
-    pub const empty: Signature = .{ .int = emptyInt };
+    const Create = packed struct {
+        tag: u8 = sigTag,
+        selector: u32,
+        class: ClassIndex,
+        padding: u8 = 0,
+        const sigTag: u8 = @truncate(@intFromEnum(ClassIndex.Signature) << 3 | Object.immediatesTag);
+        fn isTagged(self: Create) bool {
+            return self.tag == sigTag;
+        }
+    };
+    pub const empty: Signature = .{ .int = 0 };
     pub fn isEmpty(self: Signature) bool {
-        return self.int == emptyInt;
+        return self.int == empty.int;
     }
     pub fn hash(self: Signature) u32 {
         return @truncate(self.int);
     }
     pub fn from(selector: Object, class: ClassIndex) Signature {
-        return .{ .int = @bitCast(Internal{ .selector = selector.symbol40(), .class = class }) };
+        return .{ .int = @bitCast(Create{ .selector = selector.hash32(), .class = class }) };
+    }
+    pub fn fromHashPrimitive(selector: u32, primitiveNumber: u16) Signature {
+        return .{ .int = @bitCast(Create{ .selector = selector, .class = @enumFromInt(primitiveNumber) }) };
     }
     pub fn fromNameClass(name: anytype, class: ClassIndex) Signature {
-        return .{ .int = @bitCast(Internal{ .selector = @as(u40, name.numArgs()) << 32 | @as(u40, @truncate(name.symbolHash().?)) << 8 | Object.symbolTag, .class = class }) };
+        return .{ .int = @bitCast(Create{ .selector = @as(u40, name.numArgs()) << 32 | @as(u40, (name.symbolHash().?)), .class = class }) };
     }
     fn equals(self: Signature, other: Signature) bool {
         return self.int == other.int;
@@ -61,32 +73,37 @@ pub const Signature = packed struct {
     pub fn numArgs(self: Signature) u8 {
         return @truncate(self.int >> 32);
     }
-    fn isIndexSymbol(self: Signature) bool {
-        return self.numArgs() == 0xff;
-    }
-    fn indexNumber(self: Signature) u24 {
-        return @truncate(self.int >> 8);
+    pub fn signature(self: Object) ?Signature {
+        const sig: Create = @bitCast(self);
+        if (sig.isTagged())
+            return @bitCast(self);
+        return null;
     }
     fn asObject(self: Signature) Object {
-        return @bitCast(self.int);
+        return @bitCast(self);
     }
     pub inline fn asSymbol(self: Signature) Object {
-        return @bitCast(self.int & 0xffffffffff);
+        return symbol.fromHash((self.int & 0xffffff00) >> 8);
     }
-    pub inline fn getClassIndex(self: Signature) u64 {
+    pub inline fn primitive(self: Signature) u64 {
         return self.int >> 40;
     }
+    pub const getClassIndex = primitive;
     pub inline fn getClass(self: Signature) ClassIndex {
         return @as(Internal, @bitCast(self.int)).class;
     }
-    fn setClass(self: *Signature, class: ClassIndex) void {
-        self.int = (self.int & 0xffffffffff) + (@as(u64, @intFromEnum(class)) << 40);
+    pub fn withClass(self: Signature, class: ClassIndex) Signature {
+        return .{ .int = (self.int & 0xffffffffff) + (@as(u64, @intFromEnum(class)) << 40) };
     }
     pub fn format(
         self: Signature,
         writer: anytype,
     ) !void {
-        try writer.print("Signature({f},{})", .{ self.asSymbol(), self.getClass() });
+        if (self.isEmpty()) {
+            try writer.print("Signature{{empty}}", .{});
+        } else {
+            try writer.print("Signature{{{f},{}}}", .{ self.asSymbol(), self.getClass() });
+        }
     }
 };
 pub const PC = packed struct {
@@ -98,7 +115,7 @@ pub const PC = packed struct {
     pub fn init(code: *const Code) PC { // don't inline this as it triggers a zig bug!
         return .{ .code = code };
     }
-    pub inline//
+    pub inline //
     fn packedObject(self: PC) PackedObject {
         if (logging) {
             @setRuntimeSafety(false);
@@ -106,7 +123,7 @@ pub const PC = packed struct {
         }
         return self.code.packedObject;
     }
-    pub inline//
+    pub inline //
     fn method(self: PC) *const CompiledMethod {
         if (logging) {
             @setRuntimeSafety(false);
@@ -114,7 +131,7 @@ pub const PC = packed struct {
         }
         return self.code.method;
     }
-    pub inline//
+    pub inline //
     fn codeAddress(self: PC) *const Code {
         if (logging) {
             @setRuntimeSafety(false);
@@ -122,18 +139,18 @@ pub const PC = packed struct {
         }
         return self.code.codePtr;
     }
-    pub inline//
+    pub inline //
     fn targetPC(self: PC) PC {
         return .{ .code = self.codeAddress() };
     }
-    pub inline//
+    pub inline //
     fn asThreadedFn(self: PC) *const fn (PC, SP, *Process, *Context, Extra) Result {
         if (logging) {
             std.debug.print("PC_asThreadedFn: {x:0>12}: {f}\n", .{ @intFromPtr(self.code), self });
         }
         return self.code.prim();
     }
-    pub inline//
+    pub inline //
     fn prim(self: PC) *const fn (PC, SP, *Process, *Context, Extra) Result {
         return primOf(self.code);
     }
@@ -148,13 +165,21 @@ pub const PC = packed struct {
         }
         return code.prim();
     }
-    pub inline//
+    pub //inline
     fn object(self: PC) Object {
         if (logging) {
             @setRuntimeSafety(false);
             std.debug.print("PC_object:       {x:0>12}: {f}\n", .{ @intFromPtr(self.code), self.code.object });
         }
         return self.code.object;
+    }
+    pub inline //
+    fn signature(self: PC) Signature {
+        if (logging) {
+            @setRuntimeSafety(false);
+            std.debug.print("PC_signature:    {x:0>12}: {f}\n", .{ @intFromPtr(self.code), self.code.signature });
+        }
+        return self.code.signature;
     }
     pub inline fn asCode(self: PC) Code {
         return self.code.*;
@@ -168,7 +193,7 @@ pub const PC = packed struct {
     pub inline fn structure(self: PC) StackStructure {
         return self.code.structure;
     }
-    pub inline//
+    pub inline //
     fn uint(self: PC) u64 {
         if (logging) {
             @setRuntimeSafety(false);
@@ -176,7 +201,7 @@ pub const PC = packed struct {
         }
         return self.code.object.to(u64);
     }
-    pub inline//
+    pub inline //
     fn int(self: PC) i64 {
         if (logging) {
             @setRuntimeSafety(false);
@@ -226,24 +251,25 @@ pub const PC = packed struct {
 };
 pub const Code = union(enum) {
     object: Object,
-    threadedFn: *const fn (programCounter: PC, stackPointer: SP, process: *Process, context: *Context, signature: Extra) Result,
+    threadedFn: *const fn (PC, SP, *Process, *Context, Extra) Result,
     method: *const CompiledMethod,
     codePtr: *Code,
     offset: i64,
     packedObject: PackedObject,
     structure: StackStructure,
-    pub inline fn primOf(pp: *const fn (programCounter: PC, stackPointer: SP, process: *Process, context: *Context, signature: Extra) Result) Code {
+    signature: Signature,
+    pub inline fn primOf(pp: *const fn (PC, SP, *Process, *Context, Extra) Result) Code {
         //@compileLog(pp);
         const result = Code{ .threadedFn = pp };
         return result;
     }
-    pub inline fn patchPrim(self: *Code, pp: *const fn (programCounter: PC, stackPointer: SP, process: *Process, context: *Context, signature: Extra) Result) void {
+    pub inline fn patchPrim(self: *Code, pp: *const fn (PC, SP, *Process, *Context, Extra) Result) void {
         self.* = Code{ .threadedFn = pp };
     }
     pub inline fn patchMethod(self: *Code, method: *const CompiledMethod) void {
         self.* = Code{ .method = method };
     }
-    pub inline//
+    pub inline //
     fn asObject(self: Code) Object {
         //        @setRuntimeSafety(false);
         return self.object;
@@ -260,11 +286,14 @@ pub const Code = union(enum) {
     pub inline fn structureOf(structure: StackStructure) Code {
         return Code{ .structure = structure };
     }
+    pub inline fn signatureOf(signature: Signature) Code {
+        return Code{ .signature = signature };
+    }
     pub inline fn codePtrOf(code: *Code, offs: i64) Code {
         const addr = @as([*]Code, @ptrCast(code)) + 1;
         return Code{ .codePtr = @ptrCast(addr + @as(u64, @bitCast(offs))) };
     }
-    pub inline//
+    pub inline //
     fn prim(self: Code) *const fn (PC, SP, *Process, *Context, Extra) Result {
         return self.threadedFn;
     }
@@ -305,6 +334,7 @@ pub const Code = union(enum) {
             .offset => |offset| try writer.print("offset({})", .{offset}),
             .packedObject => |packedObject| try writer.print("packedObject({})", .{packedObject}),
             .structure => |structure| try writer.print("structure({})", .{structure}),
+            .signature => |signature| try writer.print("signature({f})", .{signature}),
         }
     }
 };
@@ -334,8 +364,7 @@ pub const CompiledMethod = struct {
         self: CompiledMethod,
         writer: anytype,
     ) !void {
-        try writer.print("CompiledMethod{{.stackStructure={}, .signature={f}, .executeFn={x}}}",
-            .{ self.stackStructure, self.signature, @intFromPtr(self.executeFn) });
+        try writer.print("CompiledMethod{{.stackStructure={}, .signature={f}, .executeFn={x}}}", .{ self.stackStructure, self.signature, @intFromPtr(self.executeFn) });
     }
     pub fn dump(self: *const Self) void {
         std.debug.print("Header:           {}\n", .{self.header});
@@ -373,8 +402,7 @@ pub const CompiledMethod = struct {
     pub fn execute(self: *const Self, sp: SP, process: *Process, context: *Context) Result {
         const newExtra = Extra.forMethod(self, sp);
         const pc = PC.init(&self.code[1]);
-        trace("executing: pc={f} {f} executeFn={*} ({?}) newExtra={f}\n",
-            .{ pc, self.signature, self.executeFn, @import("threadedFn.zig").find(self.executeFn), newExtra });
+        trace("executing: pc={f} {f} executeFn={*} ({?}) newExtra={f}\n", .{ pc, self.signature, self.executeFn, @import("threadedFn.zig").find(self.executeFn), newExtra });
         return self.executeFn(pc, sp, process, context, newExtra);
     }
     inline fn asHeapObjectPtr(self: *const Self) HeapObjectConstPtr {
@@ -506,7 +534,7 @@ fn CompileTimeMethod(comptime counts: usize) type {
                         code[n] = Code.primOf(threadedFn.threadedFn(field));
                         n = n + 1;
                     },
-                    Object, bool, @TypeOf(null), comptime_int => {
+                    Object, bool, @TypeOf(null), comptime_int, comptime_float => {
                         code[n] = Code.objectOf(field);
                         n = n + 1;
                     },
@@ -514,12 +542,16 @@ fn CompileTimeMethod(comptime counts: usize) type {
                         code[n] = Code.packedObjectOf(field);
                         n = n + 1;
                     },
-                    ClassIndex => {
-                        code[n] = Code.objectOf(@intFromEnum(field));
-                        n = n + 1;
-                    },
+                    // ClassIndex => {
+                    //     code[n] = Code.objectOf(@intFromEnum(field));
+                    //     n = n + 1;
+                    // },
                     StackStructure => {
                         code[n] = Code.structureOf(field);
+                        n = n + 1;
+                    },
+                    Signature => {
+                        code[n] = Code.signatureOf(field);
                         n = n + 1;
                     },
                     else => {
@@ -950,7 +982,7 @@ pub const Execution = struct {
         exe.getContext().npc = Code.end;
         const class = receiver.get_class();
         const signature = Signature.from(selector, class);
-        const method = class.lookupMethodForClass(selector, signature);
+        const method = class.lookupMethodForClass(signature);
         exe.execute(method);
         return exe.fullStack()[0];
     }

@@ -61,14 +61,15 @@ pub const ClassIndex = enum(u16) {
     ThunkInstance,
     BlockAssignInstance,
     ThunkHeap,
+    LLVM,
     ThunkImmediate,
     ThunkFloat,
-    False,
-    True,
     SmallInteger,
     Symbol,
+    Signature,
+    False,
+    True,
     Character,
-    LLVM,
     reserved = 31,
     UndefinedObject,
     Context,
@@ -120,14 +121,15 @@ pub const ClassIndex = enum(u16) {
         ThunkInstance,
         BlockAssignInstance,
         ThunkHeap,
+        LLVM,
         ThunkImmediate,
         ThunkFloat,
-        False,
-        True,
         SmallInteger,
         Symbol,
+        Signature,
+        False,
+        True,
         Character,
-        LLVM,
         pub inline fn classIndex(cp: Compact) ClassIndex {
             return @enumFromInt(@intFromEnum(cp));
         }
@@ -135,18 +137,20 @@ pub const ClassIndex = enum(u16) {
     pub inline fn compact(ci: ClassIndex) Compact {
         return @enumFromInt(@intFromEnum(ci));
     }
-    pub const lookupMethodForClass = @import("dispatch.zig").lookupMethodForClass;
+    pub const lookupMethodForClass = zag.dispatch.lookupMethodForClass;
 };
 comptime {
     std.debug.assert(@intFromEnum(ClassIndex.replace0) == 0xffff);
     std.testing.expectEqual(@intFromEnum(ClassIndex.ThunkReturnLocal), 1) catch unreachable;
     //    std.debug.assert(std.meta.hasUniqueRepresentation(Object));
-    for (@typeInfo(ClassIndex.Compact).@"enum".fields, @typeInfo(ClassIndex).@"enum".fields[0..@typeInfo(ClassIndex.Compact).@"enum".fields.len]) |ci, cci| {
+    for (@typeInfo(ClassIndex.Compact).@"enum".fields,
+        @typeInfo(ClassIndex).@"enum".fields[0..@typeInfo(ClassIndex.Compact).@"enum".fields.len]) |ci, cci| {
         std.testing.expectEqual(ci, cci) catch unreachable;
     }
 }
 pub const Object = switch (config.objectEncoding) {
     .zag => @import("object/zag.zig").Object,
+    .zagAlt => struct {},
     .nan => @import("object/nan.zig").Object,
     .spur => @import("object/spur.zig").Object,
     .taggedPtr => @import("object/taggedPtr.zig").Object,
@@ -164,7 +168,7 @@ pub const ObjectFunctions = struct {
     pub inline fn numArgs(self: Object) u4 {
         return symbol.symbolArity(self);
     }
-    pub inline//
+    pub inline //
     fn setField(self: Object, field: usize, value: Object) void {
         if (self.asObjectArray()) |ptr| ptr[field] = value;
     }
@@ -273,7 +277,7 @@ pub const ObjectFunctions = struct {
         if (sla.len > slb.len) return ord.gt;
         return ord.eq;
     }
-    pub inline//
+    pub inline //
     fn immediate_class(self: Object) ClassIndex {
         return self.which_class(false);
     }
@@ -297,8 +301,8 @@ pub const ObjectFunctions = struct {
             try writer.print("true", .{});
         } else if (self.symbolHash()) |_| {
             try writer.print("#{s}", .{symbol.asString(self).arrayAsSlice(u8) catch "???"});
-            // if (self.classFromSymbolPlus()) |c|
-            //     try writer.print("=>{}", .{c});
+        } else if (self.signature()) |signature| {
+            try writer.print("{f}", .{signature});
         } else if (self == Nil()) {
             try writer.print("nil", .{});
         } else {

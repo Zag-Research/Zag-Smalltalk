@@ -37,7 +37,6 @@ const Units = enum {
 };
 pub fn Stats(comptime Arg: type, comptime K: type, runs: comptime_int, warmups: ?comptime_int, comptime units: Units) type {
     const T = if (K == void) u64 else K;
-    const A = if (Arg == void) u64 else Arg;
     return struct {
         values: [runs]T = undefined,
         minValue: T = undefined,
@@ -49,6 +48,9 @@ pub fn Stats(comptime Arg: type, comptime K: type, runs: comptime_int, warmups: 
         runs: usize = runs,
         warmups: usize = if (warmups) |w| w else @min(3, @max(1, (runs + 1) / 3)),
         const Self = @This();
+        pub fn print(self: *Self) void {
+            std.debug.print("sum={} sumsq={} n={} values={any}\n", .{ self.sum, self.sumsq, self.n, self.values });
+        }
         const isInt = switch (@typeInfo(T)) {
             .int => true,
             else => false,
@@ -68,14 +70,14 @@ pub fn Stats(comptime Arg: type, comptime K: type, runs: comptime_int, warmups: 
                 self.addData(runner(runNumber));
             }
         }
-        pub fn time(self: *Self, runner: *const fn (A, usize) usize, comptime param: anytype) void {
+        pub fn time(self: *Self, runner: *const fn (comptime Arg, usize) usize, comptime param: Arg) void {
             for (0..self.warmups) |_| {
-                self.proof = @call(.never_inline, runner, .{ if (A == u64) 0 else param, self.proof });
+                self.proof = @call(.never_inline, runner, .{ param, self.proof });
             }
             var timer = std.time.Timer.start() catch @panic("no timer available");
             var diff: usize = 0;
-            for (0..self.runs) |runNumber| {
-                self.proof = @call(.never_inline, runner, .{ if (A == u64) runNumber + 1 else param, self.proof });
+            for (0..self.runs) |_| {
+                self.proof = @call(.never_inline, runner, .{ param, self.proof });
                 diff = timer.lap() / scale;
                 self.addData(diff);
             }
@@ -115,6 +117,14 @@ pub fn Stats(comptime Arg: type, comptime K: type, runs: comptime_int, warmups: 
         }
         pub fn max(self: Self) T {
             return self.maxValue;
+        }
+        pub fn stDevPercent(self: Self) ?f64 {
+            const divisor = if (isInt) @as(f64, @floatFromInt(self.mean())) else self.mean();
+            if (divisor == 0.0) {
+                return null;
+            } else {
+                return self.stdDev() * 100 / divisor;
+            }
         }
         pub fn noData(self: Self) bool {
             return self.n == 0;

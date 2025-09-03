@@ -45,10 +45,19 @@ fn compute(comptime test_type: Tests, proof: usize) usize {
     return proof1 ^ proof2;
 }
 pub fn main() void {
+    var baseline: usize = 0;
     inline for (std.meta.fields(Tests)) |field| {
         const test_type = @field(Tests, field.name);
-        var stat = @import("zag/utilities/stats.zig").Stats(Tests, usize, 10, .milliseconds).init();
+        var stat = @import("zag").Stats(Tests, usize, 10, null, .milliseconds).init();
         stat.time(compute, test_type);
-        std.debug.print("{s:<12}: {mu+%s:.2}\n", .{ @tagName(test_type), stat });
+        std.debug.print("{s:<12}: {}ms±{?d:.1}%", .{ @tagName(test_type), stat.mean(), stat.stDevPercent() });
+        switch (test_type) {
+            .True => { baseline += stat.mean();},
+            .False => { baseline = (baseline + stat.mean()) / 2;},
+            else => {
+                std.debug.print(" {:3}ms", .{ stat.mean() - baseline});
+            },
+        }
+        std.debug.print("\n", .{});
     }
 }

@@ -1,12 +1,13 @@
 const std = @import("std");
 pub const Encoding = enum {
     zag,
+    zagAlt,
     nan,
     spur,
     taggedPtr,
     cachedPtr,
     ptr,
-    pub fn fromName(key: []const u8) ! Encoding {
+    pub fn fromName(key: []const u8) !Encoding {
         inline for (@typeInfo(Encoding).@"enum".fields) |f| {
             if (std.mem.eql(u8, f.name, key)) {
                 return @enumFromInt(f.value);

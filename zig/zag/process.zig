@@ -38,7 +38,7 @@ const Self = @This();
 m: [process_total_size]u8 align(1), // alignment explicitly stated to emphasize the difference from Process
 const process_total_size = config.process_total_size;
 pub const alignment = @max(stack_mask_overflow, flagMask + 1);
-pub const stack_mask_overflow = zag.utilities.largerPowerOf2(Process.stack_size * @sizeOf(Object));
+const stack_mask_overflow = zag.utilities.largerPowerOf2(Process.stack_size * @sizeOf(Object));
 pub const stack_mask = stack_mask_overflow - 1;
 pub const process_stack_size = Process.stack_size;
 pub const process_nursery_size = Process.nursery_size;
@@ -157,15 +157,15 @@ pub inline fn getSp(self: *align(1) const Self) SP {
 pub inline fn freeStack(self: *align(1) const Self, sp: SP) usize {
     return (@intFromPtr(sp) - @intFromPtr(self.ptr())) / 8;
 }
-pub inline//
+pub inline //
 fn getStack(self: *align(1) const Self, sp: SP) []Object {
     //    return sp.slice((@intFromPtr(self.endOfStack()) - @intFromPtr(sp)) / @sizeOf(Object));
     return sp.sliceTo(self.endOfStack());
 }
 pub inline fn dumpStack(self: *align(1) const Self, sp: SP, why: []const u8) void {
-    trace("dumpStack ({s})\n", .{ why });
+    trace("dumpStack ({s})\n", .{why});
     for (self.getStack(sp)) |*obj|
-        trace("[{x:0>10}]: {x:0>16}\n", .{ @intFromPtr(obj), @as(u64, @bitCast(obj.*))});
+        trace("[{x:0>10}]: {x:0>16}\n", .{ @intFromPtr(obj), @as(u64, @bitCast(obj.*)) });
 }
 pub inline fn canAllocStackSpace(self: *align(1) Self, sp: SP, words: usize) bool {
     const newSp = sp.reserve(words);
@@ -407,7 +407,7 @@ const Stack = struct {
         const newInt = selfInt - @sizeOf(Object) * n;
         if (n == 1 and newInt & stack_mask > 0) {
             return @ptrFromInt(newInt);
-        } else if ((selfInt & stack_mask_overflow) == (newInt & stack_mask_overflow)) {
+        } else if (((selfInt ^ newInt) & stack_mask_overflow) == 0) {
             return @ptrFromInt(newInt);
         } else return null;
     }
@@ -426,7 +426,7 @@ const Stack = struct {
     pub inline fn slice(self: SP, n: usize) []Object {
         return self.array()[0..n];
     }
-    pub inline//
+    pub inline //
     fn sliceTo(self: SP, a_ptr: anytype) []Object {
         const i_ptr = @intFromPtr(a_ptr);
         return self.slice(((i_ptr - @intFromPtr(self))) / @sizeOf(Object));

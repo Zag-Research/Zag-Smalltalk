@@ -46,8 +46,13 @@
     "cwd": "$ZED_WORKTREE_ROOT/zig",
   },
   {
+    "label": "time fib NaN",
+    "command": "zig build -Dencoding=nan -Doptimize=ReleaseFast && ./zig-out/bin/fib",
+    "cwd": "$ZED_WORKTREE_ROOT/zig",
+  },
+  {
     "label": "branchPrediction",
-    "command": "zig build-exe -O ReleaseFast branchPrediction.zig && taskpolicy -l5 -t5 time ./branchPrediction",
+    "command": "zig build -Doptimize=ReleaseFast && time ./branchPrediction",
     "cwd": "$ZED_WORKTREE_ROOT/zig",
   },
   {
