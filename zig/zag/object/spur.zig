@@ -160,7 +160,6 @@ pub const Object = packed union {
         return self.isImmediateFloat();
     }
 
-
     pub inline fn isFloat(self: Object) bool {
         return (self.rawU() & TagMask) == FloatTag;
     }

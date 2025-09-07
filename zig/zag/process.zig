@@ -38,8 +38,9 @@ const Self = @This();
 m: [process_total_size]u8 align(1), // alignment explicitly stated to emphasize the difference from Process
 const process_total_size = config.process_total_size;
 pub const alignment = @max(stack_mask_overflow, flagMask + 1);
-const stack_mask_overflow = zag.utilities.largerPowerOf2(Process.stack_size * @sizeOf(Object));
+const stack_mask_overflow: usize = zag.utilities.largerPowerOf2(Process.stack_size * @sizeOf(Object));
 pub const stack_mask = stack_mask_overflow - 1;
+const stack_mask_shift = @ctz(stack_mask_overflow);
 pub const process_stack_size = Process.stack_size;
 pub const process_nursery_size = Process.nursery_size;
 const Process = extern struct {
@@ -63,7 +64,7 @@ const Process = extern struct {
     const headerSize = @sizeOf(Fields);
     const processAvail = (process_total_size - headerSize) / @sizeOf(Object);
     const approx_nursery_size = (processAvail - processAvail / 9) / 2;
-    const stack_size = @min(processAvail - approx_nursery_size * 2, (1 << 16) / @sizeOf(Object) - 1);
+    const stack_size: usize = @min(zag.utilities.largerPowerOf2(processAvail - approx_nursery_size * 2), (1 << 16) / @sizeOf(Object) - 1);
     const nursery_size = (processAvail - stack_size) / 2;
     comptime {
         assert(stack_size <= nursery_size);
@@ -187,7 +188,7 @@ pub fn spillStackAndReserve(self: *align(1) Self, reserve: usize, sp: SP, contex
     return .{ newSp.safeReserve(reserve), newContext, newExtra };
 }
 pub fn spillStack(self: *align(1) Self, sp: SP, context: *Context, extra: Extra) struct { SP, *Context, Extra } {
-    if (!context.isOnStack()) return .{ sp, context, extra };
+    if (!context.isOnStack(sp)) return .{ sp, context, extra };
     // if the Context is on the stack, the Context, Extra and SP will move
     _ = .{ self, @panic("unimplemented") };
 }
@@ -227,20 +228,6 @@ pub fn alloc(self: *align(1) Self, classIndex: ClassIndex, iVars: u11, indexed: 
         }
     }
     @panic("NeedNurseryCollection");
-}
-pub fn allocStackX(self: *align(1) Self, oldSp: SP, classIndex: ClassIndex, iVars: u11, indexed: ?usize, comptime element: type) !SP {
-    const aI = allocationInfo(iVars, indexed, element, false);
-    if (aI.objectSize(Process.maxStackObjectSize)) |size| {
-        if (self.canAllocStackSpace(oldSp, size + 2)) {
-            const sp = oldSp.reserve(size + 2);
-            const obj: heap.HeapObjectPtr = @ptrCast(sp.array() + 1);
-            sp.top = Object.from(obj);
-            aI.initObjectStructure(obj, classIndex, .onStack);
-            aI.initContents(obj);
-            return sp;
-        }
-    }
-    return error.NoSpace;
 }
 
 pub fn collectNursery(self: *align(1) Self, sp: SP, context: *Context, need: usize) void {
@@ -403,22 +390,22 @@ const Stack = struct {
         return self.unreserve(1);
     }
     pub inline fn reserve(self: SP, n: anytype) ?SP {
-        const selfInt = @intFromPtr(self);
-        const newInt = selfInt - @sizeOf(Object) * n;
-        if (n == 1 and newInt & stack_mask > 0) {
-            return @ptrFromInt(newInt);
-        } else if (((selfInt ^ newInt) & stack_mask_overflow) == 0) {
-            return @ptrFromInt(newInt);
+        const newSP: SP = @ptrFromInt(@intFromPtr(self) - @sizeOf(Object) * n);
+        if (self.contains(newSP)) {
+            return newSP;
         } else return null;
     }
-    pub inline fn safeReserve(self: SP, n: usize) SP {
+    pub inline fn safeReserve(self: SP, n: anytype) SP {
         return @ptrFromInt(@intFromPtr(self) - @sizeOf(Object) * n);
     }
-    pub inline fn unreserve(self: SP, n: usize) SP {
+    pub inline fn unreserve(self: SP, n: anytype) SP {
         return @ptrFromInt(@intFromPtr(self) + @sizeOf(Object) * n);
     }
     pub inline fn delta(self: SP, other: SP) usize {
         return (@intFromPtr(other) - @intFromPtr(self)) / @sizeOf(Object);
+    }
+    pub inline fn contains(self: SP, other: anytype) bool {
+        return (@intFromPtr(other) ^ @intFromPtr(self)) >> stack_mask_shift == 0;
     }
     pub inline fn array(self: SP) [*]Object {
         return @ptrCast(self);

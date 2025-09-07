@@ -59,7 +59,13 @@ $ make install
 - [Ultralight](https://ultralig.ht/)
 - [DVUI](https://github.com/david-vanderson/dvui)
 - [zig-webui](https://github.com/webui-dev/zig-webui)
-- 
+- [curated list of Elecctron alternatives](https://github.com/sudhakar3697/awesome-electron-alternatives)
+- [Ghostty](https://mitchellh.com/writing/ghostty-is-coming#user-content-fn-3) - particularly libghostty - would be a possible Zag TUI
+- [GPUI from Zed](https://www.gpui.rs/) would be a possible Zag GUI (in Rust, so would need interface) [see also](https://zed.dev/blog/videogame) [and](https://github.com/zed-industries/zed/tree/main/crates/gpui) [and](https://github.com/longbridge/gpui-component)
+- A better approach might be to expose Package/Class/Method to Zed as a directory structure. This would allow agentic mode.
+
+## Data types
+- [CRTDs](https://en.wikipedia.org/wiki/Conflict-free_replicated_data_type)
 ## Architectures
 - [C Is Not a Low-level Language - Your computer is not a fast PDP-11](https://queue.acm.org/detail.cfm?id=3212479)
 
@@ -179,6 +185,7 @@ The name is escaping me....something like Micro Systems....
 - [Detailed Primer on Data Statistics](https://lakens.github.io/statistical_inferences/)
 - [Why Japanese Developers Write Code Completely Differently (And Why It Works Better)](https://medium.com/@sohail_saifi/why-japanese-developers-write-code-completely-differently-and-why-it-works-better-de84d6244fab)
 - [Hash Function Prospector](https://github.com/skeeto/hash-prospector?tab=readme-ov-file)
+- [Lab Practices](https://labspractices.com/) Stories from an eXtreme Programming conssultancy
 
 ### Rust
 - [Learn Rust](https://www.rust-lang.org/learn)

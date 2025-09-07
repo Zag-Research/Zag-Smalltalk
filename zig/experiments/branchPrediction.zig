@@ -52,10 +52,14 @@ pub fn main() void {
         stat.time(compute, test_type);
         std.debug.print("{s:<12}: {}ms±{?d:.1}%", .{ @tagName(test_type), stat.mean(), stat.stDevPercent() });
         switch (test_type) {
-            .True => { baseline += stat.mean();},
-            .False => { baseline = (baseline + stat.mean()) / 2;},
+            .True => {
+                baseline += stat.mean();
+            },
+            .False => {
+                baseline = (baseline + stat.mean()) / 2;
+            },
             else => {
-                std.debug.print(" {:3}ms", .{ stat.mean() - baseline});
+                std.debug.print(" {:3}ms", .{stat.mean() - baseline});
             },
         }
         std.debug.print("\n", .{});

@@ -31,7 +31,7 @@ pub const primitives = struct {};
 pub const threadedFns = struct {
     pub const branchTrue = struct {
         pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
-            if (sp.top == Object.from(true, null)) {
+            if (sp.top == True()) {
                 const newPc = pc.targetPC();
                 return @call(tailCall, process.check(newPc.prim()), .{ newPc.next(), sp.drop(), process, context, extra });
             }
@@ -41,9 +41,9 @@ pub const threadedFns = struct {
     pub const branchFalse = struct {
         pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
             process.dumpStack(sp, "branchFalse");
-            if (sp.top == Object.from(false, null)) {
+            if (sp.top == False()) {
                 const newPc = pc.targetPC();
-                trace("Boolean>>#inlinePrimitive: branchFalse {f} {f}\n", .{ pc, newPc});
+                trace("Boolean>>#inlinePrimitive: branchFalse {f} {f}\n", .{ pc, newPc });
                 return @call(tailCall, process.check(newPc.prim()), .{ newPc.next(), sp.drop(), process, context, extra });
             }
             return @call(tailCall, process.check(pc.prim2()), .{ pc.next2(), sp.drop(), process, context, extra });

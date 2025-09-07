@@ -192,9 +192,6 @@ pub const Object = packed struct(u64) {
     pub inline fn isImmediateDouble(self: object.Object) bool {
         return (self.rawU() & 6) != 0;
     }
-    pub inline fn isDouble(self: object.Object) bool {
-        return self.isImmediateDouble() or self.isMemoryDouble();
-    }
     pub inline fn isMemoryDouble(self: object.Object) bool {
         return self.isMemoryAllocated() and self.to(HeapObjectPtr).*.getClass() == .Float;
     }

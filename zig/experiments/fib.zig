@@ -65,7 +65,7 @@ const fibInteger = struct {
     const classes = Object.PackedObject.classes;
     const signature = zag.symbol.signature;
     const nullMethod = zag.dispatch.nullMethod;
-    var fib align(codeAlignment)=
+    var fib align(codeAlignment) =
         compileMethod(Sym.fibonacci, 0, .SmallInteger, .{
             tf.push,                  self,
             tf.pushLiteral,           2,
@@ -112,7 +112,7 @@ const fibInteger = struct {
 
 const fibInteger0 = struct {
     const included = true;
-    var info = Info{ .name = "Integer0"};
+    var info = Info{ .name = "Integer0" };
     const self = zag.Context.makeVariable(0, 1, .Parameter, &.{});
     const leq = SmallInteger.@"<=".inlined;
     const plus = SmallInteger.@"+".inlined;
@@ -120,7 +120,7 @@ const fibInteger0 = struct {
     const classes = Object.PackedObject.classes;
     const signature = zag.symbol.signature;
     const nullMethod = zag.dispatch.nullMethod;
-    var fib align(codeAlignment)=
+    var fib align(codeAlignment) =
         compileMethod(Sym.fibonacci, 0, .SmallInteger, .{
             tf.push,                  self,
             tf.pushLiteral,           2,
@@ -167,7 +167,7 @@ const fibInteger0 = struct {
 
 const fibIntegerBr = struct {
     const included = true;
-    var info = Info{ .name = "IntegerBr"};
+    var info = Info{ .name = "IntegerBr" };
     const self = zag.Context.makeVariable(0, 1, .Parameter, &.{});
     const leq = SmallInteger.@"<=".inlined;
     const plus = SmallInteger.@"+".inlined;
@@ -175,24 +175,24 @@ const fibIntegerBr = struct {
     const classes = Object.PackedObject.classes;
     const signature = zag.symbol.signature;
     const nullMethod = zag.dispatch.nullMethod;
-    var fib align(codeAlignment)=
+    var fib align(codeAlignment) =
         compileMethod(Sym.fibonacci, 0, .SmallInteger, .{
             tf.push,                  self,
             tf.pushLiteral,           2,
             tf.inlinePrimitive,       leq,
-            tf.branchFalse,
-            "false",                  tf.returnSelf,
-            ":false",                 tf.push,
-            self,                     tf.pushLiteral,
-            1,                        tf.inlinePrimitive,
-            minus,                    tf.send0,
-            signature(.fibonacci, 0), &nullMethod,
+            tf.branchFalse,           "false",
+            tf.returnSelf,            ":false",
             tf.push,                  self,
-            tf.pushLiteral,           2,
+            tf.pushLiteral,           1,
             tf.inlinePrimitive,       minus,
-            tf.send0,                 signature(.fibonacci, 0),
-            &nullMethod,              tf.inlinePrimitive,
-            plus,                     tf.returnTop,
+            tf.send,                  signature(.fibonacci, 0),
+            &nullMethod,              tf.push,
+            self,                     tf.pushLiteral,
+            2,                        tf.inlinePrimitive,
+            minus,                    tf.send,
+            signature(.fibonacci, 0), &nullMethod,
+            tf.inlinePrimitive,       plus,
+            tf.returnTop,
         });
     fn init() void {
         fib.resolve(&[_]Object{}) catch unreachable;
@@ -222,7 +222,7 @@ const fibIntegerBr = struct {
 
 const fibFloat = struct {
     const included = true;
-    var info = Info{ .name = "Float"};
+    var info = Info{ .name = "Float" };
     const self = zag.Context.makeVariable(0, 1, .Parameter, &.{});
     const leq = Float.@"<=".inlined;
     const plus = Float.@"+".inlined;
@@ -230,7 +230,7 @@ const fibFloat = struct {
     const classes = Object.PackedObject.classes;
     const signature = zag.symbol.signature;
     const nullMethod = zag.dispatch.nullMethod;
-    var fib align(codeAlignment)=
+    var fib align(codeAlignment) =
         compileMethod(Sym.fibonacci, 0, .Float, .{
             tf.push,                  self,
             tf.pushLiteral,           2.0,
@@ -286,8 +286,7 @@ fn showDelta(infos: ?*Info, new: u64, target: []const u8) void {
                 print(" no change)", .{});
             }
             return;
-        } else
-            showDelta(info.previous, new, target);
+        } else showDelta(info.previous, new, target);
     }
 }
 fn deltaInfo(previous: ?*Info, new: *Info, arg: []const u8) *Info {
@@ -320,7 +319,7 @@ pub fn timing(args: []const []const u8, default: bool) !void {
             print("          Median   Mean   StdDev  SD/Mean ({} run{s}, {} warmup{s})\n", .{ stat.runs, if (stat.runs != 1) "s" else "", stat.warmups, if (stat.warmups != 1) "s" else "" });
         } else {
             var anyRun = false;
-            inline for (&.{fibNative, fibNativeFloat, fibInteger, fibInteger0, fibIntegerBr, fibFloat}) |benchmark| {
+            inline for (&.{ fibNative, fibNativeFloat, fibInteger, fibInteger0, fibIntegerBr, fibFloat }) |benchmark| {
                 if (benchmark.included and std.mem.eql(u8, name(arg), benchmark.info.name)) {
                     anyRun = true;
                     print("{s:>9}", .{benchmark.info.name});
@@ -336,14 +335,15 @@ pub fn timing(args: []const []const u8, default: bool) !void {
             if (!default and !anyRun)
                 print("Unknown argument: {s}\n", .{arg});
         }
-   }
+    }
 }
 pub fn main() !void {
-    const do_all = [_][]const u8{ "Config", "Header", "Native", "NativeF",
+    const do_all = [_][]const u8{
+        "Config",  "Header",            "Native", "NativeF",
         //"Float",
         "Integer",
-        "Integer0?Integer",
-        "IntegerBr?Integer?Integer0",
+        //"Integer0?Integer",
+        "IntegerBr?Integer",
     };
     // var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     // const allocator = gpa.allocator();

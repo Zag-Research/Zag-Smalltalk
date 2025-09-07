@@ -22,7 +22,7 @@ pub fn build(b: *std.Build) void {
         }),
     });
     exe.root_module.addOptions("options", options);
-    b.installArtifact(exe);
+    //    b.installArtifact(exe);
     const run_step = b.step("run", "Run the app");
     const run_cmd = b.addRunArtifact(exe);
     run_step.dependOn(&run_cmd.step);
@@ -92,8 +92,9 @@ pub fn build(b: *std.Build) void {
             },
         }),
     });
+    _ = branchPrediction;
     //b.step("branchPrediction", "Compile branchPrediction").dependOn(&b.installArtifact(branchPrediction).step);
-    b.installArtifact(branchPrediction);
+    //b.installArtifact(branchPrediction);
 
     const fib_check = b.addExecutable(.{
         .name = "fib",

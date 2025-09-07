@@ -15,7 +15,7 @@ pub const compile_date = options.compile_date;
 pub const objectEncoding = options.objectEncoding;
 pub const max_classes = options.maxClasses;
 // must be more than HeapObject.maxLength*8 so externally allocated
-pub const process_total_size = if (is_test) 2048 else 64 * 1024;
+pub const process_total_size: usize = if (is_test) 2048 else 64 * 1024;
 
 pub const debugging = false;
 pub const logThreadExecution = debugging;

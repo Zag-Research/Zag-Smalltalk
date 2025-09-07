@@ -212,6 +212,13 @@ pub const Object = packed struct(u64) {
     inline fn nativeU_noCheck(self: object.Object) u64 {
         return self.rawU() << 14 >> 14;
     }
+    pub inline fn nativeF(self: object.Object) ?f64 {
+        if (self.isImmediateDouble()) return self.toDoubleNoCheck();
+        return null;
+    }
+    inline fn nativeF_noCheck(self: object.Object) f64 {
+        return self.toDoubleNoCheck();
+    }
     pub inline fn symbolHash(self: object.Object) ?u24 {
         if (self.isImmediateClass(.Symbol)) return @truncate(self.hash32());
         return null;
@@ -253,12 +260,6 @@ pub const Object = packed struct(u64) {
 
     pub inline fn isDouble(self: object.Object) bool {
         return self.rawU() <= Negative_Infinity;
-    }
-    pub inline fn isNonLocalThunkX(self: object.Object) bool {
-        return switch (self.tag) {
-            .nonLocalThunk => true,
-            else => false,
-        };
     }
     pub inline fn isMemoryAllocated(self: object.Object) bool {
         return switch (self.tag) {

@@ -340,9 +340,10 @@ pub const Code = union(enum) {
 };
 pub const StackStructure = packed struct {
     tag: object.Object.LowTagType = object.Object.lowTagSmallInteger,
-    locals: u11 = 0,
-    selfOffset: u11 = 0,
-    _filler: std.meta.Int(.unsigned, 64 - 22 - @bitSizeOf(Object.LowTagType) - @bitSizeOf(Object.HighTagType)) = 0,
+    _fillerLow: std.meta.Int(.unsigned, 16 - @bitSizeOf(Object.LowTagType)) = 0,
+    locals: u16 = 0,
+    selfOffset: u16 = 0,
+    _fillerHigh: std.meta.Int(.unsigned, 64 - 48 - @bitSizeOf(Object.HighTagType)) = 0,
     highTag: object.Object.HighTagType = object.Object.highTagSmallInteger,
 };
 pub const endMethod = CompiledMethod.init(Nil(), Code.end);
@@ -416,9 +417,6 @@ pub const CompiledMethod = struct {
     }
     pub inline fn startPc(self: *const Self) PC {
         return PC.init(@ptrCast(&self.code[1]));
-    }
-    pub inline fn selectorHash32X(self: *const Self) u32 {
-        return @truncate(self.signature.rawU());
     }
     pub fn asFakeObject(self: *const Self) Object {
         return @as(Object, @bitCast(@intFromPtr(self)));
@@ -879,18 +877,19 @@ pub const Execution = struct {
     fn Executer(MethodType: type) type {
         return struct {
             process: Process align(Process.alignment),
-            ctxt: Context,
+            ctxt: Context.Static,
             method: MethodType,
             const Self = @This();
             pub fn new(method: MethodType) Self {
                 return Self{
                     .process = Process.new(),
-                    .ctxt = Context.init(),
+                    .ctxt = Context.Static.new(),
                     .method = method,
                 };
             }
             pub fn init(self: *Self, stackObjects: ?[]const Object) void {
-                self.process.setContext(&self.ctxt);
+                self.ctxt.initStatic();
+                self.process.setContext(@ptrCast(&self.ctxt));
                 self.process.init(Nil());
                 if (stackObjects) |source| {
                     self.initStack(source);

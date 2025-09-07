@@ -61,7 +61,7 @@ const DispatchHandler = struct {
                     if (dispatch != &Dispatch.empty)
                         dispatch.state = .dead;
                 }
-                trace("locked {} {}\n", .{index, dispatch});
+                trace("locked {} {}\n", .{ index, dispatch });
                 var numMethods: usize = 3;
                 while (true) {
                     numMethods = @max(numMethods, dispatch.nMethods + 1) * 100 / loadFactor;
@@ -148,10 +148,6 @@ const Dispatch = struct {
                 if (!newDispatch.add(ptr)) return false;
         }
         return newDispatch.add(method);
-    }
-    inline fn lookupAddressX(self: *const Self, selector: Object, ci: ClassIndex) ?*DispatchElement {
-        const dm = self.dispatchMatch(selector);
-        return dm.matchOrEmpty(Signature.from(selector, ci));
     }
     inline //
     fn lookupMethod(self: *const Self, signature: Signature) ?*const CompiledMethod {
@@ -355,12 +351,12 @@ pub const threadedFunctions = struct {
     pub const returnSelf = struct {
         pub fn threadedFn(_: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
             process.dumpStack(sp, "returnSelf");
-            if (extra.addressIfNoContext(0, sp)) |address| {
+            if (extra.selfAddress(sp)) |address| {
                 const newSp: SP = @ptrCast(address);
                 trace("returnSelf: {*}->{*} {f}\n", .{ sp, newSp, extra });
-                return @call(tailCall, process.check(context.npc), .{ context.tpc, newSp, process, context, Extra.fromContextData(context.contextData) });
+                return @call(tailCall, process.check(context.npc), .{ context.tpc, newSp, process, context, Extra.fromContextData(context.contextDataPtr(sp)) });
             }
-            const newSp, const callerContext = context.pop(process);
+            const newSp, const callerContext = context.pop(process, sp);
             process.dumpStack(sp, "returnSelf after pop");
             trace("returnSelf: {*}->{*}\n", .{ sp, newSp });
             process.dumpStack(sp, "returnSelf after pop");
@@ -389,16 +385,16 @@ pub const threadedFunctions = struct {
         pub fn threadedFn(_: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
             const top = sp.top;
             process.dumpStack(sp, "returnTop");
-            if (extra.addressIfNoContext(0, sp)) |address| {
+            if (extra.selfAddress(sp)) |address| {
                 const newSp: SP = @ptrCast(address);
                 trace("returnTop: {f} {*} {*} {f}\n", .{ top, sp, newSp, extra });
                 newSp.top = top;
-                return @call(tailCall, process.check(context.npc), .{ context.tpc, newSp, process, context, Extra.fromContextData(context.contextData) });
+                return @call(tailCall, process.check(context.npc), .{ context.tpc, newSp, process, context, Extra.fromContextData(context.contextDataPtr(sp)) });
             }
-            const newSp, const callerContext = context.pop(process);
-            trace("returnTop: {f} {*}\n", .{ top, sp });
+            const newSp, const callerContext = context.pop(process, sp);
+            trace("returnTop: {f} {*}\n", .{ top, newSp });
             newSp.top = top;
-            return @call(tailCall, process.check(callerContext.npc), .{ callerContext.tpc, newSp, process, callerContext, Extra.fromContextData(callerContext.contextData) });
+            return @call(tailCall, process.check(callerContext.npc), .{ callerContext.tpc, newSp, process, callerContext, Extra.fromContextData(callerContext.contextDataPtr(sp)) });
         }
         test "returnTopNoContext" {
             if (true) return error.NotImplemented;

@@ -143,8 +143,7 @@ comptime {
     std.debug.assert(@intFromEnum(ClassIndex.replace0) == 0xffff);
     std.testing.expectEqual(@intFromEnum(ClassIndex.ThunkReturnLocal), 1) catch unreachable;
     //    std.debug.assert(std.meta.hasUniqueRepresentation(Object));
-    for (@typeInfo(ClassIndex.Compact).@"enum".fields,
-        @typeInfo(ClassIndex).@"enum".fields[0..@typeInfo(ClassIndex.Compact).@"enum".fields.len]) |ci, cci| {
+    for (@typeInfo(ClassIndex.Compact).@"enum".fields, @typeInfo(ClassIndex).@"enum".fields[0..@typeInfo(ClassIndex.Compact).@"enum".fields.len]) |ci, cci| {
         std.testing.expectEqual(ci, cci) catch unreachable;
     }
 }
@@ -244,10 +243,6 @@ pub const ObjectFunctions = struct {
     pub fn size(self: Object) !usize {
         if (!self.isHeapObject()) return error.NotIndexable;
         return self.to(HeapObjectPtr).arraySize();
-    }
-    pub fn growSizeX(self: Object, stepSize: usize) !usize {
-        if (!self.isHeapObject()) return error.NotIndexable;
-        return self.to(HeapObjectPtr).growSize(stepSize);
     }
     pub fn isIndexable(self: Object) bool {
         if (self.isHeapObject()) return self.to(HeapObjectConstPtr).isIndexable();

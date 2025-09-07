@@ -358,7 +358,7 @@ pub const threadedFns = struct {
 pub const ThunkImmediate = struct {
     pub fn primitive(_: PC, sp: SP, process: *Process, context: *Context, _: Extra) Result {
         const result = sp.top.extraValue();
-        const newSp, const callerContext = context.pop(process);
+        const newSp, const callerContext = context.pop(process, sp);
         newSp.top = result;
         return @call(tailCall, process.check(callerContext.getNPc()), .{ callerContext.getTPc(), newSp, process, callerContext, undefined });
     }

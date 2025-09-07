@@ -30,7 +30,7 @@ inline fn hash_of(index: u24, arity: u4) u32 {
 pub const signature = SymbolsEnum.signature;
 pub fn fromHash(hash: u64) Object {
     const index: u24 = @truncate(hash * undoPhi24);
-    std.debug.print("signature: hash = {x} index = {x}\n", .{hash, index});
+    std.debug.print("signature: hash = {x} index = {x}\n", .{ hash, index });
     return @as(SymbolsEnum, @enumFromInt(index)).asObject();
 }
 const SymbolsEnum = enum(u32) {
@@ -154,7 +154,7 @@ const SymbolsEnum = enum(u32) {
     fn initSymbol(sym: *PointedObject, symbol: SymbolsEnum) void {
         const hash: u64 = symbol.symbolHash().?;
         sym.header = HeapHeader{ .classIndex = .Symbol, .hash = @truncate(hash), .format = .notIndexable, .age = .static, .length = 1 };
-        sym.data.unsigned = hash | @as(u64,symbol.numArgs()) << 24;
+        sym.data.unsigned = hash | @as(u64, symbol.numArgs()) << 24;
     }
     pub inline fn numArgs(self: SymbolsEnum) u4 {
         return @truncate(@intFromEnum(self) >> 24);

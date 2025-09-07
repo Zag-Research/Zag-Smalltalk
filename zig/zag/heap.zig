@@ -651,8 +651,8 @@ pub const HeapHeader = packed struct(u64) {
     pub inline fn objectInNursery(self: *HeapHeader, class: ClassIndex, objectSize: u11) void {
         self.* = .{ .classIndex = class, .hash = hashFromPtr(self), .format = .directIndexed, .age = .nursery, .length = objectSize };
     }
-    pub inline fn headerOnStack(comptime class: ClassIndex, hash: u24, length: u11) HeapHeader {
-        return .{ .classIndex = class, .hash = hash, .format = .special, .age = .onStack, .length = length };
+    pub inline fn headerStatic(comptime class: ClassIndex, hash: u24, length: u11) HeapHeader {
+        return .{ .classIndex = class, .hash = hash, .format = .special, .age = .static, .length = length };
     }
     pub fn freeHeader(length: u11) HeapHeader {
         return .{ .classIndex = .none, .hash = 0, .format = .free, .age = .free, .length = length };
@@ -660,17 +660,11 @@ pub const HeapHeader = packed struct(u64) {
     pub inline fn storeFreeHeader(self: *HeapHeader) void {
         self.* = freeHeader(0);
     }
-    pub inline fn staticHeaderWithLengthX(length: u12) HeapHeader {
-        return .{ .classIndex = @enumFromInt(0), .hash = 0, .format = .special, .age = .static, .length = length };
-    }
     pub inline fn staticHeaderWithClassAllocHash(classIndex: ClassIndex, ai: AllocationInfo, hash: u24) HeapHeader {
         return ai.heapHeader(classIndex, .static, hash);
     }
     pub inline fn staticHeaderWithClassLengthHash(classIndex: ClassIndex, length: u12, hash: u24) HeapHeader {
         return .{ .classIndex = classIndex, .hash = hash, .format = .special, .age = .static, .length = length };
-    }
-    pub inline fn simpleStackHeaderX(classIndex: ClassIndex, length: u12, hash: u24) HeapHeader {
-        return .{ .classIndex = classIndex, .hash = hash, .format = .directIndexed, .age = .onStack, .length = length };
     }
     inline fn init(length: u12, format: Format, classIndex: ClassIndex, hash: u24, age: Age) HeapHeader {
         return .{
