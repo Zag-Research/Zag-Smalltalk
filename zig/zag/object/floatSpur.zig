@@ -13,6 +13,7 @@ const EXPONENT_BIAS: u16 = 896; // 1023 - 127
 const MAX_EXPONENT: u16 = EXPONENT_BIAS + 0xFF; // 896 + 255 = 1151
 
 // immediate float layout: [exp8(8)][mant(52)][sign(1)][tag(3)]
+// Ref: https://clementbera.wordpress.com/2018/11/09/64-bits-immediate-floats/
 pub fn encode(value: f64) !u64 {
     const bits: u64 = @bitCast(value);
     const sign: u64 = (bits & SIGN_MASK) >> 63;
