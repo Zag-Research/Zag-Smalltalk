@@ -3,63 +3,54 @@ const math = std.math;
 const expectEqual = std.testing.expectEqual;
 const expect = std.testing.expect;
 
-const SIGN_MASK: u64 = 0x8000000000000000;
 const EXPONENT_MASK: u64 = 0x7FF0000000000000;
 const MANTISSA_MASK: u64 = 0x000FFFFFFFFFFFFF;
 const TAG = 0b100; // immediate float tag
 
 // exp8 = (exp11 - 1023) + 127 = exp11 - 896
 const EXPONENT_BIAS: u16 = 896; // 1023 - 127
-const MAX_EXPONENT: u16 = EXPONENT_BIAS + 0xFF; // 896 + 255 = 1151
+const REBIAS_CONST: u64 = 0x7000_0000_0000_0000; // 896 << 53
+
+fn encode_nocheck(bits: u64) u64 {
+    // spur encoding: [63:56]=exp8, [55:4]=mantissa, [3]=sign, [2:0]=tag(=0b100)
+    var r: u64 = std.math.rotl(u64, bits, 1);
+    r -%= REBIAS_CONST;
+    r = (r << 3) + TAG;
+    return r;
+}
 
 // immediate float layout: [exp8(8)][mant(52)][sign(1)][tag(3)]
 // Ref: https://clementbera.wordpress.com/2018/11/09/64-bits-immediate-floats/
 pub fn encode(value: f64) !u64 {
     const bits: u64 = @bitCast(value);
-    const sign: u64 = (bits & SIGN_MASK) >> 63;
-    const exp11: u64 = (bits & EXPONENT_MASK) >> 52;
-    const mantissa: u64 = bits & MANTISSA_MASK;
+    const exp: u64 = (bits & EXPONENT_MASK);
 
     // Handle zero / subnormal / special
-    if (exp11 == 0) {
-        // zero if mantissa==0, else subnormal (reject or normalize)
-        if (mantissa == 0) {
-            // Represent ±0 with exp8=0, mant=0 and keep sign; tag=0b100 example
-            return (0 << 56) | (0 << 4) | (sign << 3) | TAG;
-        }
-        return error.Unencodable;
+    if (exp == 0) {
+        const mant = bits & MANTISSA_MASK;
+        return if (mant == 0) (((bits >> 60) & 0x8) | TAG) else error.Unencodable;
     }
 
-    // IEEE special (Inf/NaN)
-    if (exp11 == 0x7FF) return error.Unencodable;
+    // Handle IEEE special values (Inf/NaN)
+    if (exp == EXPONENT_MASK) return error.Unencodable;
 
-    // normal window: 0x380..0x47F inclusive
-    const e11: u16 = @intCast(exp11);
-    if (e11 < EXPONENT_BIAS or e11 > MAX_EXPONENT) return error.Unencodable;
+    const e11: u32 = @intCast(exp >> 52);
+    const exp8_u32: u32 = e11 - EXPONENT_BIAS;
+    // Handle out-of-range exponents
+    if ((exp8_u32 & ~@as(u32, 0xFF)) != 0) return error.Unencodable;
+    // Handle collision with zero encoding
+    if (exp8_u32 == 0 and (bits & MANTISSA_MASK) == 0) return error.Unencodable;
 
-    // avoid collision with immediate zero
-    if (e11 == EXPONENT_BIAS and mantissa == 0) return error.Unencodable;
-
-    const exp8: u8 = @intCast(e11 - EXPONENT_BIAS);
-
-    // spur encoding: [63:56]=exp8, [55:4]=mantissa, [3]=sign, [2:0]=tag(=0b100)
-    return (@as(u64, exp8) << 56) | (mantissa << 4) | (sign << 3) | TAG;
+    return encode_nocheck(bits);
 }
 
 pub fn decode(self: u64) f64 {
-    const hash = self >> 3;
-    const sign: u64 = hash & 1;
-    const mantissa: u64 = (hash >> 1) & MANTISSA_MASK;
-    const exp8: u64 = hash >> 53;
-
-    // handle +- zeros
-    if (exp8 == 0 and mantissa == 0) {
-        const bits: u64 = sign << 63; 
-        return @bitCast(bits);
+    var hash = self >> 3;
+    if (hash <= 1) {
+        return @bitCast((hash & 1) << 63);
     }
-
-    const exponent = exp8 + EXPONENT_BIAS;
-    return @bitCast((sign << 63) | (exponent << 52) | mantissa);
+    hash +%= REBIAS_CONST;
+    return @bitCast(math.rotr(u64, hash, 1));
 }
 
 test "encode/decode" {
