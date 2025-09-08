@@ -191,9 +191,9 @@ pub inline fn int(i: i64, maybeProcess: ?*Process) Object {
     if (SICache and SICacheMin <= i and i <= SICacheMax)
         return Object.from(&SmallIntegerCache.objects[(@as(usize, @bitCast(i - SICacheMin))) << 1], null);
     if (maybeProcess) |process| {
-        if (process.alloc(.SmallInteger, 1, null, Object, false)) |allocReturn| {
-            allocReturn.allocated.array(i64)[1] = i;
-            return allocReturn.allocated.asObject();
+        if (process.alloc(.SmallInteger, 1, null, Object, false)) |allocResult| {
+            allocResult.allocated.array(i64)[1] = i;
+            return allocResult.allocated.asObject();
         } else |_| {}
     }
     if ((PointedObject{
@@ -253,9 +253,9 @@ pub inline fn float(v: f64, maybeProcess: ?*Process) Object {
             return Object.from(&fOne);
     }
     if (maybeProcess) |process| {
-        if (process.alloc(.Float, 1, null, Object, false)) |allocReturn| {
-            allocReturn.allocated.array(f64)[1] = v;
-            return allocReturn.allocated.asObject();
+        if (process.alloc(.Float, 1, null, Object, false)) |allocResult| {
+            allocResult.allocated.array(f64)[1] = v;
+            return allocResult.allocated.asObject();
         } else |_| {}
     }
     //@compileLog(v);

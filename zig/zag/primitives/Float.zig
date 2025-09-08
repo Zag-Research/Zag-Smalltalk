@@ -28,86 +28,64 @@ pub const moduleName = "SmallInteger";
 pub fn init() void {}
 pub const inlines = struct {
     pub fn @"+"(self: Object, other: Object, maybeProcess: ?*Process) !Object { // INLINED - Add
-        if (other.untaggedI()) |untagged| {
-            const result, const overflow = @addWithOverflow(self.taggedI_noCheck(), untagged);
-            if (overflow == 0) return Object.fromTaggedI(result, maybeProcess);
+        if (other.nativeF()) |untagged| {
+            const result = self.nativeF_noCheck() + untagged;
+            return Object.fromNativeF(result, maybeProcess);
         }
         return error.primitiveError;
     }
     pub inline fn negated(self: Object, maybeProcess: ?*Process) !Object { // Negate
-        const result, const overflow = @subWithOverflow(Object.tagged0, self.untaggedI_noCheck());
-        if (overflow == 0) return Object.fromTaggedI(result, maybeProcess);
-        return error.primitiveError;
+        const result = -self.nativeF_noCheck();
+        return Object.fromNativeF(result, maybeProcess);
     }
     pub inline fn @"-"(self: Object, other: Object, maybeProcess: ?*Process) !Object { // Subtract
-        if (other.untaggedI()) |untagged| {
-            const result, const overflow = @subWithOverflow(self.taggedI_noCheck(), untagged);
-            if (overflow == 0) return Object.fromTaggedI(result, maybeProcess);
+        if (other.nativeF()) |untagged| {
+            const result = self.nativeF_noCheck() - untagged;
+            return Object.fromNativeF(result, maybeProcess);
         }
         return error.primitiveError;
     }
     pub inline fn @"<"(self: Object, other: Object) !bool { // LessThan
-        if (other.taggedI()) |tagged|
-            return self.taggedI_noCheck() < tagged;
+        if (other.nativeF()) |tagged|
+            return self.nativeF_noCheck() < tagged;
         return error.primitiveError;
     }
     pub inline fn @">"(self: Object, other: Object) !bool { // GreaterThan
-        if (other.taggedI()) |tagged|
-            return self.taggedI_noCheck() > tagged;
+        if (other.nativeF()) |tagged|
+            return self.nativeF_noCheck() > tagged;
         return error.primitiveError;
     }
     pub inline fn @"<="(self: Object, other: Object) !bool { // LessOrEqual
-        if (other.taggedI()) |tagged|
-            return self.taggedI_noCheck() <= tagged;
+        if (other.nativeF()) |tagged|
+            return self.nativeF_noCheck() <= tagged;
         return error.primitiveError;
     }
     pub inline fn @">="(self: Object, other: Object) !bool { // GreaterOrEqual
-        if (other.taggedI()) |tagged|
-            return self.taggedI_noCheck() >= tagged;
+        if (other.nativeF()) |tagged|
+            return self.nativeF_noCheck() >= tagged;
         return error.primitiveError;
     }
     pub inline fn @"="(self: Object, other: Object) !bool { // Equal
-        if (other.taggedI()) |tagged|
-            return self.taggedI_noCheck() == tagged;
+        if (other.nativeF()) |tagged|
+            return self.nativeF_noCheck() == tagged;
         return error.primitiveError;
     }
     pub inline fn @"<>"(self: Object, other: Object) !bool { // NotEqual
-        if (other.taggedI()) |tagged|
-            return self.taggedI_noCheck() != tagged;
+        if (other.nativeF()) |tagged|
+            return self.nativeF_noCheck() != tagged;
         return error.primitiveError;
     }
     pub inline fn @"*"(self: Object, other: Object, maybeProcess: ?*Process) !Object { // Multiply
-        if (other.nativeI()) |untagged| {
-            const result, const overflow = @mulWithOverflow(self.untaggedI_noCheck(), untagged);
-            if (overflow == 0) return Object.fromUntaggedI(result, maybeProcess);
+        if (other.nativeF()) |untagged| {
+            const result = self.nativeF_noCheck() * untagged;
+            return Object.fromNativeF(result, maybeProcess);
         }
         return error.primitiveError;
     }
 };
 
-test "inline primitives" {
-    try config.skipNotZag();
-    const expectEqual = std.testing.expectEqual;
-    try expectEqual(Object.from(12, null), inlines.@"*"(Object.from(3, null), Object.from(4, null), null));
-    try expectEqual(error.primitiveError, inlines.@"*"(Object.from(0x1_0000_0000, null), Object.from(0x100_0000, null), null));
-    try expectEqual(error.primitiveError, inlines.@"*"(Object.from(0x1_0000_0000, null), Object.from(0x80_0000, null), null));
-    try expectEqual(Object.from(-0x80_0000_0000_0000, null), inlines.@"*"(Object.from(0x1_0000_0000, null), Object.from(-0x80_0000, null), null));
-    try expectEqual(Object.from(0x20_0000_0000_0000, null), inlines.@"*"(Object.from(0x1_0000_0000, null), Object.from(0x20_0000, null), null));
-    try expectEqual(Object.from(0x3f_ffff_0000_0000, null), inlines.@"*"(Object.from(0x1_0000_0000, null), Object.from(0x3f_ffff, null), null));
-    try expectEqual(Object.from(0, null), inlines.negated(Object.from(0, null), null));
-    try expectEqual(Object.from(-42, null), inlines.negated(Object.from(42, null), null));
-    try expectEqual(Object.from(0x7f_ffff_ffff_ffff, null), inlines.negated(Object.from(-0x7f_ffff_ffff_ffff, null), null));
-    try expectEqual(Object.from(-0x7f_ffff_ffff_ffff, null), inlines.negated(Object.from(0x7f_ffff_ffff_ffff, null), null));
-    try expectEqual(error.primitiveError, inlines.negated(Object.from(-0x80_0000_0000_0000, null), null));
-    try expectEqual(true, try inlines.@"<="(Object.from(0, null), Object.from(0, null)));
-    try expectEqual(true, try inlines.@"<="(Object.from(0, null), Object.from(1, null)));
-    try expectEqual(false, try inlines.@"<="(Object.from(1, null), Object.from(0, null)));
-    try expectEqual(true, try inlines.@">="(Object.from(0, null), Object.from(0, null)));
-    try expectEqual(false, try inlines.@">="(Object.from(0, null), Object.from(1, null)));
-    try expectEqual(true, try inlines.@">="(Object.from(1, null), Object.from(0, null)));
-}
 pub const @"+" = struct {
-    pub const number = 1;
+    pub const number = 41;
     pub const inlined = signature(.@"+", number);
     pub fn primitive(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result { // SmallInteger>>#+
         const newSp = sp.dropPut(inlines.@"+"(sp.next, sp.top, process) catch
@@ -119,34 +97,19 @@ pub const @"+" = struct {
             "simple add",
             .{ tf.primitive, 1 },
             &[_]Object{
-                Object.from(25, null),
-                Object.from(17, null),
+                Object.from(25.0, null),
+                Object.from(17.0, null),
             },
             &[_]Object{
-                Object.from(42, null),
-            },
-        );
-    }
-    test "simple add with overflow" {
-        try Execution.runTest(
-            "simple add with overflow",
-            .{ tf.primitive, 1, tf.pushLiteral, 42 },
-            &[_]Object{
-                Object.from(4, null),
-                Object.from(Object.maxInt, null),
-            },
-            &[_]Object{
-                Object.from(42, null),
-                Object.from(4, null),
-                Object.from(Object.maxInt, null),
+                Object.from(42.0, null),
             },
         );
     }
     pub fn inlinePrimitive(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
         process.dumpStack(sp, "+");
         const receiver = sp.next;
-        if (!receiver.isInt()) {
-            trace("SmallInteger>>#inlinePrimitive: + {f}", .{receiver});
+        if (!receiver.isFloat()) {
+            trace("Float>>#inlinePrimitive: + {f}", .{receiver});
             if (true) unreachable;
             return @call(tailCall, PC.inlinePrimitiveFailed, .{ pc, sp, process, context, extra });
         }
@@ -156,7 +119,7 @@ pub const @"+" = struct {
     }
 };
 pub const @"-" = struct {
-    pub const number = 2;
+    pub const number = 42;
     pub const inlined = signature(.@"-", number);
     pub fn primitive(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result { // SmallInteger>>#-
         const newSp = sp.dropPut(inlines.@"-"(sp.next, sp.top, process) catch
@@ -166,8 +129,8 @@ pub const @"-" = struct {
     pub fn inlinePrimitive(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
         process.dumpStack(sp, "-");
         const receiver = sp.next;
-        if (!receiver.isInt()) {
-            trace("SmallInteger>>#inlinePrimitive: - {f}\n", .{receiver});
+        if (!receiver.isFloat()) {
+            trace("Float>>#inlinePrimitive: - {f}\n", .{receiver});
             return @call(tailCall, PC.inlinePrimitiveFailed, .{ pc, sp, process, context, extra });
         }
         const newSp = sp.dropPut(inlines.@"-"(receiver, sp.top, process) catch
@@ -176,7 +139,7 @@ pub const @"-" = struct {
     }
 };
 pub const @"<=" = struct {
-    pub const number = 5;
+    pub const number = 45;
     pub const inlined = signature(.@"<=", number);
     pub fn primitive(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result { // SmallInteger>>#<=
         const newSp = sp.dropPut(Object.from(inlines.@"<="(sp.next, sp.top) catch
@@ -186,8 +149,8 @@ pub const @"<=" = struct {
     pub fn inlinePrimitive(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
         process.dumpStack(sp, "<=");
         const receiver = sp.next;
-        if (!receiver.isInt()) {
-            trace("SmallInteger>>#inlinePrimitive: <= {f}\n", .{receiver});
+        if (!receiver.isFloat()) {
+            trace("Float>>#inlinePrimitive: <= {f}\n", .{receiver});
             if (true) unreachable;
             return @call(tailCall, PC.inlinePrimitiveFailed, .{ pc, sp, process, context, extra });
         }
@@ -198,7 +161,7 @@ pub const @"<=" = struct {
     }
 };
 pub const @"*" = struct {
-    pub const number = 9;
+    pub const number = 49;
     pub const inlined = signature(.@"*", number);
     pub fn primitive(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result { // SmallInteger>>#*
         const newSp = sp.dropPut(Object.from(inlines.@"*"(sp.next, sp.top, process) catch
@@ -207,8 +170,8 @@ pub const @"*" = struct {
     }
     pub fn inlinePrimitive(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
         const receiver = sp.next;
-        if (!receiver.isInt()) {
-            trace("SmallInteger>>#inlinePrimitive: * {f}\n", .{receiver});
+        if (!receiver.isFloat()) {
+            trace("Float>>#inlinePrimitive: * {f}\n", .{receiver});
             return @call(tailCall, PC.inlinePrimitiveFailed, .{ pc, sp, process, context, extra });
         }
         const newSp = sp.dropPut(inlines.@"*"(receiver, sp.top, process) catch

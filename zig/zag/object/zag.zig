@@ -118,9 +118,15 @@ pub const Object = packed struct(u64) {
         if (self.isMemoryDouble()) return self.toDoubleFromMemory();
         return null;
     }
-    inline fn nativeF_noCheck(self: object.Object) f64 {
+    pub inline fn isFloat(self: object.Object) bool {
+        return self.isImmediateDouble() or self.isMemoryDouble();
+    }
+    pub inline fn nativeF_noCheck(self: object.Object) f64 {
         if (self.tag == .heap) return self.toDoubleFromMemory();
         return self.toDoubleNoCheck();
+    }
+    pub inline fn fromNativeF(t: f64, maybeProcess: ?*Process) object.Object {
+        return from(t,maybeProcess);
     }
     pub inline fn symbolHash(self: object.Object) ?u40 {
         if (self.isImmediateClass(.Symbol)) return @truncate(self.hash);
@@ -253,8 +259,8 @@ pub const Object = packed struct(u64) {
 
     fn memoryFloat(value: f64, maybeProcess: ?*Process) object.Object {
         if (math.isNan(value)) return object.Object.from(&InMemory.nanMemObject, null);
-        if (math.inf(f64) == value) return object.Object.from(&InMemory.pInfMemObject);
-        if (math.inf(f64) == -value) return object.Object.from(&InMemory.nInfMemObject);
+        if (math.inf(f64) == value) return object.Object.from(&InMemory.pInfMemObject, null);
+        if (math.inf(f64) == -value) return object.Object.from(&InMemory.nInfMemObject, null);
         return InMemory.float(value, maybeProcess);
     }
 

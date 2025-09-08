@@ -55,9 +55,9 @@ const Module = struct {
     const Primitive = struct {
         name: []const u8,
         number: u32,
-        primitive: ?*const fn (programCounter: PC, stackPointer: SP, process: *Process, context: *Context, signature: Extra) Result,
-        primitiveError: ?*const fn (programCounter: PC, stackPointer: SP, process: *Process, context: *Context, signature: Extra) Result,
-        inlinePrimitive: ?*const fn (programCounter: PC, stackPointer: SP, process: *Process, context: *Context, signature: Extra) Result,
+        primitive: ?*const fn (PC, SP, *Process, *Context, Extra) Result,
+        primitiveError: ?*const fn (PC, SP, *Process, *Context, Extra) Result,
+        inlinePrimitive: ?*const fn (PC, SP, *Process, *Context, Extra) Result,
         moduleInit: ?*const fn () void,
         method: ?*const execute.CompiledMethod,
     };

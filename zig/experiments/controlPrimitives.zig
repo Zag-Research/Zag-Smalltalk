@@ -104,7 +104,7 @@ pub const references = convertFn(.{
     &value,
     &valueColon,
 });
-fn convertFn(comptime source: anytype) [source.len]*const fn (programCounter: PC, stackPointer: SP, process: *Process, context: *Context, signature: Extra) Result {
+fn convertFn(comptime source: anytype) [source.len]*const fn (PC, SP, *Process, *Context, Extra) Result {
     var result: [source.len]ThreadedFn = undefined;
     inline for (source, &result) |src, *dst|
         dst.* = .{ .f = src };

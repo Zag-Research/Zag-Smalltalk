@@ -31,7 +31,7 @@ const Context = Self;
 header: HeapHeader,
 method: *const CompiledMethod,
 tpc: PC, // threaded PC
-npc: *const fn (programCounter: PC, stackPointer: SP, process: *Process, context: *Context, signature: Extra) Result, // native PC - in Continuation Passing Style
+npc: *const fn (PC, SP, *Process, *Context, Extra) Result, // native PC - in Continuation Passing Style
 prevCtxt: ?*Context,
 trapContextNumber: u64,
 contextData: *ContextData,
@@ -41,7 +41,7 @@ const ContextOnStack = struct {
     spOffset: u64,
     method: *const CompiledMethod,
     tpc: usize,
-    npc: *const fn (programCounter: PC, stackPointer: SP, process: *Process, context: *Context, signature: Extra) Result,
+    npc: *const fn (PC, SP, *Process, *Context, Extra) Result,
     prevCtxt: ?*Context,
     trapContextNumber: u64,
     contextData: *ContextData,
@@ -304,7 +304,7 @@ pub fn stack(self: *const Self, sp: SP, process: *const Process) []Object {
 pub inline fn getTPc(self: *const Context) PC {
     return self.tpc;
 }
-pub inline fn setReturnBoth(self: *Context, npc: *const fn (programCounter: PC, stackPointer: SP, process: *Process, context: *Context, signature: Extra) Result, tpc: PC) void {
+pub inline fn setReturnBoth(self: *Context, npc: *const fn (PC, SP, *Process, *Context, Extra) Result, tpc: PC) void {
     self.npc = npc;
     self.tpc = tpc;
 }
@@ -315,7 +315,7 @@ fn setReturn(self: *Context, tpc: PC) void {
 pub inline fn getNPc(self: *const Context) *const fn (PC, SP, *Process, *Context, Extra) Result {
     return self.npc;
 }
-pub inline fn setNPc(self: *Context, npc: *const fn (programCounter: PC, stackPointer: SP, process: *Process, context: *Context, signature: Extra) Result) void {
+pub inline fn setNPc(self: *Context, npc: *const fn (PC, SP, *Process, *Context, Extra) Result) void {
     self.npc = npc;
 }
 pub inline fn setTPc(self: *Context, tpc: PC) void {

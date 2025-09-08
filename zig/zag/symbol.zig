@@ -30,7 +30,6 @@ inline fn hash_of(index: u24, arity: u4) u32 {
 pub const signature = SymbolsEnum.signature;
 pub fn fromHash(hash: u64) Object {
     const index: u24 = @truncate(hash * undoPhi24);
-    std.debug.print("signature: hash = {x} index = {x}\n", .{ hash, index });
     return @as(SymbolsEnum, @enumFromInt(index)).asObject();
 }
 const SymbolsEnum = enum(u32) {
@@ -166,8 +165,12 @@ const SymbolsEnum = enum(u32) {
         return .Symbol;
     }
     pub fn asObject(self: SymbolsEnum) Object {
+        const index: u24 = @truncate(@intFromEnum(self) - 1);
+        if (config.immediateSymbols) {
+            return Object.makeImmediate(.Symbol,@truncate(staticSymbols[index].data.unsigned));
+        }
         const O = packed struct { sym: *const PointedObject };
-        return @bitCast(O{ .sym = &staticSymbols[@as(u24, @truncate(@intFromEnum(self))) - 1] });
+        return @bitCast(O{ .sym = &staticSymbols[index] });
     }
     inline fn symbol_of(index: u24, _: u4) Object {
         return @as(SymbolsEnum, @enumFromInt(index)).asObject();

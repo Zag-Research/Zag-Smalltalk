@@ -235,9 +235,9 @@ const fibFloat = struct {
             tf.push,                  self,
             tf.pushLiteral,           2.0,
             tf.inlinePrimitive,       leq,
-            tf.classCase,             classes(&.{.False}),
-            "false",                  tf.returnSelf,
-            ":false",                 tf.push,
+            tf.branchFalse,           "false",
+            tf.returnSelf,            ":false",
+            tf.push,
             self,                     tf.pushLiteral,
             1.0,                      tf.inlinePrimitive,
             minus,                    tf.send,
@@ -340,7 +340,7 @@ pub fn timing(args: []const []const u8, default: bool) !void {
 pub fn main() !void {
     const do_all = [_][]const u8{
         "Config",  "Header",            "Native", "NativeF",
-        //"Float",
+        "Float",
         "Integer",
         //"Integer0?Integer",
         "IntegerBr?Integer",
@@ -359,6 +359,6 @@ pub fn main() !void {
 }
 const testRun = zag.config.debugMode or zag.config.show_trace;
 const testReps = if (testRun) 1 else 10;
-const fibN = if (testRun) 5 else 40;
+const fibN = if (testRun) 2 else 40;
 const nRuns = if (testRun) 1 else 5;
 const warmups = if (testRun) 0 else null;
