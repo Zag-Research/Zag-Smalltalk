@@ -257,7 +257,7 @@ const fibFloat = struct {
             std.debug.print("\n", .{});
             fib.dump();
         } else {
-            const obj = Execution.mainSendTo(Sym.fibonacci, Object.from(fibN, null)) catch unreachable;
+            const obj = Execution.mainSendTo(Sym.fibonacci, Object.from(@as(f64,@floatFromInt(fibN)), null)) catch unreachable;
             if (obj.nativeF()) |threaded| {
                 const native: f64 = @floatFromInt(fibCheck(fibN));
                 if (threaded != native) {
@@ -268,7 +268,7 @@ const fibFloat = struct {
         }
     }
     fn runIt(comptime _: void, proof: usize) usize {
-        _ = Execution.mainSendTo(Sym.fibonacci, Object.from(fibN, null)) catch unreachable;
+        _ = Execution.mainSendTo(Sym.fibonacci, Object.from(@as(f64, @floatFromInt(fibN)), null)) catch unreachable;
         return proof;
     }
 };
@@ -340,10 +340,10 @@ pub fn timing(args: []const []const u8, default: bool) !void {
 pub fn main() !void {
     const do_all = [_][]const u8{
         "Config",  "Header",            "Native", "NativeF",
-        "Float",
-        "Integer",
-        //"Integer0?Integer",
+        //"Integer",
         "IntegerBr?Integer",
+        //"Integer0?Integer",
+        "Float",
     };
     // var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     // const allocator = gpa.allocator();
@@ -359,6 +359,6 @@ pub fn main() !void {
 }
 const testRun = zag.config.debugMode or zag.config.show_trace;
 const testReps = if (testRun) 1 else 10;
-const fibN = if (testRun) 2 else 40;
+const fibN = if (testRun) 5 else 40;
 const nRuns = if (testRun) 1 else 5;
 const warmups = if (testRun) 0 else null;

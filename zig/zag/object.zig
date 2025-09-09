@@ -298,6 +298,8 @@ pub const ObjectFunctions = struct {
             try writer.print("#{s}", .{symbol.asString(self).arrayAsSlice(u8) catch "???"});
         } else if (self.signature()) |signature| {
             try writer.print("{f}", .{signature});
+        } else if (self.nativeF()) |float| {
+            try writer.print("{}", .{float});
         } else if (self == Nil()) {
             try writer.print("nil", .{});
         } else {

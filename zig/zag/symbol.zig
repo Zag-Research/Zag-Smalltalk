@@ -235,7 +235,6 @@ const SymbolsStruct = struct {
     pub const noFallback = symbol0(52);
     pub const fibonacci = symbol0(53);
     pub const Object = symbol0(lastPredefinedSymbol); // always have this the last initial symbol so the tests verify all the counts are correct
-    pub const i_0 = symbol0(65535);
     inline fn fromHash32(hash: u32) object.Object {
         return object.Object.makeImmediate(.Symbol, hash);
     }

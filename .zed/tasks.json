@@ -35,8 +35,8 @@
     "cwd": "$ZED_WORKTREE_ROOT/zig",
   },
   {
-    "label": "trace fib NaN",
-    "command": "zig build -Dtrace -Dencoding=nan -Doptimize=Debug -freference-trace=5 && ./zig-out/bin/fib",
+    "label": "trace fib ptr",
+    "command": "zig build -Dtrace -Dencoding=ptr -Doptimize=Debug -freference-trace=5 && ./zig-out/bin/fib",
     "cwd": "$ZED_WORKTREE_ROOT/zig",
   },
   {
@@ -48,6 +48,11 @@
   {
     "label": "time fib NaN",
     "command": "zig build -Dencoding=nan -Doptimize=ReleaseFast && ./zig-out/bin/fib",
+    "cwd": "$ZED_WORKTREE_ROOT/zig",
+  },
+  {
+    "label": "time fib ptr",
+    "command": "zig build -Dencoding=ptr -Doptimize=ReleaseFast && ./zig-out/bin/fib",
     "cwd": "$ZED_WORKTREE_ROOT/zig",
   },
   {

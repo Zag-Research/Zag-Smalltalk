@@ -41,7 +41,7 @@ const DispatchHandler = struct {
     fn loadMethodForClass(ci: ClassIndex, signature: Signature) *const CompiledMethod {
         if (defaultForTest != void)
             return defaultForTest.loadMethodForClass(ci, signature);
-        trace("loadMethodForClass({} {f})\n", .{ ci, signature });
+        std.debug.print("loadMethodForClass({} {f})\n", .{ ci, signature });
         unreachable;
     }
     fn stats(index: ClassIndex) Dispatch.Stats {
@@ -55,11 +55,10 @@ const DispatchHandler = struct {
         trace("[addMethod] signature: {f}\n", .{method.signature});
         if (dispatches[index].addIfAllocated(method)) return;
         while (true) {
-            const dispatch = dispatches[index];
-            if (dispatch.lock()) |_| {
+            trace("[addMethod] index: {}\n", .{index});
+            if (dispatches[index].lock()) |dispatch| {
                 defer {
-                    if (dispatch != &Dispatch.empty)
-                        dispatch.state = .dead;
+                    dispatch.state = if (dispatch != &Dispatch.empty) .dead else .clean;
                 }
                 trace("locked {} {}\n", .{ index, dispatch });
                 var numMethods: usize = 3;
@@ -71,11 +70,13 @@ const DispatchHandler = struct {
                         // for (newDispatch.methodsAllocatedSlice(), 0..) |*ptr,idx| {
                         //     trace("[{}]: {*}\n", .{idx, ptr.method});
                         // }
+                        trace("[addMethod] return\n", .{});
                         return;
                     }
                 }
-            } else |_| {}
+            }
         }
+        trace("[addMethod] end\n", .{});
     }
     fn alloc(words: usize) *Dispatch {
         const nMethods = smallestPrimeAtLeast(words);
@@ -161,32 +162,31 @@ const Dispatch = struct {
     inline fn getIndex(signature: Signature, size: u64) u64 {
         return signature.hash() * size >> 32;
     }
-    fn lock(self: *Self) !void {
-        while (true) {
-            if (@cmpxchgWeak(DispatchState, &self.state, .clean, .beingUpdated, .seq_cst, .seq_cst)) |notClean| {
-                if (notClean == .dead) return error.DeadDispatch;
-            } else break;
+    fn lock(self: *Self) ?*Self {
+        if (@cmpxchgWeak(DispatchState, &self.state, .clean, .beingUpdated, .seq_cst, .seq_cst)) |notClean| {
+            if (notClean == .dead) @panic("DeadDispatch");
+            return null;
         }
+        return self;
     }
     fn addIfAllocated(self: *Self, cmp: *const CompiledMethod) bool {
         if (self.nMethods == 0) return false;
         return self.add(cmp);
     }
-    fn add(self: *Self, cmp: *const CompiledMethod) bool {
+    fn add(self_: *Self, cmp: *const CompiledMethod) bool {
         const signature = cmp.signature;
-        self.lock() catch {
-            return false;
-        };
-        defer {
-            self.state = .clean;
-        }
-        for (&self.dispatchMatch(signature).elements) |*element| {
-            if (element.match(signature)) |_| {
-                element.storeMethod(cmp); // replace this
-                return true;
-            } else if (element.isEmpty()) {
-                element.storeMethod(cmp);
-                return true;
+        if (self_.lock()) |self| {
+            defer {
+                self.state = .clean;
+            }
+            for (&self.dispatchMatch(signature).elements) |*element| {
+                if (element.match(signature)) |_| {
+                    element.storeMethod(cmp); // replace this
+                    return true;
+                } else if (element.isEmpty()) {
+                    element.storeMethod(cmp);
+                    return true;
+                }
             }
         }
         return false;
