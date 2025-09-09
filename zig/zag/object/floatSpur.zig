@@ -6,17 +6,21 @@ const expect = std.testing.expect;
 const EXPONENT_MASK: u64 = 0x7FF0000000000000;
 const MANTISSA_MASK: u64 = 0x000FFFFFFFFFFFFF;
 const TAG = 0b100; // immediate float tag
-
-// exp8 = (exp11 - 1023) + 127 = exp11 - 896
-const EXPONENT_BIAS: u16 = 896; // 1023 - 127
+const EXPONENT_BIAS: u16 = 896; // exp8 = (exp11 - 1023) + 127 = exp11 - 896
 const REBIAS_CONST: u64 = 0x7000_0000_0000_0000; // 896 << 53
 
 fn encode_nocheck(bits: u64) u64 {
-    // spur encoding: [63:56]=exp8, [55:4]=mantissa, [3]=sign, [2:0]=tag(=0b100)
     var r: u64 = std.math.rotl(u64, bits, 1);
     r -%= REBIAS_CONST;
-    r = (r << 3) + TAG;
-    return r;
+    return (r << 3) + TAG;
+}
+
+pub fn encode_norebias(bits: u64) u64 {
+    // when the top 4 exp bits (0111 or 1000) are in the low 4 bits
+    // +1 turns them into 1000/1001
+    var r = std.math.rotl(u64, bits, 5);
+    r +%= 1;
+    return std.math.rotr(u64, r, 1);
 }
 
 // immediate float layout: [exp8(8)][mant(52)][sign(1)][tag(3)]
@@ -24,10 +28,10 @@ fn encode_nocheck(bits: u64) u64 {
 pub fn encode(value: f64) !u64 {
     const bits: u64 = @bitCast(value);
     const exp: u64 = (bits & EXPONENT_MASK);
+    const mant = bits & MANTISSA_MASK;
 
     // Handle zero / subnormal / special
     if (exp == 0) {
-        const mant = bits & MANTISSA_MASK;
         return if (mant == 0) (((bits >> 60) & 0x8) | TAG) else error.Unencodable;
     }
 
@@ -35,13 +39,29 @@ pub fn encode(value: f64) !u64 {
     if (exp == EXPONENT_MASK) return error.Unencodable;
 
     const e11: u32 = @intCast(exp >> 52);
-    const exp8_u32: u32 = e11 - EXPONENT_BIAS;
-    // Handle out-of-range exponents
-    if ((exp8_u32 & ~@as(u32, 0xFF)) != 0) return error.Unencodable;
-    // Handle collision with zero encoding
-    if (exp8_u32 == 0 and (bits & MANTISSA_MASK) == 0) return error.Unencodable;
 
-    return encode_nocheck(bits);
+    // Handle Integer underflow
+    if (e11 < EXPONENT_BIAS) return error.Unencodable;
+
+    const exp8: u32 = e11 - EXPONENT_BIAS;
+
+    // Handle out-of-range exponents
+    if (exp8 > 255) return error.Unencodable;
+    
+    // Handle Zero-Collision Case
+    if (exp8 == 0 and mant == 0) return error.Unencodable;
+
+    return encode_norebias(bits);
+}
+
+pub fn decode_norebias(self: u64) f64 {
+    var r = std.math.rotl(u64, self, 1);
+    r -%= 1;
+    if (r <= 0x18) {
+        r &= 0x10;
+    }
+    r = std.math.rotr(u64, r, 5);
+    return @bitCast(r);
 }
 
 pub fn decode(self: u64) f64 {
