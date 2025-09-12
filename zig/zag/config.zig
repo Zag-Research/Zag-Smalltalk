@@ -61,9 +61,6 @@ pub fn printConfig() void {
         std.debug.print("  Error stack enabled\n", .{});
     }
 }
-test "printConfig" {
-    printConfig();
-}
 comptime {
     @setEvalBranchQuota(100000);
 }

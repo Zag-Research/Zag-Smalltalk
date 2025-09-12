@@ -1,6 +1,7 @@
 const std = @import("std");
 const zag = @import("../zag.zig");
 const config = zag.config;
+const trace = config.trace;
 const objectEncoding = config.objectEncoding;
 const Process = zag.Process;
 const object = zag.object;
@@ -206,13 +207,13 @@ pub inline fn int(i: i64, maybeProcess: ?*Process) Object {
 test "inMemory int()" {
     if (config.immediateIntegers) return error.SkipZigTest;
     const ee = std.testing.expectEqual;
-    std.debug.print("inMemory int()\n", .{});
+    trace("inMemory int()\n", .{});
     var process: Process align(Process.alignment) = Process.new();
     process.init(Object.Nil());
     const one_ = int(1, &process);
     const one: PointedObjectRef = @bitCast(one_);
-    std.debug.print("one: {}\n", .{one});
-    for (&SmallIntegerCache.objects, 0..) |*o, i| std.debug.print("[{}](0x{x:0>4}): 0x{x:0>16}\n", .{ i, @intFromPtr(o), @as(u64, @bitCast(o.*)) });
+    trace("one: {}\n", .{one});
+    for (&SmallIntegerCache.objects, 0..) |*o, i| trace("[{}](0x{x:0>4}): 0x{x:0>16}\n", .{ i, @intFromPtr(o), @as(u64, @bitCast(o.*)) });
     try ee(.SmallInteger, one.ref.header.classIndex);
     try ee(1, one.ref.data.int);
     try ee(one_, int(1, &process));

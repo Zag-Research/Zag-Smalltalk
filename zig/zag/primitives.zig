@@ -28,7 +28,7 @@ pub const primitives = struct {
     pub const Array = @import("primitives/Array.zig");
     pub const Object = @import("primitives/Object.zig");
     pub const BlockClosure = @import("primitives/BlockClosure.zig");
-    pub const LLVM = @import("primitives/llvm-primitives.zig");
+    pub const LLVM = if (config.includeLLVM) @import("primitives/llvm-primitives.zig") else struct{};
     pub const Behavior = @import("primitives/Behavior.zig");
     pub const Boolean = @import("primitives/Boolean.zig");
 };
@@ -145,7 +145,7 @@ const testModule = if (config.is_test) struct {
         }
         pub fn primitiveError(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
             if (sp.next.immediate_class() != sp.top.immediate_class()) {
-                const newSp = sp.push(Sym.value.asObject());
+                const newSp = sp.push(Sym.value);
                 return @call(tailCall, Extra.primitiveFailed, .{ pc, newSp.?, process, context, extra });
             } else {
                 const newSp = sp.dropPut(Object.from(sp.next == sp.top, null));
@@ -515,9 +515,9 @@ pub const threadedFunctions = struct {
                     trace("inlinePrimitive found: {} {f}\n", .{ primNumber, extra });
                     return @call(tailCall, p, .{ pc, sp, process, context, extra });
                 }
-                std.debug.print("primitive {} ({f}) doesn't have an inline primitive\n", .{ primNumber, obj });
+                trace("primitive {} ({f}) doesn't have an inline primitive\n", .{ primNumber, obj });
             } else {
-                std.debug.print("no primitive numbered: {}\n", .{primNumber});
+                trace("no primitive numbered: {}\n", .{primNumber});
             }
             @panic("couldn't find inlinePrimitive:");
         }

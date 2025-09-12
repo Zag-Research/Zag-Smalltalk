@@ -36,7 +36,7 @@ pub const Object = packed struct(u64) {
     pub const highTagSmallInteger = {};
     pub const PackedTagType = u3;
     pub const packedTagSmallInteger = 1;
-    pub const intTag = @import("zag.zig").intTag;
+    pub const intTag = @import("zag.zig").Object.intTag;
     pub const immediatesTag = 1;
     pub inline fn untaggedI(self: object.Object) ?i64 {
         if (self.isInt()) return self.untaggedI_noCheck();
@@ -63,6 +63,19 @@ pub const Object = packed struct(u64) {
         if (self.isInt()) return self.rawU();
         return null;
     }
+    pub inline fn nativeF(self: object.Object) ?f64 {
+        if (self.isMemoryDouble()) return self.toDoubleFromMemory();
+        return null;
+    }
+    pub inline fn isFloat(self: object.Object) bool {
+        return self.isMemoryDouble();
+    }
+    pub inline fn nativeF_noCheck(self: object.Object) f64 {
+        return self.toDoubleFromMemory();
+    }
+    pub inline fn fromNativeF(t: f64, maybeProcess: ?*Process) object.Object {
+        return from(t,maybeProcess);
+    }
     pub inline fn symbolHash(self: object.Object) ?u24 {
         if (self.isImmediateClass(.Symbol)) return self.ref.header.hash;
         return null;
@@ -70,7 +83,7 @@ pub const Object = packed struct(u64) {
     pub inline fn extraValue(self: object.Object) object.Object {
         return @bitCast(self.rawU() >> 8);
     }
-    pub inline fn isPIC(self: object.Object) bool {
+    pub inline fn isPICX(self: object.Object) bool {
         return self.isImmediateClass(.PICPointer);
     }
     pub inline fn tagMethod(o: object.Object) ?object.Object {
@@ -109,6 +122,9 @@ pub const Object = packed struct(u64) {
     pub inline fn isHeap(_: Object) bool {
         return true;
     }
+    pub inline fn isMemoryDouble(self: object.Object) bool {
+        return self.isMemoryAllocated() and self.to(HeapObjectPtr).*.getClass() == .Float;
+    }
     pub inline //
     fn isInt(self: Object) bool {
         return self.ref.header.classIndex == .SmallInteger;
@@ -146,6 +162,9 @@ pub const Object = packed struct(u64) {
     }
     pub inline fn rawWordAddress(self: Object) u64 {
         return self.rawU() & 0xffff_ffff_fff8;
+    }
+    inline fn toDoubleFromMemory(self: object.Object) f64 {
+        return self.to(*InMemory.MemoryFloat).*.value;
     }
     pub inline fn toDoubleNoCheck(self: Object) f64 {
         return self.ref.data.float;
@@ -277,4 +296,7 @@ pub const Object = packed struct(u64) {
     pub const setField = OF.setField;
     pub const to = OF.to;
     pub const toUnchecked = OF.toUnchecked;
+    pub const asVariable = zag.Context.asVariable;
+    pub const PackedObject = object.PackedObject;
+    pub const signature = zag.execute.Signature.signature;
 };

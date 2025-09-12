@@ -4,6 +4,7 @@ const mem = std.mem;
 const math = std.math;
 const zag = @import("zag.zig");
 const config = zag.config;
+const trace = config.trace;
 const assert = std.debug.assert;
 const debugError = false;
 const Process = zag.Process;
@@ -39,7 +40,7 @@ const HeapHeader = heap.HeapHeader;
 const HeapObjectPtr = heap.HeapObjectPtr;
 const HeapObjectConstPtr = heap.HeapObjectConstPtr;
 const largerPowerOf2 = @import("utilities.zig").largerPowerOf2;
-pub const SelfObject = if (!builtin.is_test) struct {} else Object.oImm(.Symbol, 0xf0000ff);
+//pub const SelfObject = if (!builtin.is_test) struct {} else Object.oImm(.Symbol, 0xf0000ff);
 pub const False = Object.False;
 pub const True = Object.True;
 pub const Nil = Object.Nil;
@@ -220,9 +221,9 @@ pub const ObjectFunctions = struct {
         if (self.isHeapObject()) return self.pointer([*]Object);
         return null;
     }
-    pub fn header(self: Object) HeapObject {
-        if (self.isHeapObject()) return self.to(HeapObjectPtr).*;
-        return @as(HeapObject, @bitCast(@as(u64, 0)));
+    pub fn header(self: Object) HeapHeader {
+        if (self.isHeapObject()) return self.to(HeapObjectPtr).header;
+        return @as(HeapHeader, @bitCast(@as(u64, 0)));
     }
     pub fn instVars(self: Object) []Object {
         if (self.isHeapObject()) return self.to(HeapObjectPtr).instVars() catch
@@ -282,7 +283,6 @@ pub const ObjectFunctions = struct {
     pub inline fn promoteToUnmovable(self: Object) !Object {
         if (self.isUnmoving()) return self;
         return error.PromoteUnimplemented;
-        //        return arenas.GlobalArena.promote(self);
     }
     pub fn format(
         self: Object,
@@ -335,14 +335,14 @@ pub const PackedObject = packed struct {
         }
         return n;
     }
-    pub fn combine14(tup: anytype) comptime_int {
+    pub fn combine14(comptime tup: anytype) comptime_int {
         return combine(u14, tup);
     }
-    pub fn classes(tup: []const ClassIndex) PackedObject {
+    pub fn classes(comptime tup: []const ClassIndex) PackedObject {
         return @bitCast((@as(u64, combine(u14, tup)) << @bitSizeOf(Object.PackedTagType)) + Object.packedTagSmallInteger);
     }
     test "combiners" {
-        std.debug.print("Test: combiners\n", .{});
+        trace("Test: combiners\n", .{});
         const expectEqual = std.testing.expectEqual;
         try expectEqual(16384 + 2, combine14(.{ 2, 1 }));
         try expectEqual(0x44010, combine14([_]ClassIndex{ .SmallInteger, .Symbol }));
@@ -372,7 +372,7 @@ test "to conversion" {
     const p = &process;
     const ee = std.testing.expectEqual;
     try ee((Object.from(3.14, p)).to(f64), 3.14);
-    //    std.debug.print("value: {}\n", .{@as(zag.InMemory.PointedObjectRef, @bitCast(Object.from(42, p)))});
+    //    trace("value: {}\n", .{@as(zag.InMemory.PointedObjectRef, @bitCast(Object.from(42, p)))});
     try ee((Object.from(42, p)).to(u64), 42);
     try std.testing.expect((Object.from(42, p)).isInt());
     try ee((Object.from(true, p)).to(bool), true);

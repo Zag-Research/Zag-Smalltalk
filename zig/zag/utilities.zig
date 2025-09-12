@@ -7,7 +7,6 @@ pub const largerPowerOf2 = general.largerPowerOf2;
 pub const largeEnoughType = general.largeEnoughType;
 pub const Treap = @import("utilities/treap.zig").Treap;
 const primes = @import("utilities/primes.zig");
-pub const next_prime_larger_than = primes.next_prime_larger_than;
 pub const smallestPrimeAtLeast = primes.smallestPrimeAtLeast;
 pub const largestPrimeLessThan = primes.largestPrimeLessThan;
 
@@ -19,4 +18,11 @@ pub fn checkEqual(comptime int: u32, comptime int2: u32) ?[]const u8 {
         var buf: [20]u8 = undefined;
     };
     return @import("std").fmt.bufPrint(b.buf[0..], "{} instead of {}", .{ int, int2 }) catch unreachable;
+}
+test {
+    _ = .{ general,
+            Treap,
+            primes,
+            Stats,
+    };
 }

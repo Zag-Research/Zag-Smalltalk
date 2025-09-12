@@ -41,7 +41,7 @@ const DispatchHandler = struct {
     fn loadMethodForClass(ci: ClassIndex, signature: Signature) *const CompiledMethod {
         if (defaultForTest != void)
             return defaultForTest.loadMethodForClass(ci, signature);
-        std.debug.print("loadMethodForClass({} {f})\n", .{ ci, signature });
+        trace("loadMethodForClass({} {f})\n", .{ ci, signature });
         unreachable;
     }
     fn stats(index: ClassIndex) Dispatch.Stats {

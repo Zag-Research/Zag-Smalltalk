@@ -181,7 +181,7 @@ test "simple int stats" {
     try expectEqual(stat.stdDev(), 1.0);
     var buf: [200]u8 = undefined;
     var buf2: [200]u8 = undefined;
-    try expect(std.mem.eql(u8, try std.fmt.bufPrint(&buf2, "2--3--4--1", .{}), try std.fmt.bufPrint(&buf, "{}", .{stat})));
+    try expect(std.mem.eql(u8, try std.fmt.bufPrint(&buf2, "2--3--4--1.00", .{}), try std.fmt.bufPrint(&buf, "{f}", .{stat})));
 }
 test "simple int stats with values" {
     const expectEqual = @import("std").testing.expectEqual;
@@ -220,7 +220,7 @@ test "larger int stats with runner" {
     try expectEqual(stat.mean(), 8);
     try expectEqual(stat.median(), 10);
     try expectEqual(stat.stdDev(), 4.422668877499195);
-    //std.debug.print("\nstats {nmxsrM}",.{stat});
+    //trace("\nstats {nmxsrM}",.{stat});
 }
 test "simple float stats" {
     const expectEqual = @import("std").testing.expectEqual;
@@ -235,10 +235,10 @@ test "simple float stats" {
     const buf: [200]u8 = undefined;
     const buf2: [200]u8 = undefined;
     //    const ebuf: []const u8 = "2.0--3.0--4.0--1.0";
-    //    std.debug.print("\nstats {<FOO>nmxs}",.{stat});
+    //    trace("\nstats {<FOO>nmxs}",.{stat});
     _ = .{ expect, buf, buf2 }; //    try expect(std.mem.eql(u8,try std.fmt.bufPrint(buf2[0..],"2--3--4--1",.{}),try std.fmt.bufPrint(buf[0..], "{}",.{stat})));
 }
-fn timeRunner(_: usize, proof: usize) usize {
+fn timeRunner(comptime _: usize, proof: usize) usize {
     return proof;
 }
 test "simple timed stats" {

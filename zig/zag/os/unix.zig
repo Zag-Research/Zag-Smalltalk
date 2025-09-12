@@ -5,6 +5,7 @@ const mem = std.mem;
 pub const page_size = std.heap.page_size_min;
 const builtin = @import("builtin");
 const os = std.posix;
+const trace = @import("zag").config.trace;
 
 pub fn MemoryAllocator(comptime Block: type) type {
     return struct {
@@ -95,8 +96,8 @@ test "simple allocation" {
         var block0 = try memAlloc.allocBlock();
         const other1 = try memAlloc.map(100, null);
         const other2 = try memAlloc.map(100, null);
-        std.debug.print("other1.ptr={x} len={}\n", .{ @intFromPtr(other1.ptr), other1.len });
-        std.debug.print("other2.ptr={x} len={}\n", .{ @intFromPtr(other2.ptr), other2.len });
+        trace("other1.ptr={x} len={}\n", .{ @intFromPtr(other1.ptr), other1.len });
+        trace("other2.ptr={x} len={}\n", .{ @intFromPtr(other2.ptr), other2.len });
         const block1 = try memAlloc.allocBlock();
         const block2 = try memAlloc.allocBlock();
         const block3 = try memAlloc.allocBlock();
@@ -107,30 +108,30 @@ test "simple allocation" {
         const block7 = try memAlloc.allocBlock();
         const other3 = try memAlloc.map(100, null);
         const other4 = try memAlloc.map(100, null);
-        std.debug.print("other3.ptr={x} len={}\n", .{ @intFromPtr(other3.ptr), other3.len });
-        std.debug.print("other4.ptr={x} len={}\n", .{ @intFromPtr(other4.ptr), other4.len });
+        trace("other3.ptr={x} len={}\n", .{ @intFromPtr(other3.ptr), other3.len });
+        trace("other4.ptr={x} len={}\n", .{ @intFromPtr(other4.ptr), other4.len });
         memAlloc.reset();
         const block8 = try memAlloc.allocBlock();
         const block9 = try memAlloc.allocBlock();
         const block10 = try memAlloc.allocBlock();
         const other5 = try memAlloc.map(100, null);
         const other6 = try memAlloc.map(100, null);
-        std.debug.print("other5.ptr={x} len={}\n", .{ @intFromPtr(other5.ptr), other3.len });
-        std.debug.print("other6.ptr={x} len={}\n", .{ @intFromPtr(other6.ptr), other4.len });
+        trace("other5.ptr={x} len={}\n", .{ @intFromPtr(other5.ptr), other3.len });
+        trace("other6.ptr={x} len={}\n", .{ @intFromPtr(other6.ptr), other4.len });
         block0[5] = 42;
-        std.debug.print("blocks = {any}\n", .{[_]*Test{
+        trace("blocks = {any}\n", .{[_]*Test{
             block0,
             block1,
             block2,
             block3,
             block4,
         }});
-        std.debug.print("blocks = {any}\n", .{[_]*Test{
+        trace("blocks = {any}\n", .{[_]*Test{
             block5,
             block6,
             block7,
         }});
-        std.debug.print("blocks = {any}\n", .{[_]*Test{
+        trace("blocks = {any}\n", .{[_]*Test{
             block8,
             block9,
             block10,

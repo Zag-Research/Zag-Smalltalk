@@ -4,6 +4,7 @@ const mem = std.mem;
 const math = std.math;
 const zag = @import("../zag.zig");
 const config = zag.config;
+const trace = config.trace;
 const assert = std.debug.assert;
 const debugError = false;
 const object = zag.object;
@@ -63,9 +64,6 @@ pub const Object = packed struct(u64) {
     const tagAndClass = (@as(u64, 1) << tagAndClassBits) - 1;
     const extraMask = 0xff;
     const ExtraType = u8;
-    pub inline fn asObject(self: Self) Self {
-        return self;
-    }
     pub inline fn tagbits(self: Self) TagAndClassType {
         return @truncate(self.rawU());
     }
@@ -77,7 +75,8 @@ pub const Object = packed struct(u64) {
         return null;
     }
     pub inline fn untaggedI_noCheck(self: object.Object) i64 {
-        return @bitCast(self.rawU() & ~tagAndClass);
+        return @bitCast(self.rawU() >> tagAndClassBits << tagAndClassBits);
+        //return @bitCast(self.rawU() & ~tagAndClass);
     }
     pub inline fn taggedI(self: object.Object) ?i64 {
         if (self.isInt()) return taggedI_noCheck(self);
@@ -181,7 +180,7 @@ pub const Object = packed struct(u64) {
         return @bitCast(@as(u8, @truncate(self.hash & extraMask)));
     }
     test "ThunkImmediate" {
-        std.debug.print("Test: ThunkImmediate\n", .{});
+        trace("Test: ThunkImmediate\n", .{});
         const ee = std.testing.expectEqual;
         if (thunkImmediate(object.Object.from(42, null))) |value|
             try ee(object.Object.from(42, null), value.thunkImmediateValue());
@@ -244,7 +243,7 @@ pub const Object = packed struct(u64) {
     pub inline fn toDoubleNoCheck(self: object.Object) f64 {
         return decode(@bitCast(self));
     }
-    pub inline fn toDoubleFromMemory(self: object.Object) f64 {
+    inline fn toDoubleFromMemory(self: object.Object) f64 {
         return self.to(*InMemory.MemoryFloat).*.value;
     }
     pub inline fn makeImmediate(cls: ClassIndex.Compact, hash: u56) object.Object {
@@ -398,6 +397,7 @@ pub const Object = packed struct(u64) {
     pub const setField = OF.setField;
     pub const to = OF.to;
     pub const toUnchecked = OF.toUnchecked;
+    pub const header = OF.header;
     pub const asVariable = zag.Context.asVariable;
     pub const PackedObject = object.PackedObject;
     pub const signature = zag.execute.Signature.signature;
