@@ -15,12 +15,6 @@ const ZERO_SHAPE: u64 = 0x8000_0000_0000_0008;
 
 pub const EncodeError = error{ Unencodable, PosInf, NegInf, NaN };
 
-fn encode_rebias(bits: u64) u64 {
-    var r: u64 = std.math.rotl(u64, bits, 1);
-    r -%= REBIAS_CONST;
-    return (r << 3) + TAG;
-}
-
 pub fn encode_norebias(bits: u64) u64 {
     // when the top 4 exp bits (0111 or 1000) are in the low 4 bits
     // +1 turns them into 1000/1001
@@ -83,7 +77,7 @@ pub fn encode_check(value: f64) !u64 {
     return encode_norebias(bits);
 }
 
-pub fn decode_rebias(self: u64) f64 {
+pub fn decode(self: u64) f64 {
     var r = std.math.rotl(u64, self, 1);
     r -%= 1;
     if (r <= 0x18) {
@@ -93,17 +87,8 @@ pub fn decode_rebias(self: u64) f64 {
     return @bitCast(r);
 }
 
-pub fn decode_norebias(self: u64) f64 {
-    var hash = self >> 3;
-    if (hash <= 1) {
-        return @bitCast((hash & 1) << 63);
-    }
-    hash +%= REBIAS_CONST;
-    return @bitCast(math.rotr(u64, hash, 1));
-}
 
 const encode = encode_spec;
-const decode =  decode_norebias;
 
 test "encode/decode" {
     try expectEqual(1.0, decode(try encode(1.0)));
