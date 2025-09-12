@@ -5,11 +5,17 @@ const expect = std.testing.expect;
 
 const EXPONENT_MASK: u64 = 0x7FF0000000000000;
 const MANTISSA_MASK: u64 = 0x000FFFFFFFFFFFFF;
-const TAG = 0b100; // immediate float tag
 const EXPONENT_BIAS: u16 = 896; // exp8 = (exp11 - 1023) + 127 = exp11 - 896
 const REBIAS_CONST: u64 = 0x7000_0000_0000_0000; // 896 << 53
 
-fn encode_nocheck(bits: u64) u64 {
+const TAG = 0b100; // immediate float tag
+const SHIFTED_EXP: u64 = 0xFFE0_0000_0000_0000;
+const SIGN_MASK: u64 = 0x8000_0000_0000_0000;
+const ZERO_SHAPE: u64 = 0x8000_0000_0000_0008;
+
+pub const EncodeError = error{ Unencodable, PosInf, NegInf, NaN };
+
+fn encode_rebias(bits: u64) u64 {
     var r: u64 = std.math.rotl(u64, bits, 1);
     r -%= REBIAS_CONST;
     return (r << 3) + TAG;
@@ -23,9 +29,26 @@ pub fn encode_norebias(bits: u64) u64 {
     return std.math.rotr(u64, r, 1);
 }
 
+pub fn encode_spec(v: f64) !u64 {
+    const bits: u64 = @bitCast(v);
+    const y = encode_norebias(bits);
+
+    // handle normal immediate float; with zero-collision check
+    if ((y & 0x7) == TAG) return if ((y | 0x8) == 0xC) return EncodeError.Unencodable else y;
+    // handle zero
+    if ((y | 0x8) == ZERO_SHAPE) return ((bits >> 60) & 0x8) | TAG;
+    // handle Inf
+    const shifted = (bits << 1);
+    if (shifted == SHIFTED_EXP) return if ((bits & SIGN_MASK) != 0) EncodeError.NegInf else EncodeError.PosInf;
+    // handle NaN
+    if (shifted > SHIFTED_EXP) return EncodeError.NaN;
+
+    return EncodeError.Unencodable; // unencodable (subnormal vs out-of-range)
+}
+
 // immediate float layout: [exp8(8)][mant(52)][sign(1)][tag(3)]
 // Ref: https://clementbera.wordpress.com/2018/11/09/64-bits-immediate-floats/
-pub fn encode(value: f64) !u64 {
+pub fn encode_check(value: f64) !u64 {
     const bits: u64 = @bitCast(value);
     const exp: u64 = (bits & EXPONENT_MASK);
     const mant = bits & MANTISSA_MASK;
@@ -36,7 +59,13 @@ pub fn encode(value: f64) !u64 {
     }
 
     // Handle IEEE special values (Inf/NaN)
-    if (exp == EXPONENT_MASK) return error.Unencodable;
+    if (exp == EXPONENT_MASK) {
+        if (mant == 0) {
+            return if ((bits & SIGN_MASK) != 0) EncodeError.NegInf else EncodeError.PosInf;
+        }
+        
+        return EncodeError.NaN;
+    }
 
     const e11: u32 = @intCast(exp >> 52);
 
@@ -47,14 +76,14 @@ pub fn encode(value: f64) !u64 {
 
     // Handle out-of-range exponents
     if (exp8 > 255) return error.Unencodable;
-    
+
     // Handle Zero-Collision Case
     if (exp8 == 0 and mant == 0) return error.Unencodable;
 
     return encode_norebias(bits);
 }
 
-pub fn decode_norebias(self: u64) f64 {
+pub fn decode_rebias(self: u64) f64 {
     var r = std.math.rotl(u64, self, 1);
     r -%= 1;
     if (r <= 0x18) {
@@ -64,7 +93,7 @@ pub fn decode_norebias(self: u64) f64 {
     return @bitCast(r);
 }
 
-pub fn decode(self: u64) f64 {
+pub fn decode_norebias(self: u64) f64 {
     var hash = self >> 3;
     if (hash <= 1) {
         return @bitCast((hash & 1) << 63);
@@ -72,6 +101,9 @@ pub fn decode(self: u64) f64 {
     hash +%= REBIAS_CONST;
     return @bitCast(math.rotr(u64, hash, 1));
 }
+
+const encode = encode_spec;
+const decode =  decode_norebias;
 
 test "encode/decode" {
     try expectEqual(1.0, decode(try encode(1.0)));
@@ -87,9 +119,9 @@ test "encode/decode" {
     try expectEqual(-largest, decode(try encode(-largest)));
     const tooSmall: f64 = @bitCast(@as(u64, 0x3800_0000_0000_0000));
     const tooLarge: f64 = @bitCast(@as(u64, 0x4800_0000_0000_0000));
-    try expectEqual(error.Unencodable, encode(tooSmall));
-    try expectEqual(error.Unencodable, encode(tooLarge));
-    try expectEqual(error.Unencodable, encode(math.nan(f64)));
-    try expectEqual(error.Unencodable, encode(math.inf(f64)));
-    try expectEqual(error.Unencodable, encode(-math.inf(f64)));
+    try expectEqual(EncodeError.Unencodable, encode(tooSmall));
+    try expectEqual(EncodeError.Unencodable, encode(tooLarge));
+    try expectEqual(EncodeError.NaN, encode(math.nan(f64)));
+    try expectEqual(EncodeError.PosInf, encode(math.inf(f64)));
+    try expectEqual(EncodeError.NegInf, encode(-math.inf(f64)));
 }
