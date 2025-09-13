@@ -12,6 +12,7 @@
 - [improving SqueakJS  performance](https://squeak.js.org/docs/jit.md.html)
 - [Fibonacci hashing](https://probablydance.com/2018/06/16/fibonacci-hashing-the-optimization-that-the-world-forgot-or-a-better-alternative-to-integer-modulo/)
 - [building Pharo VM](https://github.com/pharo-project/pharo-vm) 
+- [Resilient Smalltalk](https://www.slideshare.net/slideshow/esug2004-rtresilient/5544538) [slide 8](https://www.slideshare.net/slideshow/esug2004-rtresilient/5544538#8)
 ```
 $ git clone git@github.com:pharo-project/pharo-vm.git
 $ cmake -S pharo-vm -B build -DPHARO_DEPENDENCIES_PREFER_DOWNLOAD_BINARIES=TRUE  -DFLAVOUR=StackVM
@@ -189,6 +190,8 @@ The name is escaping me....something like Micro Systems....
 
 ### Rust
 - [Learn Rust](https://www.rust-lang.org/learn)
+- [Are we Teaching Rust Effectively?](https://blog.kodewerx.org/2025/08/are-we-teaching-rust-effectively.html)
+- [Arenas in Rust](https://manishearth.github.io/blog/2021/03/15/arenas-in-rust/)
 - [Rust docs](https://doc.rust-lang.org/)
 	- [Rust Reference](https://doc.rust-lang.org/reference/)
 	- [Rustinomicon](https://doc.rust-lang.org/nomicon/)

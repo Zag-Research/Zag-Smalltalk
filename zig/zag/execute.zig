@@ -322,7 +322,7 @@ pub const Code = union(enum) {
         writer: anytype,
     ) !void {
         if (true) {
-            try writer.print("({x})", .{@as(*const u64,@ptrCast(self)).*});
+            try writer.print("({x})", .{@as(*const u64, @ptrCast(self)).*});
             return;
         }
         switch (self.*) {

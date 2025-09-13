@@ -28,7 +28,7 @@ pub const primitives = struct {
     pub const Array = @import("primitives/Array.zig");
     pub const Object = @import("primitives/Object.zig");
     pub const BlockClosure = @import("primitives/BlockClosure.zig");
-    pub const LLVM = if (config.includeLLVM) @import("primitives/llvm-primitives.zig") else struct{};
+    pub const LLVM = if (config.includeLLVM) @import("primitives/llvm-primitives.zig") else struct {};
     pub const Behavior = @import("primitives/Behavior.zig");
     pub const Boolean = @import("primitives/Boolean.zig");
 };

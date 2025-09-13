@@ -125,7 +125,7 @@ pub const Object = packed struct(u64) {
         return self.toDoubleNoCheck();
     }
     pub inline fn fromNativeF(t: f64, maybeProcess: ?*Process) object.Object {
-        return from(t,maybeProcess);
+        return from(t, maybeProcess);
     }
     pub inline fn symbolHash(self: object.Object) ?u40 {
         if (self.isImmediateClass(.Symbol)) return @truncate(self.hash);

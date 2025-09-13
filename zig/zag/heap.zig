@@ -132,7 +132,7 @@ pub const Format = enum(u7) {
         if (true) unreachable;
         if (self.isIndexable() and self.hasInstVars()) {
             const oa = @as([*]u64, @ptrFromInt(@intFromPtr(obj))) + len;
-            return len + 3 + if (oa[2] != @intFromPtr(oa + 3)) 0 else unreachable;//form.wordSize(oa[1]);
+            return len + 3 + if (oa[2] != @intFromPtr(oa + 3)) 0 else unreachable; //form.wordSize(oa[1]);
         }
         return len + 1;
     }
@@ -861,7 +861,7 @@ pub const HeapObject = packed struct {
     }
     pub inline fn skipForward(self: HeapObjectConstPtr) [*]HeapObject {
         const head = self.header;
-        return @as([*]HeapObject, @constCast(@ptrCast(self))) + head.length + 1;
+        return @as([*]HeapObject, @ptrCast(@constCast(self))) + head.length + 1;
     }
     pub inline fn asSlice(maybeForwarded: HeapObjectConstPtr) ![]Object {
         const self = maybeForwarded.forwarded();
@@ -878,7 +878,7 @@ pub const HeapObject = packed struct {
             try realSelf.header.array(realSelf, @sizeOf(T))
         else
             try head.array(self, @sizeOf(T));
-        const ba = @as([*]T, @constCast(@ptrCast(arry.ptr)));
+        const ba = @as([*]T, @ptrCast(@constCast(arry.ptr)));
         return ba[0..arry.len];
     }
     pub inline fn arraySize(self: HeapObjectConstPtr) !usize {
@@ -925,7 +925,7 @@ pub const HeapObject = packed struct {
     pub inline fn inHeapSize(maybeForwarded: HeapObjectConstPtr) usize {
         const self = maybeForwarded.forwarded();
         const header = self.header;
-        return header.format.inHeapSize(header,self);
+        return header.format.inHeapSize(header, self);
     }
     pub inline fn isIndirect(maybeForwarded: HeapObjectConstPtr) bool {
         const self = maybeForwarded.forwarded();
@@ -961,10 +961,10 @@ pub const HeapObject = packed struct {
         return @as([*]align(@alignOf(u64)) Object, @ptrFromInt(@intFromPtr(self))) + 1;
     }
     pub inline fn start(self: HeapObjectConstPtr) [*]Object {
-        return @constCast(@ptrCast(self));
+        return @ptrCast(@constCast(self));
     }
     pub inline fn array(self: HeapObjectConstPtr, T: type) [*]T {
-        return @constCast(@ptrCast(self));
+        return @ptrCast(@constCast(self));
     }
 };
 pub fn growSize(obj: anytype, comptime Target: type) !usize {
@@ -1014,7 +1014,7 @@ pub fn CompileTimeString(comptime str: []const u8) type {
             return @as([*]const u8, @ptrCast(self))[0 .. (size + 15) / 8 * 8];
         }
         pub fn obj(self: *const Self) HeapObjectConstPtr {
-            return @alignCast(@ptrCast(self));
+            return @ptrCast(@alignCast(self));
         }
         pub fn asObject(self: *const Self) Object {
             return Object.from(self.obj());

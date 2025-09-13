@@ -123,6 +123,6 @@ inline fn buildGEP(builder: types.LLVMBuilderRef, elementType: types.LLVMTypeRef
     const offset_bits: u64 = @bitCast(offset);
     const signExtend = offset < 0;
     const idx = [_]types.LLVMValueRef{core.LLVMConstInt(elementType, offset_bits, @intFromBool(signExtend))};
-    const idx_ptr: [*c]types.LLVMValueRef = @constCast(@ptrCast(&idx[0]));
+    const idx_ptr: [*c]types.LLVMValueRef = @ptrCast(@constCast(&idx[0]));
     return core.LLVMBuildGEP2(builder, elementType, base, idx_ptr, 1, @ptrCast(name));
 }

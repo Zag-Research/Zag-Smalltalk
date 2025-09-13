@@ -260,7 +260,7 @@ fn collectNurseryPass(self: *align(1) Self, originalSp: SP, contextMutable: *Con
                 hp = pointer.copyTo(hp, &sp.top);
             sp = sp.drop();
         }
-        sp = unreachable;//context.callerStack();
+        sp = unreachable; //context.callerStack();
         context = context.previous();
     }
     // find references from the residual stack

@@ -27,6 +27,8 @@ inline fn encode_dave(v: f64) EncodeError!u64 {
         y = std.math.rotr(u64, y, 1);
         // handle normal immediate float; with zero-collision check
         if ((y & 0x7) == TAG and (y | 0x8) != 0xC) return y;
+        // if ((y & 0x7) == TAG and (y & 0xffff_ffff_ffff_ffff) != 0) return y;
+        // if ((y & 0x7) == TAG and (y >> 4) != 0) return y;
         return error.Unencodable;
     }
     y +%= 1;
@@ -87,7 +89,6 @@ inline fn encode_check(value: f64) !u64 {
     // Handle Zero-Collision Case
     if (exp8 == 0 and mant == 0) return EncodeError.Unencodable;
 
-
     var r = std.math.rotl(u64, bits, 5);
     r +%= 1;
     return std.math.rotr(u64, r, 1);
@@ -146,28 +147,9 @@ test "encode/decode" {
 pub fn main() void {
     const iterations = 10000000;
 
-    const valid_values = [_]f64{
-        0.0,
-        1.0, -1.0, math.pi, 42.0, -3.14159, 100.0, -100.0, smallest, largest,
-        1.0, -1.0, math.pi, 42.0, -3.14159, 100.0, -100.0, smallest, largest,
-        1.0, -1.0, math.pi, 42.0, -3.14159, 100.0, -100.0, smallest, largest,
-        1.0, -1.0, math.pi, 42.0, -3.14159, 100.0, -100.0, smallest, largest,
-        1.0, -1.0, math.pi, 42.0, -3.14159, 100.0, -100.0, smallest, largest,
-        1.0, -1.0, math.pi, 42.0, -3.14159, 100.0, -100.0, smallest, largest,
-        1.0, -1.0, math.pi, 42.0, -3.14159, 100.0, -100.0, smallest, largest,
-        1.0, -1.0, math.pi, 42.0, -3.14159, 100.0, -100.0, smallest, largest,
-        1.0, -1.0, math.pi, 42.0, -3.14159, 100.0, -100.0, smallest, largest,
-        1.0, -1.0, math.pi, 42.0, -3.14159, 100.0, -100.0, smallest, largest,
-        1.0, -1.0, math.pi, 42.0, -3.14159, 100.0, -100.0, smallest, largest,
-        1.0, -1.0, math.pi, 42.0, -3.14159, 100.0, -100.0, smallest, largest,
-        1.0, -1.0, math.pi, 42.0, -3.14159, 100.0, -100.0, smallest, largest,
-        1.0, -1.0, math.pi, 42.0, -3.14159, 100.0, -100.0, smallest, largest,
-        1.0, -1.0, math.pi, 42.0, -3.14159, 100.0, -100.0, smallest, largest,
-        1.0, -1.0, math.pi, 42.0, -3.14159, 100.0, -100.0, smallest, largest,
-    };
-    const invalid_values = [_]f64{
-        tooSmall, tooLarge,
-        math.nan(f64), math.inf(f64), -math.inf(f64) };
+    var valid_values = [_]f64{ 1.0, -1.0, math.pi, 42.0, -3.14159, 100.0, -100.0, smallest, largest } ** 16;
+    valid_values[0] = 0.0;
+    const invalid_values = [_]f64{ tooSmall, tooLarge, math.nan(f64), math.inf(f64), -math.inf(f64) };
 
     // Benchmark encode_spec
     var timer = std.time.Timer.start() catch unreachable;
@@ -185,7 +167,7 @@ pub fn main() void {
         }
     }
     const dave_invalid_time = timer.lap();
-    std.debug.print("dave time: {}ns {}ns\n", .{dave_valid_time, dave_invalid_time });
+    std.debug.print("dave time: {}ns {}ns\n", .{ dave_valid_time, dave_invalid_time });
 
     _ = timer.lap();
     for (0..iterations) |_| {
@@ -200,7 +182,7 @@ pub fn main() void {
         }
     }
     const spec_invalid_time = timer.lap();
-    std.debug.print("Spec time: {}ns {}ns\n", .{spec_valid_time, spec_invalid_time });
+    std.debug.print("Spec time: {}ns {}ns\n", .{ spec_valid_time, spec_invalid_time });
 
     _ = timer.lap();
     for (0..iterations) |_| {
@@ -216,9 +198,9 @@ pub fn main() void {
     }
     const check_invalid_time = timer.lap();
 
-    std.debug.print("Check time: {}ns {}ns\n", .{check_valid_time, check_invalid_time });
-    std.debug.print("Dave is {d:.2}x {d:.2}x faster\n", .{ delta(dave_valid_time, check_valid_time), delta(dave_invalid_time, check_invalid_time)});
-    std.debug.print("Spec is {d:.2}x {d:.2}x faster\n", .{ delta(spec_valid_time, check_valid_time), delta(spec_invalid_time, check_invalid_time)});
+    std.debug.print("Check time: {}ns {}ns\n", .{ check_valid_time, check_invalid_time });
+    std.debug.print("Dave is {d:.2}x {d:.2}x faster\n", .{ delta(dave_valid_time, check_valid_time), delta(dave_invalid_time, check_invalid_time) });
+    std.debug.print("Spec is {d:.2}x {d:.2}x faster\n", .{ delta(spec_valid_time, check_valid_time), delta(spec_invalid_time, check_invalid_time) });
 }
 fn delta(spec: u64, check: u64) f64 {
     return @as(f64, @floatFromInt(check)) / @as(f64, @floatFromInt(spec));

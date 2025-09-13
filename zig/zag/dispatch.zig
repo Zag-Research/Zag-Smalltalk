@@ -82,7 +82,7 @@ const DispatchHandler = struct {
         const nMethods = smallestPrimeAtLeast(words);
         const nInstVars = (nMethods * @sizeOf(DispatchElement) + @offsetOf(Dispatch, "matches")) / @sizeOf(Object) - 1;
         const aR = globalArena.aHeapAllocator().alloc(.CompiledMethod, @intCast(nInstVars), null, Object, false);
-        const newDispatch: *Dispatch = @alignCast(@ptrCast(aR.allocated));
+        const newDispatch: *Dispatch = @ptrCast(@alignCast(aR.allocated));
         newDispatch.initialize(nMethods);
         return newDispatch;
     }
@@ -135,7 +135,7 @@ const Dispatch = struct {
             @sizeOf(DispatchElement) * (smallestPrimeAtLeast(@max(5, nMethods)) + overAllocate - 1), @sizeOf(Object)); // extra -1 is for `start` field
     }
     inline fn methods(self: *const Self) [*]DispatchElement {
-        return @as([*]DispatchElement, @constCast(@ptrCast(@alignCast(&self.matches))));
+        return @as([*]DispatchElement, @ptrCast(@alignCast(@constCast(&self.matches))));
     }
     inline fn methodSlice(self: *Self) []DispatchElement {
         return self.methods()[0..self.nMethods];
@@ -534,7 +534,7 @@ const DispatchMethod = struct {
         return @bitCast(self);
     }
     inline fn asIntPtr(self: *Self) *IntSelf {
-        return @alignCast(@ptrCast(self));
+        return @ptrCast(@alignCast(self));
     }
 };
 const DispatchMatch = struct {

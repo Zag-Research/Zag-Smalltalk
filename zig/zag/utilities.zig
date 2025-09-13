@@ -20,9 +20,10 @@ pub fn checkEqual(comptime int: u32, comptime int2: u32) ?[]const u8 {
     return @import("std").fmt.bufPrint(b.buf[0..], "{} instead of {}", .{ int, int2 }) catch unreachable;
 }
 test {
-    _ = .{ general,
-            Treap,
-            primes,
-            Stats,
+    _ = .{
+        general,
+        Treap,
+        primes,
+        Stats,
     };
 }
