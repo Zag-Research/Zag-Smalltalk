@@ -13,6 +13,8 @@ const HeapHeader = heap.HeapHeader;
 const HeapObjectPtr = heap.HeapObjectPtr;
 const HeapObjectConstPtr = heap.HeapObjectConstPtr;
 const InMemory = zag.InMemory;
+// const encode = @import("floatSpur.zig").encode;
+// const decode = @import("floatSpur.zig").decode;
 
 pub const Object = packed union {
     ref: *InMemory.PointedObject,
