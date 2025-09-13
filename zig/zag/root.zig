@@ -3,8 +3,9 @@ const std = @import("std");
 test {
     //std.testing.refAllDeclsRecursive(zag);
     _ = . {
-        @import("utilities.zig"),
-        @import("object/inMemory.zig"),
+        // @import("utilities.zig"),
+        // @import("object/inMemory.zig"),
+        @import("object/spur.zig"),
         //@import("threadedFn.zig"),
     };
 }
