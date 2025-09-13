@@ -1,7 +1,11 @@
 const std = @import("std");
+const math = std.math;
+const expectEqual = std.testing.expectEqual;
+const expect = std.testing.expect;
 const zag = @import("../zag.zig");
 const trace = zag.config.trace;
 const object = zag.object;
+const Process = zag.Process;
 const testing = std.testing;
 const ClassIndex = object.ClassIndex;
 const heap = zag.heap;
@@ -9,8 +13,6 @@ const HeapHeader = heap.HeapHeader;
 const HeapObjectPtr = heap.HeapObjectPtr;
 const HeapObjectConstPtr = heap.HeapObjectConstPtr;
 const InMemory = zag.InMemory;
-const encode = @import("floatSpur.zig").encode;
-const decode = @import("floatSpur.zig").decode;
 
 pub const Object = packed union {
     ref: *InMemory.PointedObject,
@@ -154,13 +156,6 @@ pub const Object = packed union {
         return null;
     }
 
-    pub inline fn isImmediateFloat(self: Object) bool {
-        return (self.rawU() & FloatTag) != 0;
-    }
-    pub inline fn isDouble(self: Object) bool {
-        return self.isImmediateFloat();
-    }
-
     pub inline fn isFloat(self: Object) bool {
         return (self.rawU() & TagMask) == FloatTag;
     }
@@ -213,13 +208,50 @@ pub const Object = packed union {
         return self.rawU() & ~TagMask;
     }
 
+    pub fn encode(v: f64) !u64 {
+        const bits: u64 = @bitCast(v);
+        var y = std.math.rotl(u64, bits, 5);
+        y +%= 1;
+        y = std.math.rotr(u64, y, 1);
+
+        if ((y & 0x7) == 0b100 and (y >> 4 != 0)) return y;
+
+        switch (bits) {
+            0 => return 4,
+            0x8000_0000_0000_0000 => return 12,
+        }
+
+        return error.Unencodable;
+    }
+
+    pub inline fn toDoubleNoCheck(self: object.Object) f64 {
+        return decode(@bitCast(self));
+    }
+
+    pub fn decode(self: u64) f64 {
+        var r = std.math.rotl(u64, self, 1);
+        r -%= 1;
+        if (r <= 0x18) {
+            r &= 0x10;
+        }
+        r = std.math.rotr(u64, r, 5);
+        return @bitCast(r);
+    }
+
+    fn memoryFloat(value: f64, maybeProcess: ?*Process) object.Object {
+        if (math.isNan(value)) return object.Object.from(&InMemory.nanMemObject, null);
+        if (math.inf(f64) == value) return object.Object.from(&InMemory.pInfMemObject, null);
+        if (math.inf(f64) == -value) return object.Object.from(&InMemory.nInfMemObject, null);
+        return InMemory.float(value, maybeProcess);
+    }
+
     // Conversion from Zig types
     pub inline fn from(value: anytype, maybeProcess: ?*zag.Process) Object {
         const T = @TypeOf(value);
         if (T == Object) return value;
         switch (@typeInfo(T)) {
             .int, .comptime_int => return Self.fromSmallInteger(value),
-            .float => return encode(value) catch InMemory.float(value, maybeProcess),
+            .float => return @bitCast(encode(value) catch memoryFloat(value, maybeProcess)),
             .comptime_float => return from(@as(f64, value), maybeProcess),
             .bool => return if (value) Object.True else Object.False,
             .null => return Object.Nil,
@@ -234,9 +266,21 @@ pub const Object = packed union {
         @compileError("Can't convert \"" ++ @typeName(T) ++ "\"");
     }
 
+    pub inline fn isMemoryDouble(self: object.Object) bool {
+        return self.isMemoryAllocated() and self.to(HeapObjectPtr).*.getClass() == .Float;
+    }
+
+    inline fn toDoubleFromMemory(self: object.Object) f64 {
+        return self.to(*InMemory.MemoryFloat).*.value;
+    }
+
     // Conversion to Zig types (partial)
     pub fn toWithCheck(self: Object, comptime T: type, comptime check: bool) T {
         switch (T) {
+            f64 => {
+                if (!check or self.isFloat()) return self.toDoubleNoCheck();
+                if (!check or self.isMemoryDouble()) return self.toDoubleFromMemory();
+            },
             i64 => {
                 if (!check or self.isInt()) return self.nativeI_noCheck();
             },
@@ -297,55 +341,46 @@ pub const Object = packed union {
     pub const toUnchecked = OF.toUnchecked;
 };
 
-test "float conversions" {
-    const cases = [_]struct {
-        value: f64,
-        expectHeap: bool,
-    }{
-        // Normal numbers
-        .{ .value = 5.5, .expectHeap = false },
-        .{ .value = 1.0, .expectHeap = false },
-        .{ .value = -1.0, .expectHeap = false },
-        .{ .value = 3.14159, .expectHeap = false },
+test "float from/to conversion" {
+    std.debug.print("running test", .{});
 
-        // Zeros
-        .{ .value = 0.0, .expectHeap = false },
-        .{ .value = -0.0, .expectHeap = false },
+    // Test immediate float conversion
+    const testValues = [_]f64{ 1.0, -1.0, 0.0, -0.0, math.pi };
 
-        // Edge Cases
-        .{ .value = std.math.floatMin(f64), .expectHeap = true },
-        .{ .value = -std.math.floatMin(f64), .expectHeap = true },
-        .{ .value = std.math.floatMax(f64), .expectHeap = true },
-        .{ .value = -std.math.floatMax(f64), .expectHeap = true },
+    for (testValues) |value| {
+        const obj = Object.from(value, null);
+        try expect(obj.isFloat());
+        try expectEqual(value, obj.toWithCheck(f64, false));
+    }
 
-        // Infinities
-        .{ .value = std.math.inf(f64), .expectHeap = true },
-        .{ .value = -std.math.inf(f64), .expectHeap = true },
+    // print immediate float conversion succesfull
+    std.debug.print("Immediate float conversion successful\n", .{});
 
-        // NaNs
-        .{ .value = std.math.nan(f64), .expectHeap = true },
-        .{ .value = -std.math.nan(f64), .expectHeap = true },
+    // Test edge cases that should encode successfully
+    const smallest: f64 = @bitCast(@as(u64, 0x3800_0000_0000_0001));
+    const largest: f64 = @bitCast(@as(u64, 0x47FF_FFFF_FFFF_FFFF));
+
+    const edgeValues = [_]f64{ smallest, -smallest, largest, -largest };
+
+    for (edgeValues) |value| {
+        const obj = Object.from(value, null);
+        try expect(obj.isFloat());
+        try expectEqual(value, obj.toWithCheck(f64, false));
+    }
+
+    std.debug.print("edge float conversion successful\n", .{});
+
+    // Test values that should fall back to memory float
+    const memoryValues = [_]f64{
+        @bitCast(@as(u64, 0x3800_0000_0000_0000)), // tooSmall
+        @bitCast(@as(u64, 0x4800_0000_0000_0000)), // tooLarge
     };
 
-    for (cases) |case| {
-        trace("Testing value: {d}\n", .{case.value});
-        const result = Object.encode(case.value);
-
-        if (case.expectHeap) {
-            try testing.expect(result == error.NonFiniteValue or
-                result == error.Underflow or
-                result == error.Overflow);
-        } else {
-            if (result) |encoded| {
-                const decoded = encoded.decode();
-                if (std.math.isNan(case.value)) {
-                    try testing.expect(std.math.isNan(decoded));
-                } else {
-                    try testing.expectEqual(case.value, decoded);
-                }
-            } else |_| {
-                try testing.expect(false); // Should not error for non-heap cases
-            }
-        }
+    for (memoryValues) |value| {
+        const obj = Object.from(value, null);
+        try expect(obj.isHeap()); // Should be heap-allocated
+        try expectEqual(value, obj.toWithCheck(f64, false));
     }
+
+    std.debug.print("memory float conversion successful\n", .{});
 }
