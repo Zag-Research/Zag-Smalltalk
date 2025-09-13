@@ -5,6 +5,8 @@ test {
     _ = . {
         @import("utilities.zig"),
         @import("object/inMemory.zig"),
+        @import("object/floatZag.zig"),
+        @import("object/floatSpur.zig"),
         //@import("threadedFn.zig"),
     };
 }

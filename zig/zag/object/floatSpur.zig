@@ -67,8 +67,8 @@ pub fn encode_check(value: f64) !u64 {
 
     // Handle Zero-Collision Case
     if (exp8 == 0 and mant == 0) return EncodeError.Unencodable;
-    
-    
+
+
     var r = std.math.rotl(u64, bits, 5);
     r +%= 1;
     return std.math.rotr(u64, r, 1);
@@ -86,20 +86,20 @@ pub fn decode(self: u64) f64 {
 
 const encode = encode_spec;
 
+const smallest: f64 = @bitCast(@as(u64, 0x3800_0000_0000_0001));
+const largest: f64 = @bitCast(@as(u64, 0x47FF_FFFF_FFFF_FFFF));
+const tooSmall: f64 = @bitCast(@as(u64, 0x3800_0000_0000_0000));
+const tooLarge: f64 = @bitCast(@as(u64, 0x4800_0000_0000_0000));
 test "encode/decode" {
     try expectEqual(1.0, decode(try encode(1.0)));
     try expectEqual(-1.0, decode(try encode(-1.0)));
     try expectEqual(0.0, decode(try encode(0.0)));
     try expectEqual(-0.0, decode(try encode(-0.0)));
     try expectEqual(math.pi, decode(try encode(math.pi)));
-    const smallest: f64 = @bitCast(@as(u64, 0x3800_0000_0000_0001));
-    const largest: f64 = @bitCast(@as(u64, 0x47FF_FFFF_FFFF_FFFF));
     try expectEqual(smallest, decode(try encode(smallest)));
     try expectEqual(-smallest, decode(try encode(-smallest)));
     try expectEqual(largest, decode(try encode(largest)));
     try expectEqual(-largest, decode(try encode(-largest)));
-    const tooSmall: f64 = @bitCast(@as(u64, 0x3800_0000_0000_0000));
-    const tooLarge: f64 = @bitCast(@as(u64, 0x4800_0000_0000_0000));
     try expectEqual(EncodeError.Unencodable, encode(tooSmall));
     try expectEqual(EncodeError.Unencodable, encode(tooLarge));
     try expectEqual(EncodeError.NaN, encode(math.nan(f64)));
@@ -107,32 +107,68 @@ test "encode/decode" {
     try expectEqual(EncodeError.NegInf, encode(-math.inf(f64)));
 }
 
-test "benchmark encode methods" {
+// zig run -Doptimize=ReleaseFast floatSpur.zig
+pub fn main() void {
     const iterations = 1000000;
-    
-    const test_values = [_]f64{ 1.0, -1.0, 0.0, math.pi, 42.0, -3.14159, 100.0, -100.0, @bitCast(@as(u64, 0x3800_0000_0000_0001)), @bitCast(@as(u64, 0x4800_0000_0000_0000)), @bitCast(@as(u64, 0x3800_0000_0000_0000)), @bitCast(@as(u64, 0x4800_0000_0000_0000)), math.nan(f64), math.inf(f64), -math.inf(f64) };
+
+    const valid_values = [_]f64{
+        0.0,
+        1.0, -1.0, math.pi, 42.0, -3.14159, 100.0, -100.0, smallest, largest,
+        1.0, -1.0, math.pi, 42.0, -3.14159, 100.0, -100.0, smallest, largest,
+        1.0, -1.0, math.pi, 42.0, -3.14159, 100.0, -100.0, smallest, largest,
+        1.0, -1.0, math.pi, 42.0, -3.14159, 100.0, -100.0, smallest, largest,
+        1.0, -1.0, math.pi, 42.0, -3.14159, 100.0, -100.0, smallest, largest,
+        1.0, -1.0, math.pi, 42.0, -3.14159, 100.0, -100.0, smallest, largest,
+        1.0, -1.0, math.pi, 42.0, -3.14159, 100.0, -100.0, smallest, largest,
+        1.0, -1.0, math.pi, 42.0, -3.14159, 100.0, -100.0, smallest, largest,
+        1.0, -1.0, math.pi, 42.0, -3.14159, 100.0, -100.0, smallest, largest,
+        1.0, -1.0, math.pi, 42.0, -3.14159, 100.0, -100.0, smallest, largest,
+        1.0, -1.0, math.pi, 42.0, -3.14159, 100.0, -100.0, smallest, largest,
+        1.0, -1.0, math.pi, 42.0, -3.14159, 100.0, -100.0, smallest, largest,
+        1.0, -1.0, math.pi, 42.0, -3.14159, 100.0, -100.0, smallest, largest,
+        1.0, -1.0, math.pi, 42.0, -3.14159, 100.0, -100.0, smallest, largest,
+        1.0, -1.0, math.pi, 42.0, -3.14159, 100.0, -100.0, smallest, largest,
+        1.0, -1.0, math.pi, 42.0, -3.14159, 100.0, -100.0, smallest, largest,
+    };
+    const invalid_values = [_]f64{
+        tooSmall, tooLarge,
+        math.nan(f64), math.inf(f64), -math.inf(f64) };
 
     // Benchmark encode_spec
     var timer = std.time.Timer.start() catch unreachable;
-    const start_spec = timer.lap();
+    _ = timer.lap();
 
     for (0..iterations) |_| {
-        for (test_values) |val| {
+        for (valid_values) |val| {
             _ = encode_spec(val) catch continue;
         }
     }
-    const spec_time = timer.lap();
-
-    const start_check = timer.lap();
-
+    const spec_valid_time = timer.lap();
     for (0..iterations) |_| {
-        for (test_values) |val| {
-            _ = encode_check(val) catch continue;
+        for (invalid_values) |val| {
+            _ = encode_spec(val) catch continue;
         }
     }
-    const check_time = timer.lap();
+    const spec_invalid_time = timer.lap();
 
-    std.debug.print("\nSpec time: {}ns\n", .{spec_time - start_spec});
-    std.debug.print("Check time: {}ns\n", .{check_time - start_check});
-    std.debug.print("Spec is {d:.2}x faster\n", .{@as(f64, @floatFromInt(check_time - start_check)) / @as(f64, @floatFromInt(spec_time - start_spec))});
+    _ = timer.lap();
+    for (0..iterations) |_| {
+        for (valid_values) |val| {
+            _ = encode_spec(val) catch continue;
+        }
+    }
+    const check_valid_time = timer.lap();
+    for (0..iterations) |_| {
+        for (invalid_values) |val| {
+            _ = encode_spec(val) catch continue;
+        }
+    }
+    const check_invalid_time = timer.lap();
+
+    std.debug.print("\nSpec time: {}ns {}ns\n", .{spec_valid_time, spec_invalid_time });
+    std.debug.print("Check time: {}ns {}ns\n", .{check_valid_time, check_invalid_time });
+    std.debug.print("Spec is {d:.2}x {d:.2}x faster\n", .{ delta(spec_valid_time, check_valid_time), delta(spec_invalid_time, check_invalid_time)});
+}
+fn delta(spec: u64, check: u64) f64 {
+    return @as(f64, @floatFromInt(check)) / @as(f64, @floatFromInt(spec));
 }
