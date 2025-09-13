@@ -147,8 +147,7 @@ test "encode/decode" {
 pub fn main() void {
     const iterations = 10000000;
 
-    var valid_values = [_]f64{ 1.0, -1.0, math.pi, 42.0, -3.14159, 100.0, -100.0, smallest, largest } ** 16;
-    valid_values[0] = 0.0;
+    const valid_values = [_]f64{0.0} ++ [_]f64{ 1.0, -1.0, math.pi, 42.0, -3.14159, 100.0, -100.0, smallest, largest } ** 16;
     const invalid_values = [_]f64{ tooSmall, tooLarge, math.nan(f64), math.inf(f64), -math.inf(f64) };
 
     // Benchmark encode_spec
