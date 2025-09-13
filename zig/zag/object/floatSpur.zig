@@ -24,7 +24,7 @@ pub inline fn encode_n(v: f64) !u64 {
     const bits: u64 = @bitCast(v);
     const y = rotr(u64, rotl(u64, bits, 5) +% 1, 1);
     if ((y & 0x7) == TAG and (y | 0x8) != 0xC) return y;
-    if (bits ^ (bits >> 63) == 0) return 4 + ((bits >> 61) & 8);
+    if (bits & 0x7FFFFFFF_FFFFFFFF == 0) return 4 + ((bits >> 61) & 8);
     return error.Unencodable;
 }
 
