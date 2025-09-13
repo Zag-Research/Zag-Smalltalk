@@ -247,6 +247,13 @@ const FCache = switch (objectEncoding) {
     else => false,
 };
 pub inline fn float(v: f64, maybeProcess: ?*Process) Object {
+    if (std.math.isNan(v))
+        return Object.from(&nanMemObject);
+    if (std.math.isInf(v)) {
+        if (v > 0)
+            return Object.from(&pInfMemObject);
+        return Object.from(&nInfMemObject);
+    }
     if (FCache) {
         if (v == 0.0)
             return Object.from(&fZero);

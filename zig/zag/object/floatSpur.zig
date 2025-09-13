@@ -17,7 +17,26 @@ pub const EncodeError = error{ Unencodable, PosInf, NegInf, NaN };
 // immediate float layout: [exp8(8)][mant(52)][sign(1)][tag(3)]
 // Ref: https://clementbera.wordpress.com/2018/11/09/64-bits-immediate-floats/
 
-pub fn encode_spec(v: f64) !u64 {
+inline fn encode_dave(v: f64) EncodeError!u64 {
+    const bits: u64 = @bitCast(v);
+    var y = std.math.rotl(u64, bits, 5);
+    if (y <= 0x10) { // probably 0
+        if (y == 0) return 4;
+        if (y == 0x10) return 0xc;
+        y +%= 1;
+        y = std.math.rotr(u64, y, 1);
+        // handle normal immediate float; with zero-collision check
+        if ((y & 0x7) == TAG and (y | 0x8) != 0xC) return y;
+        return error.Unencodable;
+    }
+    y +%= 1;
+    y = std.math.rotr(u64, y, 1);
+
+    // handle normal immediate float
+    if ((y & 0x7) == TAG) return y;
+    return error.Unencodable;
+}
+inline fn encode_spec(v: f64) EncodeError!u64 {
     const bits: u64 = @bitCast(v);
     var y = std.math.rotl(u64, bits, 5);
     y +%= 1;
@@ -36,7 +55,7 @@ pub fn encode_spec(v: f64) !u64 {
     return EncodeError.Unencodable; // unencodable (subnormal vs out-of-range)
 }
 
-pub fn encode_check(value: f64) !u64 {
+inline fn encode_check(value: f64) !u64 {
     const bits: u64 = @bitCast(value);
     const exp: u64 = (bits & EXPONENT_MASK);
     const mant = bits & MANTISSA_MASK;
@@ -67,14 +86,14 @@ pub fn encode_check(value: f64) !u64 {
 
     // Handle Zero-Collision Case
     if (exp8 == 0 and mant == 0) return EncodeError.Unencodable;
-    
-    
+
+
     var r = std.math.rotl(u64, bits, 5);
     r +%= 1;
     return std.math.rotr(u64, r, 1);
 }
 
-pub fn decode(self: u64) f64 {
+pub inline fn decode(self: u64) f64 {
     var r = std.math.rotl(u64, self, 1);
     r -%= 1;
     if (r <= 0x18) {
@@ -84,22 +103,38 @@ pub fn decode(self: u64) f64 {
     return @bitCast(r);
 }
 
-const encode = encode_spec;
+pub const encode = encode_spec;
 
+const smallest: f64 = @bitCast(@as(u64, 0x3800_0000_0000_0001));
+const largest: f64 = @bitCast(@as(u64, 0x47FF_FFFF_FFFF_FFFF));
+const tooSmall: f64 = @bitCast(@as(u64, 0x3800_0000_0000_0000));
+const tooLarge: f64 = @bitCast(@as(u64, 0x4800_0000_0000_0000));
+test "encode_dave/decode" {
+    try expectEqual(1.0, decode(try encode_dave(1.0)));
+    try expectEqual(-1.0, decode(try encode_dave(-1.0)));
+    try expectEqual(0.0, decode(try encode_dave(0.0)));
+    try expectEqual(-0.0, decode(try encode_dave(-0.0)));
+    try expectEqual(math.pi, decode(try encode_dave(math.pi)));
+    try expectEqual(smallest, decode(try encode_dave(smallest)));
+    try expectEqual(-smallest, decode(try encode_dave(-smallest)));
+    try expectEqual(largest, decode(try encode_dave(largest)));
+    try expectEqual(-largest, decode(try encode_dave(-largest)));
+    try expectEqual(error.Unencodable, encode_dave(tooSmall));
+    try expectEqual(error.Unencodable, encode_dave(tooLarge));
+    try expectEqual(error.Unencodable, encode_dave(math.nan(f64)));
+    try expectEqual(error.Unencodable, encode_dave(math.inf(f64)));
+    try expectEqual(error.Unencodable, encode_dave(-math.inf(f64)));
+}
 test "encode/decode" {
     try expectEqual(1.0, decode(try encode(1.0)));
     try expectEqual(-1.0, decode(try encode(-1.0)));
     try expectEqual(0.0, decode(try encode(0.0)));
     try expectEqual(-0.0, decode(try encode(-0.0)));
     try expectEqual(math.pi, decode(try encode(math.pi)));
-    const smallest: f64 = @bitCast(@as(u64, 0x3800_0000_0000_0001));
-    const largest: f64 = @bitCast(@as(u64, 0x47FF_FFFF_FFFF_FFFF));
     try expectEqual(smallest, decode(try encode(smallest)));
     try expectEqual(-smallest, decode(try encode(-smallest)));
     try expectEqual(largest, decode(try encode(largest)));
     try expectEqual(-largest, decode(try encode(-largest)));
-    const tooSmall: f64 = @bitCast(@as(u64, 0x3800_0000_0000_0000));
-    const tooLarge: f64 = @bitCast(@as(u64, 0x4800_0000_0000_0000));
     try expectEqual(EncodeError.Unencodable, encode(tooSmall));
     try expectEqual(EncodeError.Unencodable, encode(tooLarge));
     try expectEqual(EncodeError.NaN, encode(math.nan(f64)));
@@ -107,32 +142,84 @@ test "encode/decode" {
     try expectEqual(EncodeError.NegInf, encode(-math.inf(f64)));
 }
 
-test "benchmark encode methods" {
-    const iterations = 1000000;
-    
-    const test_values = [_]f64{ 1.0, -1.0, 0.0, math.pi, 42.0, -3.14159, 100.0, -100.0, @bitCast(@as(u64, 0x3800_0000_0000_0001)), @bitCast(@as(u64, 0x4800_0000_0000_0000)), @bitCast(@as(u64, 0x3800_0000_0000_0000)), @bitCast(@as(u64, 0x4800_0000_0000_0000)), math.nan(f64), math.inf(f64), -math.inf(f64) };
+// zig run -Doptimize=ReleaseFast floatSpur.zig
+pub fn main() void {
+    const iterations = 10000000;
+
+    const valid_values = [_]f64{
+        0.0,
+        1.0, -1.0, math.pi, 42.0, -3.14159, 100.0, -100.0, smallest, largest,
+        1.0, -1.0, math.pi, 42.0, -3.14159, 100.0, -100.0, smallest, largest,
+        1.0, -1.0, math.pi, 42.0, -3.14159, 100.0, -100.0, smallest, largest,
+        1.0, -1.0, math.pi, 42.0, -3.14159, 100.0, -100.0, smallest, largest,
+        1.0, -1.0, math.pi, 42.0, -3.14159, 100.0, -100.0, smallest, largest,
+        1.0, -1.0, math.pi, 42.0, -3.14159, 100.0, -100.0, smallest, largest,
+        1.0, -1.0, math.pi, 42.0, -3.14159, 100.0, -100.0, smallest, largest,
+        1.0, -1.0, math.pi, 42.0, -3.14159, 100.0, -100.0, smallest, largest,
+        1.0, -1.0, math.pi, 42.0, -3.14159, 100.0, -100.0, smallest, largest,
+        1.0, -1.0, math.pi, 42.0, -3.14159, 100.0, -100.0, smallest, largest,
+        1.0, -1.0, math.pi, 42.0, -3.14159, 100.0, -100.0, smallest, largest,
+        1.0, -1.0, math.pi, 42.0, -3.14159, 100.0, -100.0, smallest, largest,
+        1.0, -1.0, math.pi, 42.0, -3.14159, 100.0, -100.0, smallest, largest,
+        1.0, -1.0, math.pi, 42.0, -3.14159, 100.0, -100.0, smallest, largest,
+        1.0, -1.0, math.pi, 42.0, -3.14159, 100.0, -100.0, smallest, largest,
+        1.0, -1.0, math.pi, 42.0, -3.14159, 100.0, -100.0, smallest, largest,
+    };
+    const invalid_values = [_]f64{
+        tooSmall, tooLarge,
+        math.nan(f64), math.inf(f64), -math.inf(f64) };
 
     // Benchmark encode_spec
     var timer = std.time.Timer.start() catch unreachable;
-    const start_spec = timer.lap();
 
+    _ = timer.lap();
     for (0..iterations) |_| {
-        for (test_values) |val| {
+        for (valid_values) |val| {
+            _ = encode_dave(val) catch return;
+        }
+    }
+    const dave_valid_time = timer.lap();
+    for (0..iterations) |_| {
+        for (invalid_values) |val| {
+            _ = encode_dave(val) catch continue;
+        }
+    }
+    const dave_invalid_time = timer.lap();
+    std.debug.print("dave time: {}ns {}ns\n", .{dave_valid_time, dave_invalid_time });
+
+    _ = timer.lap();
+    for (0..iterations) |_| {
+        for (valid_values) |val| {
+            _ = encode_spec(val) catch return;
+        }
+    }
+    const spec_valid_time = timer.lap();
+    for (0..iterations) |_| {
+        for (invalid_values) |val| {
             _ = encode_spec(val) catch continue;
         }
     }
-    const spec_time = timer.lap();
+    const spec_invalid_time = timer.lap();
+    std.debug.print("Spec time: {}ns {}ns\n", .{spec_valid_time, spec_invalid_time });
 
-    const start_check = timer.lap();
-
+    _ = timer.lap();
     for (0..iterations) |_| {
-        for (test_values) |val| {
-            _ = encode_check(val) catch continue;
+        for (valid_values) |val| {
+            _ = encode_spec(val) catch return;
         }
     }
-    const check_time = timer.lap();
+    const check_valid_time = timer.lap();
+    for (0..iterations) |_| {
+        for (invalid_values) |val| {
+            _ = encode_spec(val) catch continue;
+        }
+    }
+    const check_invalid_time = timer.lap();
 
-    std.debug.print("\nSpec time: {}ns\n", .{spec_time - start_spec});
-    std.debug.print("Check time: {}ns\n", .{check_time - start_check});
-    std.debug.print("Spec is {d:.2}x faster\n", .{@as(f64, @floatFromInt(check_time - start_check)) / @as(f64, @floatFromInt(spec_time - start_spec))});
+    std.debug.print("Check time: {}ns {}ns\n", .{check_valid_time, check_invalid_time });
+    std.debug.print("Dave is {d:.2}x {d:.2}x faster\n", .{ delta(dave_valid_time, check_valid_time), delta(dave_invalid_time, check_invalid_time)});
+    std.debug.print("Spec is {d:.2}x {d:.2}x faster\n", .{ delta(spec_valid_time, check_valid_time), delta(spec_invalid_time, check_invalid_time)});
+}
+fn delta(spec: u64, check: u64) f64 {
+    return @as(f64, @floatFromInt(check)) / @as(f64, @floatFromInt(spec));
 }
