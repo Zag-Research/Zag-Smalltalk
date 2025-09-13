@@ -2,6 +2,8 @@ const std = @import("std");
 const math = std.math;
 const expectEqual = std.testing.expectEqual;
 const expect = std.testing.expect;
+const rotl = std.math.rotl;
+const rotr = std.math.rotr;
 
 const EXPONENT_MASK: u64 = 0x7FF0000000000000;
 const MANTISSA_MASK: u64 = 0x000FFFFFFFFFFFFF;
@@ -12,7 +14,7 @@ const SHIFTED_EXP: u64 = 0xFFE0_0000_0000_0000;
 const SIGN_MASK: u64 = 0x8000_0000_0000_0000;
 const ZERO_SHAPE: u64 = 0x8000_0000_0000_0008;
 
-pub const encode = encode_dave; // used by the spur.zig
+pub const encode = encode_n; // used by the spur.zig
 pub const EncodeError = error{ Unencodable, PosInf, NegInf, NaN };
 
 // immediate float layout: [exp8(8)][mant(52)][sign(1)][tag(3)]
@@ -20,12 +22,9 @@ pub const EncodeError = error{ Unencodable, PosInf, NegInf, NaN };
 
 pub inline fn encode_n(v: f64) !u64 {
     const bits: u64 = @bitCast(v);
-    var y = std.math.rotl(u64, bits, 5);
-    y +%= 1;
-    y = std.math.rotr(u64, y, 1);
+    const y = rotr(u64, rotl(u64, bits, 5) +% 1, 1);
     if ((y & 0x7) == TAG and (y | 0x8) != 0xC) return y;
-    if (bits == 0) return 4; // +0.0
-    if (bits == 0x8000_0000_0000_0000) return 12; // -0.0
+    if (bits ^ (bits >> 63) == 0) return 4 + ((bits >> 61) & 8);
     return error.Unencodable;
 }
 
