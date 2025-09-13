@@ -145,10 +145,17 @@ test "encode/decode" {
 
 // zig run -Doptimize=ReleaseFast floatSpur.zig
 pub fn main() void {
-    const iterations = 10000000;
-
-    const valid_values = [_]f64{0.0} ++ [_]f64{ 1.0, -1.0, math.pi, 42.0, -3.14159, 100.0, -100.0, smallest, largest } ** 16;
-    const invalid_values = [_]f64{ tooSmall, tooLarge, math.nan(f64), math.inf(f64), -math.inf(f64) };
+    const valid_values = [_]f64{0.0} ** 2 ++
+        [_]f64{ 1.0, -1.0, math.pi, 42.0, -3.14159, 100.0, -100.0 } ** 16 ++
+        [_]f64{ smallest, largest } ** 16;
+    const iterations = 100000000 / valid_values.len;
+    const invalid_values =
+        [_]f64{tooSmall} ** 1 ++
+        [_]f64{tooLarge} ** 1 ++
+        [_]f64{math.nan(f64)} ** 1 ++
+        [_]f64{math.inf(f64)} ** 1 ++
+        [_]f64{-math.inf(f64)} ** 1;
+    const iterations_i = 100000000 / invalid_values.len;
 
     // Benchmark encode_spec
     var timer = std.time.Timer.start() catch unreachable;
@@ -160,7 +167,7 @@ pub fn main() void {
         }
     }
     const dave_valid_time = timer.lap();
-    for (0..iterations) |_| {
+    for (0..iterations_i) |_| {
         for (invalid_values) |val| {
             _ = encode_dave(val) catch continue;
         }
@@ -175,7 +182,7 @@ pub fn main() void {
         }
     }
     const spec_valid_time = timer.lap();
-    for (0..iterations) |_| {
+    for (0..iterations_i) |_| {
         for (invalid_values) |val| {
             _ = encode_spec(val) catch continue;
         }
@@ -190,7 +197,7 @@ pub fn main() void {
         }
     }
     const check_valid_time = timer.lap();
-    for (0..iterations) |_| {
+    for (0..iterations_i) |_| {
         for (invalid_values) |val| {
             _ = encode_spec(val) catch continue;
         }
