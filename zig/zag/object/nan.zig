@@ -12,6 +12,7 @@ const heap = zag.heap;
 const HeapObjectPtr = heap.HeapObjectPtr;
 const HeapObjectConstPtr = heap.HeapObjectConstPtr;
 const HeapHeader = heap.HeapHeader;
+const Process = zag.Process;
 pub const Object = packed struct(u64) {
     hash: u32,
     classIndex: ClassIndex,
@@ -216,8 +217,14 @@ pub const Object = packed struct(u64) {
         if (self.isImmediateDouble()) return self.toDoubleNoCheck();
         return null;
     }
-    inline fn nativeF_noCheck(self: object.Object) f64 {
+    pub inline fn isFloat(self: object.Object) bool {
+        return self.isImmediateDouble();
+    }
+    pub inline fn nativeF_noCheck(self: object.Object) f64 {
         return self.toDoubleNoCheck();
+    }
+    pub inline fn fromNativeF(t: f64, maybeProcess: ?*Process) object.Object {
+        return from(t,maybeProcess);
     }
     pub inline fn symbolHash(self: object.Object) ?u24 {
         if (self.isImmediateClass(.Symbol)) return @truncate(self.hash32());

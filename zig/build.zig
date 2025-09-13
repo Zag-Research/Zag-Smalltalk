@@ -36,7 +36,7 @@ pub fn build(b: *std.Build) void {
             .target = target,
             .optimize = optimize,
             .imports = &.{
-                .{ .name = "zag", .module = zag },
+                //.{ .name = "zag", .module = zag },
             },
         }),
     });

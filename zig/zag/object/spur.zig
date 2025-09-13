@@ -1,5 +1,6 @@
 const std = @import("std");
 const zag = @import("../zag.zig");
+const trace = zag.config.trace;
 const object = zag.object;
 const testing = std.testing;
 const ClassIndex = object.ClassIndex;
@@ -327,7 +328,7 @@ test "float conversions" {
     };
 
     for (cases) |case| {
-        std.debug.print("Testing value: {d}\n", .{case.value});
+        trace("Testing value: {d}\n", .{case.value});
         const result = Object.encode(case.value);
 
         if (case.expectHeap) {

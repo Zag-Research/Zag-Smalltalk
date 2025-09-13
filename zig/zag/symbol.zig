@@ -4,6 +4,7 @@ const Allocator = mem.Allocator;
 const builtin = @import("builtin");
 const zag = @import("zag.zig");
 const config = zag.config;
+const trace = config.trace;
 const utilities = zag.utilities;
 const object = zag.object;
 const Object = object.Object;
@@ -17,7 +18,7 @@ const undoPhi24 = zag.utilities.undoPhi(u24);
 const Signature = zag.execute.Signature;
 pub var globalAllocator = std.heap.page_allocator; //@import("globalArena.zig").allocator();
 
-pub const symbols = if (Object.inMemorySymbols) SymbolsEnum else SymbolsStruct;
+pub const symbols = SymbolsStruct;
 pub inline fn symbolIndex(obj: object.Object) u24 {
     return obj.hash24() *% undoPhi24;
 }
@@ -177,7 +178,7 @@ const SymbolsEnum = enum(u32) {
     }
     fn signature(sym: SymbolsEnum, primitive: u16) Signature {
         const int = @intFromEnum(sym);
-        return Signature.fromHashPrimitive(hash_of(int & 0xffffff, int >> 24), primitive);
+        return Signature.fromHashPrimitive(hash_of(@truncate(int), @truncate(int >> 24)), primitive);
     }
 };
 const SymbolsStruct = struct {
@@ -235,13 +236,21 @@ const SymbolsStruct = struct {
     pub const noFallback = symbol0(52);
     pub const fibonacci = symbol0(53);
     pub const Object = symbol0(lastPredefinedSymbol); // always have this the last initial symbol so the tests verify all the counts are correct
-    pub const i_0 = symbol0(65535);
-    inline fn fromHash32(hash: u32) object.Object {
-        return object.Object.makeImmediate(.Symbol, hash);
-    }
-    inline fn symbol_of(index: u24, arity: u4) object.Object {
-        return fromHash32(hash_of(index, arity));
-    }
+    const symbol_of = if (object.Object.inMemorySymbols) InMemoryFunctions.symbol_of else ImmediateFunctions.symbol_of;
+    const InMemoryFunctions = struct {
+        inline fn symbol_of(index: u24, _: u4) object.Object {
+            const O = packed struct { sym: *const PointedObject };
+            return @bitCast(O{ .sym = &SymbolsEnum.staticSymbols[index - 1] });
+        }
+    };
+    const ImmediateFunctions = struct {
+        inline fn fromHash32(hash: u32) object.Object {
+            return object.Object.makeImmediate(.Symbol, hash);
+        }
+        inline fn symbol_of(index: u24, arity: u4) object.Object {
+            return fromHash32(hash_of(index, arity));
+        }
+    };
     inline fn symbol0(index: u24) object.Object {
         return symbol_of(index, 0);
     }
@@ -279,7 +288,7 @@ var symbolTable = SymbolTable.init(&globalAllocator);
 pub fn asString(string: Object) Object {
     return symbolTable.asString(string);
 }
-pub fn loadSymbols(strs: []const heap.HeapConstPtr) void {
+pub fn loadSymbols(strs: []const heap.HeapObjectConstPtr) void {
     symbolTable.loadSymbols(strs);
 }
 pub inline fn lookup(string: Object) Object {
@@ -344,7 +353,7 @@ pub const SymbolTable = struct {
         const index = trp.lookup(string);
         if (index > 0) {
             const nArgs = numArgs(string);
-            return if (Object.inMemorySymbols) @bitCast(@intFromPtr(trp.getValue(index))) else symbols.symbol_of(@truncate(index), nArgs);
+            return if (Object.inMemorySymbols) @bitCast(@intFromPtr(trp.getValue(index))) else SymbolsEnum.symbol_of(@truncate(index), nArgs);
         }
         return Nil();
     }
@@ -371,7 +380,7 @@ pub const SymbolTable = struct {
             obj.data.object = string;
             trp.setValue(index, obj);
             break :blk @bitCast(@intFromPtr(obj));
-        } else symbols.symbol_of(
+        } else SymbolsEnum.symbol_of(
             @truncate(index),
             nArgs,
         );
@@ -387,7 +396,7 @@ pub const SymbolTable = struct {
         try std.testing.expectEqual(symbol, other);
     }
 };
-pub const noStrings = &[0]heap.HeapConstPtr{};
+pub const noStrings = &[0]heap.HeapObjectConstPtr{};
 test "symbols match initialized symbol table" {
     const expectEqual = std.testing.expectEqual;
     const expect = std.testing.expect;
@@ -397,7 +406,7 @@ test "symbols match initialized symbol table" {
     const debugging = false;
     if (debugging) {
         for (&symbols.staticSymbols, 0..) |ss, i|
-            std.debug.print("\nss[{}] {x} {x}", .{ i, ss.header.hash, ss.data.unsigned });
+            trace("\nss[{}] {x} {x}", .{ i, ss.header.hash, ss.data.unsigned });
     }
     try expectEqual(1, symbolIndex(symbols.@"=".asObject()));
     try expectEqual(1, symbolArity(symbols.@"=".asObject()));
@@ -429,8 +438,8 @@ test "symbols match initialized symbol table" {
     try symbol.verify(symbols.size.asObject());
     try symbol.verify(symbols.Object.asObject());
     try expect(mem.eql(u8, "valueWithArguments:"[0..], try symbol.asString(symbols.@"valueWithArguments:".asObject()).arrayAsSlice(u8)));
-    std.debug.print("yourself: {x}\n", .{@as(u64, @bitCast(symbols.yourself.asObject()))});
-    std.debug.print("verified: symbols match initialized symbol table\n", .{});
+    trace("yourself: {x}\n", .{@as(u64, @bitCast(symbols.yourself.asObject()))});
+    trace("verified: symbols match initialized symbol table\n", .{});
 }
 // these selectors will have special handling in a dispatch table
 // if anding a selector with QuickSelectorsMask == QuickSelectorsMatch
@@ -442,7 +451,6 @@ pub const QuickSelectorsMask = 0x19046000;
 pub const QuickSelectorsMatch = 0x18046000;
 test "find key value for quick selectors" {
     try config.skipNotZag();
-    const printing = false;
     var mask: u64 = 0;
     var match: u64 = 0;
     outer: for (8..32) |bit| {
@@ -453,13 +461,10 @@ test "find key value for quick selectors" {
         }
         mask = mask | bitmask;
         match = match | bitmatch;
-        if (printing)
-            std.debug.print("mask  = {b:0>64}\nmatch = {b:0>64}\n", .{ mask, match });
+        trace("mask  = {b:0>64}\nmatch = {b:0>64}\n", .{ mask, match });
     }
-    if (printing)
-        std.debug.print("=     - {b:0>64}\nvalue - {b:0>64}\nvalue:- {b:0>64}\ncull: - {b:0>64}\n", .{ symbols.@"=".rawU(), symbols.value.rawU(), symbols.@"value:".rawU(), symbols.@"cull:".rawU() });
-    if (printing)
-        std.debug.print("mask  = 0x{x:0>8} match = 0x{x:0>8}\n", .{ mask, match });
+    trace("=     - {b:0>64}\nvalue - {b:0>64}\nvalue:- {b:0>64}\ncull: - {b:0>64}\n", .{ symbols.@"=".rawU(), symbols.value.rawU(), symbols.@"value:".rawU(), symbols.@"cull:".rawU() });
+    trace("mask  = 0x{x:0>8} match = 0x{x:0>8}\n", .{ mask, match });
     try std.testing.expectEqual(mask, QuickSelectorsMask);
     try std.testing.expectEqual(match, QuickSelectorsMatch);
 }

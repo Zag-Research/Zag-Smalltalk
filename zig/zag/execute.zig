@@ -75,6 +75,7 @@ pub const Signature = packed struct {
     }
     pub fn signature(self: Object) ?Signature {
         const sig: Create = @bitCast(self);
+        trace("sig = {}\n", .{sig});
         if (sig.isTagged())
             return @bitCast(self);
         return null;
@@ -320,6 +321,10 @@ pub const Code = union(enum) {
         self: *const Code,
         writer: anytype,
     ) !void {
+        if (true) {
+            try writer.print("({x})", .{@as(*const u64,@ptrCast(self)).*});
+            return;
+        }
         switch (self.*) {
             .object => |obj| try writer.print("object({f})", .{obj}),
             .threadedFn => |tFn| {
@@ -431,7 +436,7 @@ fn intOf(comptime str: []const u8) u12 {
     return n;
 }
 test "intOf" {
-    std.debug.print("Test: intOf\n", .{});
+    trace("Test: intOf\n", .{});
     const expectEqual = std.testing.expectEqual;
     try expectEqual(comptime intOf("012Abc"), 12);
     try expectEqual(comptime intOf("1230Abc"), 1230);
@@ -467,7 +472,7 @@ fn countNonLabels(comptime tup: anytype) usize {
     return c;
 }
 test "countNonLabels" {
-    std.debug.print("Test: countNonLabels\n", .{});
+    trace("Test: countNonLabels\n", .{});
     const expectEqual = std.testing.expectEqual;
     try expectEqual(8, countNonLabels(.{
         ":abc",
@@ -596,7 +601,7 @@ fn CompileTimeMethod(comptime counts: usize) type {
     };
 }
 test "CompileTimeMethod" {
-    std.debug.print("Test: CompileTimeMethod\n", .{});
+    trace("Test: CompileTimeMethod\n", .{});
     const expectEqual = std.testing.expectEqual;
     const c1 = CompileTimeMethod(countNonLabels(.{
         ":abc",
@@ -649,7 +654,7 @@ fn lookupLabel(tup: anytype, comptime field: []const u8) i56 {
     @compileError("missing label: \"" ++ field ++ "\"");
 }
 test "LookupLabel" {
-    std.debug.print("Test: LookupLabel\n", .{});
+    trace("Test: LookupLabel\n", .{});
     const expectEqual = std.testing.expectEqual;
     const def: []const u8 = "def";
     const c1 = lookupLabel(.{
@@ -667,7 +672,7 @@ test "LookupLabel" {
 const print = std.io.getStdOut().writer().print;
 const p = @import("threadedFn.zig").Enum;
 test "compiling method" {
-    std.debug.print("Test: compiling method\n", .{});
+    trace("Test: compiling method\n", .{});
     const expectEqual = std.testing.expectEqual;
     //@compileLog(&p.send);
     var m = compileMethod(Sym.yourself, 0, .testClass, .{
@@ -787,7 +792,7 @@ pub fn compileObject(comptime tup: anytype) CompileTimeObject(countNonLabels(tup
 test "compileObject" {
     var process: Process align(Process.alignment) = Process.new();
     process.init(Nil());
-    std.debug.print("Test: compileObject\n", .{});
+    trace("Test: compileObject\n", .{});
     const expectEqual = std.testing.expectEqual;
     const expect = std.testing.expect;
     const c = ClassIndex;
@@ -810,13 +815,13 @@ test "compileObject" {
     const debugging = false;
     if (debugging) {
         for (&o.objects, 0..) |*ob, idx|
-            std.debug.print("\no[{}]: 0x{x:0>16}", .{ idx, @as(u64, @bitCast(ob.*)) });
+            trace("\no[{}]: 0x{x:0>16}", .{ idx, @as(u64, @bitCast(ob.*)) });
     }
     o.setLiterals(&.{ True(), Nil(), True(), Object.from(42.0, &process) }, &.{@enumFromInt(0xdead)});
     if (debugging) {
         for (&o.objects, 0..) |*ob, idx|
-            std.debug.print("\no[{}]=0x{x:0>8}: 0x{x:0>16}", .{ idx, @intFromPtr(ob), @as(u64, @bitCast(ob.*)) });
-        std.debug.print("\nTrue=0x{x:0>8}", .{@as(u64, @bitCast(True()))});
+            trace("\no[{}]=0x{x:0>8}: 0x{x:0>16}", .{ idx, @intFromPtr(ob), @as(u64, @bitCast(ob.*)) });
+        trace("\nTrue=0x{x:0>8}", .{@as(u64, @bitCast(True()))});
     }
 
     try expect(o.asObject().isHeapObject());
@@ -846,7 +851,7 @@ pub fn compileRaw(comptime tup: anytype) CompileTimeObject(countNonLabels(tup)) 
     return objType.init(tup, true);
 }
 test "compileRaw" {
-    std.debug.print("Test: compileRaw\n", .{});
+    trace("Test: compileRaw\n", .{});
     const expectEqual = std.testing.expectEqual;
     const expect = std.testing.expect;
     const c = ClassIndex;
@@ -859,7 +864,7 @@ test "compileRaw" {
     if (debugging) {
         @setRuntimeSafety(false);
         for (&o.objects, 0..) |*ob, idx|
-            std.debug.print("\no[{}]: 0x{x:0>16}", .{ idx, @as(u64, @bitCast(ob.*)) });
+            trace("\no[{}]: 0x{x:0>16}", .{ idx, @as(u64, @bitCast(ob.*)) });
     }
     try expectEqual(@as(i64, @bitCast(o.objects[1])), 42);
     try expectEqual(@as(f64, @bitCast(o.objects[2])), 42.0);
@@ -933,7 +938,7 @@ pub const Execution = struct {
         };
     }
     pub fn initTest(title: []const u8, tup: anytype) Executer(countNonLabels(tup)) {
-        std.debug.print("ExecutionTest: {s}\n", .{title});
+        trace("ExecutionTest: {s}\n", .{title});
         return init(tup);
     }
     fn init(comptime tup: anytype) Executer(countNonLabels(tup)) {
@@ -954,7 +959,7 @@ pub const Execution = struct {
         return runWithValidator(title, tup, validator, Object.empty, source, expected);
     }
     fn runWithValidator(title: []const u8, comptime tup: anytype, validator: *const fn (anytype, []const Object) ValidateErrors!void, objects: []const Object, source: []const Object, expected: []const Object) !void {
-        std.debug.print("ExecutionTest: {s}\n", .{title});
+        trace("ExecutionTest: {s}\n", .{title});
         var exe align(Process.alignment) = init(tup);
         exe.process.init(Nil());
         try exe.resolve(objects);
@@ -975,8 +980,8 @@ pub const Execution = struct {
     }
 
     pub fn mainSendTo(selector: Object, receiver: Object) !Object {
-        var exe = Executer(void).new({});
         trace("Sending: {f} to {f}\n", .{ selector, receiver });
+        var exe = Executer(void).new({});
         exe.init(&[_]Object{receiver});
         exe.getContext().npc = Code.end;
         const class = receiver.get_class();

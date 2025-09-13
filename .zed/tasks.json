@@ -13,14 +13,14 @@
     "hide": "on_success",
   },
   {
-    "label": "test-default",
-    "command": "zig build test -freference-trace=20",
+    "label": "test",
+    "command": "zig build test --summary all -freference-trace=20",
     "cwd": "$ZED_WORKTREE_ROOT/zig/zag",
     //"hide": "on_success",
   },
   {
     "label": "test-llvm",
-    "command": "zig build test -freference-trace=20 -Dllvm",
+    "command": "zig build test --summary all -freference-trace=20 -Dllvm",
     "cwd": "$ZED_WORKTREE_ROOT/zig",
     "hide": "on_success",
   },
@@ -35,12 +35,12 @@
     "cwd": "$ZED_WORKTREE_ROOT/zig",
   },
   {
-    "label": "trace fib NaN",
-    "command": "zig build -Dtrace -Dencoding=nan -Doptimize=Debug -freference-trace=5 && ./zig-out/bin/fib",
+    "label": "trace fib ptr",
+    "command": "zig build -Dtrace -Dencoding=ptr -Doptimize=Debug -freference-trace=5 && ./zig-out/bin/fib",
     "cwd": "$ZED_WORKTREE_ROOT/zig",
   },
   {
-    "label": "time fib",
+    "label": "time fib zag",
     "command": "zig build -Doptimize=ReleaseFast && ./zig-out/bin/fib",
     //"command": "zig build -Doptimize=ReleaseFast && taskpolicy -l5 -t5 time ./zig-out/bin/fib",
     "cwd": "$ZED_WORKTREE_ROOT/zig",
@@ -48,6 +48,11 @@
   {
     "label": "time fib NaN",
     "command": "zig build -Dencoding=nan -Doptimize=ReleaseFast && ./zig-out/bin/fib",
+    "cwd": "$ZED_WORKTREE_ROOT/zig",
+  },
+  {
+    "label": "time fib ptr",
+    "command": "zig build -Dencoding=ptr -Doptimize=ReleaseFast && ./zig-out/bin/fib",
     "cwd": "$ZED_WORKTREE_ROOT/zig",
   },
   {

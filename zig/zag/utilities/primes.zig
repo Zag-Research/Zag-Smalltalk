@@ -1,6 +1,7 @@
 const std = @import("std");
 const math = std.math;
 const Order = math.Order;
+const trace = @import("../config.zig").trace;
 const stdout = std.io.getStdOut().writer();
 //const expect = @import("std").testing.expect;
 const treap = @import("treap.zig");
@@ -123,7 +124,7 @@ test "prime diffs" {
             tests += 1;
         }
         if (i + 1 == p) {
-            std.debug.print("average bit tests - first {}: {d:.2} ({} primes)\n", .{ p, @as(f64, @floatFromInt(tests)) / @as(f64, @floatFromInt(n)), n });
+            trace("average bit tests - first {}: {d:.2} ({} primes)\n", .{ p, @as(f64, @floatFromInt(tests)) / @as(f64, @floatFromInt(n)), n });
             p *= 16;
             tests = 0;
         }

@@ -213,7 +213,7 @@ fn allocSpace(self: *align(1) Self, size: u11, sp: SP, context: *Context) HeapOb
 pub fn alloc(self: *align(1) Self, classIndex: ClassIndex, iVars: u11, indexed: ?usize, comptime element: type, makeWeak: bool) heap.AllocReturn {
     const aI = allocationInfo(iVars, indexed, element, makeWeak);
     if (aI.objectSize(Process.maxNurseryObjectSize)) |size| {
-        //std.debug.print("self: {x} self.header() {x} {} {x}\n", .{ @intFromPtr(self), @intFromPtr(self.header()), size, @intFromPtr(self.header().currHp) });
+        //trace("self: {x} self.header() {x} {} {x}\n", .{ @intFromPtr(self), @intFromPtr(self.header()), size, @intFromPtr(self.header().currHp) });
         const result = HeapObject.fillToBoundary(self.header().currHp);
         const newHp = result + size + 1;
         if (@intFromPtr(newHp) <= @intFromPtr(self.header().currEnd)) {
@@ -254,13 +254,13 @@ fn collectNurseryPass(self: *align(1) Self, originalSp: SP, contextMutable: *Con
     const endStack = self.endOfStack();
     var sp = originalSp;
     // find references from the stacked contexts
-    while (context.endOfStack()) |endSP| {
+    while (context.endOfStack(sp)) |endSP| {
         while (sp.lessThan(endSP)) {
             if (sp.top.asMemoryObject()) |pointer|
                 hp = pointer.copyTo(hp, &sp.top);
             sp = sp.drop();
         }
-        sp = context.callerStack();
+        sp = unreachable;//context.callerStack();
         context = context.previous();
     }
     // find references from the residual stack
@@ -426,7 +426,7 @@ const Stack = struct {
     }
 };
 test "Stack" {
-    std.debug.print("Test: Stack\n", .{});
+    trace("Test: Stack\n", .{});
     var process: Self align(alignment) = new();
     process.init(Nil());
     const ee = std.testing.expectEqual;

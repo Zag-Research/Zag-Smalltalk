@@ -2,7 +2,9 @@ const std = @import("std");
 const assert = std.debug.assert;
 const expectEqual = std.testing.expectEqual;
 const zag = @import("zag.zig");
-const is_test = zag.config.is_test;
+const config = zag.config;
+const is_test = config.is_test;
+const trace = config.trace;
 const object = zag.object;
 const Object = object.Object;
 const execute = zag.execute;
@@ -139,9 +141,9 @@ const nProduction = enumAndFunctions[2];
 
 test "print threadedFns" {
     for (0..nProduction) |index| {
-        std.debug.print("{s} \n", .{@tagName(@as(Enum, @enumFromInt(index)))});
+        trace("{s} \n", .{@tagName(@as(Enum, @enumFromInt(index)))});
     }
-    std.debug.print("\n", .{});
+    trace("\n", .{});
 }
 
 pub fn initialize() void {}
@@ -161,16 +163,16 @@ test "number of threaded functions" {
     if (true) return error.SkipZigTest;
     expectEqual(43, functions.len) catch |err| {
         inline for (std.meta.fields(Enum), 0..) |f, i| {
-            std.debug.print("{s:<25}", .{f.name});
+            trace("{s:<25}", .{f.name});
             if (i < functions.len) {
-                std.debug.print("{x:0>16}\n", .{@intFromPtr(functions[i])});
-            } else std.debug.print("?\n", .{});
+                trace("{x:0>16}\n", .{@intFromPtr(functions[i])});
+            } else trace("?\n", .{});
         }
         return err;
     };
 }
 // test "test list" {
 //     for (@import("builtin").test_functions) |f| {
-//         std.debug.print("tests: {s}\n",.{f.name});
+//         trace("tests: {s}\n",.{f.name});
 //     }
 // }

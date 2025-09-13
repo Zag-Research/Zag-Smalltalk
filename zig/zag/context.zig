@@ -83,7 +83,7 @@ const ContextOnStack = struct {
     inline fn contextDataPtr(self: *ContextOnStack) *ContextData {
         return @ptrCast(&self.selfOffset);
     }
-    inline fn endOfStack(self: *ContextOnStack) SP {
+    inline fn endOfStack(self: *const ContextOnStack) SP {
         return @ptrFromInt(@intFromPtr(self) - self.spOffset);
     }
     inline fn alloc(self: *ContextOnStack, sp: SP, size: usize) struct { [*]Object, SP } {
@@ -294,7 +294,7 @@ pub inline fn endOfStack(self: *const Context, sp: SP) ?SP {
     return null;
 }
 pub fn stack(self: *const Self, sp: SP, process: *const Process) []Object {
-    return sp.slice((@intFromPtr(self.endOfStack() orelse process.endOfStack()) - @intFromPtr(sp)) / @sizeOf(Object));
+    return sp.slice((@intFromPtr(self.endOfStack(sp) orelse process.endOfStack()) - @intFromPtr(sp)) / @sizeOf(Object));
 }
 // pub inline fn allLocals(self: *const Context, process: *const Process) []Object {
 //     const size = self.tempSize(process);
@@ -346,7 +346,7 @@ inline fn fromObjectPtr(op: [*]Object) *Context {
 }
 pub fn print(self: *const Context, process: *const Process) void {
     const pr = std.debug.print;
-    pr("Context: {*} {f} {any}\n", .{ self, self.header, self.allLocals(process) });
+    pr("Context: {*} {any}\n", .{ self, self.header });
     if (self.prevCtxt) |ctxt| {
         ctxt.print(process);
     }

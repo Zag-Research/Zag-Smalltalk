@@ -93,7 +93,7 @@ pub const HeapAllocation = extern union {
         return;
     }
     pub fn loadLargeHeapObject(file: std.fs.File, address: usize, fSize: usize) !SelfPtr {
-        _ = .{ file, address, fSize };
+        _ = .{ file, address, fSize, unreachable };
     }
     fn freeAll(self: SelfPtr) void {
         var ptr: ?SelfPtr = self;
@@ -106,7 +106,7 @@ pub const HeapAllocation = extern union {
         memoryAllocator.unmap(@as([*]align(os.page_size) u8, @ptrCast(self))[0..heap_allocation_size]);
     }
     fn cycleNext(self: SelfPtr) SelfPtr {
-        var temp = self.nextHeap;
+        var temp = self.header.nextHeap;
         if (temp == null) temp = heapAllocations;
         // ToDo: update number of users of self and temp
         return temp orelse unreachable;
@@ -350,8 +350,9 @@ const vtable = Allocator.VTable{
     .alloc = allocForAllocator,
     .resize = Allocator.noResize,
     .free = freeForAllocator,
+    .remap = undefined,
 };
-fn allocForAllocator(ctx: *anyopaque, len: usize, ptr_align: u8, ret_addr: usize) ?[*]u8 {
+fn allocForAllocator(ctx: *anyopaque, len: usize, ptr_align: mem.Alignment, ret_addr: usize) ?[*]u8 {
     _ = .{ ptr_align, ret_addr, ctx, len };
     const obj = rawAlloc(1, (len + @sizeOf(Object) - 1) / @sizeOf(Object), &heapAllocations, StructObject) catch return null;
     // ToDo: add obj to the allocatorKnown list for its page
@@ -359,12 +360,12 @@ fn allocForAllocator(ctx: *anyopaque, len: usize, ptr_align: u8, ret_addr: usize
     for (array) |*ptr| ptr.* = undefined;
     return array.ptr;
 }
-fn freeForAllocator(ctx: *anyopaque, buf: []u8, buf_align: u8, ret_addr: usize) void {
+fn freeForAllocator(ctx: *anyopaque, buf: []u8, buf_align: mem.Alignment, ret_addr: usize) void {
     // const self = @ptrCast(*Self, @alignCast(ctx));
     _ = .{ buf, buf_align, ret_addr, ctx };
     // unreachable;
 }
-fn rawAlloc(instVars: u12, arraySize: usize, hint: *?HeapAllocationPtr, comptime T: anytype) AllocErrors!HeapObjectPtr {
+fn rawAlloc(instVars: u11, arraySize: usize, hint: *?HeapAllocationPtr, comptime T: anytype) AllocErrors!HeapObjectPtr {
     if (heapAllocations == null) _ = newHeapAllocation();
     const startingAllocation = hint.*;
     var workingAllocation = startingAllocation orelse unreachable;
@@ -401,7 +402,7 @@ fn collect() AllocErrors!void {
     @panic("incomplete");
 }
 pub fn promote(obj: Object) !Object {
-    if (!obj.isHeapAllocated()) return obj;
+    if (!obj.isMemoryAllocated()) return obj;
     if (obj.header().age == Age.static) return obj;
     unreachable;
     //       @memcpy(@ptrCast([*]u8,result),@ptrCast([*]const u8,ptr),totalSize*8);

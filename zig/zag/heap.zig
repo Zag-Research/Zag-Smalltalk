@@ -95,6 +95,9 @@ pub const Format = enum(u7) {
             return iteratorFn(header, obj);
         return null;
     }
+    pub inline fn hasInstVars(self: Self) bool {
+        return self.operations().hasInstVars();
+    }
     pub inline fn isIndexable(self: Self) bool {
         return self.operations().isIndexable();
     }
@@ -124,18 +127,27 @@ pub const Format = enum(u7) {
     pub inline fn hasPointers(self: Self) bool {
         return @intFromEnum(self) > LastPointerFree;
     }
+    pub inline fn inHeapSize(self: Self, header: HeapHeader, obj: *const HeapObject) usize {
+        const len = header.length;
+        if (true) unreachable;
+        if (self.isIndexable() and self.hasInstVars()) {
+            const oa = @as([*]u64, @ptrFromInt(@intFromPtr(obj))) + len;
+            return len + 3 + if (oa[2] != @intFromPtr(oa + 3)) 0 else unreachable;//form.wordSize(oa[1]);
+        }
+        return len + 1;
+    }
     fn eq(f: Self, v: u8) !void {
         return std.testing.expectEqual(@as(Self, @enumFromInt(v)), f);
     }
     fn expectTrue(self: Self, ok: bool) !void {
         if (!ok) {
-            std.debug.print("unexpected false for {}\n", .{self});
+            trace("unexpected false for {}\n", .{self});
             return error.TestUnexpectedFalse;
         }
     }
     fn expectFalse(self: Self, ok: bool) !void {
         if (ok) {
-            std.debug.print("unexpected true for {}\n", .{self});
+            trace("unexpected true for {}\n", .{self});
             return error.TestUnexpectedTrue;
         }
     }
@@ -229,6 +241,9 @@ const HeapOperations = struct {
         //external,
         return ops;
     }
+    fn hasInstVars(self: *const HeapOperations) bool {
+        return self.instVars != noInstVars;
+    }
     fn isIndexable(self: *const HeapOperations) bool {
         return self.array != notArray;
     }
@@ -261,16 +276,16 @@ const HeapOperations = struct {
         return error.notIndexable;
     }
     fn unimplementedArray(format: Format, _: HeapHeader, _: *const HeapObject, _: usize) HeapOperationError![]Object {
-        std.debug.print("format: {}\n", .{format});
-        @panic("unimplemented");
+        trace("format: {}\n", .{format});
+        @panic("unimplemented array");
     }
     fn unimplementedInstVars(format: Format, _: HeapHeader, _: *const HeapObject) HeapOperationError![]Object {
-        std.debug.print("format: {}\n", .{format});
-        @panic("unimplemented");
+        trace("format: {}\n", .{format});
+        @panic("unimplemented instVars");
     }
     fn unimplementedSize(format: Format, _: HeapHeader, _: *const HeapObject) HeapOperationError!usize {
-        std.debug.print("format: {}\n", .{format});
-        @panic("unimplemented");
+        trace("format: {}\n", .{format});
+        @panic("unimplemented size");
     }
 };
 pub const HeapObjectPtrIterator = struct {
@@ -797,6 +812,9 @@ pub const HeapObject = packed struct {
     pub inline fn isNursery(self: HeapObjectConstPtr) bool {
         return self.header.age.isNursery();
     }
+    pub inline fn forwarded(self: HeapObjectConstPtr) HeapObjectConstPtr {
+        return self.header.forwardedTo() orelse self;
+    }
     pub inline fn getClass(self: HeapObjectConstPtr) ClassIndex {
         return self.header.classIndex;
     }
@@ -891,28 +909,23 @@ pub const HeapObject = packed struct {
         }
         ivs[index] = obj;
     }
-    pub fn growSizeX(maybeForwarded: HeapObjectConstPtr, stepSize: usize) !usize {
-        const self = maybeForwarded.forwarded();
-        const form = self.format;
-        if (!form.isIndexable()) return error.NotIndexable;
-        var len: usize = self.length;
-        if (form.hasInstVars()) {
-            const oa = @as([*]u64, @ptrFromInt(@intFromPtr(self)));
-            len = form.wordSize(oa[len + 1]);
-        }
-        len = largerPowerOf2(len * 2);
-        if (len > HeapHeader.maxLength and len < HeapHeader.maxLength * 2) size = HeapHeader.maxLength;
-        return (form.getSize() * len + stepSize - 1) / stepSize * stepSize;
-    }
+    // pub fn growSizeX(maybeForwarded: HeapObjectConstPtr, stepSize: usize) !usize {
+    //     const self = maybeForwarded.forwarded();
+    //     const form = self.format;
+    //     if (!form.isIndexable()) return error.NotIndexable;
+    //     var len: usize = self.length;
+    //     if (form.hasInstVars()) {
+    //         const oa = @as([*]u64, @ptrFromInt(@intFromPtr(self)));
+    //         len = form.wordSize(oa[len + 1]);
+    //     }
+    //     len = largerPowerOf2(len * 2);
+    //     if (len > HeapHeader.maxLength and len < HeapHeader.maxLength * 2) size = HeapHeader.maxLength;
+    //     return (form.getSize() * len + stepSize - 1) / stepSize * stepSize;
+    // }
     pub inline fn inHeapSize(maybeForwarded: HeapObjectConstPtr) usize {
         const self = maybeForwarded.forwarded();
-        const form = self.format;
-        const len = self.length;
-        if (form.isIndexable() and form.hasInstVars()) {
-            const oa = @as([*]u64, @ptrFromInt(@intFromPtr(self))) + len;
-            return len + 3 + if (oa[2] != @intFromPtr(oa + 3)) 0 else form.wordSize(oa[1]);
-        }
-        return len + 1;
+        const header = self.header;
+        return header.format.inHeapSize(header,self);
     }
     pub inline fn isIndirect(maybeForwarded: HeapObjectConstPtr) bool {
         const self = maybeForwarded.forwarded();

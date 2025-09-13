@@ -96,7 +96,12 @@ pub fn encode_check(value: f64) !u64 {
 
     // Handle Zero-Collision Case
     if (exp8 == 0 and mant == 0) return EncodeError.Unencodable;
+<<<<<<< HEAD
 
+=======
+    
+    
+>>>>>>> main
     var r = std.math.rotl(u64, bits, 5);
     r +%= 1;
     return std.math.rotr(u64, r, 1);
