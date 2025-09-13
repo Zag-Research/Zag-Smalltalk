@@ -3,20 +3,15 @@ const math = std.math;
 const expectEqual = std.testing.expectEqual;
 const expect = std.testing.expect;
 
-const EXPONENT_MASK: u64 = 0x7FF0000000000000;
-const MANTISSA_MASK: u64 = 0x000FFFFFFFFFFFFF;
-const EXPONENT_BIAS: u16 = 896; // exp8 = (exp11 - 1023) + 127 = exp11 - 896
-
 const TAG = 0b100; // immediate float tag
-const SHIFTED_EXP: u64 = 0xFFE0_0000_0000_0000;
-const SIGN_MASK: u64 = 0x8000_0000_0000_0000;
-const ZERO_SHAPE: u64 = 0x8000_0000_0000_0008;
-
 pub const EncodeError = error{ Unencodable, PosInf, NegInf, NaN };
 
 // immediate float layout: [exp8(8)][mant(52)][sign(1)][tag(3)]
 // Ref: https://clementbera.wordpress.com/2018/11/09/64-bits-immediate-floats/
 
+const SHIFTED_EXP: u64 = 0xFFE0_0000_0000_0000;
+const SIGN_MASK: u64 = 0x8000_0000_0000_0000;
+const ZERO_SHAPE: u64 = 0x8000_0000_0000_0008;
 pub fn encode_spec(v: f64) !u64 {
     const bits: u64 = @bitCast(v);
     var y = std.math.rotl(u64, bits, 5);
@@ -36,6 +31,40 @@ pub fn encode_spec(v: f64) !u64 {
     return EncodeError.Unencodable; // unencodable (subnormal vs out-of-range)
 }
 
+const NEG_ZERO: u64 = 0x8000_0000_0000_0000; 
+const NEG_INFINITY: u64 = 0xFFF0_0000_0000_0000; 
+const EXPONENT_MASK: u64 = 0x7FF0_0000_0000_0000; 
+const MANTISSA_MASK: u64 = 0x000F_FFFF_FFFF_FFFF;  // also inf
+const SPUR_POS_ZERO: u64 = 4; 
+const SPUR_NEG_ZERO: u64 = 12; 
+
+pub fn encode_spec_std(v: f64) !u64 {
+    const bits: u64 = @bitCast(v);
+    var y = std.math.rotl(u64, bits, 5);
+    y +%= 1;
+    y = std.math.rotr(u64, y, 1);
+
+    if ((y & 0x7) == TAG and (y >> 4 != 0)) return y;
+
+    switch (bits) {
+        0 => return SPUR_POS_ZERO,
+        NEG_ZERO => return SPUR_NEG_ZERO,
+        EXPONENT_MASK => return EncodeError.PosInf,
+        NEG_INFINITY => return EncodeError.NegInf,
+        else => {
+            // Check for NaN: exponent = 0x7FF and mantissa ≠ 0
+            if ((bits & EXPONENT_MASK) == EXPONENT_MASK and
+                (bits & MANTISSA_MASK) != 0)
+            {
+                return EncodeError.NaN;
+            }
+        },
+    }
+
+    return EncodeError.Unencodable; // unencodable (subnormal vs out-of-range)
+}
+
+const EXPONENT_BIAS: u16 = 896; // exp8 = (exp11 - 1023) + 127 = exp11 - 896
 pub fn encode_check(value: f64) !u64 {
     const bits: u64 = @bitCast(value);
     const exp: u64 = (bits & EXPONENT_MASK);
@@ -67,8 +96,7 @@ pub fn encode_check(value: f64) !u64 {
 
     // Handle Zero-Collision Case
     if (exp8 == 0 and mant == 0) return EncodeError.Unencodable;
-    
-    
+
     var r = std.math.rotl(u64, bits, 5);
     r +%= 1;
     return std.math.rotr(u64, r, 1);
@@ -84,7 +112,7 @@ pub fn decode(self: u64) f64 {
     return @bitCast(r);
 }
 
-const encode = encode_spec;
+const encode = encode_spec_std;
 
 test "encode/decode" {
     try expectEqual(1.0, decode(try encode(1.0)));
@@ -109,7 +137,7 @@ test "encode/decode" {
 
 test "benchmark encode methods" {
     const iterations = 1000000;
-    
+
     const test_values = [_]f64{ 1.0, -1.0, 0.0, math.pi, 42.0, -3.14159, 100.0, -100.0, @bitCast(@as(u64, 0x3800_0000_0000_0001)), @bitCast(@as(u64, 0x4800_0000_0000_0000)), @bitCast(@as(u64, 0x3800_0000_0000_0000)), @bitCast(@as(u64, 0x4800_0000_0000_0000)), math.nan(f64), math.inf(f64), -math.inf(f64) };
 
     // Benchmark encode_spec
@@ -127,7 +155,7 @@ test "benchmark encode methods" {
 
     for (0..iterations) |_| {
         for (test_values) |val| {
-            _ = encode_check(val) catch continue;
+            _ = encode_spec_std(val) catch continue;
         }
     }
     const check_time = timer.lap();
