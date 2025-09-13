@@ -13,8 +13,8 @@ const HeapHeader = heap.HeapHeader;
 const HeapObjectPtr = heap.HeapObjectPtr;
 const HeapObjectConstPtr = heap.HeapObjectConstPtr;
 const InMemory = zag.InMemory;
-// const encode = @import("floatSpur.zig").encode;
-// const decode = @import("floatSpur.zig").decode;
+const encode = @import("floatSpur.zig").encode;
+const decode = @import("floatSpur.zig").decode;
 
 pub const Object = packed union {
     ref: *InMemory.PointedObject,
@@ -210,34 +210,8 @@ pub const Object = packed union {
         return self.rawU() & ~TagMask;
     }
 
-    pub fn encode(v: f64) !u64 {
-        const bits: u64 = @bitCast(v);
-        var y = std.math.rotl(u64, bits, 5);
-        y +%= 1;
-        y = std.math.rotr(u64, y, 1);
-
-        if ((y & 0x7) == 0b100 and (y >> 4 != 0)) return y;
-
-        switch (bits) {
-            0 => return 4,
-            0x8000_0000_0000_0000 => return 12,
-        }
-
-        return error.Unencodable;
-    }
-
     pub inline fn toDoubleNoCheck(self: object.Object) f64 {
         return decode(@bitCast(self));
-    }
-
-    pub fn decode(self: u64) f64 {
-        var r = std.math.rotl(u64, self, 1);
-        r -%= 1;
-        if (r <= 0x18) {
-            r &= 0x10;
-        }
-        r = std.math.rotr(u64, r, 5);
-        return @bitCast(r);
     }
 
     fn memoryFloat(value: f64, maybeProcess: ?*Process) object.Object {
