@@ -17,7 +17,7 @@ pub const EncodeError = error{ Unencodable, PosInf, NegInf, NaN };
 // immediate float layout: [exp8(8)][mant(52)][sign(1)][tag(3)]
 // Ref: https://clementbera.wordpress.com/2018/11/09/64-bits-immediate-floats/
 
-pub fn encode_dave(v: f64) u64 {
+inline fn encode_dave(v: f64) EncodeError!u64 {
     const bits: u64 = @bitCast(v);
     var y = std.math.rotl(u64, bits, 5);
     if (y <= 0x10) { // probably 0
@@ -27,16 +27,16 @@ pub fn encode_dave(v: f64) u64 {
         y = std.math.rotr(u64, y, 1);
         // handle normal immediate float; with zero-collision check
         if ((y & 0x7) == TAG and (y | 0x8) != 0xC) return y;
-        return 0;
+        return error.Unencodable;
     }
     y +%= 1;
     y = std.math.rotr(u64, y, 1);
 
     // handle normal immediate float
     if ((y & 0x7) == TAG) return y;
-    return 0;
+    return error.Unencodable;
 }
-pub fn encode_spec(v: f64) !u64 {
+inline fn encode_spec(v: f64) EncodeError!u64 {
     const bits: u64 = @bitCast(v);
     var y = std.math.rotl(u64, bits, 5);
     y +%= 1;
@@ -55,7 +55,7 @@ pub fn encode_spec(v: f64) !u64 {
     return EncodeError.Unencodable; // unencodable (subnormal vs out-of-range)
 }
 
-pub fn encode_check(value: f64) !u64 {
+inline fn encode_check(value: f64) !u64 {
     const bits: u64 = @bitCast(value);
     const exp: u64 = (bits & EXPONENT_MASK);
     const mant = bits & MANTISSA_MASK;
@@ -93,7 +93,7 @@ pub fn encode_check(value: f64) !u64 {
     return std.math.rotr(u64, r, 1);
 }
 
-pub fn decode(self: u64) f64 {
+pub inline fn decode(self: u64) f64 {
     var r = std.math.rotl(u64, self, 1);
     r -%= 1;
     if (r <= 0x18) {
@@ -103,27 +103,27 @@ pub fn decode(self: u64) f64 {
     return @bitCast(r);
 }
 
-const encode = encode_spec;
+pub const encode = encode_spec;
 
 const smallest: f64 = @bitCast(@as(u64, 0x3800_0000_0000_0001));
 const largest: f64 = @bitCast(@as(u64, 0x47FF_FFFF_FFFF_FFFF));
 const tooSmall: f64 = @bitCast(@as(u64, 0x3800_0000_0000_0000));
 const tooLarge: f64 = @bitCast(@as(u64, 0x4800_0000_0000_0000));
 test "encode_dave/decode" {
-    try expectEqual(1.0, decode(encode_dave(1.0)));
-    try expectEqual(-1.0, decode(encode_dave(-1.0)));
-    try expectEqual(0.0, decode(encode_dave(0.0)));
-    try expectEqual(-0.0, decode(encode_dave(-0.0)));
-    try expectEqual(math.pi, decode(encode_dave(math.pi)));
-    try expectEqual(smallest, decode(encode_dave(smallest)));
-    try expectEqual(-smallest, decode(encode_dave(-smallest)));
-    try expectEqual(largest, decode(encode_dave(largest)));
-    try expectEqual(-largest, decode(encode_dave(-largest)));
-    try expectEqual(0, encode_dave(tooSmall));
-    try expectEqual(0, encode_dave(tooLarge));
-    try expectEqual(0, encode_dave(math.nan(f64)));
-    try expectEqual(0, encode_dave(math.inf(f64)));
-    try expectEqual(0, encode_dave(-math.inf(f64)));
+    try expectEqual(1.0, decode(try encode_dave(1.0)));
+    try expectEqual(-1.0, decode(try encode_dave(-1.0)));
+    try expectEqual(0.0, decode(try encode_dave(0.0)));
+    try expectEqual(-0.0, decode(try encode_dave(-0.0)));
+    try expectEqual(math.pi, decode(try encode_dave(math.pi)));
+    try expectEqual(smallest, decode(try encode_dave(smallest)));
+    try expectEqual(-smallest, decode(try encode_dave(-smallest)));
+    try expectEqual(largest, decode(try encode_dave(largest)));
+    try expectEqual(-largest, decode(try encode_dave(-largest)));
+    try expectEqual(error.Unencodable, encode_dave(tooSmall));
+    try expectEqual(error.Unencodable, encode_dave(tooLarge));
+    try expectEqual(error.Unencodable, encode_dave(math.nan(f64)));
+    try expectEqual(error.Unencodable, encode_dave(math.inf(f64)));
+    try expectEqual(error.Unencodable, encode_dave(-math.inf(f64)));
 }
 test "encode/decode" {
     try expectEqual(1.0, decode(try encode(1.0)));
@@ -175,13 +175,13 @@ pub fn main() void {
     _ = timer.lap();
     for (0..iterations) |_| {
         for (valid_values) |val| {
-            _ = encode_dave(val);// catch continue;
+            _ = encode_dave(val) catch return;
         }
     }
     const dave_valid_time = timer.lap();
     for (0..iterations) |_| {
         for (invalid_values) |val| {
-            _ = encode_dave(val);// catch continue;
+            _ = encode_dave(val) catch continue;
         }
     }
     const dave_invalid_time = timer.lap();
@@ -190,7 +190,7 @@ pub fn main() void {
     _ = timer.lap();
     for (0..iterations) |_| {
         for (valid_values) |val| {
-            _ = encode_spec(val) catch continue;
+            _ = encode_spec(val) catch return;
         }
     }
     const spec_valid_time = timer.lap();
@@ -205,7 +205,7 @@ pub fn main() void {
     _ = timer.lap();
     for (0..iterations) |_| {
         for (valid_values) |val| {
-            _ = encode_spec(val) catch continue;
+            _ = encode_spec(val) catch return;
         }
     }
     const check_valid_time = timer.lap();
