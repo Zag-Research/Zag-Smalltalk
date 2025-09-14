@@ -360,7 +360,7 @@ pub fn main() !void {
     const default = args.len <= 1;
     try timing(if (default) @constCast(do_all[0..]) else args[1..], default);
 }
-const testRun = zag.config.debugMode or zag.config.show_trace;
+const testRun = zag.config.testRun;
 const testReps = if (testRun) 1 else 10;
 const fibN = if (testRun) 5 else 40;
 const nRuns = if (testRun) 1 else 5;

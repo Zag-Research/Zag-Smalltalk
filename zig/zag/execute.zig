@@ -321,7 +321,7 @@ pub const Code = union(enum) {
         self: *const Code,
         writer: anytype,
     ) !void {
-        if (true) {
+        if (false) {
             try writer.print("({x})", .{@as(*const u64, @ptrCast(self)).*});
             return;
         }
