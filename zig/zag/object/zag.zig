@@ -64,8 +64,12 @@ pub const Object = packed struct(u64) {
     const tagAndClass = (@as(u64, 1) << tagAndClassBits) - 1;
     const extraMask = 0xff;
     const ExtraType = u8;
+    const TaggedClass = packed struct {
+        tag: TagAndClassType,
+        _: u56,
+    };
     pub inline fn tagbits(self: Self) TagAndClassType {
-        return @truncate(self.rawU());
+        return @as(TaggedClass, @bitCast(self)).tag;
     }
     fn enumBits(T: type) usize {
         return @typeInfo(@typeInfo(T).@"enum".tag_type).int.bits;
@@ -330,11 +334,24 @@ pub const Object = packed struct(u64) {
         @panic("Trying to convert Object to " ++ @typeName(T));
     }
     pub inline fn which_class(self: object.Object, comptime full: bool) ClassIndex {
-        return switch (self.tag) {
-            .heap => if (self.rawU() == 0) .UndefinedObject else if (full) self.to(HeapObjectPtr).*.getClass() else .Object,
-            .immediates => self.class.classIndex(),
-            else => .Float,
-        };
+        if (false) {
+            const tag_bits = self.tagbits();
+            const tag = tag_bits & 7;
+            if (tag == 1) return @enumFromInt(tag_bits >> 3)
+            else if (tag > 1) return .Float
+            else if (self.rawU() == 0) return .UndefinedObject
+            else if (full) return self.to(HeapObjectPtr).*.getClass() else return .Object;
+        }
+        switch (self.tag) {
+            .heap => if (self.rawU() == 0)
+                    {//@branchHint(.unlikely);
+                        return .UndefinedObject;}
+                else if (full) return self.to(HeapObjectPtr).*.getClass()
+                else return .Object,
+            .immediates => {//@branchHint(.likely);
+                            return self.class.classIndex();},
+            else => return .Float,
+        }
     }
     pub inline fn isMemoryAllocated(self: object.Object) bool {
         return if (self.isHeap()) self != object.Object.Nil() else @intFromEnum(self.class) <= @intFromEnum(ClassIndex.Compact.ThunkHeap);

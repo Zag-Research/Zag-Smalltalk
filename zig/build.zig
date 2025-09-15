@@ -20,6 +20,7 @@ pub fn build(b: *std.Build) void {
                 .{ .name = "zag", .module = zag },
             },
         }),
+        .use_llvm = true,
     });
     exe.root_module.addOptions("options", options);
     //    b.installArtifact(exe);
