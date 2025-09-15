@@ -5,8 +5,10 @@ const expect = std.testing.expect;
 
 pub inline fn encode(x: f64) !u64 {
     const u = math.rotl(u64, @bitCast(x), 4) + 2;
-    if (u & 6 != 0)
+    if (u & 6 != 0) {
+        @branchHint(.likely);
         return u;
+    }
     return error.Unencodable;
 }
 pub inline fn decode(self: u64) f64 {
@@ -34,17 +36,17 @@ test "encode/decode" {
     try expectEqual(error.Unencodable, encode(math.inf(f64)));
     try expectEqual(error.Unencodable, encode(-math.inf(f64)));
 }
-const iterations = 100000000;
+const iterations = 1000000000;
 const valid_values = [_]f64{0.0, -0.0} ** 1 ++
     [_]f64{ 1.0, -1.0, math.pi, 42.0, -3.14159, 100.0, -100.0 } ** 16 ++
     [_]f64{ smallest, largest } ** 16;
-const iterations_v = 100000000 / valid_values.len;
+const iterations_v = iterations / valid_values.len;
 const invalid_values =
     [_]f64{tooLarge} ** 1 ++
     [_]f64{math.nan(f64)} ** 1 ++
     [_]f64{math.inf(f64)} ** 1 ++
     [_]f64{-math.inf(f64)} ** 1;
-const iterations_i = 100000000 / invalid_values.len;
+const iterations_i = iterations / invalid_values.len;
 const decode_values = [_]u64{
     0x0000000000000002,
     0x000000000000000a,
@@ -58,7 +60,7 @@ const decode_values = [_]u64{
     0x0000000000000012,
     0xfffffffffffffff7,
 };
-const iterations_d = 100000000 / decode_values.len;
+const iterations_d = iterations / decode_values.len;
 // zig run -Doptimize=ReleaseFast floatSpur.zig
 pub fn main() void {
 

@@ -343,14 +343,13 @@ pub const Object = packed struct(u64) {
             else if (full) return self.to(HeapObjectPtr).*.getClass() else return .Object;
         }
         switch (self.tag) {
-            .heap => if (self.rawU() == 0)
-                    {//@branchHint(.unlikely);
-                        return .UndefinedObject;}
+            .heap => if (self.rawU() == 0) return .UndefinedObject
                 else if (full) return self.to(HeapObjectPtr).*.getClass()
                 else return .Object,
-            .immediates => {//@branchHint(.likely);
+            .immediates => {@branchHint(.likely);
                             return self.class.classIndex();},
-            else => return .Float,
+            else => {@branchHint(.likely);
+                            return .Float;},
         }
     }
     pub inline fn isMemoryAllocated(self: object.Object) bool {

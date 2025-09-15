@@ -329,12 +329,12 @@ pub const Object = packed struct(u64) {
     }
     pub inline fn which_class(self: object.Object, comptime full: bool) ClassIndex {
         const bits: u64 = @bitCast(self);
-        if (bits & 1 != 0) return .SmallInteger;
-        if (bits & 4 != 0) return .Float;
+        if (bits & 1 != 0) {@branchHint(.likely);return .SmallInteger;}
+        if (bits & 4 != 0) {@branchHint(.likely);return .Float;}
         if (bits & 2 != 0) return self.class.classIndex();
         if (bits == 0) return .UndefinedObject;
-        if (full) return self.to(HeapObjectPtr).*.getClass();
-        return .Object;
+        if (full) return self.to(HeapObjectPtr).*.getClass()
+        else return .Object;
     }
     pub inline fn isMemoryAllocated(self: object.Object) bool {
         return if (self.isHeap()) self != object.Object.Nil() else @intFromEnum(self.class) <= @intFromEnum(ClassIndex.Compact.ThunkHeap);
