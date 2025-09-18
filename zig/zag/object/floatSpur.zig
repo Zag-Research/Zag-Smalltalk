@@ -145,10 +145,13 @@ test "encode/decode" {
     try expectEqual(error.Unencodable, encode(math.inf(f64)));
     try expectEqual(error.Unencodable, encode(-math.inf(f64)));
 }
+
 const iterations_spur = 100000000;
-const valid_values = [_]f64{0.0, -0.0} ** 1 ++
+
+const valid_values = [_]f64{ 0.0, -0.0 } ** 1 ++
     [_]f64{ 1.0, -1.0, math.pi, 42.0, -3.14159, 100.0, -100.0 } ** 16 ++
     [_]f64{ smallest, largest } ** 16;
+    
 const iterations_v = iterations_spur / valid_values.len;
 const invalid_values =
     [_]f64{tooSmall} ** 1 ++
@@ -156,20 +159,22 @@ const invalid_values =
     [_]f64{math.nan(f64)} ** 1 ++
     [_]f64{math.inf(f64)} ** 1 ++
     [_]f64{-math.inf(f64)} ** 1;
+    
 const iterations_i = iterations_spur / invalid_values.len;
 const decode_values = [_]u64{
-    0x0000000000000004,
-    0x000000000000000c,
-    0x7f00000000000004,
-    0x7f0000000000000c,
-    0x80921fb54442d184,
-    0x8450000000000004,
-    0x80921f9f01b866ec,
-    0x8590000000000004,
-    0x859000000000000c,
-    0x0000000000000014,
-    0xfffffffffffffff4,
+    0x0000000000000004, // encoded +0.0
+    0x000000000000000c, // encoded -0.0
+    0x7f00000000000004, // encoded 1.0
+    0x7f0000000000000c, // encoded -1.0
+    0x80921fb54442d184, // encoded π (pi)
+    0x8450000000000004, // encoded 42.0
+    0x80921f9f01b866ec, // encoded -3.14159
+    0x8590000000000004, // encoded 100.0
+    0x859000000000000c, // encoded -100.0
+    0x0000000000000014, // encoded smallest positive value
+    0xfffffffffffffff4, // encoded largest negative value
 };
+
 const iterations_d = iterations_spur / decode_values.len;
 pub fn encode_valid(iterations: u64) void {
     for (0..iterations / valid_values.len) |_| {
@@ -194,29 +199,6 @@ pub fn decode_valid(iterations: u64) void {
 }
 // zig run -Doptimize=ReleaseFast floatSpur.zig
 pub fn main() void {
-    const iterations = 10000000;
-
-    const valid_values = [_]f64{
-        0.0,
-        1.0, -1.0, math.pi, 42.0, -3.14159, 100.0, -100.0, smallest, largest,
-        1.0, -1.0, math.pi, 42.0, -3.14159, 100.0, -100.0, smallest, largest,
-        1.0, -1.0, math.pi, 42.0, -3.14159, 100.0, -100.0, smallest, largest,
-        1.0, -1.0, math.pi, 42.0, -3.14159, 100.0, -100.0, smallest, largest,
-        1.0, -1.0, math.pi, 42.0, -3.14159, 100.0, -100.0, smallest, largest,
-        1.0, -1.0, math.pi, 42.0, -3.14159, 100.0, -100.0, smallest, largest,
-        1.0, -1.0, math.pi, 42.0, -3.14159, 100.0, -100.0, smallest, largest,
-        1.0, -1.0, math.pi, 42.0, -3.14159, 100.0, -100.0, smallest, largest,
-        1.0, -1.0, math.pi, 42.0, -3.14159, 100.0, -100.0, smallest, largest,
-        1.0, -1.0, math.pi, 42.0, -3.14159, 100.0, -100.0, smallest, largest,
-        1.0, -1.0, math.pi, 42.0, -3.14159, 100.0, -100.0, smallest, largest,
-        1.0, -1.0, math.pi, 42.0, -3.14159, 100.0, -100.0, smallest, largest,
-        1.0, -1.0, math.pi, 42.0, -3.14159, 100.0, -100.0, smallest, largest,
-        1.0, -1.0, math.pi, 42.0, -3.14159, 100.0, -100.0, smallest, largest,
-        1.0, -1.0, math.pi, 42.0, -3.14159, 100.0, -100.0, smallest, largest,
-        1.0, -1.0, math.pi, 42.0, -3.14159, 100.0, -100.0, smallest, largest,
-    };
-    const invalid_values = [_]f64{ tooSmall, tooLarge, math.nan(f64), math.inf(f64), -math.inf(f64) };
-
     // Benchmark encode_spec
     var timer = std.time.Timer.start() catch unreachable;
 
@@ -269,7 +251,6 @@ pub fn main() void {
     std.debug.print("Dave is {d:.2}x {d:.2}x faster than Foo\n", .{ delta(dave_valid_time, check_valid_time), delta(dave_invalid_time, check_invalid_time) });
     std.debug.print("Spec is {d:.2}x {d:.2}x faster than Foo\n", .{ delta(spec_valid_time, check_valid_time), delta(spec_invalid_time, check_invalid_time) });
     std.debug.print("Dave is {d:.2}x {d:.2}x faster than Spec\n", .{ delta(dave_valid_time, spec_valid_time), delta(dave_invalid_time, spec_invalid_time) });
-
 }
 
 fn delta(spec: u64, check: u64) f64 {
