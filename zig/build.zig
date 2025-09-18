@@ -110,50 +110,6 @@ pub fn build(b: *std.Build) void {
     });
     const check = b.step("check", "Check if foo compiles");
     check.dependOn(&fib_check.step);
-
-    // --- Encoding Tests ---
-    const all_encodings = [_]Encoding{.spur}; // TODO: add more when ready
-    const test_all_step = b.step("test-all-encodings", "Run tests for all encoding types");
-
-    for (all_encodings) |enc| {
-        const enc_name = @tagName(enc);
-
-        const enc_options = b.addOptions();
-        enc_options.addOption(bool, "includeLLVM", includeLLVM);
-        enc_options.addOption([]const u8, "git_version", git_version);
-        enc_options.addOption([]const u8, "compile_date", std.mem.trim(u8, compile_date, " \n\r"));
-        enc_options.addOption(Encoding, "objectEncoding", enc);
-        enc_options.addOption(u16, "maxClasses", max_classes);
-        enc_options.addOption(bool, "trace", trace);
-
-        const zag_enc = b.createModule(.{
-            .root_source_file = b.path("zag/zag.zig"),
-            .target = target,
-        });
-
-        zag_enc.addOptions("options", enc_options);
-
-        if (includeLLVM) {
-            zag_enc.addImport("llvm-build-module", llvm_module);
-        }
-
-        const enc_tests = b.addTest(.{
-            .root_module = b.createModule(.{
-                .root_source_file = b.path("zag/root.zig"),
-                .target = target,
-                .optimize = optimize,
-                .imports = &.{
-                    // .{ .name = "zag", .module = zag_enc },
-                },
-            }),
-        });
-        enc_tests.root_module.addOptions("options", enc_options);
-
-        const run_enc_tests = b.addRunArtifact(enc_tests);
-        const enc_step = b.step(b.fmt("test-{s}", .{enc_name}), b.fmt("Test {s} encoding", .{enc_name}));
-        enc_step.dependOn(&run_enc_tests.step);
-        test_all_step.dependOn(&run_enc_tests.step);
-    }
 }
 
 fn build_llvm_module(b: *std.Build, target: std.Build.ResolvedTarget, optimize: std.builtin.OptimizeMode) *std.Build.Module {
