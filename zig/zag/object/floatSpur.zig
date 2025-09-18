@@ -151,7 +151,7 @@ const iterations_spur = 100000000;
 const valid_values = [_]f64{ 0.0, -0.0 } ** 1 ++
     [_]f64{ 1.0, -1.0, math.pi, 42.0, -3.14159, 100.0, -100.0 } ** 16 ++
     [_]f64{ smallest, largest } ** 16;
-    
+
 const iterations_v = iterations_spur / valid_values.len;
 const invalid_values =
     [_]f64{tooSmall} ** 1 ++
@@ -159,7 +159,7 @@ const invalid_values =
     [_]f64{math.nan(f64)} ** 1 ++
     [_]f64{math.inf(f64)} ** 1 ++
     [_]f64{-math.inf(f64)} ** 1;
-    
+
 const iterations_i = iterations_spur / invalid_values.len;
 const decode_values = [_]u64{
     0x0000000000000004, // encoded +0.0
@@ -199,6 +199,13 @@ pub fn decode_valid(iterations: u64) void {
 }
 // zig run -Doptimize=ReleaseFast floatSpur.zig
 pub fn main() void {
+    
+    if (false) {
+        for (valid_values) |val| {
+            std.debug.print("0x{x:0>16},\n", .{encode(val) catch unreachable});
+        }
+    }
+
     // Benchmark encode_spec
     var timer = std.time.Timer.start() catch unreachable;
 
