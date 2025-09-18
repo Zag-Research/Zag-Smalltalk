@@ -19,6 +19,7 @@ pub fn build(b: *std.Build) void {
             .imports = &.{
                 .{ .name = "zag", .module = zag },
             },
+            .use_llvm = true,
         }),
     });
     exe.root_module.addOptions("options", options);
