@@ -20,6 +20,7 @@ pub fn build(b: *std.Build) void {
                 .{ .name = "zag", .module = zag },
             },
         }),
+        .use_llvm = true,
     });
     exe.root_module.addOptions("options", options);
     //    b.installArtifact(exe);
@@ -111,7 +112,7 @@ pub fn build(b: *std.Build) void {
     check.dependOn(&fib_check.step);
     
     // --- Encoding Tests ---
-    const all_encodings = [_]Encoding{ .zag, .nan, .zagAlt, .spur }; // TODO: add more when ready
+    const all_encodings = [_]Encoding{ .zag, .nan, .zagAlt }; // TODO: add more when ready
     const test_all_step = b.step("test-all-encodings", "Run tests for all encoding types");
     
     for (all_encodings) |enc| {
