@@ -147,7 +147,7 @@ pub const Object = packed union {
     }
     pub inline fn fromPointer(ptr: anytype) Object {
         const Foo = packed struct { ref: *u64 };
-        const foo = Foo{ .ref = @constCast(@ptrCast(ptr)) };
+        const foo = Foo{ .ref = @ptrCast(@constCast(ptr)) };
         return @bitCast(foo);
     }
 

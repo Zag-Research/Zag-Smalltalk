@@ -248,17 +248,17 @@ const FCache = switch (objectEncoding) {
 };
 pub inline fn float(v: f64, maybeProcess: ?*Process) Object {
     if (std.math.isNan(v))
-        return Object.from(&nanMemObject);
+        return Object.from(&nanMemObject, maybeProcess);
     if (std.math.isInf(v)) {
         if (v > 0)
-            return Object.from(&pInfMemObject);
-        return Object.from(&nInfMemObject);
+            return Object.from(&pInfMemObject, maybeProcess);
+        return Object.from(&nInfMemObject, maybeProcess);
     }
     if (FCache) {
         if (v == 0.0)
-            return Object.from(&fZero);
+            return Object.from(&fZero, maybeProcess);
         if (v == 1.0)
-            return Object.from(&fOne);
+            return Object.from(&fOne, maybeProcess);
     }
     if (maybeProcess) |process| {
         if (process.alloc(.Float, 1, null, Object, false)) |allocResult| {

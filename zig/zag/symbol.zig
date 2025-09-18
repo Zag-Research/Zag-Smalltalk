@@ -168,7 +168,7 @@ const SymbolsEnum = enum(u32) {
     pub fn asObject(self: SymbolsEnum) Object {
         const index: u24 = @truncate(@intFromEnum(self) - 1);
         if (config.immediateSymbols) {
-            return Object.makeImmediate(.Symbol,@truncate(staticSymbols[index].data.unsigned));
+            return Object.makeImmediate(.Symbol, @truncate(staticSymbols[index].data.unsigned));
         }
         const O = packed struct { sym: *const PointedObject };
         return @bitCast(O{ .sym = &staticSymbols[index] });

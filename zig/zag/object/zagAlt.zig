@@ -15,21 +15,18 @@ const HeapObjectPtr = heap.HeapObjectPtr;
 const HeapObjectConstPtr = heap.HeapObjectConstPtr;
 const Process = zag.Process;
 const InMemory = zag.InMemory;
-const encode = @import("floatZag.zig").encode;
-const decode = @import("floatZag.zig").decode;
+const encode = @import("floatSpur.zig").encode;
+const decode = @import("floatSpur.zig").decode;
 pub const Object = packed struct(u64) {
     tag: Group,
     class: ClassIndex.Compact,
     hash: u56,
     pub const Group = enum(u3) {
         heap = 0,
-        immediates,
-        float2,
-        float3,
-        float4,
-        float5,
-        float6,
-        float7,
+        int = 1,
+        immediates = 2,
+        float = 4,
+        _,
         inline fn u(cg: Group) u3 {
             return @intFromEnum(cg);
         }
@@ -47,16 +44,17 @@ pub const Object = packed struct(u64) {
     pub inline fn Nil() Object {
         return Self{ .tag = .heap, .class = .none, .hash = 0 };
     }
-    pub const tagged0: i64 = @bitCast(oImm(.SmallInteger, 0));
+    pub const tagged0: i64 = @intFromEnum(Group.int);
     pub const LowTagType = TagAndClassType;
-    pub const lowTagSmallInteger = makeImmediate(.SmallInteger, 0).tagbits();
+    pub const lowTagSmallInteger = @intFromEnum(Group.int);
     pub const HighTagType = void;
     pub const highTagSmallInteger = {};
     pub const PackedTagType = u8;
     pub const packedTagSmallInteger = intTag;
-    pub const intTag = oImm(.SmallInteger, 0).tagbits();
+    pub const intTag = @intFromEnum(Group.int);
     pub const immediatesTag = @intFromEnum(Group.immediates);
     const TagAndClassType = u8;
+    const tagBits = enumBits(Group);
     const tagAndClassBits = enumBits(Group) + enumBits(ClassIndex.Compact);
     comptime {
         assert(tagAndClassBits == @bitSizeOf(TagAndClassType));
@@ -64,12 +62,8 @@ pub const Object = packed struct(u64) {
     const tagAndClass = (@as(u64, 1) << tagAndClassBits) - 1;
     const extraMask = 0xff;
     const ExtraType = u8;
-    const TaggedClass = packed struct {
-        tag: TagAndClassType,
-        _: u56,
-    };
     pub inline fn tagbits(self: Self) TagAndClassType {
-        return @as(TaggedClass, @bitCast(self)).tag;
+        return @truncate(self.rawU());
     }
     fn enumBits(T: type) usize {
         return @typeInfo(@typeInfo(T).@"enum".tag_type).int.bits;
@@ -79,7 +73,7 @@ pub const Object = packed struct(u64) {
         return null;
     }
     pub inline fn untaggedI_noCheck(self: object.Object) i64 {
-        return @bitCast(self.rawU() >> tagAndClassBits << tagAndClassBits);
+        return @bitCast(self.rawU() >> tagBits << tagBits);
         //return @bitCast(self.rawU() & ~tagAndClass);
     }
     pub inline fn taggedI(self: object.Object) ?i64 {
@@ -93,7 +87,7 @@ pub const Object = packed struct(u64) {
         return @bitCast(i);
     }
     pub inline fn fromUntaggedI(i: i64, _: anytype) object.Object {
-        return @bitCast(i + oImm(.SmallInteger, 0).tagbits());
+        return @bitCast((i << tagBits) + @intFromEnum(Group.int));
     }
     // pub inline fn cast(v: anytype) object.Object {
     //     // stored using little-endian order
@@ -107,14 +101,14 @@ pub const Object = packed struct(u64) {
         return null;
     }
     inline fn nativeI_noCheck(self: object.Object) i64 {
-        return self.rawI() >> tagAndClassBits;
+        return self.rawI() >> tagBits;
     }
     pub inline fn nativeU(self: object.Object) ?u64 {
         if (self.isInt()) return self.nativeU_noCheck();
         return null;
     }
     inline fn nativeU_noCheck(self: object.Object) u64 {
-        return self.hash;
+        return self.rawU() >> tagBits;
     }
     pub inline fn nativeF(self: object.Object) ?f64 {
         if (self.isImmediateDouble()) return self.toDoubleNoCheck();
@@ -199,7 +193,7 @@ pub const Object = packed struct(u64) {
         return self.tag == .heap;
     }
     pub inline fn isImmediateDouble(self: object.Object) bool {
-        return (self.rawU() & 6) != 0;
+        return (self.rawU() & 4) != 0;
     }
     pub inline fn isMemoryDouble(self: object.Object) bool {
         return self.isMemoryAllocated() and self.to(HeapObjectPtr).*.getClass() == .Float;
@@ -211,7 +205,7 @@ pub const Object = packed struct(u64) {
         return grp.base();
     }
     pub inline fn isInt(self: object.Object) bool {
-        return self.isImmediateClass(.SmallInteger);
+        return self.tag == .int;
     }
     pub inline fn isNat(self: object.Object) bool {
         return self.isInt() and self.rawI() >= 0;
@@ -271,7 +265,7 @@ pub const Object = packed struct(u64) {
         const T = @TypeOf(value);
         if (T == object.Object) return value;
         switch (@typeInfo(T)) {
-            .int, .comptime_int => return oImm(.SmallInteger, @as(u56, @bitCast(@as(i56, value)))),
+            .int, .comptime_int => return @bitCast(@as(i64, value << 3) + 1),
             .float => return @bitCast(encode(value) catch {
                 return memoryFloat(value, maybeProcess);
             }),
@@ -334,23 +328,13 @@ pub const Object = packed struct(u64) {
         @panic("Trying to convert Object to " ++ @typeName(T));
     }
     pub inline fn which_class(self: object.Object, comptime full: bool) ClassIndex {
-        if (false) {
-            const tag_bits = self.tagbits();
-            const tag = tag_bits & 7;
-            if (tag == 1) return @enumFromInt(tag_bits >> 3)
-            else if (tag > 1) return .Float
-            else if (self.rawU() == 0) return .UndefinedObject
-            else if (full) return self.to(HeapObjectPtr).*.getClass() else return .Object;
-        }
-        switch (self.tag) {
-            .heap => if (self.rawU() == 0) return .UndefinedObject
-                else if (full) return self.to(HeapObjectPtr).*.getClass()
-                else return .Object,
-            .immediates => {@branchHint(.likely);
-                            return self.class.classIndex();},
-            else => {@branchHint(.likely);
-                            return .Float;},
-        }
+        const bits: u64 = @bitCast(self);
+        if (bits & 1 != 0) {@branchHint(.likely);return .SmallInteger;}
+        if (bits & 4 != 0) {@branchHint(.likely);return .Float;}
+        if (bits & 2 != 0) return self.class.classIndex();
+        if (bits == 0) return .UndefinedObject;
+        if (full) return self.to(HeapObjectPtr).*.getClass()
+        else return .Object;
     }
     pub inline fn isMemoryAllocated(self: object.Object) bool {
         return if (self.isHeap()) self != object.Object.Nil() else @intFromEnum(self.class) <= @intFromEnum(ClassIndex.Compact.ThunkHeap);

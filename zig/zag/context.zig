@@ -227,7 +227,7 @@ pub fn format(
     try writer.print("}}", .{});
 }
 inline fn headerOf(self: *const Context) *HeapHeader {
-    return @as(HeapObjectPtr, @constCast(@ptrCast(self))).headerPtr();
+    return @as(HeapObjectPtr, @ptrCast(@constCast(self))).headerPtr();
 }
 pub inline fn popTargetContext(target: *Context, process: *Process, result: Object) struct { SP, *Context } {
     //TODO: check if result is on the stack and ?copy to heap if so?

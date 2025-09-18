@@ -221,7 +221,7 @@ pub const ByteCode = enum(i8) {
                         context.setTPc(asCodePtr(pc + 1));
                         const offset = pc[0].i();
                         if (offset >= 0) pc += 1 + @as(u64, @intCast(offset)) else pc -= @as(u64, @intCast(@as(i32, -offset) - 1));
-                        return @call(tailCall, interpret, .{ @as(PC, @alignCast(@ptrCast(pc))), sp, process, context, @as(Object, @bitCast(@intFromPtr(method))), undefined });
+                        return @call(tailCall, interpret, .{ @as(PC, @ptrCast(@alignCast(pc))), sp, process, context, @as(Object, @bitCast(@intFromPtr(method))), undefined });
                     },
                     .exit => @panic("fell off the end"),
                     else => {

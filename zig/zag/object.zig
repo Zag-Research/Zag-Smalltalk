@@ -150,7 +150,7 @@ comptime {
 }
 pub const Object = switch (config.objectEncoding) {
     .zag => @import("object/zag.zig").Object,
-    .zagAlt => struct {},
+    .zagAlt => @import("object/zagAlt.zig").Object,
     .nan => @import("object/nan.zig").Object,
     .spur => @import("object/spur.zig").Object,
     .taggedPtr => @import("object/taggedPtr.zig").Object,

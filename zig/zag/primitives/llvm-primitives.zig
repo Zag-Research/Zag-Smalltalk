@@ -311,6 +311,6 @@ inline fn singleIndexGEP(builder: LLVMBuilderRef, elementType: LLVMTypeRef, base
     const offset_bits: u64 = @bitCast(offset);
     const signExtend = offset < 0;
     const idx = [_]LLVMValueRef{llvm.type.LLVMConstInt(elementType, offset_bits, @intFromBool(signExtend))};
-    const idx_ptr: [*c]llvm.types.LLVMValueRef = @constCast(@ptrCast(&idx[0]));
+    const idx_ptr: [*c]llvm.types.LLVMValueRef = @ptrCast(@constCast(&idx[0]));
     return llvm.core.LLVMBuildGEP2(builder, elementType, base, idx_ptr, 1, @ptrCast(name));
 }

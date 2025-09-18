@@ -74,7 +74,7 @@ pub const Object = packed struct(u64) {
         return self.toDoubleFromMemory();
     }
     pub inline fn fromNativeF(t: f64, maybeProcess: ?*Process) object.Object {
-        return from(t,maybeProcess);
+        return from(t, maybeProcess);
     }
     pub inline fn symbolHash(self: object.Object) ?u24 {
         if (self.isImmediateClass(.Symbol)) return self.ref.header.hash;
@@ -197,7 +197,7 @@ pub const Object = packed struct(u64) {
                     .one, .many => {
                         //@compileLog("from: ",value);
                         @setRuntimeSafety(false);
-                        return Object{ .ref = @alignCast(@constCast(@ptrCast(value))) };
+                        return Object{ .ref = @ptrCast(@alignCast(@constCast(value))) };
                     },
                     else => {},
                 }

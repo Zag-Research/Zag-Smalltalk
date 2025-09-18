@@ -74,7 +74,7 @@ const fibInteger = struct {
             "false",                  tf.returnSelf,
             ":false",                 tf.push,
             self,                     tf.pushLiteral,
-            "0const",                        tf.inlinePrimitive,
+            "0const",                 tf.inlinePrimitive,
             minus,                    tf.send,
             signature(.fibonacci, 0), &nullMethod,
             tf.push,                  self,
@@ -85,7 +85,7 @@ const fibInteger = struct {
             plus,                     tf.returnTop,
         });
     fn init() void {
-        fib.resolve(&[_]Object{Object.from(1, null), Object.from(2, null)}) catch unreachable;
+        fib.resolve(&[_]Object{ Object.from(1, null), Object.from(2, null) }) catch unreachable;
         fib.initExecute();
         zag.dispatch.addMethod(@ptrCast(&fib));
         if (zag.config.show_trace) {
@@ -129,7 +129,7 @@ const fibInteger0 = struct {
             "false",                  tf.returnSelf,
             ":false",                 tf.push,
             self,                     tf.pushLiteral,
-            "0const",                        tf.inlinePrimitive,
+            "0const",                 tf.inlinePrimitive,
             minus,                    tf.send0,
             signature(.fibonacci, 0), &nullMethod,
             tf.push,                  self,
@@ -140,7 +140,7 @@ const fibInteger0 = struct {
             plus,                     tf.returnTop,
         });
     fn init() void {
-        fib.resolve(&[_]Object{Object.from(1, null), Object.from(2, null)}) catch unreachable;
+        fib.resolve(&[_]Object{ Object.from(1, null), Object.from(2, null) }) catch unreachable;
         fib.initExecute();
         zag.dispatch.addMethod(@ptrCast(&fib));
         if (zag.config.show_trace) {
@@ -195,7 +195,7 @@ const fibIntegerBr = struct {
             tf.returnTop,
         });
     fn init() void {
-        fib.resolve(&[_]Object{Object.from(1, null), Object.from(2, null)}) catch unreachable;
+        fib.resolve(&[_]Object{ Object.from(1, null), Object.from(2, null) }) catch unreachable;
         fib.initExecute();
         zag.dispatch.addMethod(@ptrCast(&fib));
         if (zag.config.show_trace) {
@@ -237,27 +237,27 @@ const fibFloat = struct {
             tf.inlinePrimitive,       leq,
             tf.branchFalse,           "false",
             tf.returnSelf,            ":false",
-            tf.push,
-            self,                     tf.pushLiteral,
-            "0const",                 tf.inlinePrimitive,
-            minus,                    tf.send,
-            signature(.fibonacci, 0), &nullMethod,
             tf.push,                  self,
-            tf.pushLiteral,           "1const",
+            tf.pushLiteral,           "0const",
             tf.inlinePrimitive,       minus,
             tf.send,                  signature(.fibonacci, 0),
-            &nullMethod,              tf.inlinePrimitive,
-            plus,                     tf.returnTop,
+            &nullMethod,              tf.push,
+            self,                     tf.pushLiteral,
+            "1const",                 tf.inlinePrimitive,
+            minus,                    tf.send,
+            signature(.fibonacci, 0), &nullMethod,
+            tf.inlinePrimitive,       plus,
+            tf.returnTop,
         });
     fn init() void {
-        fib.resolve(&[_]Object{Object.from(1.0, null), Object.from(2.0, null)}) catch unreachable;
+        fib.resolve(&[_]Object{ Object.from(1.0, null), Object.from(2.0, null) }) catch unreachable;
         fib.initExecute();
         zag.dispatch.addMethod(@ptrCast(&fib));
         if (zag.config.show_trace) {
             std.debug.print("\n", .{});
             fib.dump();
         } else {
-            const obj = Execution.mainSendTo(Sym.fibonacci, Object.from(@as(f64,@floatFromInt(fibN)), null)) catch unreachable;
+            const obj = Execution.mainSendTo(Sym.fibonacci, Object.from(@as(f64, @floatFromInt(fibN)), null)) catch unreachable;
             if (obj.nativeF()) |threaded| {
                 const native: f64 = @floatFromInt(fibCheck(fibN));
                 if (threaded != native) {
@@ -341,8 +341,8 @@ pub fn timing(args: []const []const u8, default: bool) !void {
 }
 pub fn main() !void {
     const do_all = [_][]const u8{
-        "Config",  "Header",
-        "Native", "NativeF",
+        "Config",            "Header",
+        "Native",            "NativeF",
         //"Integer",
         "IntegerBr?Integer",
         //"Integer0?Integer",
@@ -360,8 +360,7 @@ pub fn main() !void {
     const default = args.len <= 1;
     try timing(if (default) @constCast(do_all[0..]) else args[1..], default);
 }
-const testRun = zag.config.debugMode or zag.config.show_trace;
-const testReps = if (testRun) 1 else 10;
+const testRun = zag.config.testRun;
 const fibN = if (testRun) 5 else 40;
-const nRuns = if (testRun) 1 else 5;
+const nRuns = if (testRun) 1 else 10;
 const warmups = if (testRun) 0 else null;

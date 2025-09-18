@@ -101,7 +101,7 @@ pub const Object = packed struct(u64) {
     pub inline fn extraI(self: object.Object) i3 {
         return @bitCast(@as(u3, @truncate(self.rawU())));
     }
-    const Negative_Infinity: u64 = g(.immediates); //0xfff0000000000000;
+    const Negative_Infinity: u64 = g(.heap); //0xfff0000000000000;
     const Start_of_Heap_Objects: u64 = g(.heap);
     inline fn of(comptime v: u64) object.Object {
         return @bitCast(v);
@@ -178,14 +178,8 @@ pub const Object = packed struct(u64) {
     pub const taggedI_noCheck = untaggedI_noCheck;
     pub const fromTaggedI = fromUntaggedI;
     pub inline fn fromUntaggedI(i: i64, _: anytype) object.Object {
-        var o = cast(@as(u64, @bitCast(i)) >> 14);
-        o.tag = .smallInteger;
-        return o;
+        return cast(@as(u64, @bitCast(i)) >> 14 | g(.smallInteger));
     }
-    // pub inline fn cast(v: anytype) object.Object {
-    //     // stored using little-endian order
-    //     return @bitCast(v);
-    // }
     pub inline fn symbol40(self: object.Object) u40 {
         return @as(u40, self.hash32()) << 8 | 1;
     }
@@ -224,7 +218,7 @@ pub const Object = packed struct(u64) {
         return self.toDoubleNoCheck();
     }
     pub inline fn fromNativeF(t: f64, maybeProcess: ?*Process) object.Object {
-        return from(t,maybeProcess);
+        return from(t, maybeProcess);
     }
     pub inline fn symbolHash(self: object.Object) ?u24 {
         if (self.isImmediateClass(.Symbol)) return @truncate(self.hash32());
@@ -244,14 +238,14 @@ pub const Object = packed struct(u64) {
         return self.rawU() == other.rawU();
     }
     pub inline fn isInt(self: object.Object) bool {
-        return @intFromEnum(self.tag) >= @intFromEnum(Group.smallInteger);
+        return self.rawU() >= g(.smallInteger);
     }
     pub inline fn isNat(self: object.Object) bool {
         if (self.untaggedI()) |value| return value >= 0;
         return false;
     }
     inline fn isImmediateDouble(self: object.Object) bool {
-        return self.rawU() < g(.heap);
+        return self.rawU() <= Negative_Infinity;
     }
     pub inline fn highPointer(self: object.Object, T: type) ?T {
         return @ptrFromInt(self.rawU() & 0xFFFF_FFFF_FFF8);
@@ -363,20 +357,20 @@ pub const Object = packed struct(u64) {
         return @as(u48, @truncate(@as(usize, @bitCast(self))));
     }
     pub inline fn which_class(self: object.Object, comptime full: bool) ClassIndex {
-        return switch (self.tag) {
-            .thunkReturnLocal => .ThunkReturnLocal,
-            .thunkReturnInstance => .ThunkReturnInstance,
-            .thunkReturnSmallInteger => .ThunkReturnSmallInteger,
-            .thunkReturnImmediate => .ThunkReturnImmediate,
-            .thunkLocal => .ThunkLocal,
-            .thunkInstance => .ThunkInstance,
-            .thunkHeap => .ThunkHeap,
-            .picPointer => @panic("nonLocalThunk"),
-            .immediates => self.classIndex,
-            .heap => if (full) self.to(HeapObjectPtr).*.getClass() else .Object,
-            .smallInteger => .SmallInteger,
-            else => .Float,
-        };
+        switch (self.tag) {
+            .smallInteger => {@branchHint(.likely); return .SmallInteger;},
+            .immediates => {@branchHint(.likely); return self.classIndex;},
+            .thunkReturnLocal => {@branchHint(.unlikely); return .ThunkReturnLocal;},
+            .thunkReturnInstance => {@branchHint(.unlikely); return .ThunkReturnInstance;},
+            .thunkReturnSmallInteger => {@branchHint(.unlikely); return .ThunkReturnSmallInteger;},
+            .thunkReturnImmediate => {@branchHint(.unlikely); return .ThunkReturnImmediate;},
+            .thunkLocal => {@branchHint(.unlikely); return .ThunkLocal;},
+            .thunkInstance => {@branchHint(.unlikely); return .ThunkInstance;},
+            .thunkHeap => {@branchHint(.unlikely); return .ThunkHeap;},
+            .picPointer => {@branchHint(.unlikely); @panic("nonLocalThunk");},
+            .heap => if (full) return self.to(HeapObjectPtr).*.getClass() else return .Object,
+            else => {@branchHint(.likely); return .Float;},
+        }
     }
     pub inline fn isHeapObject(self: object.Object) bool {
         return self.tag == .heap;
