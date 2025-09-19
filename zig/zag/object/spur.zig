@@ -398,11 +398,6 @@ pub const Object = packed union {
     pub const toUnchecked = OF.toUnchecked;
     pub const asVariable = zag.Context.asVariable;
     pub const setField = OF.setField;
-    
-    // Add custom equality comparison
-    pub fn eql(self: Object, other: Object) bool {
-        return @as(u64, @bitCast(self)) == @as(u64, @bitCast(other));
-    }
 };
 
 test "float from/to conversion" {
