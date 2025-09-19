@@ -147,7 +147,7 @@ pub const Object = packed union {
     }
     pub inline fn fromPointer(ptr: anytype) Object {
         const Foo = packed struct { ref: *u64 };
-        const foo = Foo{ .ref = @ptrCast(@constCast(ptr)) };
+        const foo = Foo{ .ref = @constCast(@ptrCast(ptr)) };
         return @bitCast(foo);
     }
 
@@ -237,8 +237,9 @@ pub const Object = packed union {
     pub const testU = rawU;
     pub const testI = rawI;
     pub inline fn rawU(self: Object) u64 {
-        return @intFromPtr(self.ref);
+        return @bitCast(self);
     }
+    
     inline fn rawI(self: Object) i64 {
         return @bitCast(self.rawU());
     }
