@@ -53,8 +53,9 @@ pub fn build(b: *std.Build) void {
     options.addOption(bool, "includeLLVM", includeLLVM);
     const git_version = b.run(&.{ "git", "log", "--pretty=format:%cI-%h", "-1" });
     options.addOption([]const u8, "git_version", git_version);
-    const compile_date = b.run(&.{ "date", "+%Y-%m-%dT%H:%M:%S%z" });
-    options.addOption([]const u8, "compile_date", std.mem.trim(u8, compile_date, " \n\r"));
+    const compile_date_with_extra = b.run(&.{ "date", "+%Y-%m-%dT%H:%M:%S%z" });
+    const compile_date = std.mem.trim(u8, compile_date_with_extra, " \n\r");
+    options.addOption([]const u8, "compile_date", compile_date);
     const Encoding = @import("zag/encoding.zig").Encoding;
     const encoding = b.option(Encoding, "encoding", "Object encoding") orelse .zag;
     options.addOption(Encoding, "objectEncoding", encoding);
@@ -110,18 +111,18 @@ pub fn build(b: *std.Build) void {
     });
     const check = b.step("check", "Check if foo compiles");
     check.dependOn(&fib_check.step);
-    
+
     // --- Encoding Tests ---
     const all_encodings = [_]Encoding{ .zag, .nan, .zagAlt }; // TODO: add more when ready
     const test_all_step = b.step("test-all-encodings", "Run tests for all encoding types");
-    
+
     for (all_encodings) |enc| {
         const enc_name = @tagName(enc);
-        
+
         const enc_options = b.addOptions();
         enc_options.addOption(bool, "includeLLVM", includeLLVM);
         enc_options.addOption([]const u8, "git_version", git_version);
-        enc_options.addOption([]const u8, "compile_date", std.mem.trim(u8, compile_date, " \n\r"));
+        enc_options.addOption([]const u8, "compile_date", compile_date);
         enc_options.addOption(Encoding, "objectEncoding", enc);
         enc_options.addOption(u16, "maxClasses", max_classes);
         enc_options.addOption(bool, "trace", trace);
@@ -130,9 +131,9 @@ pub fn build(b: *std.Build) void {
             .root_source_file = b.path("zag/zag.zig"),
             .target = target,
         });
-        
+
         zag_enc.addOptions("options", enc_options);
-        
+
         if (includeLLVM) {
             zag_enc.addImport("llvm-build-module", llvm_module);
         }

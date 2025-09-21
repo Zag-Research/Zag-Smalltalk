@@ -238,7 +238,7 @@ pub const Object = packed struct(u64) {
         return self.rawU() == object.Object.True().rawU();
     }
     pub inline fn withClass(self: object.Object, class: ClassIndex) object.Object {
-        if (!self.isSymbol()) @panic("not a Symbol");
+        if (!self.isSymbol()) std.debug.panic("not a Symbol: {f}", self);
         return @bitCast((self.rawU() & 0xffffffffff) | (@as(u64, @intFromEnum(class)) << 40));
     }
     pub inline fn rawWordAddress(self: object.Object) u64 {

@@ -8,3 +8,22 @@ Integer benchmarks (fibonacci, integer benchmarks),
  [Clément Béra](https://clementbera.wordpress.com/ "Clément Béra") [on Cog optimizations](https://clementbera.wordpress.com/2014/08/12/arithmetic-inlined-and-special-selectors/) including how to turn them off (for benchmarking comparisons)
 
  [This](https://github.com/hashrocket/websocket-shootout/issues/44) bug/comment thread has nothing to do with our benchmarking, but still has a lot of good insights about benchmarking in general.
+
+In [Resilient Smalltalk] there is a micro-benchmark testing recursion and non-local returns:
+```smalltalk
+Element = Object (
+| next |
+length = (
+    | n |
+    n := 0.
+    self do: [ :e | n := n + 1. e ifLast: [ ˆn ]. ].
+)
+do: [block] = (
+    block value: self.
+    next do: block.
+)
+ifLast: [block] = (
+    next isNil ifTrue: [ block value ].
+)
+)
+```

@@ -276,16 +276,13 @@ const HeapOperations = struct {
         return error.notIndexable;
     }
     fn unimplementedArray(format: Format, _: HeapHeader, _: *const HeapObject, _: usize) HeapOperationError![]Object {
-        trace("format: {}\n", .{format});
-        @panic("unimplemented array");
+        std.debug.panic("unimplemented array: {}", .{format});
     }
     fn unimplementedInstVars(format: Format, _: HeapHeader, _: *const HeapObject) HeapOperationError![]Object {
-        trace("format: {}\n", .{format});
-        @panic("unimplemented instVars");
+        std.debug.panic("unimplemented instVars: {}", .{format});
     }
     fn unimplementedSize(format: Format, _: HeapHeader, _: *const HeapObject) HeapOperationError!usize {
-        trace("format: {}\n", .{format});
-        @panic("unimplemented size");
+        std.debug.panic("unimplemented size: {}", .{format});
     }
 };
 pub const HeapObjectPtrIterator = struct {

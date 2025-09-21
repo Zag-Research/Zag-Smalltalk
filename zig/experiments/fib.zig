@@ -209,8 +209,10 @@ const fibIntegerBr = struct {
                 unreachable;
             }
         }
+        std.debug.print(" init complete\n", .{});
     }
     fn runIt(comptime _: void, proof: usize) usize {
+        std.debug.print(" runIt\n", .{});
         const obj = Execution.mainSendTo(Sym.fibonacci, Object.from(fibN, null)) catch unreachable;
         if (obj.nativeU()) |result| {
             return result + proof;

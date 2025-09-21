@@ -288,6 +288,10 @@ pub const ObjectFunctions = struct {
         self: Object,
         writer: anytype,
     ) !void {
+        if (true) {
+            try writer.print("Object({x})", .{@as(u64, @bitCast(self))});
+            return;
+        }
         if (self.nativeI()) |i| {
             try writer.print("{d}", .{i});
         } else if (self.equals(False())) {

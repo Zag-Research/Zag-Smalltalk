@@ -19,6 +19,12 @@
     //"hide": "on_success",
   },
   {
+    "label": "test-all-encodings",
+    "command": "zig build test-all-encodings --summary all -freference-trace=20",
+    "cwd": "$ZED_WORKTREE_ROOT/zig/zag",
+    //"hide": "on_success",
+  },
+  {
     "label": "test-llvm",
     "command": "zig build test --summary all -freference-trace=20 -Dllvm",
     "cwd": "$ZED_WORKTREE_ROOT/zig",

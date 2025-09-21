@@ -16,6 +16,7 @@ const True = object.True;
 const False = object.False;
 const Context = zag.Context;
 const ContextData = Context.ContextData;
+const Variable = Context.Variable;
 const Extra = Context.Extra;
 const heap = zag.heap;
 const HeapHeader = heap.HeapHeader;
@@ -174,6 +175,14 @@ pub const PC = packed struct {
         }
         return self.code.object;
     }
+    pub //inline
+    fn variable(self: PC) Variable {
+        if (logging) {
+            @setRuntimeSafety(false);
+            std.debug.print("PC_variable:     {x:0>12}: {f}\n", .{ @intFromPtr(self.code), self.code.variable });
+        }
+        return self.code.variable;
+    }
     pub inline //
     fn signature(self: PC) Signature {
         if (logging) {
@@ -252,6 +261,7 @@ pub const PC = packed struct {
 };
 pub const Code = union(enum) {
     object: Object,
+    variable: Variable,
     threadedFn: *const fn (PC, SP, *Process, *Context, Extra) Result,
     method: *const CompiledMethod,
     codePtr: *Code,
@@ -269,6 +279,14 @@ pub const Code = union(enum) {
     }
     pub inline fn patchMethod(self: *Code, method: *const CompiledMethod) void {
         self.* = Code{ .method = method };
+    }
+    pub inline //
+    fn asVariable(self: Code) Variable {
+        //        @setRuntimeSafety(false);
+        return self.variable;
+    }
+    pub inline fn variableOf(v: Variable) Code {
+        return Code{ .variable = v };
     }
     pub inline //
     fn asObject(self: Code) Object {
@@ -321,12 +339,13 @@ pub const Code = union(enum) {
         self: *const Code,
         writer: anytype,
     ) !void {
-        if (false) {
+        if (true) {
             try writer.print("({x})", .{@as(*const u64, @ptrCast(self)).*});
-            return;
+            //return;
         }
         switch (self.*) {
             .object => |obj| try writer.print("object({f})", .{obj}),
+            .variable => |variable| try writer.print("variable   ({f})", .{variable}),
             .threadedFn => |tFn| {
                 if (@import("threadedFn.zig").find(tFn)) |name| {
                     try writer.print("{}", .{name});
@@ -380,9 +399,11 @@ pub const CompiledMethod = struct {
         std.debug.print("Jitted Function:  {?}\n", .{self.jitted});
         const code: [*]const Code = @ptrCast(&self.code);
         const methodSize = self.header.length - codeOffsetInObjects;
+        std.debug.print("methodSize:       {}\n", .{methodSize});
         for (code[0..methodSize]) |*instruction| {
             std.debug.print("[{x:0>12}]: {f}\n", .{ @intFromPtr(instruction), instruction.* });
         }
+        std.debug.print("methodSize:       {}\n", .{methodSize});
     }
     pub fn init(name: Object, methodFn: *const fn (PC, SP, *Process, *Context, Extra) Result) Self {
         return Self{
@@ -506,6 +527,7 @@ fn CompileTimeMethod(comptime counts: usize) type {
         // }
         pub fn dump(self: *Self) void {
             @as(*CompiledMethod, @ptrCast(self)).dump();
+            std.debug.print("CompiledMethod dump\n", .{});
         }
         pub fn init(name: anytype, comptime locals: u11, function: ?*const fn (PC, SP, *Process, *Context, Extra) Result, class: ClassIndex, tup: anytype) Self {
             const header = comptime HeapHeader.calc(.CompiledMethod, codeOffsetInUnits + codes, 0, Age.static, null, Object, false) catch @compileError("method too big");
@@ -555,6 +577,10 @@ fn CompileTimeMethod(comptime counts: usize) type {
                     },
                     Signature => {
                         code[n] = Code.signatureOf(field);
+                        n = n + 1;
+                    },
+                    Variable => {
+                        code[n] = Code.variableOf(field);
                         n = n + 1;
                     },
                     else => {
