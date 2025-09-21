@@ -304,7 +304,7 @@ pub const ObjectFunctions = struct {
             try writer.print("{f}", .{signature});
         } else if (self.nativeF()) |float| {
             try writer.print("{}", .{float});
-        } else if (self == Nil()) {
+        } else if (self.equals(Nil())) {
             try writer.print("nil", .{});
         } else {
             try writer.print("{{?0x{x:0>16}}}", .{@as(u64, @bitCast(self))});
