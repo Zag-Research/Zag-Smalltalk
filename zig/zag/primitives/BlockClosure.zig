@@ -113,17 +113,18 @@ pub const threadedFns = struct {
         }
         test "asThunk int" {
             try config.skipNotZag();
-            try Execution.runTestWithValidator(
+            var exe = Execution.initTest(
                 "asThunk int",
-                .{tf.asThunk},
-                &validateInt,
-                &[_]Object{Object.from(2, null)},
+                .{tf.asThunk});
+            try exe.runTestWithValidator(
+                @ptrCast(&validateInt),
+                &[_]Object{exe.object(2)},
                 Object.empty,
             );
         }
-        fn validateInt(exe: anytype, _: []const Object) Execution.ValidateErrors!void {
+        fn validateInt(exe: anytype, _: []const Object) !void {
             switch (objectEncoding) {
-                .zag => try std.testing.expectEqualSlices(Object, &[_]Object{Object.makeImmediate(.ThunkImmediate, @truncate(Object.from(2, null).testU()))}, exe.stack()),
+                .zag => try std.testing.expectEqualSlices(Object, &[_]Object{Object.makeImmediate(.ThunkImmediate, @truncate(exe.object(2).testU()))}, exe.stack()),
                 else => return error.TestAborted,
             }
         }
@@ -131,15 +132,16 @@ pub const threadedFns = struct {
         test "asThunk ptr" {
             try config.skipNotZag();
             const obj = Object.from(&ThunkReturnSmallInteger.method, null);
-            try Execution.runTestWithValidator(
+            var exe = Execution.initTest(
                 "asThunk ptr",
-                .{tf.asThunk},
-                &validatePtr,
+                .{tf.asThunk});
+            try exe.runTestWithValidator(
+                @ptrCast(&validatePtr),
                 &[_]Object{obj},
                 &[_]Object{obj},
             );
         }
-        fn validatePtr(exe: anytype, expected: []const Object) Execution.ValidateErrors!void {
+        fn validatePtr(exe: anytype, expected: []const Object) !void {
             const obj = expected[0];
             switch (objectEncoding) {
                 .zag => try std.testing.expectEqualSlices(Object, &[_]Object{Object.makeImmediate(.ThunkHeap, @truncate(obj.testU() << 8))}, exe.stack()),
@@ -149,15 +151,16 @@ pub const threadedFns = struct {
 
         test "asThunk True" {
             try config.skipNotZag();
-            try Execution.runTestWithValidator(
+            var exe = Execution.initTest(
                 "asThunk True",
-                .{tf.asThunk},
-                &validateTrue,
+                .{tf.asThunk});
+            try exe.runTestWithValidator(
+                @ptrCast(&validateTrue),
                 &[_]Object{True()},
                 Object.empty,
             );
         }
-        fn validateTrue(exe: anytype, _: []const Object) Execution.ValidateErrors!void {
+        fn validateTrue(exe: anytype, _: []const Object) !void {
             switch (objectEncoding) {
                 .zag => try std.testing.expectEqualSlices(Object, &[_]Object{Object.makeImmediate(.ThunkImmediate, @truncate(True().testU()))}, exe.stack()),
                 else => return error.TestAborted,
@@ -166,15 +169,16 @@ pub const threadedFns = struct {
 
         test "asThunk float" {
             try config.skipNotZag();
-            try Execution.runTestWithValidator(
+            var exe = Execution.initTest(
                 "asThunk float",
-                .{tf.asThunk},
-                &validateFloat,
-                &[_]Object{Object.from(-32767.75, null)},
+                .{tf.asThunk});
+            try exe.runTestWithValidator(
+                @ptrCast(&validateFloat),
+                &[_]Object{exe.object(-32767.75)},
                 Object.empty,
             );
         }
-        fn validateFloat(exe: anytype, _: []const Object) Execution.ValidateErrors!void {
+        fn validateFloat(exe: anytype, _: []const Object) !void {
             switch (objectEncoding) {
                 .zag => try std.testing.expectEqualSlices(Object, &[_]Object{@bitCast(@as(u64, 0x0dffff0000000e69))}, exe.stack()),
                 else => return error.TestAborted,
@@ -183,16 +187,17 @@ pub const threadedFns = struct {
 
         test "asThunk doesn't fit" {
             try config.skipNotZag();
-            const obj = Object.from(1.0 / 5.0, null);
-            try Execution.runTestWithValidator(
+            var exe = Execution.initTest(
                 "asThunk doesn't fit",
-                .{tf.asThunk},
-                &validateNone,
+                .{tf.asThunk});
+            const obj = exe.object(1.0 / 5.0);
+            try exe.runTestWithValidator(
+                @ptrCast(&validateNone),
                 &[_]Object{obj},
                 &[_]Object{obj},
             );
         }
-        fn validateNone(exe: anytype, expected: []const Object) Execution.ValidateErrors!void {
+        fn validateNone(exe: anytype, expected: []const Object) !void {
             const obj = expected[0];
             const result = exe.stack()[0];
             const exeheap = exe.getHeap();
@@ -256,22 +261,22 @@ pub const threadedFns = struct {
                 comptime object14(.{ 3, 4, 0 }),
                 "0block",
             });
-            try exe.resolve(&[_]Object{ Object.from(&testMethod, null), True(), Nil() });
-            try exe.execute(&[_]Object{
-                Object.from(17, null),
+            try exe.resolve(&[_]Object{ exe.object(&testMethod), True(), Nil() });
+            exe.execute(&[_]Object{
+                exe.object(17),
             });
             const stack = exe.stack();
-            try expectEqual(Object.from(&stack[2], null), stack[0]);
-            try expectEqual(Object.from(42, null), stack[1]);
+            try expectEqual(exe.object(&stack[2]), stack[0]);
+            try expectEqual(exe.object(42), stack[1]);
             const header: HeapHeader = @bitCast(stack[2]);
             try expectEqual(.onStack, header.age);
             try expectEqual(4, header.length);
             try expectEqual(.BlockClosure, header.classIndex);
-            try expectEqual(Object.from(&testMethod, null), stack[3]);
-            try expectEqual(Object.from(1, null), stack[4]);
+            try expectEqual(exe.object(&testMethod), stack[3]);
+            try expectEqual(exe.object(1), stack[4]);
             try expectEqual(Nil(), stack[5]);
             try expectEqual(True(), stack[6]);
-            try expectEqual(Object.from(17, null), stack[7]);
+            try expectEqual(exe.object(17), stack[7]);
         }
     };
     pub const value = struct {

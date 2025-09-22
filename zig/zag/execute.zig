@@ -66,7 +66,7 @@ pub const Signature = packed struct {
         return .{ .int = @bitCast(Create{ .selector = selector, .class = @enumFromInt(primitiveNumber) }) };
     }
     pub fn fromNameClass(name: anytype, class: ClassIndex) Signature {
-        return .{ .int = @bitCast(Create{ .selector = @as(u40, name.numArgs()) << 32 | @as(u40, (name.symbolHash().?)), .class = class }) };
+        return .{ .int = @bitCast(Create{ .selector = @as(u32, name.numArgs()) << 24 | @as(u32, (name.symbolHash().?)), .class = class }) };
     }
     fn equals(self: Signature, other: Signature) bool {
         return self.int == other.int;
@@ -624,6 +624,9 @@ fn CompileTimeMethod(comptime counts: usize) type {
         pub fn getCodeSize(_: *Self) usize {
             return codes;
         }
+        fn execute(self: *Self, sp: SP, process: *Process, context: *Context) Result {
+            return @as(*CompiledMethod, @ptrCast(self)).execute(sp, process, context);
+        }
     };
 }
 test "CompileTimeMethod" {
@@ -903,13 +906,14 @@ test "compileRaw" {
 }
 
 pub const Execution = struct {
-    const failedObject: packed struct { x: u64 } = .{ .x = undefined };
+    const failedObject: packed struct { x: u64 } = .{ .x = 2 };
     pub const failed: Object = @bitCast(failedObject);
     fn Executer(MethodType: type) type {
         return struct {
             process: Process align(Process.alignment),
             ctxt: Context.Static,
             method: MethodType,
+            process_initted: bool = false,
             const Self = @This();
             pub fn new(method: MethodType) Self {
                 return Self{
@@ -918,15 +922,22 @@ pub const Execution = struct {
                     .method = method,
                 };
             }
+            pub fn initProcess(self: *Self) void {
+                if (!self.process_initted) {
+                    self.process.init(Nil());
+                    self.process_initted = true;
+                }
+            }
             pub fn init(self: *Self, stackObjects: ?[]const Object) void {
                 self.ctxt.initStatic();
                 self.process.setContext(@ptrCast(&self.ctxt));
-                self.process.init(Nil());
+                self.initProcess();
                 if (stackObjects) |source| {
                     self.initStack(source);
                 }
             }
             fn initStack(self: *Self, source: []const Object) void {
+                self.initProcess();
                 const sp = self.process.endOfStack().safeReserve(source.len);
                 self.process.setSp(sp);
                 for (source, sp.slice(source.len)) |src, *stck|
@@ -953,56 +964,59 @@ pub const Execution = struct {
             pub fn getSp(self: *const Self) SP {
                 return self.process.getSp();
             }
-            pub fn execute(self: *Self, method: *const CompiledMethod) void {
-                _ = method.execute(self.getSp(), &self.process, self.getContext());
+            pub inline fn object(self: *Self, value: anytype) Object {
+                self.initProcess();
+                return Object.from(value, &self.process);
+            }
+            pub fn execute(self: *Self, stackObjects: ?[]const Object) void {
+                self.init(stackObjects);
+                _ = self.method.execute(self.getSp(), &self.process, self.getContext());
                 self.getProcess().dumpStack(self.getSp(), "return from execution");
             }
             pub fn matchStack(self: *const Self, expected: []const Object) !void {
                 const result = self.stack();
                 try std.testing.expectEqualSlices(Object, expected, result);
             }
+            pub fn runTest(self: *Self, source: []const Object, expected: []const Object) !void {
+                return self.runTestWithObjects(Object.empty, source, expected);
+            }
+            pub fn runTestWithObjects(self: *Self, objects: []const Object, source: []const Object, expected: []const Object) !void {
+                try self.runWithValidator(&validate, objects, source, expected);
+            }
+            pub const ValidateErrors = error{
+                TestAborted,
+                TestExpectedEqual,
+            };
+            pub fn runTestWithValidator(self: *Self, validator: *const fn (*Self, []const Object) ValidateErrors!void, source: []const Object, expected: []const Object) !void {
+                return self.runWithValidator(validator, Object.empty, source, expected);
+            }
+            fn runWithValidator(exe: *Self, validator: *const fn (*Self, []const Object) ValidateErrors!void, objects: []const Object, source: []const Object, expected: []const Object) !void {
+                exe.process.init(Nil());
+                try exe.resolve(objects);
+                exe.execute(source);
+                try std.testing.expect(exe.getContext() == @as(*Context, @ptrCast(&exe.ctxt)));
+                try validator(exe, expected);
+            }
+            fn validate(exe: *Self, expected: []const Object) ValidateErrors!void {
+                const result = exe.stack();
+                if (result.len > 0 and result[0] == failed) return error.TestAborted;
+                trace(
+                    \\run:
+                    \\  expected: {any}
+                    \\  result: {any}
+                    \\
+                , .{ expected, result });
+                try std.testing.expectEqualSlices(Object, expected, result);
+            }
         };
     }
-    pub fn initTest(title: []const u8, tup: anytype) Executer(countNonLabels(tup)) {
+    pub fn initTest(title: []const u8, tup: anytype) Executer(CompileTimeMethod(countNonLabels(tup))) {
         trace("ExecutionTest: {s}\n", .{title});
         return init(tup);
     }
-    fn init(comptime tup: anytype) Executer(countNonLabels(tup)) {
+    fn init(comptime tup: anytype) Executer(CompileTimeMethod(countNonLabels(tup))) {
         const ExeType = Executer(CompileTimeMethod(countNonLabels(tup)));
         return ExeType.new(compileMethod(Sym.yourself, 0, .testClass, tup));
-    }
-    pub fn runTest(title: []const u8, tup: anytype, source: []const Object, expected: []const Object) !void {
-        return runTestWithObjects(title, tup, Object.empty, source, expected);
-    }
-    pub fn runTestWithObjects(title: []const u8, comptime tup: anytype, objects: []const Object, source: []const Object, expected: []const Object) !void {
-        try runWithValidator(title, tup, &validate, objects, source, expected);
-    }
-    pub const ValidateErrors = error{
-        TestAborted,
-        TestExpectedEqual,
-    };
-    pub fn runTestWithValidator(title: []const u8, tup: anytype, validator: *const fn (anytype, []const Object) ValidateErrors!void, source: []const Object, expected: []const Object) !void {
-        return runWithValidator(title, tup, validator, Object.empty, source, expected);
-    }
-    fn runWithValidator(title: []const u8, comptime tup: anytype, validator: *const fn (anytype, []const Object) ValidateErrors!void, objects: []const Object, source: []const Object, expected: []const Object) !void {
-        trace("ExecutionTest: {s}\n", .{title});
-        var exe align(Process.alignment) = init(tup);
-        exe.process.init(Nil());
-        try exe.resolve(objects);
-        exe.execute(source, exe.method);
-        try std.testing.expect(exe.getContext() == &exe.ctxt);
-        try validator(&exe, expected);
-    }
-    fn validate(exe: anytype, expected: []const Object) ValidateErrors!void {
-        const result = exe.stack();
-        if (result.len > 0 and result[0] == failed) return error.TestAborted;
-        trace(
-            \\run:
-            \\  expected: {any}
-            \\  result: {any}
-            \\
-        , .{ expected, result });
-        try std.testing.expectEqualSlices(Object, expected, result);
     }
 
     pub fn mainSendTo(selector: Object, receiver: Object) !Object {

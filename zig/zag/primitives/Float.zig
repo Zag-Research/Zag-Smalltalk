@@ -93,15 +93,16 @@ pub const @"+" = struct {
         return @call(tailCall, process.check(context.npc), .{ context.tpc, newSp, process, context, unreachable });
     }
     test "simple add" {
-        try Execution.runTest(
+        var exe = Execution.initTest(
             "simple add",
-            .{ tf.primitive, 1 },
+            .{ tf.primitive, 1 });
+        try exe.runTest(
             &[_]Object{
-                Object.from(25.0, null),
-                Object.from(17.0, null),
+                exe.object(25.0),
+                exe.object(17.0),
             },
             &[_]Object{
-                Object.from(42.0, null),
+                exe.object(42.0),
             },
         );
     }

@@ -16,7 +16,7 @@ pub const compile_date = options.compile_date;
 pub const objectEncoding = options.objectEncoding;
 pub const max_classes = options.maxClasses;
 // must be more than HeapObject.maxLength*8 so externally allocated
-pub const process_total_size: usize = if (is_test) 1024 else if (testRun) 2048 else 64 * 1024;
+pub const process_total_size: usize = if (is_test or testRun) 2048 else 64 * 1024;
 
 pub const debugging = false;
 pub const logThreadExecution = debugging;
@@ -64,4 +64,7 @@ pub fn printConfig() void {
 }
 comptime {
     @setEvalBranchQuota(100000);
+}
+test {
+    // printConfig();
 }

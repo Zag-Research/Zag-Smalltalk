@@ -59,11 +59,11 @@ pub const Object = packed union {
     pub inline fn False() Object {
         return Object.from(&InMemory.False, null);
     }
-    
+
     pub inline fn True() Object {
         return Object.from(&InMemory.True, null);
     }
-    
+
     pub inline fn Nil() Object {
         return Object.from(&InMemory.Nil, null);
     }
@@ -211,7 +211,7 @@ pub const Object = packed union {
         };
         return oImm(group, hash);
     }
-    
+
     // Add fromNativeF for compatibility
     pub inline fn fromNativeF(t: f64, maybeProcess: ?*Process) object.Object {
         return from(t, maybeProcess);
@@ -239,7 +239,7 @@ pub const Object = packed union {
     pub inline fn rawU(self: Object) u64 {
         return @bitCast(self);
     }
-    
+
     inline fn rawI(self: Object) i64 {
         return @bitCast(self.rawU());
     }
@@ -340,7 +340,7 @@ pub const Object = packed union {
     }
 
     // Add symbolHash method
-    pub inline fn symbolHash(self: Object) ?u32 {
+    pub inline fn symbolHash(self: Object) ?u24 {
         if (self.isSymbol()) {
             return @as(u32, self.to(HeapObjectPtr).*.header.hash);
         }
@@ -363,9 +363,8 @@ pub const Object = packed union {
 
     pub inline fn withPrimitive(self: Object, prim: u64) Object {
         // For spur encoding, we can't easily embed primitives in objects
-        // This is a placeholder implementation
-        _ = prim;
-        return self;
+        // However, this is only done for signature objects, which already aren't quite valid
+        return @bitCast(self.rawU() | prim << 40);
     }
 
     pub inline fn extraValue(self: Object) Object {

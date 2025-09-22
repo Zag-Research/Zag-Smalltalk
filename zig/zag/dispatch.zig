@@ -364,7 +364,7 @@ pub const threadedFunctions = struct {
         }
         test "returnSelf" {
             if (true) return error.NotImplemented;
-            try Execution.runTest(
+            var exe = Execution.initTest(
                 "returnSelf",
                 .{
                     tf.pushLiteral,
@@ -375,9 +375,10 @@ pub const threadedFunctions = struct {
                     2,
                     tf.pushLiteral,
                     99,
-                },
-                &[_]Object{Object.from(42, null)},
-                &[_]Object{Object.from(42, null)},
+                });
+            try exe.runTest(
+                &[_]Object{exe.object(42)},
+                &[_]Object{exe.object(42)},
             );
         }
     };
@@ -398,7 +399,7 @@ pub const threadedFunctions = struct {
         }
         test "returnTopNoContext" {
             if (true) return error.NotImplemented;
-            try Execution.runTest(
+            var exe = Execution.initTest(
                 "returnTopNoContext",
                 .{
                     tf.pushLiteral,
@@ -409,9 +410,10 @@ pub const threadedFunctions = struct {
                     2,
                     tf.pushLiteral,
                     99,
-                },
+                });
+            try exe.runTest(
                 &[_]Object{True()},
-                &[_]Object{Object.from(42, null)},
+                &[_]Object{exe.object(42)},
             );
         }
     };

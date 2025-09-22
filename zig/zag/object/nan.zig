@@ -145,6 +145,9 @@ pub const Object = packed struct(u64) {
     pub inline fn high16(self: object.Object) u16 {
         return @intFromEnum(self.classIndex);
     }
+    pub inline fn withPrimitive(self: object.Object, prim: u64) object.Object {
+        return @bitCast(self.rawU() | prim << 40);
+    }
     pub inline fn makeImmediate(cls: ClassIndex, low32: u32) object.Object {
         return @bitCast(Group.immediates.base() | (@as(u64, @intFromEnum(cls)) << 32) | low32);
     }
@@ -432,3 +435,4 @@ test "all generated NaNs are positive" {
     try v(inf * 0.0);
     try v(std.math.nan(f64));
 }
+test "test of test-all-encodings" {}

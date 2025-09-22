@@ -61,7 +61,7 @@ pub const branch = struct {
             ":label",
         });
         assert(@alignOf(@TypeOf(exe)) > 50);
-        try exe.execute(Object.empty);
+        exe.execute(Object.empty);
         try exe.matchStack(Object.empty);
     }
 };
@@ -96,7 +96,7 @@ pub const classCase = struct {
     }
     test "classCase match" {
         const classes = Object.PackedObject.classes;
-        try Execution.runTest(
+        var exe = Execution.initTest(
             "classCase match",
             .{
                 tf.classCase,
@@ -110,14 +110,15 @@ pub const classCase = struct {
                 tf.pushLiteral,
                 42,
                 ":end",
-            },
+            });
+        try exe.runTest(
             &[_]Object{True()},
-            &[_]Object{Object.from(42, null)},
+            &[_]Object{exe.object(42)},
         );
     }
     test "classCase no match" {
         const classes = Object.PackedObject.classes;
-        try Execution.runTest(
+        var exe = Execution.initTest(
             "classCase no match",
             .{
                 tf.classCase,
@@ -131,14 +132,15 @@ pub const classCase = struct {
                 tf.pushLiteral,
                 17,
                 ":end",
-            },
+            });
+        try exe.runTest(
             &[_]Object{False()},
-            &[_]Object{Object.from(42, null)},
+            &[_]Object{exe.object(42)},
         );
     }
     test "classCase no match - leave" {
         const classes = Object.PackedObject.classes;
-        try Execution.runTest(
+        var exe = Execution.initTest(
             "classCase no match - leave",
             .{
                 tf.classCase,
@@ -150,7 +152,8 @@ pub const classCase = struct {
                 tf.pushLiteral,
                 17,
                 ":end",
-            },
+            });
+        try exe.runTest(
             &[_]Object{False()},
             &[_]Object{False()},
         );
@@ -162,15 +165,16 @@ pub const drop = struct {
         return @call(tailCall, process.check(pc.prim()), .{ pc.next(), newSp, process, context, extra });
     }
     test "drop" {
-        try Execution.runTest(
+        var exe = Execution.initTest(
             "drop",
-            .{tf.drop},
+            .{tf.drop});
+        try exe.runTest(
             &[_]Object{
-                Object.from(17, null),
-                Object.from(42, null),
+                exe.object(17),
+                exe.object(42),
             },
             &[_]Object{
-                Object.from(42, null),
+                exe.object(42),
             },
         );
     }
@@ -186,17 +190,18 @@ pub const dup = struct {
         }
     }
     test "dup" {
-        try Execution.runTest(
+        var exe = Execution.initTest(
             "dup",
-            .{tf.dup},
+            .{tf.dup});
+        try exe.runTest(
             &[_]Object{
-                Object.from(42, null),
-                Object.from(17, null),
+                exe.object(42),
+                exe.object(17),
             },
             &[_]Object{
-                Object.from(42, null),
-                Object.from(42, null),
-                Object.from(17, null),
+                exe.object(42),
+                exe.object(42),
+                exe.object(17),
             },
         );
     }
@@ -212,17 +217,18 @@ pub const over = struct {
         }
     }
     test "over" {
-        try Execution.runTest(
+        var exe = Execution.initTest(
             "over",
-            .{tf.over},
+            .{tf.over});
+        try exe.runTest(
             &[_]Object{
-                Object.from(17, null),
-                Object.from(42, null),
+                exe.object(17),
+                exe.object(42),
             },
             &[_]Object{
-                Object.from(42, null),
-                Object.from(17, null),
-                Object.from(42, null),
+                exe.object(42),
+                exe.object(17),
+                exe.object(42),
             },
         );
     }
@@ -255,21 +261,22 @@ pub const popAssociationValue = struct {
         });
         association.setLiterals(&.{Nil()}, &.{});
         if (true) return error.SkipZigTest;
-        try Execution.runTestWithObjects(
+        var exe = Execution.initTest(
             "popAssociationValue",
             .{
                 tf.popAssociationValue,
                 "0object",
-            },
+            });
+        try exe.runTestWithObjects(
             &.{
                 association.asObject(),
             },
             &[_]Object{
-                Object.from(42, null),
+                exe.object(42),
             },
             &[_]Object{},
         );
-        try expectEqual(Object.from(42, null), association.objects[2]);
+        try expectEqual(exe.object(42), association.objects[2]);
     }
 };
 pub const push = struct {
@@ -297,22 +304,23 @@ pub const push = struct {
     }
     test "push" {
         if (true) return error.UnimplementedTest;
-        try Execution.runTest(
+        var exe = Execution.initTest(
             "push",
-            .{ tf.pushLocal, 1, tf.pushLocal, 4 },
+            .{ tf.pushLocal, 1, tf.pushLocal, 4 });
+        try exe.runTest(
             &[_]Object{
-                Object.from(42, null),
-                Object.from(17, null),
-                Object.from(2, null),
-                Object.from(3, null),
+                exe.object(42),
+                exe.object(17),
+                exe.object(2),
+                exe.object(3),
             },
             &[_]Object{
-                Object.from(3, null),
-                Object.from(17, null),
-                Object.from(42, null),
-                Object.from(17, null),
-                Object.from(2, null),
-                Object.from(3, null),
+                exe.object(3),
+                exe.object(17),
+                exe.object(42),
+                exe.object(17),
+                exe.object(2),
+                exe.object(3),
             },
         );
     }
@@ -334,18 +342,19 @@ pub const pushAssociationValue = struct {
             "0Nil",
             42,
         });
-        try Execution.runTestWithObjects(
+        var exe = Execution.initTest(
             "pushAssociationValue",
             .{
                 tf.pushAssociationValue,
                 "0object",
-            },
+            });
+        try exe.runTestWithObjects(
             &.{
                 association.asObject(),
             },
             &[_]Object{},
             &[_]Object{
-                Object.from(42, null),
+                exe.object(42),
             },
         );
     }
@@ -364,16 +373,17 @@ pub const pushLiteral = struct {
         }
     }
     test "pushLiteral" {
-        try Execution.runTest(
+        var exe = Execution.initTest(
             "pushLiteral",
             .{
                 tf.pushLiteral,
                 17,
                 tf.pushLiteral,
                 42,
-            },
+            });
+        try exe.runTest(
             &[_]Object{},
-            &[_]Object{ Object.from(42, null), Object.from(17, null) },
+            &[_]Object{ exe.object(42), exe.object(17) },
         );
     }
 };

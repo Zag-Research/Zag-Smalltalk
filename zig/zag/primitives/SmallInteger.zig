@@ -115,30 +115,32 @@ pub const @"+" = struct {
         return @call(tailCall, process.check(context.npc), .{ context.tpc, newSp, process, context, unreachable });
     }
     test "simple add" {
-        try Execution.runTest(
+        var exe = Execution.initTest(
             "simple add",
-            .{ tf.primitive, 1 },
+            .{ tf.primitive, 1 });
+        try exe.runTest(
             &[_]Object{
-                Object.from(25, null),
-                Object.from(17, null),
+                exe.object(25),
+                exe.object(17),
             },
             &[_]Object{
-                Object.from(42, null),
+                exe.object(42),
             },
         );
     }
     test "simple add with overflow" {
-        try Execution.runTest(
+        var exe = Execution.initTest(
             "simple add with overflow",
-            .{ tf.primitive, 1, tf.pushLiteral, 42 },
+            .{ tf.primitive, 1, tf.pushLiteral, 42 });
+        try exe.runTest(
             &[_]Object{
-                Object.from(4, null),
-                Object.from(Object.maxInt, null),
+                exe.object(4),
+                exe.object(Object.maxInt),
             },
             &[_]Object{
-                Object.from(42, null),
-                Object.from(4, null),
-                Object.from(Object.maxInt, null),
+                exe.object(42),
+                exe.object(4),
+                exe.object(Object.maxInt),
             },
         );
     }

@@ -288,7 +288,7 @@ pub const ObjectFunctions = struct {
         self: Object,
         writer: anytype,
     ) !void {
-        if (true) {
+        if (false) {
             try writer.print("Object({x})", .{@as(u64, @bitCast(self))});
             return;
         }
@@ -360,7 +360,7 @@ test "from conversion" {
     const p = &process;
     //    try ee(@as(f64, @bitCast((Object.from(3.14)))), 3.14);
     try ee((Object.from(3.14, p)).immediate_class(), .Float);
-    try std.testing.expect((Object.from(3.14, p)).isDouble());
+    try std.testing.expect((Object.from(3.14, p)).isFloat());
     try ee((Object.from(3, null)).immediate_class(), .SmallInteger);
     try std.testing.expect((Object.from(3, null)).isInt());
     try std.testing.expect((Object.from(false, null)).isBool());
@@ -401,7 +401,7 @@ test "printing" {
     var fbs = std.io.fixedBufferStream(&buf);
     const stream = fbs.writer();
     try stream.print("{f}\n", .{Object.from(42, null)});
-    try stream.print("{f}\n", .{symbol.symbols.yourself.asObject()});
+    try stream.print("{f}\n", .{symbol.symbols.yourself});
     try std.testing.expectEqualSlices(u8, "42\n#yourself\n", fbs.getWritten());
 }
 const Buf = blk: {

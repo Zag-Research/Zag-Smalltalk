@@ -131,7 +131,7 @@ pub const Object = packed struct(u64) {
     pub inline fn fromNativeF(t: f64, maybeProcess: ?*Process) object.Object {
         return from(t, maybeProcess);
     }
-    pub inline fn symbolHash(self: object.Object) ?u40 {
+    pub inline fn symbolHash(self: object.Object) ?u24 {
         if (self.isImmediateClass(.Symbol)) return @truncate(self.hash);
         return null;
     }
@@ -143,7 +143,7 @@ pub const Object = packed struct(u64) {
     }
     pub const testU = rawU;
     pub const testI = rawI;
-    inline fn rawU(self: Self) u64 {
+    pub inline fn rawU(self: Self) u64 {
         return @bitCast(self);
     }
     inline fn rawI(self: object.Object) i64 {

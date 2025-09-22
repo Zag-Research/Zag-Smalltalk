@@ -176,7 +176,7 @@ pub const makeJITPrimitiveGenerator = if (config.notZag) struct {} else struct {
             tf.inlinePrimitive, 900,
             tf.inlinePrimitive, 901,
         });
-        try exe.execute(&[_]Object{}); // initial stack
+        exe.execute(&[_]Object{}); // initial stack
         const result = exe.stack()[0];
         const spec = result.rawSpecial();
         try expectEqual(llvmClass, spec.imm);

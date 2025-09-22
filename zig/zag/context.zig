@@ -420,9 +420,9 @@ pub const threadedFunctions = struct {
                 tf.pushLiteral,
                 42,
             });
-            try exe.execute(&[_]Object{Object.from(17, null)});
-            try exe.matchStack(&[_]Object{Object.from(42, null)});
-            try expect(exe.getContext() != &exe.ctxt);
+            exe.execute(&[_]Object{Object.from(17, &exe.process)});
+            try exe.matchStack(&[_]Object{Object.from(42, &exe.process)});
+            try expect(exe.getContext() != @as(*Context, @ptrCast(&exe.ctxt)));
         }
         // test "init context" {
         //     //    const expectEqual = std.testing.expectEqual;
@@ -450,7 +450,7 @@ pub const threadedFunctions = struct {
         pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
             if (extra.noContext())
                 return @call(tailCall, pushContext.threadedFn, .{ pc.prev(), sp, process, context, extra });
-            const value = Object.from(context, null);
+            const value = Object.from(context, process);
             if (true) unreachable;
             if (sp.push(value)) |newSp| {
                 return @call(tailCall, process.check(pc.prim()), .{ pc.next(), newSp, process, context, extra });
