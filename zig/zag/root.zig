@@ -1,7 +1,4 @@
-const std = @import("std");
-//const zag = @import("zag");
 test {
-    //std.testing.refAllDeclsRecursive(zag);
     _ = .{
         @import("config.zig"),
         @import("utilities.zig"),

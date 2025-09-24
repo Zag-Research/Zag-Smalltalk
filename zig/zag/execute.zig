@@ -526,7 +526,7 @@ fn CompileTimeMethod(comptime counts: usize) type {
         //         @compileError("CompiledMethod prefix not the same as CompileTimeMethod == " ++ s);
         // }
         pub fn dump(self: *Self) void {
-            @as(*CompiledMethod, @ptrCast(self)).dump();
+            self.asCompiledMethod().dump();
             std.debug.print("CompiledMethod dump\n", .{});
         }
         pub fn init(name: anytype, comptime locals: u11, function: ?*const fn (PC, SP, *Process, *Context, Extra) Result, class: ClassIndex, tup: anytype) Self {
@@ -1019,15 +1019,20 @@ pub const Execution = struct {
         return ExeType.new(compileMethod(Sym.yourself, 0, .testClass, tup));
     }
 
-    pub fn mainSendTo(selector: Object, receiver: Object) !Object {
-        trace("Sending: {f} to {f}\n", .{ selector, receiver });
-        var exe = Executer(void).new({});
-        exe.init(&[_]Object{receiver});
-        exe.getContext().npc = Code.end;
-        const class = receiver.get_class();
-        const signature = Signature.from(selector, class);
-        const method = class.lookupMethodForClass(signature);
-        exe.execute(method);
-        return exe.fullStack()[0];
-    }
+    pub const MainExecuter = struct {
+        exe: Executer(void),
+        pub fn new() !MainExecuter {
+            return .{.exe = Executer(void).new({})};
+        }
+        pub fn sendTo(self: *MainExecuter, selector: Object, receiver: Object) !Object {
+            trace("Sending: {f} to {f}\n", .{ selector, receiver });
+            self.exe.init(&[_]Object{receiver});
+            self.exe.getContext().npc = Code.end;
+            const class = receiver.get_class();
+            const signature = Signature.from(selector, class);
+            const method = class.lookupMethodForClass(signature);
+            self.exe.execute(method);
+            return self.exe.fullStack()[0];
+        }
+    };
 };

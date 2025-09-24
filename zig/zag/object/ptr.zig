@@ -100,7 +100,7 @@ pub const Object = packed struct(u64) {
     }
     pub const testU = rawU;
     pub const testI = rawI;
-    inline //
+    pub inline //
     fn rawU(self: object.Object) u64 {
         return self.ref.data.unsigned;
     }
@@ -155,6 +155,9 @@ pub const Object = packed struct(u64) {
     }
     pub inline fn toNatNoCheck(self: Object) u64 {
         return self.ref.data.unsigned;
+    }
+    pub inline fn withPrimitive(self: object.Object, prim: u64) object.Object {
+        return @bitCast(self.rawU() | prim << 40);
     }
     pub inline fn withClass(self: Object, class: ClassIndex) Object {
         if (!self.isSymbol()) std.debug.panic("not a Symbol: {f}", self);
