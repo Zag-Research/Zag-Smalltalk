@@ -180,6 +180,7 @@ The name is escaping me....something like Micro Systems....
 - [Zig reference](https://ziglang.org/documentation/master/#Assembly) and [Zig Learn](https://ziglearn.org/chapter-2/#random-numbers)
 - [Zig 0.10.0 release notes](https://ziglang.org/download/0.10.0/release-notes.html#Function-Pointers)
 - [alternate test runner](https://gist.github.com/karlseguin/c6bea5b35e4e8d26af6f81c22cb5d76b)
+- [Custom Test Runner Blog Post: Karl Seguin](https://www.openmymind.net/Using-A-Custom-Test-Runner-In-Zig/)
 
 ## Miscellaneous
 - [Hidden Heroes](https://hiddenheroes.netguru.com/)
