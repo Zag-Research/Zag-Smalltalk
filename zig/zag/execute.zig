@@ -1019,19 +1019,22 @@ pub const Execution = struct {
         return ExeType.new(compileMethod(Sym.yourself, 0, .testClass, tup));
     }
 
-    pub const MainExecuter = struct {
-        exe: Executer(void),
-        pub fn new() !MainExecuter {
-            return .{.exe = Executer(void).new({})};
+    pub const MainExecutor = struct {
+        exe: Executer(*const CompiledMethod),
+        pub fn new() MainExecutor {
+            return .{.exe = Executer(*const CompiledMethod).new(undefined)};
         }
-        pub fn sendTo(self: *MainExecuter, selector: Object, receiver: Object) !Object {
+        pub inline fn object(self: *MainExecutor, value: anytype) Object {
+            return self.exe.object(value);
+        }
+        pub fn sendTo(self: *MainExecutor, selector: Object, receiver: Object) !Object {
             trace("Sending: {f} to {f}\n", .{ selector, receiver });
-            self.exe.init(&[_]Object{receiver});
+            self.exe.init(Object.empty);
             self.exe.getContext().npc = Code.end;
             const class = receiver.get_class();
             const signature = Signature.from(selector, class);
-            const method = class.lookupMethodForClass(signature);
-            self.exe.execute(method);
+            self.exe.method = class.lookupMethodForClass(signature);
+            self.exe.execute(&[_]Object{receiver});
             return self.exe.fullStack()[0];
         }
     };

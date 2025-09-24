@@ -84,7 +84,7 @@ const fibInteger = struct {
             &nullMethod,              tf.inlinePrimitive,
             plus,                     tf.returnTop,
         });
-    var exe: *MainExecutor = undefined;
+    var exe: MainExecutor = undefined;
     fn init() void {
         exe = MainExecutor.new();
         fib.resolve(&[_]Object{ exe.object(1), exe.object(2) }) catch unreachable;
@@ -141,7 +141,9 @@ const fibInteger0 = struct {
             &nullMethod,              tf.inlinePrimitive,
             plus,                     tf.returnTop,
         });
+    var exe: MainExecutor = undefined;
     fn init() void {
+        exe = MainExecutor.new();
         fib.resolve(&[_]Object{ exe.object(1), exe.object(2) }) catch unreachable;
         fib.initExecute();
         zag.dispatch.addMethod(@ptrCast(&fib));
@@ -196,7 +198,9 @@ const fibIntegerBr = struct {
             tf.inlinePrimitive,       plus,
             tf.returnTop,
         });
+    var exe: MainExecutor = undefined;
     fn init() void {
+        exe = MainExecutor.new();
         fib.resolve(&[_]Object{ exe.object(1), exe.object(2) }) catch unreachable;
         fib.initExecute();
         zag.dispatch.addMethod(@ptrCast(&fib));
@@ -211,10 +215,8 @@ const fibIntegerBr = struct {
                 unreachable;
             }
         }
-        std.debug.print(" init complete\n", .{});
     }
     fn runIt(comptime _: void, proof: usize) usize {
-        std.debug.print(" runIt\n", .{});
         const obj = exe.sendTo(Sym.fibonacci, exe.object(fibN)) catch unreachable;
         if (obj.nativeU()) |result| {
             return result + proof;
@@ -253,7 +255,9 @@ const fibFloat = struct {
             tf.inlinePrimitive,       plus,
             tf.returnTop,
         });
+    var exe: MainExecutor = undefined;
     fn init() void {
+        exe = MainExecutor.new();
         fib.resolve(&[_]Object{ exe.object(1.0), exe.object(2.0) }) catch unreachable;
         fib.initExecute();
         zag.dispatch.addMethod(@ptrCast(&fib));
@@ -272,7 +276,7 @@ const fibFloat = struct {
         }
     }
     fn runIt(comptime _: void, proof: usize) usize {
-        _ = exe.sendTo(Sym.fibonacci, exe.object(@as(f64, @floatFromInt(fibN)), null)) catch unreachable;
+        _ = exe.sendTo(Sym.fibonacci, exe.object(@as(f64, @floatFromInt(fibN)))) catch unreachable;
         return proof;
     }
 };
@@ -366,5 +370,5 @@ pub fn main() !void {
 }
 const testRun = zag.config.testRun;
 const fibN = if (testRun) 5 else 40;
-const nRuns = if (testRun) 1 else 10;
+const nRuns = if (testRun) 1 else 5;
 const warmups = if (testRun) 0 else null;
