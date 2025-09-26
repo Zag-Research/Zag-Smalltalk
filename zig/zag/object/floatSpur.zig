@@ -107,7 +107,7 @@ inline fn encode_check(value: f64) !u64 {
 }
 
 pub inline fn decode(self: u64) f64 {
-    if (self <= 0xC) {
+    if (self <= 0xC) {@branchHint(.unlikely);
         if (self == 4) {
             return 0.0;
         } else if (self == 0xC) {
@@ -173,9 +173,16 @@ const decode_values = [_]u64{
     0x859000000000000c, // encoded -100.0
     0x0000000000000014, // encoded smallest positive value
     0xfffffffffffffff4, // encoded largest negative value
+    0x7f00000000000004, // repetition of valid values
+    0x7f0000000000000c,
+    0x80921fb54442d184,
+    0x8450000000000004,
+    0x80921f9f01b866ec,
+    0x8590000000000004,
+    0x859000000000000c,
+    0xfffffffffffffff4,
 };
 
-const iterations_d = iterations_spur / decode_values.len;
 pub fn encode_valid(iterations: u64) void {
     for (0..iterations / valid_values.len) |_| {
         for (valid_values) |val| {
@@ -199,7 +206,7 @@ pub fn decode_valid(iterations: u64) void {
 }
 // zig run -Doptimize=ReleaseFast floatSpur.zig
 pub fn main() void {
-    
+
     if (false) {
         for (valid_values) |val| {
             std.debug.print("0x{x:0>16},\n", .{encode(val) catch unreachable});
