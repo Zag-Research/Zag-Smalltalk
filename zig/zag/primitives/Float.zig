@@ -12,6 +12,7 @@ const Extra = Context.Extra;
 const Result = execute.Result;
 const Execution = execute.Execution;
 const CompiledMethod = execute.CompiledMethod;
+const fromPrimitive = execute.Signature.fromPrimitive;
 const Process = zag.Process;
 const object = zag.object;
 const Object = object.Object;
@@ -95,7 +96,7 @@ pub const @"+" = struct {
     test "simple add" {
         var exe = Execution.initTest(
             "simple add",
-            .{ tf.primitive, 1 });
+            .{ tf.primitive, comptime fromPrimitive(1) });
         try exe.runTest(
             &[_]Object{
                 exe.object(25.0),

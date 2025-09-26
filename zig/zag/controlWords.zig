@@ -57,7 +57,7 @@ pub const branch = struct {
             tf.branch,
             "label",
             tf.push,
-            17,
+            Object.tests[0],
             ":label",
         });
         assert(@alignOf(@TypeOf(exe)) > 50);
@@ -103,17 +103,17 @@ pub const classCase = struct {
                 comptime classes(&.{.True}),
                 "true",
                 tf.pushLiteral,
-                17,
+                Object.tests[1],
                 tf.branch,
                 "end",
                 ":true",
                 tf.pushLiteral,
-                42,
+                Object.tests[0],
                 ":end",
             });
         try exe.runTest(
             &[_]Object{True()},
-            &[_]Object{exe.object(42)},
+            &[_]Object{Object.tests[0]},
         );
     }
     test "classCase no match" {
@@ -125,17 +125,17 @@ pub const classCase = struct {
                 comptime classes(&.{ .True, .False }),
                 "true",
                 tf.pushLiteral,
-                42,
+                Object.tests[0],
                 tf.branch,
                 "end",
                 ":true",
                 tf.pushLiteral,
-                17,
+                Object.tests[1],
                 ":end",
             });
         try exe.runTest(
             &[_]Object{False()},
-            &[_]Object{exe.object(42)},
+            &[_]Object{Object.tests[0]},
         );
     }
     test "classCase no match - leave" {
@@ -150,7 +150,7 @@ pub const classCase = struct {
                 "end",
                 ":true",
                 tf.pushLiteral,
-                17,
+                Object.tests[0],
                 ":end",
             });
         try exe.runTest(
@@ -340,7 +340,7 @@ pub const pushAssociationValue = struct {
             ":def",
             c.Association,
             "0Nil",
-            42,
+            Object.tests[0],
         });
         var exe = Execution.initTest(
             "pushAssociationValue",
@@ -377,13 +377,13 @@ pub const pushLiteral = struct {
             "pushLiteral",
             .{
                 tf.pushLiteral,
-                17,
+                Object.tests[1],
                 tf.pushLiteral,
-                42,
+                Object.tests[0],
             });
         try exe.runTest(
             &[_]Object{},
-            &[_]Object{ exe.object(42), exe.object(17) },
+            &[_]Object{ Object.tests[0], Object.tests[1] },
         );
     }
 };

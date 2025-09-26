@@ -418,7 +418,7 @@ pub const threadedFunctions = struct {
             var exe = Execution.initTest("pushContext", .{
                 tf.pushContext,
                 tf.pushLiteral,
-                42,
+                Object.tests[0],
             });
             exe.execute(&[_]Object{Object.from(17, &exe.process)});
             try exe.matchStack(&[_]Object{Object.from(42, &exe.process)});

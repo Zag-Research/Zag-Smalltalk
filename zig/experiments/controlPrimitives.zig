@@ -166,7 +166,7 @@ test "simple return via Execution" {
     const expectEqual = std.testing.expectEqual;
     Process.resetForTest();
     var method = compileMethod(Sym.yourself, 0, 0, .testClass, .{
-        &pushLiteral,        42,
+        &pushLiteral,        Object.tests[0],
         &returnTopNoContext, 1,
     });
     var te = Execution.new();
@@ -184,7 +184,7 @@ test "context return via Execution" {
     Process.resetForTest();
     var method = compileMethod(Sym.@"at:", 0, 0, .testClass, .{
         &pushContext,       "^",
-        &pushLiteral,       42,
+        &pushLiteral,       Object.tests[0],
         &returnWithContext,
     });
     var te = Execution.new();

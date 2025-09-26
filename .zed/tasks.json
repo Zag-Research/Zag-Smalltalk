@@ -20,13 +20,13 @@
   },
   {
     "label": "test zag encoding",
-    "command": "zig build test -Dencoding=zag --summary all -freference-trace=20",
+    "command": "zig build test -Dencoding=zag --summary all -freference-trace=5",
     "cwd": "$ZED_WORKTREE_ROOT/zig/zag",
     //"hide": "on_success",
   },
   {
     "label": "test ptr encoding",
-    "command": "zig build test -Dencoding=ptr -Dtrace --summary all -freference-trace=20",
+    "command": "zig build test -Dencoding=ptr -Dtrace --summary all -freference-trace=5",
     "cwd": "$ZED_WORKTREE_ROOT/zig/zag",
     //"hide": "on_success",
   },

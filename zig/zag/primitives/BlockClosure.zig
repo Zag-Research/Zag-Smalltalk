@@ -203,7 +203,7 @@ pub const threadedFns = struct {
             const exeheap = exe.getHeap();
             switch (objectEncoding) {
                 .zag => {
-                    try expectEqual(.ThunkInstance, result.which_class(false));
+                    try expectEqual(.ThunkInstance, result.which_class());
                     try expectEqual(2, exeheap.len);
                     try expectEqual(obj, exeheap[1].asObjectValue());
                 },
@@ -250,7 +250,7 @@ pub const threadedFns = struct {
             if (true) return error.NotImplemented;
             var exe = Execution.initTest("pushClosure", .{
                 tf.pushLiteral,
-                42,
+                Object.tests[0],
                 tf.pushLiteral,
                 "1True",
                 tf.pushLiteral,

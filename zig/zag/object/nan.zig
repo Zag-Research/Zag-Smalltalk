@@ -359,7 +359,7 @@ pub const Object = packed struct(u64) {
     inline fn nanPointerAsInt(self: Object) usize {
         return @as(u48, @truncate(@as(usize, @bitCast(self))));
     }
-    pub inline fn which_class(self: object.Object, comptime full: bool) ClassIndex {
+    pub inline fn which_class(self: object.Object) ClassIndex {
         switch (self.tag) {
             .smallInteger => {@branchHint(.likely); return .SmallInteger;},
             .immediates => {@branchHint(.likely); return self.classIndex;},
@@ -371,7 +371,7 @@ pub const Object = packed struct(u64) {
             .thunkInstance => {@branchHint(.unlikely); return .ThunkInstance;},
             .thunkHeap => {@branchHint(.unlikely); return .ThunkHeap;},
             .picPointer => {@branchHint(.unlikely); @panic("nonLocalThunk");},
-            .heap => if (full) return self.to(HeapObjectPtr).*.getClass() else return .Object,
+            .heap => return self.to(HeapObjectPtr).*.getClass(),
             else => {@branchHint(.likely); return .Float;},
         }
     }
@@ -389,7 +389,6 @@ pub const Object = packed struct(u64) {
     pub const format = OF.format;
     pub const getField = OF.getField;
     pub const get_class = OF.get_class;
-    pub const immediate_class = OF.immediate_class;
     pub const isBool = OF.isBool;
     pub const isIndexable = OF.isIndexable;
     pub const isNil = OF.isNil;
@@ -405,6 +404,7 @@ pub const Object = packed struct(u64) {
     pub const primitive = @import("zag.zig").Object.primitive;
     pub const symbol = @import("zag.zig").Object.symbol;
     pub const signature = zag.execute.Signature.signature;
+    pub const tests = OF.tests;
 };
 test "all generated NaNs are positive" {
     // test that all things that generate NaN generate positive ones

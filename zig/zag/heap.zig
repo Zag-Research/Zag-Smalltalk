@@ -21,7 +21,6 @@ const True = object.True;
 const ClassIndex = object.ClassIndex;
 const utilities = zag.utilities;
 const largerPowerOf2 = utilities.largerPowerOf2;
-const inversePhi24 = utilities.inversePhi(u24);
 const assert = std.debug.assert;
 pub const Format = enum(u7) {
     immutableSizeZero = 0,
@@ -336,7 +335,7 @@ pub const HeapObjectPtrIterator = struct {
 //     var o1b = compileObject(.{
 //         True,
 //         Sym.i_0, // alternate reference to replacement Object #1
-//         42,
+//         Object.tests[0],
 //         c.Class, // third HeapObject
 //     });
 //     o1b.setLiterals(&[_]Object{Nil}, &[_]ClassIndex{});
@@ -370,7 +369,7 @@ pub const HeapObjectPtrIterator = struct {
 //     // const ho3 = AllocationInfo.calc(o3.len, null, Object, false).fillFooters(@ptrCast(&o3[o3.len-1]), ClassIndex.Object, .static, 0, Object);
 // }
 inline fn hashFromPtr(ptr: anytype) u24 {
-    return @truncate((@intFromPtr(ptr) >> 3) *% inversePhi24);
+    return utilities.ProspectorHash.hash24(@truncate(@intFromPtr(ptr) >> 3));
 }
 pub const AllocationInfo = struct {
     format: Format,

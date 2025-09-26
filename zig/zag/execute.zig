@@ -30,7 +30,6 @@ const HeapAllocationPtr = globalArena.HeapAllocationPtr;
 //const class = zag.class;
 const symbol = zag.symbol;
 const Sym = symbol.symbols;
-const phi32 = zag.utilities.inversePhi(u32);
 const threadedFn = zag.threadedFn;
 const tf = threadedFn.Enum;
 
@@ -65,6 +64,9 @@ pub const Signature = packed struct {
     pub fn fromHashPrimitive(selector: u32, primitiveNumber: u16) Signature {
         return .{ .int = @bitCast(Create{ .selector = selector, .class = @enumFromInt(primitiveNumber) }) };
     }
+    pub fn fromPrimitive(primitiveNumber: u16) Signature {
+        return .{ .int = @bitCast(Create{ .selector = 0, .class = @enumFromInt(primitiveNumber) }) };
+    }
     pub fn fromNameClass(name: anytype, class: ClassIndex) Signature {
         return .{ .int = @bitCast(Create{ .selector = @as(u32, name.numArgs()) << 24 | @as(u32, (name.symbolHash().?)), .class = class }) };
     }
@@ -87,8 +89,8 @@ pub const Signature = packed struct {
     pub inline fn asSymbol(self: Signature) Object {
         return symbol.fromHash((self.int & 0xffffff00) >> 8);
     }
-    pub inline fn primitive(self: Signature) u64 {
-        return self.int >> 40;
+    pub inline fn primitive(self: Signature) u16 {
+        return @intFromEnum(@as(Internal, @bitCast(self)).class);
     }
     pub const getClassIndex = primitive;
     pub inline fn getClass(self: Signature) ClassIndex {
@@ -293,8 +295,8 @@ pub const Code = union(enum) {
         //        @setRuntimeSafety(false);
         return self.object;
     }
-    pub inline fn objectOf(o: anytype) Code {
-        return Code{ .object = Object.from(o, null) };
+    pub inline fn objectOf(o: Object) Code {
+        return Code{ .object = o };
     }
     pub inline fn packedObjectOf(po: PackedObject) Code {
         return Code{ .packedObject = po };
@@ -559,8 +561,16 @@ fn CompileTimeMethod(comptime counts: usize) type {
                         code[n] = Code.primOf(threadedFn.threadedFn(field));
                         n = n + 1;
                     },
-                    Object, bool, @TypeOf(null), comptime_int, comptime_float => {
+                    Object => {
                         code[n] = Code.objectOf(field);
+                        n = n + 1;
+                    },
+                    bool => {
+                        code[n] = Code.objectOf(if (field) True() else False());
+                        n = n + 1;
+                    },
+                    @TypeOf(null) => {
+                        code[n] = Code.objectOf(Nil());
                         n = n + 1;
                     },
                     PackedObject => {
@@ -701,14 +711,15 @@ test "LookupLabel" {
 const print = std.io.getStdOut().writer().print;
 const p = @import("threadedFn.zig").Enum;
 test "compiling method" {
-    trace("Test: compiling method\n", .{});
+    const o1 = Object.tests[0];
+    const o2 = Object.tests[1];
     const expectEqual = std.testing.expectEqual;
     //@compileLog(&p.send);
     var m = compileMethod(Sym.yourself, 0, .testClass, .{
         ":abc", p.branch,
         "def",  "0True",
-        42,     ":def",
-        "abc",  3,
+        o1,     ":def",
+        "abc",  o2,
         null,
     });
     //TODO    m.setLiterals(&[_]Object{Sym.value}, &[_]Object{Object.from(42)});
@@ -719,9 +730,9 @@ test "compiling method" {
     try expectEqual(t[0].prim(), threadedFn.threadedFn(.branch));
     try expectEqual(t[1].codePtr, &m.code[4]);
     try expectEqual(t[2].object, True());
-    try expectEqual(t[3].object, Object.from(42, null));
+    try expectEqual(t[3].object, o1);
     try expectEqual(t[4].codePtr, &m.code[0]);
-    try expectEqual(t[5].object, Object.from(3, null));
+    try expectEqual(t[5].object, o2);
     try expectEqual(t[6].object, Nil());
 }
 
@@ -790,7 +801,7 @@ fn CompileTimeObject(comptime counts: usize) type {
                         if (@intFromEnum(header.classIndex) >= @intFromEnum(ClassIndex.ReplacementIndices)) {
                             header.classIndex = classes[@intFromEnum(ClassIndex.replace0) - @intFromEnum(header.classIndex)];
                         }
-                        header.hash ^= @truncate(@intFromPtr(o) *% phi32);
+                        header.hash ^= zag.utilities.ProspectorHash.hash24(@truncate(@intFromPtr(o)));
                         lastHeader = header;
                     } else {
                         const ob: u64 = @bitCast(o.*);
@@ -829,7 +840,7 @@ test "compileObject" {
         ":def",
         c.Class, // first HeapObject
         "second", // pointer to second object
-        42,
+        Object.tests[0],
         "1mref", // reference to replacement Object #1
         "third", // pointer to third object
         "0mref",
@@ -856,7 +867,7 @@ test "compileObject" {
     try expect(o.asObject().isHeapObject());
     //try expect(o.objects[9].equals(o.asObject()));
     //    try expectEqual(@as(u48, @truncate(o.asObject().rawU())), @as(u48, @truncate(@intFromPtr(&o.objects[8]))));
-    try expect(o.objects[2].equals(Object.from(42, null)));
+    try expect(o.objects[2].equals(Object.tests[0]));
     try expectEqual(o.objects[10].to(f64), Object.from(42.0, &process).to(f64));
     try expect(o.objects[3].equals(Nil()));
     try expect(o.objects[5].equals(True()));

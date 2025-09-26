@@ -186,7 +186,7 @@ pub const Object = packed struct(u64) {
         return @truncate(self.ref.data.unsigned >> 8);
     }
     pub inline //
-    fn from(value: anytype, maybeProcess: ?*Process) Object {
+    fn from(value: anytype, maybeProcess: *Process) Object {
         const T = @TypeOf(value);
         if (T == Object) return value;
         switch (@typeInfo(T)) {
@@ -252,7 +252,8 @@ pub const Object = packed struct(u64) {
         @panic("Trying to convert Object to " ++ @typeName(T));
     }
     pub inline //
-    fn which_class(self: Object, _: bool) ClassIndex {
+    fn which_class(self: Object) ClassIndex {
+        std.debug.print("which_class\n", .{});
         return self.ref.header.classIndex;
     }
     pub inline fn isMemoryAllocated(self: Object) bool {
@@ -288,7 +289,6 @@ pub const Object = packed struct(u64) {
     pub const format = OF.format;
     pub const getField = OF.getField;
     pub const get_class = OF.get_class;
-    pub const immediate_class = OF.immediate_class;
     pub const isBool = OF.isBool;
     pub const isIndexable = OF.isIndexable;
     pub const isNil = OF.isNil;
@@ -302,4 +302,5 @@ pub const Object = packed struct(u64) {
     pub const asVariable = zag.Context.asVariable;
     pub const PackedObject = object.PackedObject;
     pub const signature = zag.execute.Signature.signature;
+    pub const tests = OF.tests;
 };

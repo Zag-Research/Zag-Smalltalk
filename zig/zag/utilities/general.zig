@@ -1,31 +1,7 @@
 const std = @import("std");
-const phi = std.math.phi;
-// returns an odd number (changes u8) so all possible values are generated
-pub fn inversePhi(comptime T: type) T {
-    switch (@typeInfo(T)) {
-        .int => |int_info| switch (int_info.signedness) {
-            .unsigned => return @as(T, @intFromFloat(@as(f128, @floatFromInt(1 << int_info.bits)) / phi)) | 1,
-            else => {},
-        },
-        else => {},
-    }
-    @compileError("invalid type for inversePhi: " ++ @typeName(T));
-}
-test "check inversePhi" {
-    const expectEqual = std.testing.expectEqual;
-    try expectEqual(inversePhi(u64), 11400714819323198485);
-    try expectEqual(inversePhi(u32), 2654435769);
-    try expectEqual(inversePhi(u24), 10368889);
-    try expectEqual(inversePhi(u16), 40503);
-    try expectEqual(inversePhi(u8), 159);
-}
-// there isn't a closed form way to calculate this, but
 // https://en.wikipedia.org/wiki/Extended_Euclidean_algorithm#Computing_multiplicative_inverses_in_modular_structures
 // shows the Extended Eclidean algorithm can calculate in log time
-pub fn undoPhi(comptime T: type) T {
-    return inverse(T, inversePhi(T)) catch @panic("not invertible");
-}
-fn inverse(comptime T: type, a: T) !T {
+pub fn inverseMod(comptime T: type, a: T) !T {
     const n = 1 << @typeInfo(T).int.bits;
     var t: i128 = 0;
     var newt: i128 = 1;
@@ -45,56 +21,6 @@ fn inverse(comptime T: type, a: T) !T {
     return @truncate(@as(u128, @intCast(t)));
 }
 
-test "check undoPhi is inverse" {
-    const expectEqual = std.testing.expectEqual;
-    try expectEqual(undoPhi(u64) *% inversePhi(u64), 1);
-    try expectEqual(undoPhi(u32) *% inversePhi(u32), 1);
-    try expectEqual(undoPhi(u24) *% inversePhi(u24), 1);
-    try expectEqual(undoPhi(u16) *% inversePhi(u16), 1);
-    try expectEqual(undoPhi(u8) *% inversePhi(u8), 1);
-}
-test "check undoPhi" {
-    const expectEqual = std.testing.expectEqual;
-    try expectEqual(undoPhi(u64), 17428512612931826493);
-    try expectEqual(undoPhi(u32), 340573321);
-    try expectEqual(undoPhi(u24), 11764425);
-    try expectEqual(undoPhi(u16), 30599);
-    try expectEqual(undoPhi(u8), 95);
-}
-test "randomness of /phi - all values enumerated" {
-    const expectEqual = @import("std").testing.expectEqual;
-    var counts = [_]u32{0} ** 3;
-    // 24 case crashes because it's too big
-    // var data24 = [_]u24{0} ** (65536*256);
-    // const phi24 = inversePhi(u24);
-    // for (data24, 0..) |_, index| {
-    //     data24[@as(u24, @truncate(index)) *% phi24] += 1;
-    // }
-    // for (data24) |count| {
-    //     counts[count] += 1;
-    // }
-    // try expectEqual(counts[1], 65536*256);
-    var data16 = [_]u16{0} ** 65536;
-    const phi16 = inversePhi(u16);
-    for (data16, 0..) |_, index| {
-        data16[@as(u16, @truncate(index)) *% phi16] += 1;
-    }
-    for (data16) |count| {
-        counts[count] += 1;
-    }
-    try expectEqual(counts[1], 65536);
-
-    var data8 = [_]u16{0} ** 256;
-    const phi8 = inversePhi(u8);
-    for (data8, 0..) |_, index| {
-        data8[@as(u8, @truncate(index)) *% phi8] += 1;
-    }
-    counts[1] = 0;
-    for (data8) |count| {
-        counts[count] += 1;
-    }
-    try expectEqual(counts[1], 256);
-}
 pub inline fn bitsToRepresent(value: anytype) u7 {
     const T = @TypeOf(value);
     switch (@typeInfo(T)) {

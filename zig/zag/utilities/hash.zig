@@ -216,46 +216,169 @@ fn SAC_test(T: type, rng: fn (T) T, order: u64) f64 {
     }
     return chi;
 }
-// From: https://nullprogram.com/blog/2018/07/31/
-fn triple32(orig: u32) u32 {
-    var x = orig;
-    x ^= x >> 17;
-    x *%= 0xed5ad4bb;
-    x ^= x >> 11;
-    x *%= 0xac4c1b51;
-    x ^= x >> 15;
-    x *%= 0x31848bab;
-    x ^= x >> 14;
-    return x;
-}
-fn triple32_r(orig: u32) u32 {
-    var x = orig;
-    x ^= x >> 14 ^ x >> 28;
-    x *%= 0x32b21703;
-    x ^= x >> 15 ^ x >> 30;
-    x *%= 0x469e0db1;
-    x ^= x >> 11 ^ x >> 22;
-    x *%= 0x79a85073;
-    x ^= x >> 17;
-    return x;
-}
-fn inversePhi32(x: u32) u32 {
-    return (x +% 0) *% 2654435769;
-}
-fn triple24(orig: u24) u24 {
-    var x = orig;
-    x ^= x >> 13;
-    x *%= 0xed54bb;
-    x ^= x >> 8;
-    x *%= 0xac4b51;
-    x ^= x >> 11;
-    x *%= 0x318bab;
-    x ^= x >> 14;
-    return x;
-}
-fn inversePhi24(x: u24) u24 {
-    return x *% 10368889;
-}
+pub const Prospector = struct{
+    // From: https://nullprogram.com/blog/2018/07/31/
+    // the 64 bit version is derived from https://xoshiro.di.unimi.it/splitmix64.c
+    // which is derived from Java 8's SplittableRandom generator
+    //   See http://dx.doi.org/10.1145/2714064.2660195
+    pub fn hash64(orig: u64) u64 {
+        var x = orig;
+        x ^= x >> 30;
+        x *%= 0xbf58476d1ce4e5b9;
+        x ^= x >> 27;
+        x *%= 0x94d049bb133111eb;
+        x ^= x >> 31;
+        return x;
+    }
+    pub fn unhash64(orig: u64) u64 {
+        var x = orig;
+        x ^= x >> 31 ^ x >> 62;
+        x *%= 0x319642b2d24d8ec3;
+        x ^= x >> 27 ^ x >> 54;
+        x *%= 0x96de1b173f119089;
+        x ^= x >> 30 ^ x >> 60;
+        return x;
+    }
+    pub fn hash32(orig: u32) u32 {
+        var x = orig;
+        x ^= x >> 17;
+        x *%= 0xed5ad4bb;
+        x ^= x >> 11;
+        x *%= 0xac4c1b51;
+        x ^= x >> 15;
+        x *%= 0x31848bab;
+        x ^= x >> 14;
+        return x;
+    }
+    pub fn unhash32(orig: u32) u32 {
+        var x = orig;
+        x ^= x >> 14 ^ x >> 28;
+        x *%= 0x32b21703;
+        x ^= x >> 15 ^ x >> 30;
+        x *%= 0x469e0db1;
+        x ^= x >> 11 ^ x >> 22;
+        x *%= 0x79a85073;
+        x ^= x >> 17;
+        return x;
+    }
+    pub fn hash24(orig: u24) u24 {
+        var x = orig;
+        x ^= x >> 13;
+        x *%= 0xed54bb;
+        x ^= x >> 8;
+        x *%= 0xac4b51;
+        x ^= x >> 11;
+        x *%= 0x318bab;
+        x ^= x >> 14;
+        return x;
+    }
+    pub fn unhash24(orig: u24) u24 {
+        var x = orig;
+        x ^= x >> 14;
+        x *%= 0x32b21703;
+        x ^= x >> 15 ^ x >> 30;
+        x *%= 0x469e0db1;
+        x ^= x >> 11 ^ x >> 22;
+        x *%= 0x79a85073;
+        x ^= x >> 17;
+        return x;
+    }
+};
+pub const Phi = struct{
+    const phi = std.math.phi;
+    // returns an odd number (changes u8) so all possible values are generated
+    pub fn inversePhi(comptime T: type) T {
+        switch (@typeInfo(T)) {
+            .int => |int_info| switch (int_info.signedness) {
+                .unsigned => return @as(T, @intFromFloat(@as(f128, @floatFromInt(1 << int_info.bits)) / phi)) | 1,
+                else => {},
+            },
+            else => {},
+        }
+        @compileError("invalid type for inversePhi: " ++ @typeName(T));
+    }
+    // there isn't a closed form way to calculate this, but
+    pub fn undoPhi(comptime T: type) T {
+        return @import("general.zig").inverseMod(T, inversePhi(T)) catch @panic("not invertible");
+    }
+    pub fn MakePhiHash(comptime T: type) type {
+        return struct {
+            pub inline fn hash(v: T) T {
+                return v *% inversePhi(T);
+            }
+            pub inline fn unhash(v: T) T {
+                return v *% undoPhi(T);
+            }
+        };
+    }
+    pub fn hash(comptime T: type) fn (v: T) callconv(.@"inline") T {
+        return MakePhiHash(T).hash;
+    }
+    pub const hash64= MakePhiHash(u64).hash;
+    pub const hash32= MakePhiHash(u32).hash;
+    pub const hash24= MakePhiHash(u24).hash;
+    pub const hash16= MakePhiHash(u16).hash;
+    pub const hash8= MakePhiHash(u8).hash;
+    pub const unhash64= MakePhiHash(u64).unhash;
+    pub const unhash32= MakePhiHash(u32).unhash;
+    pub const unhash24= MakePhiHash(u24).unhash;
+    pub const unhash16= MakePhiHash(u16).unhash;
+    pub const unhash8= MakePhiHash(u8).unhash;
+    test "check inversePhi" {
+        const expectEqual = std.testing.expectEqual;
+        try expectEqual(hash64(1), 11400714819323198485);
+        try expectEqual(hash32(1), 2654435769);
+        try expectEqual(hash24(1), 10368889);
+        try expectEqual(hash16(1), 40503);
+        try expectEqual(hash8(1), 159);
+    }
+    test "check undoPhi" {
+        const expectEqual = std.testing.expectEqual;
+        try expectEqual(unhash64(1), 17428512612931826493);
+        try expectEqual(unhash32(1), 340573321);
+        try expectEqual(unhash24(1), 11764425);
+        try expectEqual(unhash16(1), 30599);
+        try expectEqual(unhash8(1), 95);
+    }
+    test "check undoPhi is inverse" {
+        const expectEqual = std.testing.expectEqual;
+        try expectEqual(unhash64(hash64(1)), 1);
+        try expectEqual(unhash32(hash32(1)), 1);
+        try expectEqual(unhash24(hash24(1)), 1);
+        try expectEqual(unhash16(hash16(1)), 1);
+        try expectEqual(unhash8(hash8(1)), 1);
+    }
+    test "randomness of /phi - all values enumerated" {
+        // data24 is too big and causes a crash
+        // var data24 = [_]bool{false} ** (65536*256);
+        // for (data24, 0..) |_, index| {
+        //     const int = inversePhi24(@truncate(index));
+        //     if (data24[int]) {
+        //         return error.Failed;
+        //     } else {
+        //         data24[int] = true;
+        //     }
+        // }
+        var data16 = [_]bool{false} ** 65536;
+        for (data16, 0..) |_, index| {
+            const int = hash16(@truncate(index));
+            if (data16[int]) {
+                return error.Failed;
+            } else {
+                data16[int] = true;
+            }
+        }
+        var data8 = [_]bool{false} ** 256;
+        for (data8, 0..) |_, index| {
+            const int = hash8(@truncate(index));
+            if (data8[int]) {
+                return error.Failed;
+            } else {
+                data8[int] = true;
+            }
+        }
+    }
+};
 // u32 key[2]= {
 //     0xdeadbeef,
 //     0xdeadbeef
@@ -273,22 +396,34 @@ fn SAC_print() void {
     // 32     46.19  53.48
     // 64     83.67  93.21
     const print = std.debug.print;
-    print("'triple32' has a chi-square-8 value of {d}\n", .{SAC_test(u32, triple32, 8)});
-    print("'triple32' has a chi-square-16 value of {d}\n", .{SAC_test(u32, triple32, 16)});
-    print("'triple32' has a chi-square-32 value of {d}\n", .{SAC_test(u32, triple32, 32)});
-    print("'triple32_r' has a chi-square-8 value of {d}\n", .{SAC_test(u32, triple32_r, 8)});
-    print("'triple32_r' has a chi-square-16 value of {d}\n", .{SAC_test(u32, triple32_r, 16)});
-    print("'triple32_r' has a chi-square-32 value of {d}\n", .{SAC_test(u32, triple32_r, 32)});
+    print("'triple64' has a chi-square-8 value of {d}\n", .{SAC_test(u64, Prospector.hash64, 8)});
+    print("'triple64' has a chi-square-16 value of {d}\n", .{SAC_test(u64, Prospector.hash64, 16)});
+    print("'triple64' has a chi-square-32 value of {d}\n", .{SAC_test(u64, Prospector.hash64, 32)});
+    print("'triple64' has a chi-square-64 value of {d}\n", .{SAC_test(u64, Prospector.hash64, 64)});
+    print("'triple32' has a chi-square-8 value of {d}\n", .{SAC_test(u32, Prospector.hash32, 8)});
+    print("'triple32' has a chi-square-16 value of {d}\n", .{SAC_test(u32, Prospector.hash32, 16)});
+    print("'triple32' has a chi-square-32 value of {d}\n", .{SAC_test(u32, Prospector.hash32, 32)});
+    print("'triple32_r' has a chi-square-8 value of {d}\n", .{SAC_test(u32, Prospector.unhash32, 8)});
+    print("'triple32_r' has a chi-square-16 value of {d}\n", .{SAC_test(u32, Prospector.unhash32, 16)});
+    print("'triple32_r' has a chi-square-32 value of {d}\n", .{SAC_test(u32, Prospector.unhash32, 32)});
     // print("'doHalfSipHash' has a chi-square-8 value of {d}\n", .{SAC_test(doHalfSipHash, 8)});
     // print("'doHalfSipHash' has a chi-square-16 value of {d}\n", .{SAC_test(doHalfSipHash, 16)});
     // print("'doHalfSipHash' has a chi-square-32 value of {d}\n", .{SAC_test(doHalfSipHash, 32)});
-    print("'inversePhi32' has a chi-square-8 value of {d}\n", .{SAC_test(u32, inversePhi32, 8)});
-    print("'inversePhi32' has a chi-square-16 value of {d}\n", .{SAC_test(u32, inversePhi32, 16)});
-    print("'inversePhi32' has a chi-square-32 value of {d}\n", .{SAC_test(u32, inversePhi32, 32)});
-    print("'triple24' has a chi-square-8 value of {d}\n", .{SAC_test(u24, triple24, 8)});
-    print("'triple24' has a chi-square-24 value of {d}\n", .{SAC_test(u24, triple24, 24)});
+    print("'Phi.hash64' has a chi-square-8 value of {d}\n", .{SAC_test(u64, Phi.hash64, 8)});
+    print("'Phi.hash64' has a chi-square-16 value of {d}\n", .{SAC_test(u64, Phi.hash64, 16)});
+    print("'Phi.hash64' has a chi-square-32 value of {d}\n", .{SAC_test(u64, Phi.hash64, 32)});
+    print("'Phi.hash64' has a chi-square-64 value of {d}\n", .{SAC_test(u64, Phi.hash64, 64)});
+    print("'inversePhi32' has a chi-square-8 value of {d}\n", .{SAC_test(u32, Phi.hash32, 8)});
+    print("'inversePhi32' has a chi-square-16 value of {d}\n", .{SAC_test(u32, Phi.hash32, 16)});
+    print("'inversePhi32' has a chi-square-32 value of {d}\n", .{SAC_test(u32, Phi.hash32, 32)});
+    print("'triple24' has a chi-square-8 value of {d}\n", .{SAC_test(u24, Prospector.hash24, 8)});
+    print("'triple24' has a chi-square-24 value of {d}\n", .{SAC_test(u24, Prospector.hash24, 24)});
+}
+test {
+    _ = Phi;
 }
 pub fn main() void {
+    SAC_print();
     // var sequential = Sequential{};
     // showSequence(sequential.sequence());
     var bitPattern = BitPattern{};

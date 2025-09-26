@@ -315,12 +315,11 @@ pub const Object = packed union {
     }
 
     // Class detection (stub)
-    pub inline fn which_class(self: Object, comptime full: bool) ClassIndex {
+    pub inline fn which_class(self: Object) ClassIndex {
         if (self.isInt()) return .SmallInteger;
         if (self.isCharacter()) return .Character;
         if (self.isFloat()) return .Float;
-        if (full) return self.to(HeapObjectPtr).*.getClass();
-        return .Object;
+        return self.to(HeapObjectPtr).*.getClass();
     }
 
     pub inline fn tagMethod(o: object.Object) ?Object {
@@ -387,7 +386,6 @@ pub const Object = packed union {
     pub const format = OF.format;
     pub const getField = OF.getField;
     pub const get_class = OF.get_class;
-    pub const immediate_class = OF.immediate_class;
     pub const isIndexable = OF.isIndexable;
     pub const isUnmoving = OF.isUnmoving;
     pub const numArgs = OF.numArgs;
@@ -397,6 +395,7 @@ pub const Object = packed union {
     pub const toUnchecked = OF.toUnchecked;
     pub const asVariable = zag.Context.asVariable;
     pub const setField = OF.setField;
+    pub const tests = OF.tests;
 };
 
 test "float from/to conversion" {

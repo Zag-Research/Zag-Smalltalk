@@ -176,9 +176,9 @@ pub const TaggedPtrObject = packed struct(u64) {
         }
         @panic("Trying to convert Object to " ++ @typeName(T));
     }
-    pub inline fn which_class(self: Object, comptime full: bool) ClassIndex {
+    pub inline fn which_class(self: Object) ClassIndex {
         return switch (self.tag) {
-            .heap => if (self.rawU() == 0) .UndefinedObject else if (full) self.to(HeapObjectPtr).*.getClass() else .Object,
+            .heap => if (self.rawU() == 0) .UndefinedObject else self.to(HeapObjectPtr).*.getClass(),
             .immediates => self.class.classIndex(),
             else => .Float,
         };
@@ -219,7 +219,6 @@ pub const TaggedPtrObject = packed struct(u64) {
     pub const format = OF.format;
     pub const getField = OF.getField;
     pub const get_class = OF.get_class;
-    pub const immediate_class = OF.immediate_class;
     pub const isBool = OF.isBool;
     pub const isIndexable = OF.isIndexable;
     pub const isNil = OF.isNil;

@@ -1,6 +1,6 @@
 const general = @import("utilities/general.zig");
-pub const inversePhi = general.inversePhi;
-pub const undoPhi = general.undoPhi;
+pub const PhiHash = @import("utilities/hash.zig").Phi;
+pub const ProspectorHash = @import("utilities/hash.zig").Prospector;
 pub const bitsToRepresent = general.bitsToRepresent;
 pub const smallerPowerOf2 = general.smallerPowerOf2;
 pub const largerPowerOf2 = general.largerPowerOf2;

@@ -13,24 +13,24 @@ const PointedObject = zag.InMemory.PointedObject;
 const heap = zag.heap;
 const HeapHeader = heap.HeapHeader;
 const Treap = zag.utilities.Treap;
-const inversePhi24 = zag.utilities.inversePhi(u24);
-const undoPhi24 = zag.utilities.undoPhi(u24);
+const hash = zag.utilities.PhiHash.hash24;
+const unhash = zag.utilities.PhiHash.unhash24;
 const Signature = zag.execute.Signature;
 pub var globalAllocator = std.heap.page_allocator; //@import("globalArena.zig").allocator();
 
 pub const symbols = SymbolsStruct;
 pub inline fn symbolIndex(obj: object.Object) u24 {
-    return obj.hash24() *% undoPhi24;
+    return unhash(obj.hash24());
 }
 pub inline fn symbolArity(obj: object.Object) u4 {
     return @truncate(obj.hash32() >> 24);
 }
 inline fn hash_of(index: u24, arity: u4) u32 {
-    return @as(u24, index *% inversePhi24) | (@as(u32, arity) << 24);
+    return @as(u32, hash(index)) | (@as(u32, arity) << 24);
 }
 pub const signature = SymbolsEnum.signature;
-pub fn fromHash(hash: u64) Object {
-    const index: u24 = @truncate(hash * undoPhi24);
+pub fn fromHash(aHash: u64) Object {
+    const index = unhash(@truncate(aHash));
     return @as(SymbolsEnum, @enumFromInt(index)).asObject();
 }
 const SymbolsEnum = enum(u32) {
@@ -152,17 +152,17 @@ const SymbolsEnum = enum(u32) {
         break :blk symbolArray;
     };
     fn initSymbol(sym: *PointedObject, symbol: SymbolsEnum) void {
-        const hash: u64 = symbol.symbolHash().?;
-        sym.header = HeapHeader{ .classIndex = .Symbol, .hash = @truncate(hash), .format = .notIndexable, .age = .static, .length = 1 };
-        sym.data.unsigned = hash | @as(u64, symbol.numArgs()) << 24;
+        const s_hash = symbol.symbolHash().?;
+        sym.header = HeapHeader{ .classIndex = .Symbol, .hash = s_hash, .format = .notIndexable, .age = .static, .length = 1 };
+        sym.data.unsigned = s_hash | @as(u64, symbol.numArgs()) << 24;
     }
     pub inline fn numArgs(self: SymbolsEnum) u4 {
         return @truncate(@intFromEnum(self) >> 24);
     }
     pub inline fn symbolHash(self: SymbolsEnum) ?u24 {
-        return @as(u24, @truncate(@intFromEnum(self))) *% inversePhi24;
+        return hash(@truncate(@intFromEnum(self)));
     }
-    pub inline fn immediate_class(_: SymbolsEnum) object.ClassIndex {
+    pub inline fn get_class(_: SymbolsEnum) object.ClassIndex {
         return .Symbol;
     }
     pub fn asObject(self: SymbolsEnum) Object {
@@ -244,8 +244,8 @@ const SymbolsStruct = struct {
         }
     };
     const ImmediateFunctions = struct {
-        inline fn fromHash32(hash: u32) object.Object {
-            return object.Object.makeImmediate(.Symbol, hash);
+        inline fn fromHash32(a_hash: u32) object.Object {
+            return object.Object.makeImmediate(.Symbol, a_hash);
         }
         inline fn symbol_of(index: u24, arity: u4) object.Object {
             return fromHash32(hash_of(index, arity));

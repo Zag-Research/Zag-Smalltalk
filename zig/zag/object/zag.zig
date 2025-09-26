@@ -186,8 +186,8 @@ pub const Object = packed struct(u64) {
     test "ThunkImmediate" {
         trace("Test: ThunkImmediate\n", .{});
         const ee = std.testing.expectEqual;
-        if (thunkImmediate(object.Object.from(42, null))) |value|
-            try ee(object.Object.from(42, null), value.thunkImmediateValue());
+        if (thunkImmediate(object.Object.tests[0])) |value|
+            try ee(object.Object.tests[0], value.thunkImmediateValue());
         if (thunkImmediate(object.Object.from(-42, null))) |value|
             try ee(object.Object.from(-42, null), value.thunkImmediateValue());
         try ee(null, thunkImmediate(object.Object.from(@as(u64, 1) << 47, null)));
@@ -333,19 +333,19 @@ pub const Object = packed struct(u64) {
         }
         @panic("Trying to convert Object to " ++ @typeName(T));
     }
-    pub inline fn which_class(self: object.Object, comptime full: bool) ClassIndex {
+    pub inline fn which_class(self: object.Object) ClassIndex {
         if (false) {
             const tag_bits = self.tagbits();
             const tag = tag_bits & 7;
             if (tag == 1) return @enumFromInt(tag_bits >> 3)
             else if (tag > 1) return .Float
             else if (self.rawU() == 0) return .UndefinedObject
-            else if (full) return self.to(HeapObjectPtr).*.getClass() else return .Object;
+            else return self.to(HeapObjectPtr).*.getClass();
         }
         switch (self.tag) {
-            .heap => if (self.rawU() == 0) return .UndefinedObject
-                else if (full) return self.to(HeapObjectPtr).*.getClass()
-                else return .Object,
+            .heap => if (self.rawU() == 0) {@branchHint(.unlikely);
+                return .UndefinedObject;
+            } else return self.to(HeapObjectPtr).*.getClass(),
             .immediates => {@branchHint(.likely);
                             return self.class.classIndex();},
             else => {@branchHint(.likely);
@@ -402,7 +402,6 @@ pub const Object = packed struct(u64) {
     pub const format = OF.format;
     pub const getField = OF.getField;
     pub const get_class = OF.get_class;
-    pub const immediate_class = OF.immediate_class;
     pub const isBool = OF.isBool;
     pub const isIndexable = OF.isIndexable;
     pub const isNil = OF.isNil;
@@ -417,4 +416,5 @@ pub const Object = packed struct(u64) {
     pub const asVariable = zag.Context.asVariable;
     pub const PackedObject = object.PackedObject;
     pub const signature = zag.execute.Signature.signature;
+    pub const tests = OF.tests;
 };

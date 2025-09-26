@@ -12,6 +12,7 @@ const Extra = Context.Extra;
 const Result = execute.Result;
 const Execution = execute.Execution;
 const CompiledMethod = execute.CompiledMethod;
+const fromPrimitive = execute.Signature.fromPrimitive;
 const Process = zag.Process;
 const object = zag.object;
 const Object = object.Object;
@@ -117,7 +118,7 @@ pub const @"+" = struct {
     test "simple add" {
         var exe = Execution.initTest(
             "simple add",
-            .{ tf.primitive, 1 });
+            .{ tf.primitive, comptime fromPrimitive(1) });
         try exe.runTest(
             &[_]Object{
                 exe.object(25),
@@ -131,14 +132,14 @@ pub const @"+" = struct {
     test "simple add with overflow" {
         var exe = Execution.initTest(
             "simple add with overflow",
-            .{ tf.primitive, 1, tf.pushLiteral, 42 });
+            .{ tf.primitive, comptime fromPrimitive(1), tf.pushLiteral, Object.tests[0] });
         try exe.runTest(
             &[_]Object{
                 exe.object(4),
                 exe.object(Object.maxInt),
             },
             &[_]Object{
-                exe.object(42),
+                Object.tests[0],
                 exe.object(4),
                 exe.object(Object.maxInt),
             },

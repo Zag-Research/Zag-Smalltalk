@@ -405,7 +405,7 @@ pub const threadedFunctions = struct {
                     tf.pushLiteral,
                     91,
                     tf.pushLiteral,
-                    42,
+                    Object.tests[0],
                     tf.returnTop,
                     2,
                     tf.pushLiteral,
