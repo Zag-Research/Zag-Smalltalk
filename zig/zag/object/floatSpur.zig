@@ -251,7 +251,14 @@ pub fn main() void {
     const invalid_time = timer.lap();
     decode_valid(iterations);
     const decode_time = timer.lap();
-    std.debug.print("Foo time: {d:.3}s {d:.3}s {d:.3}s\n", .{ @as(f64, @floatFromInt(valid_time))*ns, @as(f64, @floatFromInt(invalid_time))*ns, @as(f64, @floatFromInt(decode_time))*ns });
+    for (0..iterations / decode_values.len) |_| {
+        for (decode_values) |val| {
+            _ = decode(val);
+        }
+    }
+    const decode_time2 = timer.lap();
+
+    std.debug.print("Foo time: {d:.3}s {d:.3}s {d:.3}s {d:.3}s\n", .{ @as(f64, @floatFromInt(valid_time))*ns, @as(f64, @floatFromInt(invalid_time))*ns, @as(f64, @floatFromInt(decode_time))*ns, @as(f64, @floatFromInt(decode_time2))*ns });
 
     std.debug.print("Dave is {d:.2}x {d:.2}x faster than Foo\n", .{ delta(dave_valid_time, valid_time), delta(dave_invalid_time, invalid_time) });
     std.debug.print("Spec is {d:.2}x {d:.2}x faster than Foo\n", .{ delta(spec_valid_time, valid_time), delta(spec_invalid_time, invalid_time) });
