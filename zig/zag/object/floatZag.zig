@@ -88,8 +88,8 @@ pub fn decode_valid(iterations: u64) void {
 
 // zig run -Doptimize=ReleaseFast floatSpur.zig
 pub fn main() void {
-    const iterations = 1_000_000_000;
-    const ns = 1.0 / 1_000_000_000.0;
+    const iterations = 100_000_000;
+    const ns = 1.0 / @as(f64, @floatFromInt(iterations));
 
     if (false) {
         for (valid_values) |val| {
