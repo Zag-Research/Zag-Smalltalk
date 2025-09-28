@@ -169,14 +169,14 @@ const decode_values = [_]u64{
     0x859000000000000c, // encoded -100.0
     0x0000000000000014, // encoded smallest positive value
     0xfffffffffffffff4, // encoded largest positive value
-    0x7f00000000000004, // repetition of valid values
-    0x7f0000000000000c,
-    0x80921fb54442d184,
-    0x8450000000000004,
-    0x80921f9f01b866ec,
-    0x8590000000000004,
-    0x859000000000000c,
-    0xfffffffffffffff4,
+    0x7f000c0000000004, // repetition of valid values
+    0x7f000c000000000c,
+    0x80921cb54442d184,
+    0x84500c0000000004,
+    0x80921c9f01b866ec,
+    0x85900c0000000004,
+    0x85900c000000000c,
+    0xfffffcfffffffff4,
 };
 
 pub fn encode_valid(iterations: u64) void {
