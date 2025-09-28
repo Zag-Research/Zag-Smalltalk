@@ -1,3 +1,5 @@
+## Hardware performance
+[Agner Fog's manuals](https://agner.org/optimize/)
 ## Instructions per Cycle
 
 [StackOverflow on pipeline stalls](https://stackoverflow.com/questions/22165299/what-are-stalled-cycles-frontend-and-stalled-cycles-backend-in-perf-stat-resul)
