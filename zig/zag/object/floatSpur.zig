@@ -146,13 +146,10 @@ test "encode/decode" {
     try expectEqual(error.Unencodable, encode(-math.inf(f64)));
 }
 
-const iterations_spur = 100000000;
-
 const valid_values = [_]f64{ 0.0, -0.0 } ** 1 ++
     [_]f64{ 1.0, -1.0, math.pi, 42.0, -3.14159, 100.0, -100.0 } ** 16 ++
     [_]f64{ smallest, largest } ** 16;
 
-const iterations_v = iterations_spur / valid_values.len;
 const invalid_values =
     [_]f64{tooSmall} ** 1 ++
     [_]f64{tooLarge} ** 1 ++
@@ -160,7 +157,6 @@ const invalid_values =
     [_]f64{math.inf(f64)} ** 1 ++
     [_]f64{-math.inf(f64)} ** 1;
 
-const iterations_i = iterations_spur / invalid_values.len;
 const decode_values = [_]u64{
     0x0000000000000004, // encoded +0.0
     0x000000000000000c, // encoded -0.0
@@ -172,7 +168,7 @@ const decode_values = [_]u64{
     0x8590000000000004, // encoded 100.0
     0x859000000000000c, // encoded -100.0
     0x0000000000000014, // encoded smallest positive value
-    0xfffffffffffffff4, // encoded largest negative value
+    0xfffffffffffffff4, // encoded largest positive value
     0x7f00000000000004, // repetition of valid values
     0x7f0000000000000c,
     0x80921fb54442d184,
@@ -206,6 +202,7 @@ pub fn decode_valid(iterations: u64) void {
 }
 // zig run -Doptimize=ReleaseFast floatSpur.zig
 pub fn main() void {
+    const iterations = 100000000;
 
     if (false) {
         for (valid_values) |val| {
@@ -217,13 +214,13 @@ pub fn main() void {
     var timer = std.time.Timer.start() catch unreachable;
 
     _ = timer.lap();
-    for (0..iterations_v) |_| {
+    for (0..iterations / valid_values.len) |_| {
         for (valid_values) |val| {
             _ = encode_dave(val) catch return;
         }
     }
     const dave_valid_time = timer.lap();
-    for (0..iterations_i) |_| {
+    for (0..iterations / invalid_values.len) |_| {
         for (invalid_values) |val| {
             _ = encode_dave(val) catch continue;
         }
@@ -232,13 +229,13 @@ pub fn main() void {
     std.debug.print("dave time: {}ns {}ns\n", .{ dave_valid_time, dave_invalid_time });
 
     _ = timer.lap();
-    for (0..iterations_v) |_| {
+    for (0..iterations / valid_values.len) |_| {
         for (valid_values) |val| {
             _ = encode_spec(val) catch return;
         }
     }
     const spec_valid_time = timer.lap();
-    for (0..iterations_i) |_| {
+    for (0..iterations / invalid_values.len) |_| {
         for (invalid_values) |val| {
             _ = encode_spec(val) catch continue;
         }
@@ -247,23 +244,16 @@ pub fn main() void {
     std.debug.print("Spec time: {}ns {}ns\n", .{ spec_valid_time, spec_invalid_time });
 
     _ = timer.lap();
-    for (0..iterations_v) |_| {
-        for (valid_values) |val| {
-            _ = encode_n(val) catch return;
-        }
-    }
-    const check_valid_time = timer.lap();
-    for (0..iterations_i) |_| {
-        for (invalid_values) |val| {
-            _ = encode_n(val) catch continue;
-        }
-    }
-    const check_invalid_time = timer.lap();
+    encode_valid(iterations);
+    const valid_time = timer.lap();
+    encode_invalid(iterations);
+    const invalid_time = timer.lap();
+    decode_valid(iterations);
+    const decode_time = timer.lap();
+    std.debug.print("Foo time: {}ns {}ns {}ns\n", .{ valid_time, invalid_time, decode_time });
 
-    std.debug.print("Foo time: {}ns {}ns\n", .{ check_valid_time, check_invalid_time });
-
-    std.debug.print("Dave is {d:.2}x {d:.2}x faster than Foo\n", .{ delta(dave_valid_time, check_valid_time), delta(dave_invalid_time, check_invalid_time) });
-    std.debug.print("Spec is {d:.2}x {d:.2}x faster than Foo\n", .{ delta(spec_valid_time, check_valid_time), delta(spec_invalid_time, check_invalid_time) });
+    std.debug.print("Dave is {d:.2}x {d:.2}x faster than Foo\n", .{ delta(dave_valid_time, valid_time), delta(dave_invalid_time, invalid_time) });
+    std.debug.print("Spec is {d:.2}x {d:.2}x faster than Foo\n", .{ delta(spec_valid_time, valid_time), delta(spec_invalid_time, invalid_time) });
     std.debug.print("Dave is {d:.2}x {d:.2}x faster than Spec\n", .{ delta(dave_valid_time, spec_valid_time), delta(dave_invalid_time, spec_invalid_time) });
 }
 

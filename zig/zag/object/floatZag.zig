@@ -45,11 +45,18 @@ const invalid_values =
     [_]f64{math.inf(f64)} ** 1 ++
     [_]f64{-math.inf(f64)} ** 1;
 const decode_values = [_]u64{
-    0x0000000000000002,
-    0x000000000000000a,
-    0xff00000000000005,
-    0xff0000000000000d,
-    0x00921fb54442d186,
+    0x0000000000000002, // encoded +0.0
+    0x000000000000000a, // encoded -0.0
+    0xff00000000000005, // encoded +1.0
+    0xff0000000000000d, // encoded -1.0
+    0x00921fb54442d186, // encoded +pi
+    0x0450000000000006, // encoded +42.0
+    0x00921f9f01b866ee, // encoded -3.14159
+    0x0590000000000006, // encoded +100.0
+    0x059000000000000e, // encoded -100.0
+    0x0000000000000012, // encoded +smallest
+    0xfffffffffffffff7, // encoded -largest
+    0x00921fb54442d186, // repetition
     0x0450000000000006,
     0x00921f9f01b866ee,
     0x0590000000000006,
@@ -77,4 +84,31 @@ pub fn decode_valid(iterations: u64) void {
             _ = decode(val);
         }
     }
+}
+
+// zig run -Doptimize=ReleaseFast floatSpur.zig
+pub fn main() void {
+    const iterations = 100000000;
+
+    if (false) {
+        for (valid_values) |val| {
+            std.debug.print("0x{x:0>16},\n", .{encode(val) catch unreachable});
+        }
+    }
+
+    // Benchmark encode_spec
+    var timer = std.time.Timer.start() catch unreachable;
+
+    _ = timer.lap();
+    encode_valid(iterations);
+    const valid_time = timer.lap();
+    encode_invalid(iterations);
+    const invalid_time = timer.lap();
+    decode_valid(iterations);
+    const decode_time = timer.lap();
+    std.debug.print("encode time: {}ns {}ns {}ns\n", .{ valid_time, invalid_time, decode_time });
+}
+
+fn delta(spec: u64, check: u64) f64 {
+    return @as(f64, @floatFromInt(check)) / @as(f64, @floatFromInt(spec));
 }
