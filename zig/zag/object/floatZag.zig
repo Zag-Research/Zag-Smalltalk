@@ -88,7 +88,8 @@ pub fn decode_valid(iterations: u64) void {
 
 // zig run -Doptimize=ReleaseFast floatSpur.zig
 pub fn main() void {
-    const iterations = 100000000;
+    const iterations = 1_000_000_000;
+    const ns = 1.0 / 1_000_000_000.0;
 
     if (false) {
         for (valid_values) |val| {
@@ -106,7 +107,7 @@ pub fn main() void {
     const invalid_time = timer.lap();
     decode_valid(iterations);
     const decode_time = timer.lap();
-    std.debug.print("encode time: {}ns {}ns {}ns\n", .{ valid_time, invalid_time, decode_time });
+    std.debug.print("encode time: {d:.3}s {d:.3}s {d:.3}s\n", .{ @as(f64, @floatFromInt(valid_time))*ns, @as(f64, @floatFromInt(invalid_time))*ns, @as(f64, @floatFromInt(decode_time))*ns });
 }
 
 fn delta(spec: u64, check: u64) f64 {

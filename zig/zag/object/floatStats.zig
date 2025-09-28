@@ -1,7 +1,8 @@
 const std = @import("std");
 // zig run -Doptimize=ReleaseFast -fomit-frame-pointer floatStats.zig
 pub fn main() void {
-    const iterations = 1000000000;
+    const iterations = 1_000_000_000;
+    const ns = 1.0 / 1_000_000_000.0;
     var timer = std.time.Timer.start() catch unreachable;
 
     const zag = @import("floatZag.zig");
@@ -12,7 +13,7 @@ pub fn main() void {
     const zag_invalid_time = timer.lap();
     zag.decode_valid(iterations);
     const zag_decode_time = timer.lap();
-    std.debug.print("zag time: {}ns {}ns {}ns\n", .{ zag_valid_time, zag_invalid_time, zag_decode_time });
+    std.debug.print("zag time: {d:.3}s {d:.3}s {d:.3}s\n", .{ @as(f64, @floatFromInt(zag_valid_time))*ns, @as(f64, @floatFromInt(zag_invalid_time))*ns, @as(f64, @floatFromInt(zag_decode_time))*ns });
 
     const spur = @import("floatSpur.zig");
     _ = timer.lap();
@@ -22,7 +23,7 @@ pub fn main() void {
     const spur_invalid_time = timer.lap();
     spur.decode_valid(iterations);
     const spur_decode_time = timer.lap();
-    std.debug.print("Spur time: {}ns {}ns {}ns\n", .{ spur_valid_time, spur_invalid_time, spur_decode_time });
+    std.debug.print("Spur time: {d:.3}s {d:.3}s {d:.3}s\n", .{ @as(f64, @floatFromInt(spur_valid_time))*ns, @as(f64, @floatFromInt(spur_invalid_time))*ns, @as(f64, @floatFromInt(spur_decode_time))*ns });
 
     std.debug.print("Zag is {d:.2}x {d:.2}x {d:.2}x faster\n",
         .{ delta(zag_valid_time, spur_valid_time),
