@@ -365,7 +365,7 @@ pub const Object = packed struct(u64) {
             fullCompare,
             bigSwitch,
         };
-        switch (Choose.fullCompare) {
+        switch (Choose.tagCompare) {
             .fullCompare => {
                 const u = Group.u;
                 const base = Group.base;

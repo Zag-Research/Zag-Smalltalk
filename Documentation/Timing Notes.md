@@ -10,7 +10,7 @@ Zag is 1.37x 1.47x 1.47x faster
 #### zag
 IntegerBr 2519ms  2513ms   8.98ms   0.4%
     Float 3134ms  3136ms  15.05ms   0.5%
-tag
+tag **fastest**
 	IntegerBr 2469ms  2467ms   5.10ms   0.2%
     Float 3118ms  3120ms  10.13ms   0.3%
 table
@@ -57,9 +57,38 @@ Zag is 0.99x 1.04x 0.35x faster
 #### zag
 IntegerBr 5245ms  5254ms  27.35ms   0.5%
     Float 6190ms  6187ms  10.09ms   0.2%
+table **fastest**
+	IntegerBr 4987ms  4983ms  17.87ms   0.4%
+	    Float 5694ms  5694ms  10.67ms   0.2%
+firstFloat
+	IntegerBr 5003ms  5001ms  12.74ms   0.3%
+	    Float 5565ms  5649ms 135.04ms   2.4%
+andTagbits
+	IntegerBr 5037ms  5038ms  14.04ms   0.3%
+	    Float 5723ms  5718ms   7.00ms   0.1%
+bigSwitch
+	IntegerBr 5089ms  5081ms  14.97ms   0.3%
+	    Float 5741ms  5745ms  10.59ms   0.2%
+tag
+	IntegerBr 6080ms  6100ms 336.27ms   5.5%
+	   Float 6555ms  6567ms  50.01ms   0.8%
+rotateTagbits
+	IntegerBr 6236ms  6150ms 133.37ms   2.2%
+	    Float 6118ms  6216ms 199.56ms   3.2%
+
 #### zagAlt
 IntegerBr 4612ms  4596ms  38.37ms   0.8%
     Float 6297ms  6312ms  24.00ms   0.4%
 #### nan
 IntegerBr 4444ms  4458ms  26.68ms   0.6%
     Float 4246ms  4248ms   7.09ms   0.2%
+tagCompare **fastest**
+	IntegerBr 4735ms  4738ms  20.95ms   0.4%
+	    Float 4671ms  4669ms  28.62ms   0.6%
+bigSwitch
+	IntegerBr 4814ms  4814ms  11.34ms   0.2%
+	    Float 4578ms  4576ms  17.32ms   0.4%
+ fullCompare
+    IntegerBr 4761ms  4836ms 147.11ms   3.0%
+	    Float 4709ms  4710ms  12.72ms   0.3%
+   
