@@ -316,9 +316,13 @@ pub const Object = packed union {
 
     // Class detection (stub)
     pub inline fn which_class(self: Object) ClassIndex {
-        if (self.isInt()) return .SmallInteger;
-        if (self.isCharacter()) return .Character;
-        if (self.isFloat()) return .Float;
+        if (self.isInt()) {@branchHint(.likely);
+            return .SmallInteger;
+        } else if (self.isFloat()) {@branchHint(.likely);
+            return .Float;
+        } else if (self.isCharacter()) {@branchHint(.unlikely);
+            return .Character;
+        }
         return self.to(HeapObjectPtr).*.getClass();
     }
 

@@ -360,19 +360,86 @@ pub const Object = packed struct(u64) {
         return @as(u48, @truncate(@as(usize, @bitCast(self))));
     }
     pub inline fn which_class(self: object.Object) ClassIndex {
-        switch (self.tag) {
-            .smallInteger => {@branchHint(.likely); return .SmallInteger;},
-            .immediates => {@branchHint(.likely); return self.classIndex;},
-            .thunkReturnLocal => {@branchHint(.unlikely); return .ThunkReturnLocal;},
-            .thunkReturnInstance => {@branchHint(.unlikely); return .ThunkReturnInstance;},
-            .thunkReturnSmallInteger => {@branchHint(.unlikely); return .ThunkReturnSmallInteger;},
-            .thunkReturnImmediate => {@branchHint(.unlikely); return .ThunkReturnImmediate;},
-            .thunkLocal => {@branchHint(.unlikely); return .ThunkLocal;},
-            .thunkInstance => {@branchHint(.unlikely); return .ThunkInstance;},
-            .thunkHeap => {@branchHint(.unlikely); return .ThunkHeap;},
-            .picPointer => {@branchHint(.unlikely); @panic("nonLocalThunk");},
-            .heap => return self.to(HeapObjectPtr).*.getClass(),
-            else => {@branchHint(.likely); return .Float;},
+        const Choose = enum {
+            tagCompare,
+            fullCompare,
+            bigSwitch,
+        };
+        switch (Choose.fullCompare) {
+            .fullCompare => {
+                const u = Group.u;
+                const base = Group.base;
+                const full = self.rawU();
+                if (full >= base(.smallInteger)) {@branchHint(.likely);
+                    return .SmallInteger;
+                } else if (full <= base(.heap)) {@branchHint(.likely);
+                    return .Float;
+                } else {
+                    const tagEnum = self.tag;
+                    const tag = tagEnum.u();
+                    if (tag == u(.heap)) {@branchHint(.likely);
+                        return self.toUnchecked(HeapObjectPtr).*.getClass();
+                    } else if (tag == u(.immediates)) {@branchHint(.likely);
+                        return self.classIndex;
+                    } else switch (tagEnum) {
+                        .thunkReturnLocal => {@branchHint(.unlikely); return .ThunkReturnLocal;},
+                        .thunkReturnInstance => {@branchHint(.unlikely); return .ThunkReturnInstance;},
+                        .thunkReturnSmallInteger => {@branchHint(.unlikely); return .ThunkReturnSmallInteger;},
+                        .thunkReturnImmediate => {@branchHint(.unlikely); return .ThunkReturnImmediate;},
+                        .thunkLocal => {@branchHint(.unlikely); return .ThunkLocal;},
+                        .thunkInstance => {@branchHint(.unlikely); return .ThunkInstance;},
+                        .thunkHeap => {@branchHint(.unlikely); return .ThunkHeap;},
+                        else => @panic("Unknown tag"),
+                    }
+                }
+            },
+            .tagCompare => {
+                const tagEnum = self.tag;
+                const tag = tagEnum.u();
+                const u = Group.u;
+                if (tag >= u(.smallInteger)) {@branchHint(.likely);
+                    return .SmallInteger;
+                } else if (tag < u(.heap)) {@branchHint(.likely);
+                    return .Float;
+                } else if (tag == u(.heap)) {@branchHint(.likely);
+                    if (self.rawU() == Group.base(.heap)) {@branchHint(.unlikely);
+                        return .Float;
+                    }
+                    return self.toUnchecked(HeapObjectPtr).*.getClass();
+                } else if (tag == u(.immediates)) {@branchHint(.likely);
+                    return self.classIndex;
+                } else  switch (tagEnum) {
+                    .thunkReturnLocal => {@branchHint(.unlikely); return .ThunkReturnLocal;},
+                    .thunkReturnInstance => {@branchHint(.unlikely); return .ThunkReturnInstance;},
+                    .thunkReturnSmallInteger => {@branchHint(.unlikely); return .ThunkReturnSmallInteger;},
+                    .thunkReturnImmediate => {@branchHint(.unlikely); return .ThunkReturnImmediate;},
+                    .thunkLocal => {@branchHint(.unlikely); return .ThunkLocal;},
+                    .thunkInstance => {@branchHint(.unlikely); return .ThunkInstance;},
+                    .thunkHeap => {@branchHint(.unlikely); return .ThunkHeap;},
+                    else => {
+                        @panic("Unknown tag");
+                    }
+                }
+            },
+            .bigSwitch => {
+                switch (self.tag) {
+                    .smallInteger => {@branchHint(.likely); return .SmallInteger;},
+                    .immediates => {@branchHint(.likely); return self.classIndex;},
+                    .smallInteger_1,
+                    .smallInteger_2,
+                    .smallInteger_3 => {@branchHint(.unlikely); return .SmallInteger;},
+                    .thunkReturnLocal => {@branchHint(.unlikely); return .ThunkReturnLocal;},
+                    .thunkReturnInstance => {@branchHint(.unlikely); return .ThunkReturnInstance;},
+                    .thunkReturnSmallInteger => {@branchHint(.unlikely); return .ThunkReturnSmallInteger;},
+                    .thunkReturnImmediate => {@branchHint(.unlikely); return .ThunkReturnImmediate;},
+                    .thunkLocal => {@branchHint(.unlikely); return .ThunkLocal;},
+                    .thunkInstance => {@branchHint(.unlikely); return .ThunkInstance;},
+                    .thunkHeap => {@branchHint(.unlikely); return .ThunkHeap;},
+                    .picPointer => {@branchHint(.unlikely); @panic("nonLocalThunk");},
+                    .heap => return self.toUnchecked(HeapObjectPtr).*.getClass(),
+                    else => {@branchHint(.likely); return .Float;},
+                }
+            },
         }
     }
     pub inline fn isHeapObject(self: object.Object) bool {

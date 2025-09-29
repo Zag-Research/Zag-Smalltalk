@@ -20,7 +20,7 @@ pub const EncodeError = error{ Unencodable, PosInf, NegInf, NaN };
 // immediate float layout: [exp8(8)][mant(52)][sign(1)][tag(3)]
 // Ref: https://clementbera.wordpress.com/2018/11/09/64-bits-immediate-floats/
 
-pub inline fn encode_n(v: f64) !u64 {
+pub noinline fn encode_n(v: f64) !u64 {
     const bits: u64 = @bitCast(v);
     const y = rotr(u64, rotl(u64, bits, 5) +% 1, 1);
     if ((y & 0x7) == TAG and (y | 0x8) != 0xC) return y;
@@ -106,7 +106,7 @@ inline fn encode_check(value: f64) !u64 {
     return std.math.rotr(u64, r, 1);
 }
 
-pub inline fn decode(self: u64) f64 {
+pub fn decode(self: u64) f64 {
     if (self <= 0xC) {@branchHint(.unlikely);
         if (self == 4) {
             return 0.0;
@@ -186,20 +186,23 @@ pub fn encode_valid(iterations: u64) void {
         }
     }
 }
-pub fn encode_invalid(iterations: u64) void {
-    for (0..iterations / invalid_values.len) |_| {
+pub fn encode_invalid(iterations: u64) u64 {
+    var result : u64 = 0;
+    for (0..iterations / invalid_values.len) |i| {
         for (invalid_values) |val| {
-            _ = encode(val) catch continue;
+            result += encode(val) catch @as(u64, @bitCast(val))+i;
         }
     }
+    return result;
 }
-pub fn decode_valid(iterations: u64) void {
-    std.debug.print("reps: {}\n", .{iterations / decode_values.len});
+pub fn decode_valid(iterations: u64) f64 {
+    var result : f64 = 0.0;
     for (0..iterations / decode_values.len) |_| {
         for (decode_values) |val| {
-            _ = decode(val);
+            result += @call(.never_inline, decode, .{val});
         }
     }
+    return result;
 }
 // zig run -Doptimize=ReleaseFast floatSpur.zig
 pub fn main() void {
@@ -228,7 +231,7 @@ pub fn main() void {
         }
     }
     const dave_invalid_time = timer.lap();
-    std.debug.print("dave time: {d:.3}s {d:.3}s\n", .{ @as(f64, @floatFromInt(dave_valid_time))*ns, @as(f64, @floatFromInt(dave_invalid_time))*ns });
+    std.debug.print("dave time: {d:.3}ns {d:.3}ns\n", .{ @as(f64, @floatFromInt(dave_valid_time))*ns, @as(f64, @floatFromInt(dave_invalid_time))*ns });
 
     _ = timer.lap();
     for (0..iterations / valid_values.len) |_| {
@@ -243,23 +246,17 @@ pub fn main() void {
         }
     }
     const spec_invalid_time = timer.lap();
-    std.debug.print("Spec time: {d:.3}s {d:.3}s\n", .{ @as(f64, @floatFromInt(spec_valid_time))*ns, @as(f64, @floatFromInt(spec_invalid_time))*ns });
+    std.debug.print("Spec time: {d:.3}ns {d:.3}ns\n", .{ @as(f64, @floatFromInt(spec_valid_time))*ns, @as(f64, @floatFromInt(spec_invalid_time))*ns });
 
     _ = timer.lap();
     encode_valid(iterations);
     const valid_time = timer.lap();
-    encode_invalid(iterations);
+    std.mem.doNotOptimizeAway(encode_invalid(iterations));
     const invalid_time = timer.lap();
-    decode_valid(iterations);
+    std.mem.doNotOptimizeAway(decode_valid(iterations));
     const decode_time = timer.lap();
-    for (0..iterations / decode_values.len) |_| {
-        for (decode_values) |val| {
-            _ = decode(val);
-        }
-    }
-    const decode_time2 = timer.lap();
 
-    std.debug.print("Foo time: {d:.3}s {d:.3}s {d:.3}s {d:.3}s\n", .{ @as(f64, @floatFromInt(valid_time))*ns, @as(f64, @floatFromInt(invalid_time))*ns, @as(f64, @floatFromInt(decode_time))*ns, @as(f64, @floatFromInt(decode_time2))*ns });
+    std.debug.print("Foo time: {d:.3}ns {d:.3}ns {d:.3}ns\n", .{ @as(f64, @floatFromInt(valid_time))*ns, @as(f64, @floatFromInt(invalid_time))*ns, @as(f64, @floatFromInt(decode_time))*ns });
 
     std.debug.print("Dave is {d:.2}x {d:.2}x faster than Foo\n", .{ delta(dave_valid_time, valid_time), delta(dave_invalid_time, invalid_time) });
     std.debug.print("Spec is {d:.2}x {d:.2}x faster than Foo\n", .{ delta(spec_valid_time, valid_time), delta(spec_invalid_time, invalid_time) });

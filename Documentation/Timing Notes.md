@@ -10,6 +10,24 @@ Zag is 1.37x 1.47x 1.47x faster
 #### zag
 IntegerBr 2519ms  2513ms   8.98ms   0.4%
     Float 3134ms  3136ms  15.05ms   0.5%
+tag
+	IntegerBr 2469ms  2467ms   5.10ms   0.2%
+    Float 3118ms  3120ms  10.13ms   0.3%
+table
+	IntegerBr 2480ms  2478ms  11.53ms   0.5%
+    Float 3112ms  3114ms   9.68ms   0.3%
+firstFloat
+	IntegerBr 2498ms  2513ms  35.62ms   1.4%
+    Float 3112ms  3115ms  11.63ms   0.4%
+andTagbits
+	IntegerBr 2525ms  2522ms  11.31ms   0.4%
+    Float 3202ms  3209ms  17.60ms   0.5%
+bigSwitch
+	IntegerBr 2557ms  2559ms  17.09ms   0.7%
+    Float 3358ms  3358ms   1.96ms   0.1%
+rotateTagbits
+	IntegerBr 2583ms  2577ms  18.66ms   0.7%
+    Float 3188ms  3188ms   5.42ms   0.2%
 
 #### zagAlt
 IntegerBr 2512ms  2508ms   7.43ms   0.3%
@@ -18,6 +36,15 @@ IntegerBr 2512ms  2508ms   7.43ms   0.3%
 #### nan
 IntegerBr 2554ms  2557ms   8.73ms   0.3%
     Float 2492ms  2500ms  18.45ms   0.7%
+fullCompare **fastest**
+    IntegerBr 2319ms  2318ms   1.85ms   0.1%
+    Float 2284ms  2291ms  20.19ms   0.9%
+tagCompare
+	IntegerBr 2361ms  2361ms   1.94ms   0.1%
+    Float 2327ms  2334ms  18.30ms   0.8%
+bigSwitch
+	IntegerBr 2417ms  2430ms  17.45ms   0.7%
+    Float 2364ms  2384ms  39.19ms   1.6%
 
 ### x86-64  Intel i7-9750H CPU @ 2.60GHz
 #### floatZag

@@ -135,9 +135,15 @@ pub const ClassIndex = enum(u16) {
         pub inline fn classIndex(cp: Compact) ClassIndex {
             return @enumFromInt(@intFromEnum(cp));
         }
+        pub fn tag(comptime self: Compact) u8 {
+            return @as(u8, @intFromEnum(self)) << 3 | 1;
+        }
     };
     pub inline fn compact(ci: ClassIndex) Compact {
         return @enumFromInt(@intFromEnum(ci));
+    }
+    pub inline fn classIndexFromInt(int: u5) ClassIndex {
+        return @enumFromInt(int);
     }
     pub const lookupMethodForClass = zag.dispatch.lookupMethodForClass;
 };

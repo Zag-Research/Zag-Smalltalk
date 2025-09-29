@@ -48,7 +48,7 @@ fn decode_valid(iterations: u64, decoder: *const fn (u64) f64) f64 {
     return result;
 }
 pub fn main() void {
-    const iterations = 1_000_000_000;
+    const iterations = 10_000_000_000;
     const ns = 1.0 / @as(f64, @floatFromInt(iterations));
     var timer = std.time.Timer.start() catch unreachable;
 
