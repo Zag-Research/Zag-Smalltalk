@@ -368,23 +368,25 @@ pub const PackedObject = packed struct {
 };
 
 test "from conversion" {
+    try config.skipNotZag();
     const ee = std.testing.expectEqual;
-    std.debug.print("from conversion\n", .{});
     var process: Process align(Process.alignment) = Process.new();
     process.init(Nil());
     const p = &process;
-    //    try ee(@as(f64, @bitCast((Object.from(3.14)))), 3.14);
+    if (true) unreachable;
+    try ee(@as(f64, @bitCast((Object.from(3.14, p)))), 3.14);
     try ee((Object.from(3.14, p)).get_class(), .Float);
     try std.testing.expect((Object.from(3.14, p)).isFloat());
-    try ee((Object.from(3, null)).get_class(), .SmallInteger);
-    try std.testing.expect((Object.from(3, null)).isInt());
-    try std.testing.expect((Object.from(false, null)).isBool());
+    try ee((Object.from(3, p)).get_class(), .SmallInteger);
+    try std.testing.expect((Object.from(3, p)).isInt());
+    try std.testing.expect((Object.from(false, p)).isBool());
     // following fails
-    //try ee((Object.from(false, null)).get_class(), .False);
-    //try ee((Object.from(true, null)).get_class(), .True);
-    //try std.testing.expect((Object.from(true, null)).isBool());
-    //try ee((Object.from(null, null)).get_class(), .UndefinedObject);
-    try std.testing.expect((Object.from(null, null)).isNil());
+    if (true) unreachable;
+    try ee((Object.from(false, p)).get_class(), .False);
+    try ee((Object.from(true, p)).get_class(), .True);
+    try std.testing.expect((Object.from(true, p)).isBool());
+    try ee((Object.from(null, p)).get_class(), .UndefinedObject);
+    try std.testing.expect((Object.from(null, p)).isNil());
 }
 test "to conversion" {
     var process: Process align(Process.alignment) = Process.new();
@@ -399,20 +401,22 @@ test "to conversion" {
     try ee((Object.from(-0x400000, p)).toUnchecked(i64), -0x400000);
 }
 test "get_class" {
+    try config.skipNotZag();
     var process: Process align(Process.alignment) = Process.new();
     process.init(Nil());
     const p = &process;
     const ee = std.testing.expectEqual;
     try ee((Object.from(3.14, p)).get_class(), .Float);
     try ee((Object.from(42, p)).get_class(), .SmallInteger);
-    try ee((Object.from(true, null)).get_class(), .True);
-    try ee((Object.from(false, null)).get_class(), .False);
+    try ee((Object.from(true, p)).get_class(), .True);
+    try ee((Object.from(false, p)).get_class(), .False);
     try ee(Nil().get_class(), .UndefinedObject);
     try ee(True().get_class(), .True);
     try ee(False().get_class(), .False);
     try ee(symbol.symbols.yourself.get_class(), .Symbol);
 }
 test "printing" {
+    try config.skipNotZag();
     var buf: [80]u8 = undefined;
     var fbs = std.io.fixedBufferStream(&buf);
     const stream = fbs.writer();
@@ -441,7 +445,7 @@ test "order" {
             try ee(0, sl1[2]);
             @setRuntimeSafety(false);
             const buf2 = (Buf{
-                .obj = Object.from(42.0, null),
+                .obj = Object.fromAddress(42.0),
             }).buf;
             try ee(buf2[0], 6);
             try ee(buf2[6], 80);

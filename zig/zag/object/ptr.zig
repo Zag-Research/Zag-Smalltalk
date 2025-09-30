@@ -20,13 +20,13 @@ pub const Object = packed struct(u64) {
     pub const inMemorySymbols = true;
     pub const ZERO = of(0);
     pub fn False() Object {
-        return Object.from(&InMemory.False, null);
+        return Object.fromAddress(&InMemory.False);
     }
     pub fn True() Object {
-        return Object.from(&InMemory.True, null);
+        return Object.fromAddress(&InMemory.True);
     }
     pub fn Nil() Object {
-        return Object.from(&InMemory.Nil, null);
+        return Object.fromAddress(&InMemory.Nil);
     }
     pub const maxInt = 0x7fff_ffff_ffff_ffff;
     pub const tagged0: i64 = 0;
@@ -73,8 +73,8 @@ pub const Object = packed struct(u64) {
     pub inline fn nativeF_noCheck(self: object.Object) f64 {
         return self.toDoubleFromMemory();
     }
-    pub inline fn fromNativeF(t: f64, maybeProcess: ?*Process) object.Object {
-        return from(t, maybeProcess);
+    pub inline fn fromNativeF(t: f64, process: *Process) object.Object {
+        return from(t, process);
     }
     pub inline fn symbolHash(self: object.Object) ?u24 {
         if (self.isImmediateClass(.Symbol)) return self.ref.header.hash;
@@ -186,7 +186,12 @@ pub const Object = packed struct(u64) {
         return @truncate(self.ref.data.unsigned >> 8);
     }
     pub inline //
-    fn from(value: anytype, maybeProcess: *Process) Object {
+    fn fromAddress(value: anytype) Object {
+        //@compileLog("from: ",value);
+        @setRuntimeSafety(false);
+        return Object{ .ref = @ptrCast(@alignCast(@constCast(value))) };
+    }
+    pub inline fn from(value: anytype, maybeProcess: *Process) Object {
         const T = @TypeOf(value);
         if (T == Object) return value;
         switch (@typeInfo(T)) {

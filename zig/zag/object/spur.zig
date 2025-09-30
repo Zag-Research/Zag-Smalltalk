@@ -57,15 +57,15 @@ pub const Object = packed union {
 
     // Static constructor functions
     pub inline fn False() Object {
-        return Object.from(&InMemory.False, null);
+        return Object.fromAddress(&InMemory.False);
     }
 
     pub inline fn True() Object {
-        return Object.from(&InMemory.True, null);
+        return Object.fromAddress(&InMemory.True);
     }
 
     pub inline fn Nil() Object {
-        return Object.from(&InMemory.Nil, null);
+        return Object.fromAddress(&InMemory.Nil);
     }
 
     pub inline fn tagbits(self: Self) TagAndClassType {
@@ -252,9 +252,9 @@ pub const Object = packed union {
     }
 
     fn memoryFloat(value: f64, maybeProcess: ?*Process) object.Object {
-        if (math.isNan(value)) return object.Object.from(&InMemory.nanMemObject, null);
-        if (math.inf(f64) == value) return object.Object.from(&InMemory.pInfMemObject, null);
-        if (math.inf(f64) == -value) return object.Object.from(&InMemory.nInfMemObject, null);
+        if (math.isNan(value)) return object.Object.fromAddress(&InMemory.nanMemObject);
+        if (math.inf(f64) == value) return object.Object.fromAddress(&InMemory.pInfMemObject);
+        if (math.inf(f64) == -value) return object.Object.fromAddress(&InMemory.nInfMemObject);
         return InMemory.float(value, maybeProcess);
     }
 
@@ -409,7 +409,7 @@ test "float from/to conversion" {
     const testValues = [_]f64{ 1.0, -1.0, 0.0, -0.0, math.pi };
 
     for (testValues) |value| {
-        const obj = Object.from(value, null);
+        const obj = Object.fromAddress(value);
         try expect(obj.isFloat());
         try expectEqual(value, obj.toWithCheck(f64, false));
     }
@@ -424,7 +424,7 @@ test "float from/to conversion" {
     const edgeValues = [_]f64{ smallest, -smallest, largest, -largest };
 
     for (edgeValues) |value| {
-        const obj = Object.from(value, null);
+        const obj = Object.fromAddress(value);
         try expect(obj.isFloat());
         try expectEqual(value, obj.toWithCheck(f64, false));
     }
@@ -438,7 +438,7 @@ test "float from/to conversion" {
     };
 
     for (memoryValues) |value| {
-        const obj = Object.from(value, null);
+        const obj = Object.fromAddress(value);
         try expect(obj.isHeap()); // Should be heap-allocated
         try expectEqual(value, obj.toWithCheck(f64, false));
     }

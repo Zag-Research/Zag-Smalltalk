@@ -742,7 +742,7 @@ fn CompileTimeObject(comptime counts: usize) type {
         objects: [codes]Object align(8),
         offsets: [codes]bool align(8),
         const Self = @This();
-        pub fn init(comptime tup: anytype, comptime raw: bool) Self {
+        pub fn init(comptime tup: anytype, raw: bool) Self {
             var obj = Self{
                 .objects = undefined,
                 .offsets = [_]bool{false} ** codes,
@@ -753,12 +753,14 @@ fn CompileTimeObject(comptime counts: usize) type {
             comptime var hash: i24 = 0;
             inline for (tup) |field| {
                 const o: Object = switch (@TypeOf(field)) {
-                    Object, bool, @TypeOf(null) => Object.from(field, null),
+                    Object => field,
+                    bool => if (field) True() else False(),
+                    @TypeOf(null) => Nil(),
                     comptime_int => blk: {
-                        hash = field;
-                        break :blk if (raw) Object.rawFromU(@bitCast(@as(i64, field))) else Object.from(field, null);
-                    },
-                    comptime_float => if (raw) Object.rawFromU(@bitCast(@as(f64, field))) else Object.from(field, null),
+                          hash = field;
+                          break :blk if (raw) Object.rawFromU(@bitCast(@as(i64, field))) else unreachable;
+                      },
+                    comptime_float => if (raw) Object.rawFromU(@bitCast(@as(f64, field))) else unreachable,
                     ClassIndex => blk: {
                         if (last >= 0)
                             objects[last] = @as(HeapHeader, @bitCast(objects[last]))
@@ -805,7 +807,7 @@ fn CompileTimeObject(comptime counts: usize) type {
                         lastHeader = header;
                     } else {
                         const ob: u64 = @bitCast(o.*);
-                        o.* = if (ob & 1 != 0) Object.from(&self.objects[ob >> 1], null) else replacements[ob >> 1];
+                        o.* = if (ob & 1 != 0) Object.fromAddress(&self.objects[ob >> 1]) else replacements[ob >> 1];
                         if (o.isMemoryAllocated()) {
                             if (lastHeader) |h| h.format = .notIndexableWithPointers;
                         }
@@ -820,7 +822,7 @@ fn CompileTimeObject(comptime counts: usize) type {
             return @ptrCast(self);
         }
         pub inline fn asObject(self: *Self) Object {
-            return Object.from(self.asHeapObjectPtr(), null);
+            return Object.fromAddress(self.asHeapObjectPtr());
         }
     };
 }

@@ -188,8 +188,8 @@ pub const Object = packed struct(u64) {
         const ee = std.testing.expectEqual;
         if (thunkImmediate(object.Object.tests[0])) |value|
             try ee(object.Object.tests[0], value.thunkImmediateValue());
-        if (thunkImmediate(object.Object.from(-42, null))) |value|
-            try ee(object.Object.from(-42, null), value.thunkImmediateValue());
+        if (thunkImmediate(object.Object.fromAddress(-42))) |value|
+            try ee(object.Object.fromAddress(-42), value.thunkImmediateValue());
         try ee(null, thunkImmediate(object.Object.from(@as(u64, 1) << 47, null)));
     }
     pub inline fn isImmediateClass(self: object.Object, comptime class: ClassIndex.Compact) bool {
@@ -261,9 +261,9 @@ pub const Object = packed struct(u64) {
     }
 
     fn memoryFloat(value: f64, maybeProcess: ?*Process) object.Object {
-        if (math.isNan(value)) return object.Object.from(&InMemory.nanMemObject, null);
-        if (math.inf(f64) == value) return object.Object.from(&InMemory.pInfMemObject, null);
-        if (math.inf(f64) == -value) return object.Object.from(&InMemory.nInfMemObject, null);
+        if (math.isNan(value)) return object.Object.fromAddress(&InMemory.nanMemObject);
+        if (math.inf(f64) == value) return object.Object.fromAddress(&InMemory.pInfMemObject);
+        if (math.inf(f64) == -value) return object.Object.fromAddress(&InMemory.nInfMemObject);
         return InMemory.float(value, maybeProcess);
     }
 

@@ -253,20 +253,19 @@ pub const popAssociationValue = struct {
         return @call(tailCall, process.check(pc.prim2()), .{ pc.next2(), sp.drop(), process, context, extra });
     }
     test "popAssociationValue" {
-        var association = compileObject(.{
-            ":def",
-            c.Association,
-            "0Nil",
-            0,
-        });
-        association.setLiterals(&.{Nil()}, &.{});
-        if (true) return error.SkipZigTest;
         var exe = Execution.initTest(
             "popAssociationValue",
             .{
                 tf.popAssociationValue,
                 "0object",
             });
+        var association = compileObject(.{
+            ":def",
+            c.Association,
+            "0Nil",
+            "1Zero",
+        });
+        association.setLiterals(&.{Nil(), exe.object(0)}, &.{});
         try exe.runTestWithObjects(
             &.{
                 association.asObject(),

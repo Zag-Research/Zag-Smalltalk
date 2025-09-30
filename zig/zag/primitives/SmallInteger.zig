@@ -87,25 +87,27 @@ pub const inlines = struct {
 };
 
 test "inline primitives" {
-    try config.skipNotZag();
+    var process: Process align(Process.alignment) = Process.new();
+    process.init(Nil());
+    const p = &process;
     const expectEqual = std.testing.expectEqual;
-    try expectEqual(Object.from(12, null), inlines.@"*"(Object.from(3, null), Object.from(4, null), null));
-    try expectEqual(error.primitiveError, inlines.@"*"(Object.from(0x1_0000_0000, null), Object.from(0x100_0000, null), null));
-    try expectEqual(error.primitiveError, inlines.@"*"(Object.from(0x1_0000_0000, null), Object.from(0x80_0000, null), null));
-    try expectEqual(Object.from(-0x80_0000_0000_0000, null), inlines.@"*"(Object.from(0x1_0000_0000, null), Object.from(-0x80_0000, null), null));
-    try expectEqual(Object.from(0x20_0000_0000_0000, null), inlines.@"*"(Object.from(0x1_0000_0000, null), Object.from(0x20_0000, null), null));
-    try expectEqual(Object.from(0x3f_ffff_0000_0000, null), inlines.@"*"(Object.from(0x1_0000_0000, null), Object.from(0x3f_ffff, null), null));
-    try expectEqual(Object.from(0, null), inlines.negated(Object.from(0, null), null));
-    try expectEqual(Object.from(-42, null), inlines.negated(Object.from(42, null), null));
-    try expectEqual(Object.from(0x7f_ffff_ffff_ffff, null), inlines.negated(Object.from(-0x7f_ffff_ffff_ffff, null), null));
-    try expectEqual(Object.from(-0x7f_ffff_ffff_ffff, null), inlines.negated(Object.from(0x7f_ffff_ffff_ffff, null), null));
-    try expectEqual(error.primitiveError, inlines.negated(Object.from(-0x80_0000_0000_0000, null), null));
-    try expectEqual(true, try inlines.@"<="(Object.from(0, null), Object.from(0, null)));
-    try expectEqual(true, try inlines.@"<="(Object.from(0, null), Object.from(1, null)));
-    try expectEqual(false, try inlines.@"<="(Object.from(1, null), Object.from(0, null)));
-    try expectEqual(true, try inlines.@">="(Object.from(0, null), Object.from(0, null)));
-    try expectEqual(false, try inlines.@">="(Object.from(0, null), Object.from(1, null)));
-    try expectEqual(true, try inlines.@">="(Object.from(1, null), Object.from(0, null)));
+    try expectEqual(Object.from(12, p), inlines.@"*"(Object.from(3, p), Object.from(4, p), null));
+    try expectEqual(error.primitiveError, inlines.@"*"(Object.from(0x1_0000_0000, p), Object.from(0x100_0000, p), null));
+    try expectEqual(error.primitiveError, inlines.@"*"(Object.from(0x1_0000_0000, p), Object.from(0x80_0000, p), null));
+    try expectEqual(Object.from(-0x80_0000_0000_0000, p), inlines.@"*"(Object.from(0x1_0000_0000, p), Object.from(-0x80_0000, p), null));
+    try expectEqual(Object.from(0x20_0000_0000_0000, p), inlines.@"*"(Object.from(0x1_0000_0000, p), Object.from(0x20_0000, p), null));
+    try expectEqual(Object.from(0x3f_ffff_0000_0000, p), inlines.@"*"(Object.from(0x1_0000_0000, p), Object.from(0x3f_ffff, p), null));
+    try expectEqual(Object.from(0, p), inlines.negated(Object.from(0, p), null));
+    try expectEqual(Object.from(-42, p), inlines.negated(Object.from(42, p), null));
+    try expectEqual(Object.from(0x7f_ffff_ffff_ffff, p), inlines.negated(Object.from(-0x7f_ffff_ffff_ffff, p), null));
+    try expectEqual(Object.from(-0x7f_ffff_ffff_ffff, p), inlines.negated(Object.from(0x7f_ffff_ffff_ffff, p), null));
+    try expectEqual(error.primitiveError, inlines.negated(Object.from(-0x80_0000_0000_0000, p), null));
+    try expectEqual(true, try inlines.@"<="(Object.from(0, p), Object.from(0, p)));
+    try expectEqual(true, try inlines.@"<="(Object.from(0, p), Object.from(1, p)));
+    try expectEqual(false, try inlines.@"<="(Object.from(1, p), Object.from(0, p)));
+    try expectEqual(true, try inlines.@">="(Object.from(0, p), Object.from(0, p)));
+    try expectEqual(false, try inlines.@">="(Object.from(0, p), Object.from(1, p)));
+    try expectEqual(true, try inlines.@">="(Object.from(1, p), Object.from(0, p)));
 }
 pub const @"+" = struct {
     pub const number = 1;
@@ -183,7 +185,7 @@ pub const @"<=" = struct {
     pub const inlined = signature(.@"<=", number);
     pub fn primitive(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result { // SmallInteger>>#<=
         const newSp = sp.dropPut(Object.from(inlines.@"<="(sp.next, sp.top) catch
-            return @call(tailCall, Extra.primitiveFailed, .{ pc, sp, process, context, extra }), null));
+            return @call(tailCall, Extra.primitiveFailed, .{ pc, sp, process, context, extra }), process));
         return @call(tailCall, process.check(context.npc), .{ context.tpc, newSp, process, context, unreachable });
     }
     pub fn inlinePrimitive(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
@@ -195,7 +197,7 @@ pub const @"<=" = struct {
             return @call(tailCall, PC.inlinePrimitiveFailed, .{ pc, sp, process, context, extra });
         }
         const newSp = sp.dropPut(Object.from(inlines.@"<="(receiver, sp.top) catch
-            return @call(tailCall, PC.inlinePrimitiveFailed, .{ pc, sp, process, context, extra }), null));
+            return @call(tailCall, PC.inlinePrimitiveFailed, .{ pc, sp, process, context, extra }), process));
         trace("Inline <= called, {*} {f}\n", .{ newSp, extra });
         return @call(tailCall, process.check(pc.prim2()), .{ pc.next2(), newSp, process, context, extra });
     }
@@ -205,7 +207,7 @@ pub const @"*" = struct {
     pub const inlined = signature(.@"*", number);
     pub fn primitive(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result { // SmallInteger>>#*
         const newSp = sp.dropPut(Object.from(inlines.@"*"(sp.next, sp.top, process) catch
-            return @call(tailCall, Extra.primitiveFailed, .{ pc, sp, process, context, extra }), null));
+            return @call(tailCall, Extra.primitiveFailed, .{ pc, sp, process, context, extra }), process));
         return @call(tailCall, process.check(context.npc), .{ context.tpc, newSp, process, context, unreachable });
     }
     pub fn inlinePrimitive(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {

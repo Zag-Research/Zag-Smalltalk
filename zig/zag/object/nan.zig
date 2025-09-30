@@ -483,7 +483,7 @@ test "all generated NaNs are positive" {
     const fns = struct {
         const nanU: u64 = @bitCast(math.nan(f64));
         fn d(x: anytype) !void {
-            try std.testing.expect(object.Object.from(x, null).isDouble());
+            try std.testing.expect(object.Object.fromAddress(x).isDouble());
         }
         fn v(x: anytype) !void {
             try d(x);

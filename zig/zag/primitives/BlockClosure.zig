@@ -131,7 +131,7 @@ pub const threadedFns = struct {
 
         test "asThunk ptr" {
             try config.skipNotZag();
-            const obj = Object.from(&ThunkReturnSmallInteger.method, null);
+            const obj = Object.fromAddress(&ThunkReturnSmallInteger.method);
             var exe = Execution.initTest(
                 "asThunk ptr",
                 .{tf.asThunk});
@@ -241,8 +241,8 @@ pub const threadedFns = struct {
                 d.* = s;
             closure[0] = (HeapHeader.calc(.BlockClosure, @truncate(size), @truncate(@intFromPtr(sp)), .onStack, null, Object, false) catch unreachable).o();
             closure[1] = pc.next().object();
-            if (includeContext != 0) closure[2] = Object.from(context, null);
-            newSp.top = Object.from(closure.ptr, null);
+            if (includeContext != 0) closure[2] = Object.fromAddress(context);
+            newSp.top = Object.fromAddress(closure.ptr);
             return @call(tailCall, process.check(pc.skip(2).prim()), .{ pc.skip(2).next(), newSp, process, newContext, newExtra });
         }
         const testMethod = compileMethod(Sym.yourself, 0, 0, .BlockClosure, .{});

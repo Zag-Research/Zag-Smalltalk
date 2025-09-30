@@ -28,21 +28,21 @@ const tf = zag.threadedFn.Enum;
 pub const moduleName = "SmallInteger";
 pub fn init() void {}
 pub const inlines = struct {
-    pub fn @"+"(self: Object, other: Object, maybeProcess: ?*Process) !Object { // INLINED - Add
+    pub fn @"+"(self: Object, other: Object, process: *Process) !Object { // INLINED - Add
         if (other.nativeF()) |untagged| {
             const result = self.nativeF_noCheck() + untagged;
-            return Object.fromNativeF(result, maybeProcess);
+            return Object.fromNativeF(result, process);
         }
         return error.primitiveError;
     }
-    pub inline fn negated(self: Object, maybeProcess: ?*Process) !Object { // Negate
+    pub inline fn negated(self: Object, process: *Process) !Object { // Negate
         const result = -self.nativeF_noCheck();
-        return Object.fromNativeF(result, maybeProcess);
+        return Object.fromNativeF(result, process);
     }
-    pub inline fn @"-"(self: Object, other: Object, maybeProcess: ?*Process) !Object { // Subtract
+    pub inline fn @"-"(self: Object, other: Object, process: *Process) !Object { // Subtract
         if (other.nativeF()) |untagged| {
             const result = self.nativeF_noCheck() - untagged;
-            return Object.fromNativeF(result, maybeProcess);
+            return Object.fromNativeF(result, process);
         }
         return error.primitiveError;
     }
@@ -76,10 +76,10 @@ pub const inlines = struct {
             return self.nativeF_noCheck() != tagged;
         return error.primitiveError;
     }
-    pub inline fn @"*"(self: Object, other: Object, maybeProcess: ?*Process) !Object { // Multiply
+    pub inline fn @"*"(self: Object, other: Object, process: *Process) !Object { // Multiply
         if (other.nativeF()) |untagged| {
             const result = self.nativeF_noCheck() * untagged;
-            return Object.fromNativeF(result, maybeProcess);
+            return Object.fromNativeF(result, process);
         }
         return error.primitiveError;
     }
@@ -145,8 +145,8 @@ pub const @"<=" = struct {
     pub const inlined = signature(.@"<=", number);
     pub fn primitive(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result { // SmallInteger>>#<=
         const newSp = sp.dropPut(Object.from(inlines.@"<="(sp.next, sp.top) catch
-            return @call(tailCall, Extra.primitiveFailed, .{ pc, sp, process, context, extra }), null));
-        return @call(tailCall, process.check(context.npc), .{ context.tpc, newSp, process, context, unreachable });
+            return @call(tailCall, Extra.primitiveFailed, .{ pc, sp, process, context, extra }), process));
+        return @call(tailCall, process.check(context.npc), .{ context.tpc, newSp, process, context, undefined });
     }
     pub fn inlinePrimitive(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
         process.dumpStack(sp, "<=");
@@ -157,9 +157,9 @@ pub const @"<=" = struct {
             return @call(tailCall, PC.inlinePrimitiveFailed, .{ pc, sp, process, context, extra });
         }
         const newSp = sp.dropPut(Object.from(inlines.@"<="(receiver, sp.top) catch
-            return @call(tailCall, PC.inlinePrimitiveFailed, .{ pc, sp, process, context, extra }), null));
+            return @call(tailCall, PC.inlinePrimitiveFailed, .{ pc, sp, process, context, extra }), process));
         trace("Inline <= called, {*} {f}\n", .{ newSp, extra });
-        return @call(tailCall, process.check(pc.prim2()), .{ pc.next2(), newSp, process, context, extra });
+        return @call(tailCall, process.check(pc.prim2()), .{ pc.next2(), newSp, process, context, undefined });
     }
 };
 pub const @"*" = struct {
@@ -167,8 +167,8 @@ pub const @"*" = struct {
     pub const inlined = signature(.@"*", number);
     pub fn primitive(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result { // SmallInteger>>#*
         const newSp = sp.dropPut(Object.from(inlines.@"*"(sp.next, sp.top, process) catch
-            return @call(tailCall, Extra.primitiveFailed, .{ pc, sp, process, context, extra }), null));
-        return @call(tailCall, process.check(context.npc), .{ context.tpc, newSp, process, context, unreachable });
+            return @call(tailCall, Extra.primitiveFailed, .{ pc, sp, process, context, extra }), process));
+        return @call(tailCall, process.check(context.npc), .{ context.tpc, newSp, process, context, undefined });
     }
     pub fn inlinePrimitive(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
         const receiver = sp.next;
