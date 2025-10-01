@@ -1,4 +1,5 @@
 const std = @import("std");
+const Encoding = @import("zag/encoding.zig").Encoding;
 pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
@@ -31,21 +32,6 @@ pub fn build(b: *std.Build) void {
     if (b.args) |args| {
         run_cmd.addArgs(args);
     }
-    const tests = b.addTest(.{
-        .root_module = b.createModule(.{
-            .root_source_file = b.path("zag/root.zig"),
-            .target = target,
-            .optimize = optimize,
-            .imports = &.{
-                //.{ .name = "zag", .module = zag },
-            },
-        }),
-    });
-    tests.root_module.addOptions("options", options);
-    const run_tests = b.addRunArtifact(tests);
-    const test_step = b.step("test", "Run tests");
-    test_step.dependOn(&run_tests.step);
-
     var includeLLVM = false;
     if (b.option(bool, "llvm", "Include LLVM in build") orelse false) {
         includeLLVM = true;
@@ -53,11 +39,11 @@ pub fn build(b: *std.Build) void {
     options.addOption(bool, "includeLLVM", includeLLVM);
     const git_version = b.run(&.{ "git", "log", "--pretty=format:%cI-%h", "-1" });
     options.addOption([]const u8, "git_version", git_version);
-    const compile_date = b.run(&.{ "date", "+%Y-%m-%dT%H:%M:%S%z" });
-    options.addOption([]const u8, "compile_date", std.mem.trim(u8, compile_date, " \n\r"));
-    const Encoding = @import("zag/encoding.zig").Encoding;
-    const encoding = b.option(Encoding, "encoding", "Object encoding") orelse .zag;
-    options.addOption(Encoding, "objectEncoding", encoding);
+    const compile_date_with_extra = b.run(&.{ "date", "+%Y-%m-%dT%H:%M:%S%z" });
+    const compile_date = std.mem.trim(u8, compile_date_with_extra, " \n\r");
+    options.addOption([]const u8, "compile_date", compile_date);
+    const encoding_option = b.option(Encoding, "encoding", "Object encoding");
+    options.addOption(Encoding, "objectEncoding", encoding_option orelse .zag);
     const max_classes = b.option(u16, "maxClasses", "Maximum number of classes") orelse 255;
     options.addOption(u16, "maxClasses", max_classes);
     const trace = b.option(bool, "trace", "trace execution") orelse false;
@@ -110,6 +96,48 @@ pub fn build(b: *std.Build) void {
     });
     const check = b.step("check", "Check if foo compiles");
     check.dependOn(&fib_check.step);
+
+    // --- Encoding Tests ---
+    const test_encodings: []const Encoding =
+        if (encoding_option) |specific_encoding|
+                &[_]Encoding{ specific_encoding}
+            else &[_]Encoding{ .zag, .nan, .zagAlt };
+    const test_step = b.step("test", "Run tests for all encoding types");
+
+    for (test_encodings) |enc| {
+        const enc_options = b.addOptions();
+        enc_options.addOption(bool, "includeLLVM", includeLLVM);
+        enc_options.addOption([]const u8, "git_version", git_version);
+        enc_options.addOption([]const u8, "compile_date", compile_date);
+        enc_options.addOption(Encoding, "objectEncoding", enc);
+        enc_options.addOption(u16, "maxClasses", max_classes);
+        enc_options.addOption(bool, "trace", trace);
+
+        const zag_enc = b.createModule(.{
+            .root_source_file = b.path("zag/zag.zig"),
+            .target = target,
+        });
+
+        zag_enc.addOptions("options", enc_options);
+
+        if (includeLLVM) {
+            zag_enc.addImport("llvm-build-module", llvm_module);
+        }
+
+        const enc_tests = b.addTest(.{
+            .root_module = b.createModule(.{
+                .root_source_file = b.path("zag/root.zig"),
+                .target = target,
+                .optimize = optimize,
+                .imports = &.{
+                    // .{ .name = "zag", .module = zag_enc },
+                },
+            }),
+        });
+        enc_tests.root_module.addOptions("options", enc_options);
+        const run_enc_tests = b.addRunArtifact(enc_tests);
+        test_step.dependOn(&run_enc_tests.step);
+    }
 }
 
 fn build_llvm_module(b: *std.Build, target: std.Build.ResolvedTarget, optimize: std.builtin.OptimizeMode) *std.Build.Module {

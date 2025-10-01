@@ -84,7 +84,7 @@ The additional classes that are hard-coded (because they are referenced by Zig c
 32. `UndefinedObject`: the singleton value `nil` which is represented as all zero bits.
 33. `Context`: method context. Note this must be #33 so that it relates to the reserved class #4
 34. `Float`: the bit patterns that encode double-precision IEEE floating point.
-35. `ProtoObject`: the master superclass. This is also the value returned by `immediate_class` for all heap and thread-local objects. This is an address of an in-memory object.
+35. `ProtoObject`: the master superclass. This is an address of an in-memory object.
 36. `Object`: the superclass of all normal objects
 37. `Array`: the fundamental `Array` class.
 38. `String`: ASCII strings (which are mutable)

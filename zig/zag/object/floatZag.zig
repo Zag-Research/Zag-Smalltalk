@@ -36,23 +36,27 @@ test "encode/decode" {
     try expectEqual(error.Unencodable, encode(math.inf(f64)));
     try expectEqual(error.Unencodable, encode(-math.inf(f64)));
 }
-const iterations = 1000000000;
 const valid_values = [_]f64{0.0, -0.0} ** 1 ++
     [_]f64{ 1.0, -1.0, math.pi, 42.0, -3.14159, 100.0, -100.0 } ** 16 ++
     [_]f64{ smallest, largest } ** 16;
-const iterations_v = iterations / valid_values.len;
 const invalid_values =
     [_]f64{tooLarge} ** 1 ++
     [_]f64{math.nan(f64)} ** 1 ++
     [_]f64{math.inf(f64)} ** 1 ++
     [_]f64{-math.inf(f64)} ** 1;
-const iterations_i = iterations / invalid_values.len;
 const decode_values = [_]u64{
-    0x0000000000000002,
-    0x000000000000000a,
-    0xff00000000000005,
-    0xff0000000000000d,
-    0x00921fb54442d186,
+    0x0000000000000002, // encoded +0.0
+    0x000000000000000a, // encoded -0.0
+    0xff00000000000005, // encoded +1.0
+    0xff0000000000000d, // encoded -1.0
+    0x00921fb54442d186, // encoded +pi
+    0x0450000000000006, // encoded +42.0
+    0x00921f9f01b866ee, // encoded -3.14159
+    0x0590000000000006, // encoded +100.0
+    0x059000000000000e, // encoded -100.0
+    0x0000000000000012, // encoded +smallest
+    0xfffffffffffffff7, // encoded -largest
+    0x00921fb54442d186, // repetition
     0x0450000000000006,
     0x00921f9f01b866ee,
     0x0590000000000006,
@@ -60,52 +64,52 @@ const decode_values = [_]u64{
     0x0000000000000012,
     0xfffffffffffffff7,
 };
-const iterations_d = iterations / decode_values.len;
+pub fn encode_valid(iterations: u64) void {
+    for (0..iterations / valid_values.len) |_| {
+        for (valid_values) |val| {
+            _ = encode(val) catch return;
+        }
+    }
+}
+pub fn encode_invalid(iterations: u64) void {
+    for (0..iterations / invalid_values.len) |_| {
+        for (invalid_values) |val| {
+            std.mem.doNotOptimizeAway(encode(val) catch 0);
+        }
+    }
+}
+pub fn decode_valid(iterations: u64) void {
+    for (0..iterations / decode_values.len) |_| {
+        for (decode_values) |val| {
+            std.mem.doNotOptimizeAway(decode(val));
+        }
+    }
+}
+
 // zig run -Doptimize=ReleaseFast floatSpur.zig
 pub fn main() void {
+    const iterations = 100_000_000;
+    const ns = 1.0 / @as(f64, @floatFromInt(iterations));
 
     if (false) {
         for (valid_values) |val| {
             std.debug.print("0x{x:0>16},\n", .{encode(val) catch unreachable});
         }
     }
+
     // Benchmark encode_spec
     var timer = std.time.Timer.start() catch unreachable;
 
     _ = timer.lap();
-    for (0..iterations_v) |_| {
-        for (valid_values) |val| {
-            _ = encode(val) catch return;
-        }
-    }
+    encode_valid(iterations);
     const valid_time = timer.lap();
-    for (0..iterations_i) |_| {
-        for (invalid_values) |val| {
-            _ = encode(val) catch continue;
-        }
-    }
+    encode_invalid(iterations);
     const invalid_time = timer.lap();
-    for (0..iterations_d) |_| {
-        for (decode_values) |val| {
-            _ = decode(val);
-        }
-    }
+    decode_valid(iterations);
     const decode_time = timer.lap();
-    std.debug.print("zag time: {}ns {}ns {}ns\n", .{ valid_time, invalid_time, decode_time });
-
-    _ = timer.lap();
-    const spur = @import("floatSpur.zig");
-    spur.encode_valid(iterations);
-    const spur_valid_time = timer.lap();
-    spur.encode_invalid(iterations);
-    const spur_invalid_time = timer.lap();
-    spur.decode_valid(iterations);
-    const spur_decode_time = timer.lap();
-    std.debug.print("Spur time: {}ns {}ns {}ns\n", .{ spur_valid_time, spur_invalid_time, spur_decode_time });
-
-    std.debug.print("Zag is {d:.2}x {d:.2}x {d:.2}x faster\n",
-        .{ delta(valid_time, spur_valid_time), delta(invalid_time, spur_invalid_time), delta(decode_time, spur_decode_time) });
+    std.debug.print("encode time: {d:.3}s {d:.3}s {d:.3}s\n", .{ @as(f64, @floatFromInt(valid_time))*ns, @as(f64, @floatFromInt(invalid_time))*ns, @as(f64, @floatFromInt(decode_time))*ns });
 }
-fn delta(zag: u64, spur: u64) f64 {
-    return @as(f64, @floatFromInt(spur)) / @as(f64, @floatFromInt(zag));
+
+fn delta(spec: u64, check: u64) f64 {
+    return @as(f64, @floatFromInt(check)) / @as(f64, @floatFromInt(spec));
 }

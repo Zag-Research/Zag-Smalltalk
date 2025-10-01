@@ -125,7 +125,7 @@ pub const Object = packed struct(u64) {
     pub inline fn fromNativeF(t: f64, maybeProcess: ?*Process) object.Object {
         return from(t, maybeProcess);
     }
-    pub inline fn symbolHash(self: object.Object) ?u40 {
+    pub inline fn symbolHash(self: object.Object) ?u24 {
         if (self.isImmediateClass(.Symbol)) return @truncate(self.hash);
         return null;
     }
@@ -137,7 +137,7 @@ pub const Object = packed struct(u64) {
     }
     pub const testU = rawU;
     pub const testI = rawI;
-    inline fn rawU(self: Self) u64 {
+    pub inline fn rawU(self: Self) u64 {
         return @bitCast(self);
     }
     inline fn rawI(self: object.Object) i64 {
@@ -180,10 +180,10 @@ pub const Object = packed struct(u64) {
     test "ThunkImmediate" {
         trace("Test: ThunkImmediate\n", .{});
         const ee = std.testing.expectEqual;
-        if (thunkImmediate(object.Object.from(42, null))) |value|
-            try ee(object.Object.from(42, null), value.thunkImmediateValue());
-        if (thunkImmediate(object.Object.from(-42, null))) |value|
-            try ee(object.Object.from(-42, null), value.thunkImmediateValue());
+        if (thunkImmediate(object.Object.tests[0])) |value|
+            try ee(object.Object.tests[0], value.thunkImmediateValue());
+        if (thunkImmediate(object.Object.fromAddress(-42))) |value|
+            try ee(object.Object.fromAddress(-42), value.thunkImmediateValue());
         try ee(null, thunkImmediate(object.Object.from(@as(u64, 1) << 47, null)));
     }
     pub inline fn isImmediateClass(self: object.Object, comptime class: ClassIndex.Compact) bool {
@@ -232,7 +232,7 @@ pub const Object = packed struct(u64) {
         return self.rawU() == object.Object.True().rawU();
     }
     pub inline fn withClass(self: object.Object, class: ClassIndex) object.Object {
-        if (!self.isSymbol()) @panic("not a Symbol");
+        if (!self.isSymbol()) std.debug.panic("not a Symbol: {f}", self);
         return @bitCast((self.rawU() & 0xffffffffff) | (@as(u64, @intFromEnum(class)) << 40));
     }
     pub inline fn rawWordAddress(self: object.Object) u64 {
@@ -255,12 +255,15 @@ pub const Object = packed struct(u64) {
     }
 
     fn memoryFloat(value: f64, maybeProcess: ?*Process) object.Object {
-        if (math.isNan(value)) return object.Object.from(&InMemory.nanMemObject, null);
-        if (math.inf(f64) == value) return object.Object.from(&InMemory.pInfMemObject, null);
-        if (math.inf(f64) == -value) return object.Object.from(&InMemory.nInfMemObject, null);
+        if (math.isNan(value)) return object.Object.fromAddress(&InMemory.nanMemObject);
+        if (math.inf(f64) == value) return object.Object.fromAddress(&InMemory.pInfMemObject);
+        if (math.inf(f64) == -value) return object.Object.fromAddress(&InMemory.nInfMemObject);
         return InMemory.float(value, maybeProcess);
     }
 
+    pub fn fromAddress(value: anytype) Object {
+        return @bitCast(@intFromPtr(value));
+    }
     pub inline fn from(value: anytype, maybeProcess: ?*Process) object.Object {
         const T = @TypeOf(value);
         if (T == object.Object) return value;
@@ -327,14 +330,19 @@ pub const Object = packed struct(u64) {
         }
         @panic("Trying to convert Object to " ++ @typeName(T));
     }
-    pub inline fn which_class(self: object.Object, comptime full: bool) ClassIndex {
+    pub inline fn which_class(self: object.Object) ClassIndex {
         const bits: u64 = @bitCast(self);
-        if (bits & 1 != 0) {@branchHint(.likely);return .SmallInteger;}
-        if (bits & 4 != 0) {@branchHint(.likely);return .Float;}
-        if (bits & 2 != 0) return self.class.classIndex();
-        if (bits == 0) return .UndefinedObject;
-        if (full) return self.to(HeapObjectPtr).*.getClass()
-        else return .Object;
+        if (bits & 1 != 0) {@branchHint(.likely);
+            return .SmallInteger;
+        } else if (bits & 4 != 0) {@branchHint(.likely);
+            return .Float;
+        } else if (bits & 2 != 0) {@branchHint(.unlikely);
+            return self.class.classIndex();
+        } else if (bits == 0) {@branchHint(.unlikely);
+            return .UndefinedObject;
+        } else {
+            return self.to(HeapObjectPtr).*.getClass();
+        }
     }
     pub inline fn isMemoryAllocated(self: object.Object) bool {
         return if (self.isHeap()) self != object.Object.Nil() else @intFromEnum(self.class) <= @intFromEnum(ClassIndex.Compact.ThunkHeap);
@@ -386,7 +394,6 @@ pub const Object = packed struct(u64) {
     pub const format = OF.format;
     pub const getField = OF.getField;
     pub const get_class = OF.get_class;
-    pub const immediate_class = OF.immediate_class;
     pub const isBool = OF.isBool;
     pub const isIndexable = OF.isIndexable;
     pub const isNil = OF.isNil;
@@ -401,4 +408,5 @@ pub const Object = packed struct(u64) {
     pub const asVariable = zag.Context.asVariable;
     pub const PackedObject = object.PackedObject;
     pub const signature = zag.execute.Signature.signature;
+    pub const tests = OF.tests;
 };

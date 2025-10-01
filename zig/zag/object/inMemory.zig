@@ -200,7 +200,7 @@ pub inline fn int(i: i64, maybeProcess: ?*Process) Object {
     if ((PointedObject{
         .header = .{ .classIndex = .SmallInteger },
         .data = .{ .int = i },
-    }).cached()) |obj| return Object.from(obj, null);
+    }).cached()) |obj| return Object.fromAddress(obj);
     //@compileLog(i,"uncachable");
     unreachable;
 }
@@ -248,17 +248,17 @@ const FCache = switch (objectEncoding) {
 };
 pub inline fn float(v: f64, maybeProcess: ?*Process) Object {
     if (std.math.isNan(v))
-        return Object.from(&nanMemObject, maybeProcess);
+        return Object.fromAddress(&nanMemObject);
     if (std.math.isInf(v)) {
         if (v > 0)
-            return Object.from(&pInfMemObject, maybeProcess);
-        return Object.from(&nInfMemObject, maybeProcess);
+            return Object.fromAddress(&pInfMemObject);
+        return Object.fromAddress(&nInfMemObject);
     }
     if (FCache) {
         if (v == 0.0)
-            return Object.from(&fZero, maybeProcess);
+            return Object.fromAddress(&fZero);
         if (v == 1.0)
-            return Object.from(&fOne, maybeProcess);
+            return Object.fromAddress(&fOne);
     }
     if (maybeProcess) |process| {
         if (process.alloc(.Float, 1, null, Object, false)) |allocResult| {

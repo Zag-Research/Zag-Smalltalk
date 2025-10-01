@@ -21,7 +21,6 @@ const True = object.True;
 const ClassIndex = object.ClassIndex;
 const utilities = zag.utilities;
 const largerPowerOf2 = utilities.largerPowerOf2;
-const inversePhi24 = utilities.inversePhi(u24);
 const assert = std.debug.assert;
 pub const Format = enum(u7) {
     immutableSizeZero = 0,
@@ -276,16 +275,13 @@ const HeapOperations = struct {
         return error.notIndexable;
     }
     fn unimplementedArray(format: Format, _: HeapHeader, _: *const HeapObject, _: usize) HeapOperationError![]Object {
-        trace("format: {}\n", .{format});
-        @panic("unimplemented array");
+        std.debug.panic("unimplemented array: {}", .{format});
     }
     fn unimplementedInstVars(format: Format, _: HeapHeader, _: *const HeapObject) HeapOperationError![]Object {
-        trace("format: {}\n", .{format});
-        @panic("unimplemented instVars");
+        std.debug.panic("unimplemented instVars: {}", .{format});
     }
     fn unimplementedSize(format: Format, _: HeapHeader, _: *const HeapObject) HeapOperationError!usize {
-        trace("format: {}\n", .{format});
-        @panic("unimplemented size");
+        std.debug.panic("unimplemented size: {}", .{format});
     }
 };
 pub const HeapObjectPtrIterator = struct {
@@ -339,7 +335,7 @@ pub const HeapObjectPtrIterator = struct {
 //     var o1b = compileObject(.{
 //         True,
 //         Sym.i_0, // alternate reference to replacement Object #1
-//         42,
+//         Object.tests[0],
 //         c.Class, // third HeapObject
 //     });
 //     o1b.setLiterals(&[_]Object{Nil}, &[_]ClassIndex{});
@@ -373,7 +369,7 @@ pub const HeapObjectPtrIterator = struct {
 //     // const ho3 = AllocationInfo.calc(o3.len, null, Object, false).fillFooters(@ptrCast(&o3[o3.len-1]), ClassIndex.Object, .static, 0, Object);
 // }
 inline fn hashFromPtr(ptr: anytype) u24 {
-    return @truncate((@intFromPtr(ptr) >> 3) *% inversePhi24);
+    return utilities.ProspectorHash.hash24(@truncate(@intFromPtr(ptr) >> 3));
 }
 pub const AllocationInfo = struct {
     format: Format,
@@ -943,7 +939,7 @@ pub const HeapObject = packed struct {
     }
     pub inline //
     fn asObject(self: HeapObjectConstPtr) Object {
-        return Object.from(self, null);
+        return Object.fromAddress(self);
     }
     pub inline fn asObjectValue(self: HeapObjectConstPtr) Object {
         return @bitCast(self.*);
@@ -1046,7 +1042,7 @@ test "compile time2" {
 }
 test "compile time3" {
     if (!debugError)
-        try std.testing.expect(mem.eql(u8, try Object.from(abcde, null).arrayAsSlice(u8), "abcdefghijklm"));
+        try std.testing.expect(mem.eql(u8, try Object.fromAddress(abcde).arrayAsSlice(u8), "abcdefghijklm"));
 }
 test "compile time4" {
     try std.testing.expect(mem.eql(u8, try strings[3].arrayAsSlice(u8), "False"));

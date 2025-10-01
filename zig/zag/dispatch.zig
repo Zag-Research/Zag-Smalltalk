@@ -350,21 +350,21 @@ pub const threadedFunctions = struct {
     const tf = zag.threadedFn.Enum;
     pub const returnSelf = struct {
         pub fn threadedFn(_: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
-            process.dumpStack(sp, "returnSelf");
+            process.traceStack(sp, "returnSelf");
             if (extra.selfAddress(sp)) |address| {
                 const newSp: SP = @ptrCast(address);
                 trace("returnSelf: {*}->{*} {f}\n", .{ sp, newSp, extra });
                 return @call(tailCall, process.check(context.npc), .{ context.tpc, newSp, process, context, Extra.fromContextData(context.contextDataPtr(sp)) });
             }
             const newSp, const callerContext = context.pop(process, sp);
-            process.dumpStack(sp, "returnSelf after pop");
+            process.traceStack(sp, "returnSelf after pop");
             trace("returnSelf: {*}->{*}\n", .{ sp, newSp });
-            process.dumpStack(sp, "returnSelf after pop");
+            process.traceStack(sp, "returnSelf after pop");
             return @call(tailCall, process.check(callerContext.getNPc()), .{ callerContext.getTPc(), newSp, process, callerContext, Extra.fromContextData(callerContext.contextData) });
         }
         test "returnSelf" {
             if (true) return error.NotImplemented;
-            try Execution.runTest(
+            var exe = Execution.initTest(
                 "returnSelf",
                 .{
                     tf.pushLiteral,
@@ -375,16 +375,17 @@ pub const threadedFunctions = struct {
                     2,
                     tf.pushLiteral,
                     99,
-                },
-                &[_]Object{Object.from(42, null)},
-                &[_]Object{Object.from(42, null)},
+                });
+            try exe.runTest(
+                &[_]Object{exe.object(42)},
+                &[_]Object{exe.object(42)},
             );
         }
     };
     pub const returnTop = struct {
         pub fn threadedFn(_: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
             const top = sp.top;
-            process.dumpStack(sp, "returnTop");
+            process.traceStack(sp, "returnTop");
             if (extra.selfAddress(sp)) |address| {
                 const newSp: SP = @ptrCast(address);
                 trace("returnTop: {f} {*} {*} {f}\n", .{ top, sp, newSp, extra });
@@ -398,20 +399,21 @@ pub const threadedFunctions = struct {
         }
         test "returnTopNoContext" {
             if (true) return error.NotImplemented;
-            try Execution.runTest(
+            var exe = Execution.initTest(
                 "returnTopNoContext",
                 .{
                     tf.pushLiteral,
                     91,
                     tf.pushLiteral,
-                    42,
+                    Object.tests[0],
                     tf.returnTop,
                     2,
                     tf.pushLiteral,
                     99,
-                },
+                });
+            try exe.runTest(
                 &[_]Object{True()},
-                &[_]Object{Object.from(42, null)},
+                &[_]Object{exe.object(42)},
             );
         }
     };
@@ -441,22 +443,21 @@ pub const threadedFunctions = struct {
     }
     pub const send = struct {
         pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
-            process.dumpStack(sp, "send");
-            trace("send: {f} {f}\n", .{ pc, extra });
+            process.traceStack(sp, "send");
             const signature = pc.signature();
             const method = getMethod(pc, signature, sp.at(signature.numArgs()));
             const newPc = method.codePc();
             const newSp, const newContext =
                 if (extra.installContextIfNone(sp, process, context)) |new| .{ new.sp, new.context } else .{ sp, context };
             //trace("sending...: sp:{x} {f} method:{x}\n", .{ @intFromPtr(sp), extra, @intFromPtr(method) });
-            process.dumpStack(newSp, "send maybe new");
+            process.traceStack(newSp, "send maybe new");
             newContext.setReturn(pc.next2());
             return @call(tailCall, newPc.prim(), .{ newPc.next(), newSp, process, newContext, Extra.forMethod(method, newSp) });
         }
     };
     pub const send0 = struct {
         pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
-            process.dumpStack(sp, "send");
+            process.traceStack(sp, "send");
             trace("send0: {f} {f}\n", .{ pc, extra });
             const signature = pc.signature();
             const method = getMethod(pc, signature, sp.top);
@@ -464,7 +465,7 @@ pub const threadedFunctions = struct {
             const newSp, const newContext =
                 if (extra.installContextIfNone(sp, process, context)) |new| .{ new.sp, new.context } else .{ sp, context };
             //trace("sending...: sp:{x} {f} method:{x}\n", .{ @intFromPtr(sp), extra, @intFromPtr(method) });
-            process.dumpStack(newSp, "send maybe new");
+            process.traceStack(newSp, "send maybe new");
             newContext.setReturn(pc.next2());
             return @call(tailCall, newPc.prim(), .{ newPc.next(), newSp, process, newContext, Extra.forMethod(method, newSp) });
         }

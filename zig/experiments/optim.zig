@@ -55,16 +55,14 @@ pub const ZObject = packed struct(u64) {
     h1: u16,
     classIndex: ClassIndex,
     tag: Group,
-    inline fn which_class(self: ZObject, comptime full: bool) ClassIndex {
+    inline fn which_class(self: ZObject) ClassIndex {
         return switch (self.tag) {
             .numericThunk, .immediateThunk, .heapThunk, .nonLocalThunk, .nonLocalClosure, .heapClosure => .BlockClosure,
             .immediates => self.classIndex,
-            .heap => if (full) .Character else .Object,
+            .heap => .Object,
             .smallIntMin, .smallIntNeg_2, .smallIntNeg_3, .smallIntNeg_4, .smallInt0, .smallIntPos_6, .smallIntPos_7, .smallIntMax => .SmallInteger,
             else => .Float,
         };
     }
 };
-export fn immediate_classZ(self: ZObject) ClassIndex {
-    return self.which_class(false);
-}
+

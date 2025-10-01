@@ -16,6 +16,7 @@ const True = object.True;
 const False = object.False;
 const Context = zag.Context;
 const ContextData = Context.ContextData;
+const Variable = Context.Variable;
 const Extra = Context.Extra;
 const heap = zag.heap;
 const HeapHeader = heap.HeapHeader;
@@ -29,7 +30,6 @@ const HeapAllocationPtr = globalArena.HeapAllocationPtr;
 //const class = zag.class;
 const symbol = zag.symbol;
 const Sym = symbol.symbols;
-const phi32 = zag.utilities.inversePhi(u32);
 const threadedFn = zag.threadedFn;
 const tf = threadedFn.Enum;
 
@@ -64,8 +64,11 @@ pub const Signature = packed struct {
     pub fn fromHashPrimitive(selector: u32, primitiveNumber: u16) Signature {
         return .{ .int = @bitCast(Create{ .selector = selector, .class = @enumFromInt(primitiveNumber) }) };
     }
+    pub fn fromPrimitive(primitiveNumber: u16) Signature {
+        return .{ .int = @bitCast(Create{ .selector = 0, .class = @enumFromInt(primitiveNumber) }) };
+    }
     pub fn fromNameClass(name: anytype, class: ClassIndex) Signature {
-        return .{ .int = @bitCast(Create{ .selector = @as(u40, name.numArgs()) << 32 | @as(u40, (name.symbolHash().?)), .class = class }) };
+        return .{ .int = @bitCast(Create{ .selector = @as(u32, name.numArgs()) << 24 | @as(u32, (name.symbolHash().?)), .class = class }) };
     }
     fn equals(self: Signature, other: Signature) bool {
         return self.int == other.int;
@@ -86,8 +89,8 @@ pub const Signature = packed struct {
     pub inline fn asSymbol(self: Signature) Object {
         return symbol.fromHash((self.int & 0xffffff00) >> 8);
     }
-    pub inline fn primitive(self: Signature) u64 {
-        return self.int >> 40;
+    pub inline fn primitive(self: Signature) u16 {
+        return @intFromEnum(@as(Internal, @bitCast(self)).class);
     }
     pub const getClassIndex = primitive;
     pub inline fn getClass(self: Signature) ClassIndex {
@@ -174,6 +177,14 @@ pub const PC = packed struct {
         }
         return self.code.object;
     }
+    pub //inline
+    fn variable(self: PC) Variable {
+        if (logging) {
+            @setRuntimeSafety(false);
+            std.debug.print("PC_variable:     {x:0>12}: {f}\n", .{ @intFromPtr(self.code), self.code.variable });
+        }
+        return self.code.variable;
+    }
     pub inline //
     fn signature(self: PC) Signature {
         if (logging) {
@@ -252,6 +263,7 @@ pub const PC = packed struct {
 };
 pub const Code = union(enum) {
     object: Object,
+    variable: Variable,
     threadedFn: *const fn (PC, SP, *Process, *Context, Extra) Result,
     method: *const CompiledMethod,
     codePtr: *Code,
@@ -271,12 +283,20 @@ pub const Code = union(enum) {
         self.* = Code{ .method = method };
     }
     pub inline //
+    fn asVariable(self: Code) Variable {
+        //        @setRuntimeSafety(false);
+        return self.variable;
+    }
+    pub inline fn variableOf(v: Variable) Code {
+        return Code{ .variable = v };
+    }
+    pub inline //
     fn asObject(self: Code) Object {
         //        @setRuntimeSafety(false);
         return self.object;
     }
-    pub inline fn objectOf(o: anytype) Code {
-        return Code{ .object = Object.from(o, null) };
+    pub inline fn objectOf(o: Object) Code {
+        return Code{ .object = o };
     }
     pub inline fn packedObjectOf(po: PackedObject) Code {
         return Code{ .packedObject = po };
@@ -321,12 +341,13 @@ pub const Code = union(enum) {
         self: *const Code,
         writer: anytype,
     ) !void {
-        if (false) {
+        if (true) {
             try writer.print("({x})", .{@as(*const u64, @ptrCast(self)).*});
-            return;
+            //return;
         }
         switch (self.*) {
             .object => |obj| try writer.print("object({f})", .{obj}),
+            .variable => |variable| try writer.print("variable   ({f})", .{variable}),
             .threadedFn => |tFn| {
                 if (@import("threadedFn.zig").find(tFn)) |name| {
                     try writer.print("{}", .{name});
@@ -380,9 +401,11 @@ pub const CompiledMethod = struct {
         std.debug.print("Jitted Function:  {?}\n", .{self.jitted});
         const code: [*]const Code = @ptrCast(&self.code);
         const methodSize = self.header.length - codeOffsetInObjects;
+        std.debug.print("methodSize:       {}\n", .{methodSize});
         for (code[0..methodSize]) |*instruction| {
             std.debug.print("[{x:0>12}]: {f}\n", .{ @intFromPtr(instruction), instruction.* });
         }
+        std.debug.print("methodSize:       {}\n", .{methodSize});
     }
     pub fn init(name: Object, methodFn: *const fn (PC, SP, *Process, *Context, Extra) Result) Self {
         return Self{
@@ -505,7 +528,8 @@ fn CompileTimeMethod(comptime counts: usize) type {
         //         @compileError("CompiledMethod prefix not the same as CompileTimeMethod == " ++ s);
         // }
         pub fn dump(self: *Self) void {
-            @as(*CompiledMethod, @ptrCast(self)).dump();
+            self.asCompiledMethodPtr().dump();
+            std.debug.print("CompiledMethod dump\n", .{});
         }
         pub fn init(name: anytype, comptime locals: u11, function: ?*const fn (PC, SP, *Process, *Context, Extra) Result, class: ClassIndex, tup: anytype) Self {
             const header = comptime HeapHeader.calc(.CompiledMethod, codeOffsetInUnits + codes, 0, Age.static, null, Object, false) catch @compileError("method too big");
@@ -537,8 +561,16 @@ fn CompileTimeMethod(comptime counts: usize) type {
                         code[n] = Code.primOf(threadedFn.threadedFn(field));
                         n = n + 1;
                     },
-                    Object, bool, @TypeOf(null), comptime_int, comptime_float => {
+                    Object => {
                         code[n] = Code.objectOf(field);
+                        n = n + 1;
+                    },
+                    bool => {
+                        code[n] = Code.objectOf(if (field) True() else False());
+                        n = n + 1;
+                    },
+                    @TypeOf(null) => {
+                        code[n] = Code.objectOf(Nil());
                         n = n + 1;
                     },
                     PackedObject => {
@@ -555,6 +587,10 @@ fn CompileTimeMethod(comptime counts: usize) type {
                     },
                     Signature => {
                         code[n] = Code.signatureOf(field);
+                        n = n + 1;
+                    },
+                    Variable => {
+                        code[n] = Code.variableOf(field);
                         n = n + 1;
                     },
                     else => {
@@ -597,6 +633,9 @@ fn CompileTimeMethod(comptime counts: usize) type {
         }
         pub fn getCodeSize(_: *Self) usize {
             return codes;
+        }
+        fn execute(self: *Self, sp: SP, process: *Process, context: *Context) Result {
+            return @as(*CompiledMethod, @ptrCast(self)).execute(sp, process, context);
         }
     };
 }
@@ -672,14 +711,15 @@ test "LookupLabel" {
 const print = std.io.getStdOut().writer().print;
 const p = @import("threadedFn.zig").Enum;
 test "compiling method" {
-    trace("Test: compiling method\n", .{});
+    const o1 = Object.tests[0];
+    const o2 = Object.tests[1];
     const expectEqual = std.testing.expectEqual;
     //@compileLog(&p.send);
     var m = compileMethod(Sym.yourself, 0, .testClass, .{
         ":abc", p.branch,
         "def",  "0True",
-        42,     ":def",
-        "abc",  3,
+        o1,     ":def",
+        "abc",  o2,
         null,
     });
     //TODO    m.setLiterals(&[_]Object{Sym.value}, &[_]Object{Object.from(42)});
@@ -690,9 +730,9 @@ test "compiling method" {
     try expectEqual(t[0].prim(), threadedFn.threadedFn(.branch));
     try expectEqual(t[1].codePtr, &m.code[4]);
     try expectEqual(t[2].object, True());
-    try expectEqual(t[3].object, Object.from(42, null));
+    try expectEqual(t[3].object, o1);
     try expectEqual(t[4].codePtr, &m.code[0]);
-    try expectEqual(t[5].object, Object.from(3, null));
+    try expectEqual(t[5].object, o2);
     try expectEqual(t[6].object, Nil());
 }
 
@@ -702,7 +742,7 @@ fn CompileTimeObject(comptime counts: usize) type {
         objects: [codes]Object align(8),
         offsets: [codes]bool align(8),
         const Self = @This();
-        pub fn init(comptime tup: anytype, comptime raw: bool) Self {
+        pub fn init(comptime tup: anytype, raw: bool) Self {
             var obj = Self{
                 .objects = undefined,
                 .offsets = [_]bool{false} ** codes,
@@ -713,12 +753,14 @@ fn CompileTimeObject(comptime counts: usize) type {
             comptime var hash: i24 = 0;
             inline for (tup) |field| {
                 const o: Object = switch (@TypeOf(field)) {
-                    Object, bool, @TypeOf(null) => Object.from(field, null),
+                    Object => field,
+                    bool => if (field) True() else False(),
+                    @TypeOf(null) => Nil(),
                     comptime_int => blk: {
-                        hash = field;
-                        break :blk if (raw) Object.rawFromU(@bitCast(@as(i64, field))) else Object.from(field, null);
-                    },
-                    comptime_float => if (raw) Object.rawFromU(@bitCast(@as(f64, field))) else Object.from(field, null),
+                          hash = field;
+                          break :blk if (raw) Object.rawFromU(@bitCast(@as(i64, field))) else unreachable;
+                      },
+                    comptime_float => if (raw) Object.rawFromU(@bitCast(@as(f64, field))) else unreachable,
                     ClassIndex => blk: {
                         if (last >= 0)
                             objects[last] = @as(HeapHeader, @bitCast(objects[last]))
@@ -761,11 +803,11 @@ fn CompileTimeObject(comptime counts: usize) type {
                         if (@intFromEnum(header.classIndex) >= @intFromEnum(ClassIndex.ReplacementIndices)) {
                             header.classIndex = classes[@intFromEnum(ClassIndex.replace0) - @intFromEnum(header.classIndex)];
                         }
-                        header.hash ^= @truncate(@intFromPtr(o) *% phi32);
+                        header.hash ^= zag.utilities.ProspectorHash.hash24(@truncate(@intFromPtr(o)));
                         lastHeader = header;
                     } else {
                         const ob: u64 = @bitCast(o.*);
-                        o.* = if (ob & 1 != 0) Object.from(&self.objects[ob >> 1], null) else replacements[ob >> 1];
+                        o.* = if (ob & 1 != 0) Object.fromAddress(&self.objects[ob >> 1]) else replacements[ob >> 1];
                         if (o.isMemoryAllocated()) {
                             if (lastHeader) |h| h.format = .notIndexableWithPointers;
                         }
@@ -780,7 +822,7 @@ fn CompileTimeObject(comptime counts: usize) type {
             return @ptrCast(self);
         }
         pub inline fn asObject(self: *Self) Object {
-            return Object.from(self.asHeapObjectPtr(), null);
+            return Object.fromAddress(self.asHeapObjectPtr());
         }
     };
 }
@@ -800,7 +842,7 @@ test "compileObject" {
         ":def",
         c.Class, // first HeapObject
         "second", // pointer to second object
-        42,
+        Object.tests[0],
         "1mref", // reference to replacement Object #1
         "third", // pointer to third object
         "0mref",
@@ -827,7 +869,7 @@ test "compileObject" {
     try expect(o.asObject().isHeapObject());
     //try expect(o.objects[9].equals(o.asObject()));
     //    try expectEqual(@as(u48, @truncate(o.asObject().rawU())), @as(u48, @truncate(@intFromPtr(&o.objects[8]))));
-    try expect(o.objects[2].equals(Object.from(42, null)));
+    try expect(o.objects[2].equals(Object.tests[0]));
     try expectEqual(o.objects[10].to(f64), Object.from(42.0, &process).to(f64));
     try expect(o.objects[3].equals(Nil()));
     try expect(o.objects[5].equals(True()));
@@ -877,13 +919,14 @@ test "compileRaw" {
 }
 
 pub const Execution = struct {
-    const failedObject: packed struct { x: u64 } = .{ .x = undefined };
+    const failedObject: packed struct { x: u64 } = .{ .x = 2 };
     pub const failed: Object = @bitCast(failedObject);
     fn Executer(MethodType: type) type {
         return struct {
             process: Process align(Process.alignment),
             ctxt: Context.Static,
             method: MethodType,
+            process_initted: bool = false,
             const Self = @This();
             pub fn new(method: MethodType) Self {
                 return Self{
@@ -892,15 +935,22 @@ pub const Execution = struct {
                     .method = method,
                 };
             }
+            pub fn initProcess(self: *Self) void {
+                if (!self.process_initted) {
+                    self.process.init(Nil());
+                    self.process_initted = true;
+                }
+            }
             pub fn init(self: *Self, stackObjects: ?[]const Object) void {
                 self.ctxt.initStatic();
                 self.process.setContext(@ptrCast(&self.ctxt));
-                self.process.init(Nil());
+                self.initProcess();
                 if (stackObjects) |source| {
                     self.initStack(source);
                 }
             }
             fn initStack(self: *Self, source: []const Object) void {
+                self.initProcess();
                 const sp = self.process.endOfStack().safeReserve(source.len);
                 self.process.setSp(sp);
                 for (source, sp.slice(source.len)) |src, *stck|
@@ -927,67 +977,78 @@ pub const Execution = struct {
             pub fn getSp(self: *const Self) SP {
                 return self.process.getSp();
             }
-            pub fn execute(self: *Self, method: *const CompiledMethod) void {
-                _ = method.execute(self.getSp(), &self.process, self.getContext());
-                self.getProcess().dumpStack(self.getSp(), "return from execution");
+            pub inline fn object(self: *Self, value: anytype) Object {
+                self.initProcess();
+                return Object.from(value, &self.process);
+            }
+            pub fn execute(self: *Self, stackObjects: ?[]const Object) void {
+                self.init(stackObjects);
+                _ = self.method.execute(self.getSp(), &self.process, self.getContext());
+                self.getProcess().traceStack(self.getSp(), "return from execution");
             }
             pub fn matchStack(self: *const Self, expected: []const Object) !void {
                 const result = self.stack();
                 try std.testing.expectEqualSlices(Object, expected, result);
             }
+            pub fn runTest(self: *Self, source: []const Object, expected: []const Object) !void {
+                return self.runTestWithObjects(Object.empty, source, expected);
+            }
+            pub fn runTestWithObjects(self: *Self, objects: []const Object, source: []const Object, expected: []const Object) !void {
+                try self.runWithValidator(&validate, objects, source, expected);
+            }
+            pub const ValidateErrors = error{
+                TestAborted,
+                TestExpectedEqual,
+            };
+            pub fn runTestWithValidator(self: *Self, validator: *const fn (*Self, []const Object) ValidateErrors!void, source: []const Object, expected: []const Object) !void {
+                return self.runWithValidator(validator, Object.empty, source, expected);
+            }
+            fn runWithValidator(exe: *Self, validator: *const fn (*Self, []const Object) ValidateErrors!void, objects: []const Object, source: []const Object, expected: []const Object) !void {
+                exe.process.init(Nil());
+                try exe.resolve(objects);
+                exe.execute(source);
+                try std.testing.expect(exe.getContext() == @as(*Context, @ptrCast(&exe.ctxt)));
+                try validator(exe, expected);
+            }
+            fn validate(exe: *Self, expected: []const Object) ValidateErrors!void {
+                const result = exe.stack();
+                if (result.len > 0 and result[0] == failed) return error.TestAborted;
+                trace(
+                    \\run:
+                    \\  expected: {any}
+                    \\  result: {any}
+                    \\
+                , .{ expected, result });
+                try std.testing.expectEqualSlices(Object, expected, result);
+            }
         };
     }
-    pub fn initTest(title: []const u8, tup: anytype) Executer(countNonLabels(tup)) {
+    pub fn initTest(title: []const u8, tup: anytype) Executer(CompileTimeMethod(countNonLabels(tup))) {
         trace("ExecutionTest: {s}\n", .{title});
         return init(tup);
     }
-    fn init(comptime tup: anytype) Executer(countNonLabels(tup)) {
+    fn init(comptime tup: anytype) Executer(CompileTimeMethod(countNonLabels(tup))) {
         const ExeType = Executer(CompileTimeMethod(countNonLabels(tup)));
         return ExeType.new(compileMethod(Sym.yourself, 0, .testClass, tup));
     }
-    pub fn runTest(title: []const u8, tup: anytype, source: []const Object, expected: []const Object) !void {
-        return runTestWithObjects(title, tup, Object.empty, source, expected);
-    }
-    pub fn runTestWithObjects(title: []const u8, comptime tup: anytype, objects: []const Object, source: []const Object, expected: []const Object) !void {
-        try runWithValidator(title, tup, &validate, objects, source, expected);
-    }
-    pub const ValidateErrors = error{
-        TestAborted,
-        TestExpectedEqual,
-    };
-    pub fn runTestWithValidator(title: []const u8, tup: anytype, validator: *const fn (anytype, []const Object) ValidateErrors!void, source: []const Object, expected: []const Object) !void {
-        return runWithValidator(title, tup, validator, Object.empty, source, expected);
-    }
-    fn runWithValidator(title: []const u8, comptime tup: anytype, validator: *const fn (anytype, []const Object) ValidateErrors!void, objects: []const Object, source: []const Object, expected: []const Object) !void {
-        trace("ExecutionTest: {s}\n", .{title});
-        var exe align(Process.alignment) = init(tup);
-        exe.process.init(Nil());
-        try exe.resolve(objects);
-        exe.execute(source, exe.method);
-        try std.testing.expect(exe.getContext() == &exe.ctxt);
-        try validator(&exe, expected);
-    }
-    fn validate(exe: anytype, expected: []const Object) ValidateErrors!void {
-        const result = exe.stack();
-        if (result.len > 0 and result[0] == failed) return error.TestAborted;
-        trace(
-            \\run:
-            \\  expected: {any}
-            \\  result: {any}
-            \\
-        , .{ expected, result });
-        try std.testing.expectEqualSlices(Object, expected, result);
-    }
 
-    pub fn mainSendTo(selector: Object, receiver: Object) !Object {
-        trace("Sending: {f} to {f}\n", .{ selector, receiver });
-        var exe = Executer(void).new({});
-        exe.init(&[_]Object{receiver});
-        exe.getContext().npc = Code.end;
-        const class = receiver.get_class();
-        const signature = Signature.from(selector, class);
-        const method = class.lookupMethodForClass(signature);
-        exe.execute(method);
-        return exe.fullStack()[0];
-    }
+    pub const MainExecutor = struct {
+        exe: Executer(*const CompiledMethod),
+        pub fn new() MainExecutor {
+            return .{.exe = Executer(*const CompiledMethod).new(undefined)};
+        }
+        pub inline fn object(self: *MainExecutor, value: anytype) Object {
+            return self.exe.object(value);
+        }
+        pub fn sendTo(self: *MainExecutor, selector: Object, receiver: Object) !Object {
+            trace("Sending: {f} to {f}\n", .{ selector, receiver });
+            self.exe.init(Object.empty);
+            self.exe.getContext().npc = Code.end;
+            const class = receiver.get_class();
+            const signature = Signature.from(selector, class);
+            self.exe.method = class.lookupMethodForClass(signature);
+            self.exe.execute(&[_]Object{receiver});
+            return self.exe.fullStack()[0];
+        }
+    };
 };

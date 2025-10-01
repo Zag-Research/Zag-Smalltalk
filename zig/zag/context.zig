@@ -168,7 +168,7 @@ pub const Extra = packed struct {
     }
     pub fn inlinePrimitiveFailed(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
         trace("inlinePrimitiveFailed: {f} {f}\n", .{ extra, pc });
-        _ = .{ sp, process, context, @panic("inlinePrimitiveFailed") };
+        _ = .{ sp, process, context, std.debug.panic("inlinePrimitiveFailed: {f} {f}\n", .{ extra, pc }) };
         //return @call(tailCall, process.check(pc.prev().prim()), .{ pc, sp, process, context, extra.encoded() });
     }
     pub fn format(
@@ -351,29 +351,40 @@ pub fn print(self: *const Context, process: *const Process) void {
         ctxt.print(process);
     }
 }
-const Variable = packed struct {
+pub const Variable = packed struct {
     lowBits: u8,
     localIndex: u7,
     isLocal: bool,
     stackOffset: u8,
     objectIndices: u40,
-    fn asVariable(self: Object) Variable {
-        return @bitCast(self);
+    pub fn format(self: Variable, writer: anytype) !void {
+        try writer.print("Variable {{ localIndex: {}, isLocal: {}, stackOffset: {}, objectIndices: {} }}", .{
+            self.localIndex,
+            self.isLocal,
+            self.stackOffset,
+            self.objectIndices,
+        });
     }
-    fn make(stackOffset: u8, localIndex: u7, options: Options, indices: []u10) Object {
+    fn make(stackOffset: u8, localIndex: u7, options: Options, indices: []u10) Variable {
         var oi: usize = 0;
         for (indices, 0..) |index, shift| {
             oi = oi | @as(usize, index) << @truncate(10 * shift);
         }
-        return @bitCast(Variable{
+        return Variable{
             .lowBits = Object.intTag,
             .localIndex = localIndex,
             .isLocal = options == .Local,
             .stackOffset = stackOffset,
             .objectIndices = @truncate(oi),
-        });
+        };
     }
-    pub inline fn getAddress(v: Variable, sp: SP, extra: Extra) *Object {
+    pub inline fn getSimpleAddress(v: Variable, sp: SP, extra: Extra) [*]Object {
+        return if (extra.selfAddress(sp)) |selfAddress|
+                selfAddress - v.stackOffset
+            else
+                extra.contextDataPtr().localAddress(v.localIndex);
+    }
+    pub inline fn getAddress(v: Variable, sp: SP, extra: Extra) [*]Object {
         var objs: [*]Object =
             if (extra.selfAddress(sp)) |selfAddress|
                 selfAddress - v.stackOffset
@@ -384,11 +395,10 @@ const Variable = packed struct {
             objs = objs[ref & 0x3ff].to([*]Object);
             ref = ref >> 10;
         }
-        return &objs[0];
+        return objs;
     }
     const Options = enum { Local, Parameter };
 };
-pub const asVariable = Variable.asVariable;
 pub const makeVariable = Variable.make;
 
 pub const threadedFunctions = struct {
@@ -408,11 +418,11 @@ pub const threadedFunctions = struct {
             var exe = Execution.initTest("pushContext", .{
                 tf.pushContext,
                 tf.pushLiteral,
-                42,
+                Object.tests[0],
             });
-            try exe.execute(&[_]Object{Object.from(17, null)});
-            try exe.matchStack(&[_]Object{Object.from(42, null)});
-            try expect(exe.getContext() != &exe.ctxt);
+            exe.execute(&[_]Object{Object.from(17, &exe.process)});
+            try exe.matchStack(&[_]Object{Object.from(42, &exe.process)});
+            try expect(exe.getContext() != @as(*Context, @ptrCast(&exe.ctxt)));
         }
         // test "init context" {
         //     //    const expectEqual = std.testing.expectEqual;
@@ -436,11 +446,17 @@ pub const threadedFunctions = struct {
         //     trace("init: 8\n", .{});
         // }
     };
+    pub const debug = struct {
+        pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
+            process.dumpStack(sp, "debug");
+            return @call(tailCall, process.check(pc.prim()), .{ pc.next(), sp, process, context, extra });
+        }
+    };
     pub const pushThisContext = struct {
         pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
             if (extra.noContext())
                 return @call(tailCall, pushContext.threadedFn, .{ pc.prev(), sp, process, context, extra });
-            const value = Object.from(context, null);
+            const value = Object.from(context, process);
             if (true) unreachable;
             if (sp.push(value)) |newSp| {
                 return @call(tailCall, process.check(pc.prim()), .{ pc.next(), newSp, process, context, extra });

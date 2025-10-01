@@ -74,7 +74,7 @@ pub const TaggedPtrObject = packed struct(u64) {
         return self.hash;
     }
     pub inline fn withClass(self: Object, class: ClassIndex) Object {
-        if (!self.isSymbol()) @panic("not a Symbol");
+        if (!self.isSymbol()) std.debug.panic("not a Symbol: {f}", self);
         return @bitCast((self.rawU() & 0xffffffffff) | (@as(u64, @intFromEnum(class)) << 40));
     }
     pub inline fn rawWordAddress(self: Object) u64 {
@@ -176,9 +176,9 @@ pub const TaggedPtrObject = packed struct(u64) {
         }
         @panic("Trying to convert Object to " ++ @typeName(T));
     }
-    pub inline fn which_class(self: Object, comptime full: bool) ClassIndex {
+    pub inline fn which_class(self: Object) ClassIndex {
         return switch (self.tag) {
-            .heap => if (self.rawU() == 0) .UndefinedObject else if (full) self.to(HeapObjectPtr).*.getClass() else .Object,
+            .heap => if (self.rawU() == 0) .UndefinedObject else self.to(HeapObjectPtr).*.getClass(),
             .immediates => self.class.classIndex(),
             else => .Float,
         };
@@ -219,7 +219,6 @@ pub const TaggedPtrObject = packed struct(u64) {
     pub const format = OF.format;
     pub const getField = OF.getField;
     pub const get_class = OF.get_class;
-    pub const immediate_class = OF.immediate_class;
     pub const isBool = OF.isBool;
     pub const isIndexable = OF.isIndexable;
     pub const isNil = OF.isNil;

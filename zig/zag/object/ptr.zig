@@ -20,13 +20,13 @@ pub const Object = packed struct(u64) {
     pub const inMemorySymbols = true;
     pub const ZERO = of(0);
     pub fn False() Object {
-        return Object.from(&InMemory.False, null);
+        return Object.fromAddress(&InMemory.False);
     }
     pub fn True() Object {
-        return Object.from(&InMemory.True, null);
+        return Object.fromAddress(&InMemory.True);
     }
     pub fn Nil() Object {
-        return Object.from(&InMemory.Nil, null);
+        return Object.fromAddress(&InMemory.Nil);
     }
     pub const maxInt = 0x7fff_ffff_ffff_ffff;
     pub const tagged0: i64 = 0;
@@ -73,8 +73,8 @@ pub const Object = packed struct(u64) {
     pub inline fn nativeF_noCheck(self: object.Object) f64 {
         return self.toDoubleFromMemory();
     }
-    pub inline fn fromNativeF(t: f64, maybeProcess: ?*Process) object.Object {
-        return from(t, maybeProcess);
+    pub inline fn fromNativeF(t: f64, process: *Process) object.Object {
+        return from(t, process);
     }
     pub inline fn symbolHash(self: object.Object) ?u24 {
         if (self.isImmediateClass(.Symbol)) return self.ref.header.hash;
@@ -100,7 +100,7 @@ pub const Object = packed struct(u64) {
     }
     pub const testU = rawU;
     pub const testI = rawI;
-    inline //
+    pub inline //
     fn rawU(self: object.Object) u64 {
         return self.ref.data.unsigned;
     }
@@ -156,8 +156,11 @@ pub const Object = packed struct(u64) {
     pub inline fn toNatNoCheck(self: Object) u64 {
         return self.ref.data.unsigned;
     }
+    pub inline fn withPrimitive(self: object.Object, prim: u64) object.Object {
+        return @bitCast(self.rawU() | prim << 40);
+    }
     pub inline fn withClass(self: Object, class: ClassIndex) Object {
-        if (!self.isSymbol()) @panic("not a Symbol");
+        if (!self.isSymbol()) std.debug.panic("not a Symbol: {f}", self);
         return @bitCast((self.rawU() & 0xffffffffff) | (@as(u64, @intFromEnum(class)) << 40));
     }
     pub inline fn rawWordAddress(self: Object) u64 {
@@ -183,7 +186,12 @@ pub const Object = packed struct(u64) {
         return @truncate(self.ref.data.unsigned >> 8);
     }
     pub inline //
-    fn from(value: anytype, maybeProcess: ?*Process) Object {
+    fn fromAddress(value: anytype) Object {
+        //@compileLog("from: ",value);
+        @setRuntimeSafety(false);
+        return Object{ .ref = @ptrCast(@alignCast(@constCast(value))) };
+    }
+    pub inline fn from(value: anytype, maybeProcess: *Process) Object {
         const T = @TypeOf(value);
         if (T == Object) return value;
         switch (@typeInfo(T)) {
@@ -249,7 +257,8 @@ pub const Object = packed struct(u64) {
         @panic("Trying to convert Object to " ++ @typeName(T));
     }
     pub inline //
-    fn which_class(self: Object, _: bool) ClassIndex {
+    fn which_class(self: Object) ClassIndex {
+        std.debug.print("which_class\n", .{});
         return self.ref.header.classIndex;
     }
     pub inline fn isMemoryAllocated(self: Object) bool {
@@ -285,7 +294,6 @@ pub const Object = packed struct(u64) {
     pub const format = OF.format;
     pub const getField = OF.getField;
     pub const get_class = OF.get_class;
-    pub const immediate_class = OF.immediate_class;
     pub const isBool = OF.isBool;
     pub const isIndexable = OF.isIndexable;
     pub const isNil = OF.isNil;
@@ -299,4 +307,5 @@ pub const Object = packed struct(u64) {
     pub const asVariable = zag.Context.asVariable;
     pub const PackedObject = object.PackedObject;
     pub const signature = zag.execute.Signature.signature;
+    pub const tests = OF.tests;
 };

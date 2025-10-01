@@ -125,13 +125,13 @@ pub const Object = packed struct(u64) {
         return self.isImmediateDouble() or self.isMemoryDouble();
     }
     pub inline fn nativeF_noCheck(self: object.Object) f64 {
-        if (self.tag == .heap) return self.toDoubleFromMemory();
-        return self.toDoubleNoCheck();
+        if (self.isImmediateDouble()) return self.toDoubleNoCheck();
+        return self.toDoubleFromMemory();
     }
     pub inline fn fromNativeF(t: f64, maybeProcess: ?*Process) object.Object {
         return from(t, maybeProcess);
     }
-    pub inline fn symbolHash(self: object.Object) ?u40 {
+    pub inline fn symbolHash(self: object.Object) ?u24 {
         if (self.isImmediateClass(.Symbol)) return @truncate(self.hash);
         return null;
     }
@@ -143,7 +143,7 @@ pub const Object = packed struct(u64) {
     }
     pub const testU = rawU;
     pub const testI = rawI;
-    inline fn rawU(self: Self) u64 {
+    pub inline fn rawU(self: Self) u64 {
         return @bitCast(self);
     }
     inline fn rawI(self: object.Object) i64 {
@@ -184,12 +184,14 @@ pub const Object = packed struct(u64) {
         return @bitCast(@as(u8, @truncate(self.hash & extraMask)));
     }
     test "ThunkImmediate" {
-        trace("Test: ThunkImmediate\n", .{});
+        var process: Process align(Process.alignment) = Process.new();
+        process.init(Nil());
+        const p = &process;
         const ee = std.testing.expectEqual;
-        if (thunkImmediate(object.Object.from(42, null))) |value|
-            try ee(object.Object.from(42, null), value.thunkImmediateValue());
-        if (thunkImmediate(object.Object.from(-42, null))) |value|
-            try ee(object.Object.from(-42, null), value.thunkImmediateValue());
+        if (thunkImmediate(object.Object.tests[0])) |value|
+            try ee(object.Object.tests[0], value.thunkImmediateValue());
+        if (thunkImmediate(object.Object.from(-42, p))) |value|
+            try ee(object.Object.from(-42, p), value.thunkImmediateValue());
         try ee(null, thunkImmediate(object.Object.from(@as(u64, 1) << 47, null)));
     }
     pub inline fn isImmediateClass(self: object.Object, comptime class: ClassIndex.Compact) bool {
@@ -202,7 +204,7 @@ pub const Object = packed struct(u64) {
         return (self.rawU() & 6) != 0;
     }
     pub inline fn isMemoryDouble(self: object.Object) bool {
-        return self.isMemoryAllocated() and self.to(HeapObjectPtr).*.getClass() == .Float;
+        return self.isMemoryAllocated() and self.toUnchecked(HeapObjectPtr).*.getClass() == .Float;
     }
     inline fn oImm(c: ClassIndex.Compact, h: u56) Self {
         return Self{ .tag = .immediates, .class = c, .hash = h };
@@ -238,7 +240,7 @@ pub const Object = packed struct(u64) {
         return self.rawU() == object.Object.True().rawU();
     }
     pub inline fn withClass(self: object.Object, class: ClassIndex) object.Object {
-        if (!self.isSymbol()) @panic("not a Symbol");
+        if (!self.isSymbol()) std.debug.panic("not a Symbol: {f}", self);
         return @bitCast((self.rawU() & 0xffffffffff) | (@as(u64, @intFromEnum(class)) << 40));
     }
     pub inline fn rawWordAddress(self: object.Object) u64 {
@@ -248,7 +250,7 @@ pub const Object = packed struct(u64) {
         return decode(@bitCast(self));
     }
     inline fn toDoubleFromMemory(self: object.Object) f64 {
-        return self.to(*InMemory.MemoryFloat).*.value;
+        return self.toUnchecked(*InMemory.MemoryFloat).*.value;
     }
     pub inline fn makeImmediate(cls: ClassIndex.Compact, hash: u56) object.Object {
         return oImm(cls, hash);
@@ -261,12 +263,15 @@ pub const Object = packed struct(u64) {
     }
 
     fn memoryFloat(value: f64, maybeProcess: ?*Process) object.Object {
-        if (math.isNan(value)) return object.Object.from(&InMemory.nanMemObject, null);
-        if (math.inf(f64) == value) return object.Object.from(&InMemory.pInfMemObject, null);
-        if (math.inf(f64) == -value) return object.Object.from(&InMemory.nInfMemObject, null);
+        if (math.isNan(value)) return object.Object.fromAddress(&InMemory.nanMemObject);
+        if (math.inf(f64) == value) return object.Object.fromAddress(&InMemory.pInfMemObject);
+        if (math.inf(f64) == -value) return object.Object.fromAddress(&InMemory.nInfMemObject);
         return InMemory.float(value, maybeProcess);
     }
 
+    pub fn fromAddress(value: anytype) Object {
+        return @bitCast(@intFromPtr(value));
+    }
     pub inline fn from(value: anytype, maybeProcess: ?*Process) object.Object {
         const T = @TypeOf(value);
         if (T == object.Object) return value;
@@ -316,7 +321,7 @@ pub const Object = packed struct(u64) {
                         switch (@typeInfo(ptrInfo.child)) {
                             .@"fn" => {},
                             .@"struct" => {
-                                if (!check or (self.isMemoryAllocated() and (!@hasDecl(ptrInfo.child, "ClassIndex") or self.to(HeapObjectConstPtr).classIndex == ptrInfo.child.ClassIndex))) {
+                                if (!check or (self.isMemoryAllocated() and (!@hasDecl(ptrInfo.child, "ClassIndex") or self.toUnchecked(HeapObjectConstPtr).classIndex == ptrInfo.child.ClassIndex))) {
                                     if (@hasField(ptrInfo.child, "header") or (@hasDecl(ptrInfo.child, "includesHeader") and ptrInfo.child.includesHeader)) {
                                         return @as(T, @ptrFromInt(@as(usize, @bitCast(self))));
                                     } else {
@@ -333,23 +338,108 @@ pub const Object = packed struct(u64) {
         }
         @panic("Trying to convert Object to " ++ @typeName(T));
     }
-    pub inline fn which_class(self: object.Object, comptime full: bool) ClassIndex {
-        if (false) {
-            const tag_bits = self.tagbits();
-            const tag = tag_bits & 7;
-            if (tag == 1) return @enumFromInt(tag_bits >> 3)
-            else if (tag > 1) return .Float
-            else if (self.rawU() == 0) return .UndefinedObject
-            else if (full) return self.to(HeapObjectPtr).*.getClass() else return .Object;
+    const class_table = blk: {
+        var table = [_]ClassIndex{.Float} ** 256;
+        for (0..31) |i| {
+            table[i << 3] = .none;
+            table[i << 3 | 1] = @enumFromInt(i);
         }
-        switch (self.tag) {
-            .heap => if (self.rawU() == 0) return .UndefinedObject
-                else if (full) return self.to(HeapObjectPtr).*.getClass()
-                else return .Object,
-            .immediates => {@branchHint(.likely);
-                            return self.class.classIndex();},
-            else => {@branchHint(.likely);
-                            return .Float;},
+        break :blk table;
+    };
+    pub inline fn which_class(self: object.Object) ClassIndex {
+        const Choose = enum {
+            tag,
+            table,
+            firstFloat,
+            andTagbits,
+            bigSwitch,
+            rotateTagbits,
+        };
+        switch (Choose.table) {
+            .tag => {
+                switch (self.tag) {
+                    .heap => if (self.rawU() == 0) {@branchHint(.unlikely);
+                        return .UndefinedObject;
+                    } else return self.toUnchecked(HeapObjectPtr).*.getClass(),
+                    .immediates => {@branchHint(.likely);
+                        return self.class.classIndex();},
+                    else => {@branchHint(.likely);
+                        return .Float;},
+                }
+            },
+            .table => {
+                const class = class_table[self.tagbits()];
+                if (class == .none) {@branchHint(.unlikely);
+                    if (self.rawU() == 0) {@branchHint(.unlikely);
+                        return .UndefinedObject;
+                    } else return self.toUnchecked(HeapObjectPtr).*.getClass();
+                }
+                return class;
+            },
+            .bigSwitch => {
+                const t = ClassIndex.Compact.tag;
+                switch (@as(u8, @truncate(self.rawU()))) {
+                    0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38,
+                    0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, 0x78,
+                    0x80, 0x88, 0x90, 0x98, 0xA0, 0xA8, 0xB0, 0xB8,
+                    0xC0, 0xC8, 0xD0, 0xD8, 0xE0, 0xE8, 0xF0, 0xF8 => {
+                        if (self.rawU() == 0) {@branchHint(.unlikely);
+                            return .UndefinedObject;
+                        } else return self.toUnchecked(HeapObjectPtr).*.getClass();
+                    },
+                    t(.ThunkReturnLocal) => {@branchHint(.unlikely); return .ThunkReturnLocal;},
+                    t(.ThunkReturnInstance) => {@branchHint(.unlikely); return .ThunkReturnInstance;},
+                    t(.ThunkReturnSmallInteger) => {@branchHint(.unlikely); return .ThunkReturnSmallInteger;},
+                    t(.ThunkReturnImmediate) => {@branchHint(.unlikely); return .ThunkReturnImmediate;},
+                    t(.ThunkReturnCharacter) => {@branchHint(.unlikely); return .ThunkReturnCharacter;},
+                    t(.ThunkReturnFloat) => {@branchHint(.unlikely); return .ThunkReturnFloat;},
+                    t(.ThunkLocal) => {@branchHint(.unlikely); return .ThunkLocal;},
+                    t(.BlockAssignLocal) => {@branchHint(.unlikely); return .BlockAssignLocal;},
+                    t(.ThunkInstance) => {@branchHint(.unlikely); return .ThunkInstance;},
+                    t(.BlockAssignInstance) => {@branchHint(.unlikely); return .BlockAssignInstance;},
+                    t(.ThunkHeap) => {@branchHint(.unlikely); return .ThunkHeap;},
+                    t(.LLVM) => {@branchHint(.unlikely); return .LLVM;},
+                    t(.ThunkImmediate) => {@branchHint(.unlikely); return .ThunkImmediate;},
+                    t(.ThunkFloat) => {@branchHint(.unlikely); return .ThunkFloat;},
+                    t(.SmallInteger) => {@branchHint(.likely); return .SmallInteger;},
+                    t(.Symbol) => {@branchHint(.unlikely); return .Symbol;},
+                    t(.Signature) => {@branchHint(.unlikely); return .Signature;},
+                    t(.False) => {@branchHint(.likely); return .False;},
+                    t(.True) => {@branchHint(.likely); return .True;},
+                    t(.Character) => {@branchHint(.unlikely); return .Character;},
+                          0xa9, 0xb1, 0xb9,
+                    0xc1, 0xc9, 0xd1, 0xd9,
+                    0xe1, 0xe9, 0xf1, 0xf9 => {@branchHint(.unlikely); @panic("Unexpected tag");},
+                    else => {@branchHint(.likely); return .Float;}
+                }
+            },
+            .firstFloat => {
+                if (self.isImmediateDouble()) {@branchHint(.likely);
+                    return .Float;
+                } else if (self.isImmediateWhenNotDouble()) {@branchHint(.likely);
+                    return ClassIndex.classIndexFromInt(@truncate(self.rawU() >> 3));
+                } else if (self.rawU() == 0) {@branchHint(.unlikely);
+                    return .UndefinedObject;
+                } else return self.toUnchecked(HeapObjectPtr).*.getClass();
+            },
+            .andTagbits => {
+                const tag_bits = self.tagbits();
+                const tag = tag_bits & 7;
+                if (tag == 1) return @enumFromInt(tag_bits >> 3)
+                else if (tag > 1) return .Float
+                else if (self.rawU() == 0) return .UndefinedObject
+                else return self.toUnchecked(HeapObjectPtr).*.getClass();
+            },
+            .rotateTagbits => {
+                const tag_bits = std.math.rotl(u8, self.tagbits(), 5);
+                if (tag_bits >= 2 << 5) {@branchHint(.likely);
+                    return .Float;
+                } else if (tag_bits > 1 << 5) {@branchHint(.likely);
+                    return ClassIndex.classIndexFromInt(@truncate(tag_bits));
+                } else if (self.rawU() == 0) {@branchHint(.unlikely);
+                    return .UndefinedObject;
+                } else return self.toUnchecked(HeapObjectPtr).*.getClass();
+            },
         }
     }
     pub inline fn isMemoryAllocated(self: object.Object) bool {
@@ -388,6 +478,9 @@ pub const Object = packed struct(u64) {
     pub inline fn isImmediate(self: object.Object) bool {
         return self.tag == .immediates;
     }
+    pub inline fn isImmediateWhenNotDouble(self: object.Object) bool {
+        return self.rawU() & 1 != 0;
+    }
     pub inline fn isHeapObject(self: object.Object) bool {
         return self.tag == .heap;
     }
@@ -402,7 +495,6 @@ pub const Object = packed struct(u64) {
     pub const format = OF.format;
     pub const getField = OF.getField;
     pub const get_class = OF.get_class;
-    pub const immediate_class = OF.immediate_class;
     pub const isBool = OF.isBool;
     pub const isIndexable = OF.isIndexable;
     pub const isNil = OF.isNil;
@@ -417,4 +509,5 @@ pub const Object = packed struct(u64) {
     pub const asVariable = zag.Context.asVariable;
     pub const PackedObject = object.PackedObject;
     pub const signature = zag.execute.Signature.signature;
+    pub const tests = OF.tests;
 };

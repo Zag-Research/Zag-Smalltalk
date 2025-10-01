@@ -164,9 +164,14 @@ fn getStack(self: *align(1) const Self, sp: SP) []Object {
     return sp.sliceTo(self.endOfStack());
 }
 pub inline fn dumpStack(self: *align(1) const Self, sp: SP, why: []const u8) void {
-    trace("dumpStack ({s})\n", .{why});
+    std.debug.print("traceStack ({s})\n", .{why});
     for (self.getStack(sp)) |*obj|
-        trace("[{x:0>10}]: {x:0>16}\n", .{ @intFromPtr(obj), @as(u64, @bitCast(obj.*)) });
+        std.debug.print("[{x:0>10}]: {x:0>16}\n", .{ @intFromPtr(obj), @as(u64, @bitCast(obj.*)) });
+}
+pub inline fn traceStack(self: *align(1) const Self, sp: SP, why: []const u8) void {
+    trace("traceStack ({s})\n", .{why});
+    for (self.getStack(sp)) |*obj|
+            trace("[{x:0>10}]: {x:0>16}\n", .{ @intFromPtr(obj), @as(u64, @bitCast(obj.*)) });
 }
 pub inline fn canAllocStackSpace(self: *align(1) Self, sp: SP, words: usize) bool {
     const newSp = sp.reserve(words);
@@ -303,17 +308,17 @@ test "nursery allocation" {
     var pr = &process;
     pr.init(Nil());
     const emptySize = Process.nursery_size;
-    try ee(Process.stack_size, 27);
-    try ee(pr.freeNursery(), emptySize);
+    try ee(32, Process.stack_size);
+    try ee(emptySize, pr.freeNursery());
     var sp = pr.endOfStack();
     var initialContext = Context.init();
-    var ar = pr.alloc(ClassIndex.Class, 4, null, void, false);
+    var ar = try pr.alloc(ClassIndex.Class, 4, null, void, false);
     _ = ar.initAll();
     const o1 = ar.allocated;
-    try ee(pr.freeNursery(), emptySize - 5);
-    ar = pr.alloc(ClassIndex.Class, 5, null, void, false);
+    try ee(emptySize - 5, pr.freeNursery());
+    ar = try pr.alloc(ClassIndex.Class, 5, null, void, false);
     _ = ar.initAll();
-    ar = pr.alloc(ClassIndex.Class, 6, null, void, false);
+    ar = try pr.alloc(ClassIndex.Class, 6, null, void, false);
     const o2 = ar.initAll();
     try ee(emptySize - 19, pr.freeNursery());
     try o1.instVarPut(0, o2.asObject());

@@ -15,6 +15,7 @@ const PC = execute.PC;
 const Result = execute.Result;
 const SP = Process.SP;
 const Execution = execute.Execution;
+const fromPrimitive = execute.Signature.fromPrimitive;
 const Process = zag.Process;
 const Context = zag.Context;
 const Extra = Context.Extra;
@@ -136,27 +137,27 @@ const testModule = if (config.is_test) struct {
     pub const primitive998 = struct {
         pub const number = 998;
         pub fn primitive(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
-            if (sp.next.immediate_class() != sp.top.immediate_class()) {
+            if (sp.next.get_class() != sp.top.get_class()) {
                 return @call(tailCall, Extra.primitiveFailed, .{ pc, sp, process, context, extra });
             } else {
-                const newSp = sp.dropPut(Object.from(sp.next.equals(sp.top), null));
-                return @call(tailCall, process.check(context.npc), .{ context.tpc, newSp, process, context, extra });
+                const newSp = sp.dropPut(Object.from(sp.next.equals(sp.top), process));
+                return @call(tailCall, process.check(context.npc), .{ context.tpc, newSp, process, context, Extra.fromContextData(context.contextDataPtr(sp)) });
             }
         }
         pub fn primitiveError(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
-            if (sp.next.immediate_class() != sp.top.immediate_class()) {
+            if (sp.next.get_class() != sp.top.get_class()) {
                 const newSp = sp.push(Sym.value);
                 return @call(tailCall, Extra.primitiveFailed, .{ pc, newSp.?, process, context, extra });
             } else {
-                const newSp = sp.dropPut(Object.from(sp.next == sp.top, null));
-                return @call(tailCall, process.check(context.npc), .{ context.tpc, newSp, process, context, extra });
+                const newSp = sp.dropPut(Object.from(sp.next == sp.top, process));
+                return @call(tailCall, process.check(context.npc), .{ context.tpc, newSp, process, context, Extra.fromContextData(context.contextDataPtr(sp)) });
             }
         }
         pub fn inlinePrimitive(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
-            if (sp.next.immediate_class() != sp.top.immediate_class()) {
+            if (sp.next.get_class() != sp.top.get_class()) {
                 return @call(tailCall, Extra.inlinePrimitiveFailed, .{ pc, sp, process, context, extra });
             } else {
-                const newSp = sp.dropPut(Object.from(sp.next == sp.top, null));
+                const newSp = sp.dropPut(Object.from(sp.next == sp.top, process));
                 return @call(tailCall, process.check(pc.prim2()), .{ pc.next2(), newSp, process, context, extra });
             }
         }
@@ -197,17 +198,18 @@ pub const threadedFunctions = struct {
             return @call(tailCall, method.executeFn, .{ pc, sp, process, context, extra });
         }
         test "primitive found" {
-            try Execution.runTest(
+            var exe = Execution.initTest(
                 "primitive: found",
                 .{
                     tf.primitive,
-                    998,
+                    comptime fromPrimitive(998),
                     tf.pushLiteral,
-                    99,
-                },
+                    Object.tests[0],
+                });
+            try exe.runTest(
                 &[_]Object{
-                    Object.from(42, null),
-                    Object.from(17, null),
+                    exe.object(42),
+                    exe.object(17),
                 },
                 &[_]Object{
                     False(),
@@ -215,42 +217,44 @@ pub const threadedFunctions = struct {
             );
         }
         test "primitive with error" {
-            try Execution.runTest(
+            var exe = Execution.initTest(
                 "primitive: with error",
                 .{
                     tf.primitive,
-                    998,
+                    comptime fromPrimitive(998),
                     tf.pushLiteral,
-                    99,
-                },
+                    Object.tests[0],
+                });
+            try exe.runTest(
                 &[_]Object{
                     True(),
-                    Object.from(17, null),
+                    exe.object(17),
                 },
                 &[_]Object{
-                    Object.from(99, null),
+                    Object.tests[0],
                     True(),
-                    Object.from(17, null),
+                    exe.object(17),
                 },
             );
         }
         test "primitive not found" {
-            try Execution.runTest(
+            var exe = Execution.initTest(
                 "primitive: not found",
                 .{
                     tf.primitive,
-                    999,
+                    comptime fromPrimitive(999),
                     tf.pushLiteral,
-                    99,
+                    Object.tests[0],
+                });
+            try exe.runTest(
+                &[_]Object{
+                    exe.object(42),
+                    exe.object(17),
                 },
                 &[_]Object{
-                    Object.from(42, null),
-                    Object.from(17, null),
-                },
-                &[_]Object{
-                    Object.from(99, null),
-                    Object.from(42, null),
-                    Object.from(17, null),
+                    Object.tests[0],
+                    exe.object(42),
+                    exe.object(17),
                 },
             );
         }
@@ -277,17 +281,18 @@ pub const threadedFunctions = struct {
             return @call(tailCall, noPrimWithError, .{ pc, sp, process, context, extra });
         }
         test "primitive:error: found" {
-            try Execution.runTest(
+            var exe = Execution.initTest(
                 "primitive:error: found",
                 .{
                     tf.primitiveError,
-                    998,
+                    comptime fromPrimitive(998),
                     tf.pushLiteral,
-                    99,
-                },
+                    Object.tests[0],
+                });
+            try exe.runTest(
                 &[_]Object{
-                    Object.from(42, null),
-                    Object.from(17, null),
+                    exe.object(42),
+                    exe.object(17),
                 },
                 &[_]Object{
                     False(),
@@ -295,44 +300,46 @@ pub const threadedFunctions = struct {
             );
         }
         test "primitive:error: with error" {
-            try Execution.runTest(
+            var exe = Execution.initTest(
                 "primitive:error: with error",
                 .{
                     tf.primitiveError,
-                    998,
+                    comptime fromPrimitive(998),
                     tf.pushLiteral,
-                    99,
-                },
+                    Object.tests[0],
+                });
+            try exe.runTest(
                 &[_]Object{
                     True(),
-                    Object.from(17, null),
+                    exe.object(17),
                 },
                 &[_]Object{
-                    Object.from(99, null),
-                    Sym.value.asObject(),
+                    Object.tests[0],
+                    Sym.value,
                     True(),
-                    Object.from(17, null),
+                    exe.object(17),
                 },
             );
         }
         test "primitive:error: not found" {
-            try Execution.runTest(
+            var exe = Execution.initTest(
                 "primitive:error: not found",
                 .{
                     tf.primitiveError,
-                    999,
+                    comptime fromPrimitive(999),
                     tf.pushLiteral,
-                    99,
+                    Object.tests[0],
+                });
+            try exe.runTest(
+                &[_]Object{
+                    exe.object(42),
+                    exe.object(17),
                 },
                 &[_]Object{
-                    Object.from(42, null),
-                    Object.from(17, null),
-                },
-                &[_]Object{
-                    Object.from(99, null),
+                    Object.tests[0],
                     Nil(),
-                    Object.from(42, null),
-                    Object.from(17, null),
+                    exe.object(42),
+                    exe.object(17),
                 },
             );
         }
@@ -369,12 +376,12 @@ pub const threadedFunctions = struct {
                 "0name",
                 "1module",
                 tf.pushLiteral,
-                99,
+                Object.tests[0],
             });
             try exe.resolve(&[_]Object{ primitive998.asObject(), testModule.moduleString.asObject() });
-            try exe.execute(&[_]Object{
-                Object.from(42, null),
-                Object.from(17, null),
+            exe.execute(&[_]Object{
+                exe.object(42),
+                exe.object(17),
             });
             try expectEqualSlices(Object, &[_]Object{
                 False(),
@@ -386,17 +393,17 @@ pub const threadedFunctions = struct {
                 "0name",
                 "1module",
                 tf.pushLiteral,
-                99,
+                Object.tests[0],
             });
             try exe.resolve(&[_]Object{ primitive998.asObject(), testModule.moduleString.asObject() });
-            try exe.execute(&[_]Object{
+            exe.execute(&[_]Object{
                 True(),
-                Object.from(17, null),
+                exe.object(17),
             });
             try expectEqualSlices(Object, &[_]Object{
-                Object.from(99, null),
+                Object.tests[0],
                 True(),
-                Object.from(17, null),
+                exe.object(17),
             }, exe.stack());
         }
         test "primitive:module: not found" {
@@ -405,17 +412,17 @@ pub const threadedFunctions = struct {
                 "0name",
                 "1module",
                 tf.pushLiteral,
-                99,
+                Object.tests[0],
             });
             try exe.resolve(&[_]Object{ primitiveNotDefined.asObject(), testModule.moduleString.asObject() });
-            try exe.execute(&[_]Object{
-                Object.from(42, null),
-                Object.from(17, null),
+            exe.execute(&[_]Object{
+                exe.object(42),
+                exe.object(17),
             });
             try expectEqualSlices(Object, &[_]Object{
-                Object.from(99, null),
-                Object.from(42, null),
-                Object.from(17, null),
+                Object.tests[0],
+                exe.object(42),
+                exe.object(17),
             }, exe.stack());
         }
     };
@@ -451,12 +458,12 @@ pub const threadedFunctions = struct {
                 "0name",
                 "1module",
                 tf.pushLiteral,
-                99,
+                Object.tests[0],
             });
             try exe.resolve(&[_]Object{ primitive998.asObject(), testModule.moduleString.asObject() });
-            try exe.execute(&[_]Object{
-                Object.from(42, null),
-                Object.from(17, null),
+            exe.execute(&[_]Object{
+                exe.object(42),
+                exe.object(17),
             });
             try expectEqualSlices(Object, &[_]Object{
                 False(),
@@ -468,18 +475,18 @@ pub const threadedFunctions = struct {
                 "0name",
                 "1module",
                 tf.pushLiteral,
-                99,
+                Object.tests[0],
             });
             try exe.resolve(&[_]Object{ primitive998.asObject(), testModule.moduleString.asObject() });
-            try exe.execute(&[_]Object{
+            exe.execute(&[_]Object{
                 True(),
-                Object.from(17, null),
+                exe.object(17),
             });
             try expectEqualSlices(Object, &[_]Object{
-                Object.from(99, null),
-                Sym.value.asObject(),
+                Object.tests[0],
+                Sym.value,
                 True(),
-                Object.from(17, null),
+                exe.object(17),
             }, exe.stack());
         }
         test "primitive:module:error: not found" {
@@ -488,24 +495,24 @@ pub const threadedFunctions = struct {
                 "0name",
                 "1module",
                 tf.pushLiteral,
-                99,
+                Object.tests[0],
             });
             try exe.resolve(&[_]Object{ primitiveNotDefined.asObject(), testModule.moduleString.asObject() });
-            try exe.execute(&[_]Object{
-                Object.from(42, null),
-                Object.from(17, null),
+            exe.execute(&[_]Object{
+                exe.object(42),
+                exe.object(17),
             });
             try expectEqualSlices(Object, &[_]Object{
-                Object.from(99, null),
+                Object.tests[0],
                 Nil(),
-                Object.from(42, null),
-                Object.from(17, null),
+                exe.object(42),
+                exe.object(17),
             }, exe.stack());
         }
     };
     pub const inlinePrimitive = struct {
         pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
-            process.dumpStack(sp, "inlinePrimitive");
+            process.traceStack(sp, "inlinePrimitive");
             const obj = pc.signature();
             const primNumber = obj.primitive();
             trace("inlinePrimitive: {f} {}\n", .{ obj, primNumber });
@@ -528,35 +535,36 @@ pub const threadedFunctions = struct {
                 tf.inlinePrimitive,
                 "0prim",
                 tf.pushLiteral,
-                99,
+                Object.tests[0],
             });
             try exe.resolve(&[_]Object{Sym.value.withPrimitive(998)});
-            try exe.execute(&[_]Object{
-                Object.from(42, null),
-                Object.from(17, null),
+            exe.execute(&[_]Object{
+                exe.object(42),
+                exe.object(17),
                 False(),
             });
             try expectEqualSlices(Object, &[_]Object{
-                Object.from(99, null),
+                Object.tests[0],
                 True(),
             }, exe.stack());
         }
         test "inlinePrimitive not found" {
             if (true) return error.SkipZigTest;
-            try Execution.runTest(
+            var exe = Execution.initTest(
                 "inlinePrimitive: not found",
                 .{
                     tf.inlinePrimitive,
-                    999,
+                    fromPrimitive(999),
+                });
+            try exe.runTest(
+                &[_]Object{
+                    exe.object(42),
+                    exe.object(17),
                 },
                 &[_]Object{
-                    Object.from(42, null),
-                    Object.from(17, null),
-                },
-                &[_]Object{
-                    Object.from(99, null),
-                    Object.from(42, null),
-                    Object.from(17, null),
+                    Object.tests[0],
+                    exe.object(42),
+                    exe.object(17),
                 },
             );
         }
@@ -579,35 +587,36 @@ pub const threadedFunctions = struct {
                 tf.inlinePrimitiveModule,
                 "0prim",
                 tf.pushLiteral,
-                99,
+                Object.tests[0],
             });
             try exe.resolve(&[_]Object{Sym.value.withPrimitive(998)});
-            try exe.execute(&[_]Object{
-                Object.from(42, null),
-                Object.from(17, null),
+            exe.execute(&[_]Object{
+                exe.object(42),
+                exe.object(17),
                 False(),
             });
             try expectEqualSlices(Object, &[_]Object{
-                Object.from(99, null),
+                Object.tests[0],
                 True(),
             }, exe.stack());
         }
         test "inlinePrimitiveModule not found" {
             if (true) return error.SkipZigTest;
-            try Execution.runTest(
+            var exe = Execution.initTest(
                 "inlinePrimitiveModule: not found",
                 .{
                     tf.inlinePrimitiveModule,
-                    999,
+                    fromPrimitive(999),
+                });
+            try exe.runTest(
+                &[_]Object{
+                    exe.object(42),
+                    exe.object(17),
                 },
                 &[_]Object{
-                    Object.from(42, null),
-                    Object.from(17, null),
-                },
-                &[_]Object{
-                    Object.from(99, null),
-                    Object.from(42, null),
-                    Object.from(17, null),
+                    Object.tests[0],
+                    exe.object(42),
+                    exe.object(17),
                 },
             );
         }

@@ -1,7 +1,11 @@
 const std = @import("std");
+const math = std.math;
+const expectEqual = std.testing.expectEqual;
+const expect = std.testing.expect;
 const zag = @import("../zag.zig");
 const trace = zag.config.trace;
 const object = zag.object;
+const Process = zag.Process;
 const testing = std.testing;
 const ClassIndex = object.ClassIndex;
 const heap = zag.heap;
@@ -18,6 +22,7 @@ pub const Object = packed union {
         tag: Group,
         hash: u61,
     },
+
     const Group = enum(LowTagType) {
         pointer = 0,
         smallInteger = 0b001,
@@ -38,9 +43,6 @@ pub const Object = packed union {
     const Self = @This();
     pub const inMemorySymbols = true;
     pub const ZERO: Object = @bitCast(@as(u64, 0));
-    pub const False = Object.from(&InMemory.False, null);
-    pub const True = Object.from(&InMemory.True, null);
-    pub const Nil = Object.from(&InMemory.Nil, null);
     pub const LowTagType = TagAndClassType;
     pub const lowTagSmallInteger = makeImmediate(.SmallInteger, 0).tagbits();
     pub const HighTagType = void;
@@ -49,7 +51,22 @@ pub const Object = packed union {
     pub const packedTagSmallInteger = intTag;
     pub const intTag = @intFromEnum(Group.smallInteger);
     pub const immediatesTag = 1;
+    pub const maxInt = 0x3fffffffffffffff;
+    pub const tagged0: i64 = 1; // SmallInteger 0 in spur encoding
     const TagAndClassType = u3;
+
+    // Static constructor functions
+    pub inline fn False() Object {
+        return Object.fromAddress(&InMemory.False);
+    }
+
+    pub inline fn True() Object {
+        return Object.fromAddress(&InMemory.True);
+    }
+
+    pub inline fn Nil() Object {
+        return Object.fromAddress(&InMemory.Nil);
+    }
 
     pub inline fn tagbits(self: Self) TagAndClassType {
         return @truncate(self.rawU());
@@ -73,12 +90,12 @@ pub const Object = packed union {
         return @bitCast(self);
     }
 
-    pub inline fn fromTaggedI(i: i64) Object {
+    pub inline fn fromTaggedI(i: i64, _: anytype) Object {
         return @bitCast(i);
     }
 
-    pub inline fn fromUntaggedI(i: i64) Object {
-        return @bitCast(i + oImm(.SmallInteger, 0).tagbits());
+    pub inline fn fromUntaggedI(i: i64, _: anytype) Object {
+        return @bitCast(@as(u64, @bitCast(i)) | SmallIntegerTag);
     }
 
     // Spur SmallInteger
@@ -105,6 +122,15 @@ pub const Object = packed union {
     pub inline fn nativeU_noCheck(self: Object) u64 {
         return @as(u64, self.rawU()) >> 1;
     }
+    pub inline fn nativeF(self: Object) ?f64 {
+        if (self.isFloat()) return self.toDoubleNoCheck();
+        if (self.isMemoryDouble()) return self.toDoubleFromMemory();
+        return null;
+    }
+    pub inline fn nativeF_noCheck(self: Object) f64 {
+        if (self.isFloat()) return self.toDoubleNoCheck();
+        return self.toDoubleFromMemory();
+    }
     pub inline fn fromSmallInteger(i: i64) Object {
         return @bitCast((@as(u64, @bitCast(i)) << 1) | SmallIntegerTag);
     }
@@ -121,7 +147,7 @@ pub const Object = packed union {
     }
     pub inline fn fromPointer(ptr: anytype) Object {
         const Foo = packed struct { ref: *u64 };
-        const foo = Foo{ .ref = @ptrCast(@constCast(ptr)) };
+        const foo = Foo{ .ref = @constCast(@ptrCast(ptr)) };
         return @bitCast(foo);
     }
 
@@ -154,37 +180,44 @@ pub const Object = packed union {
         return null;
     }
 
-    pub inline fn isImmediateFloat(self: Object) bool {
-        return (self.rawU() & FloatTag) != 0;
-    }
-    pub inline fn isDouble(self: Object) bool {
-        return self.isImmediateFloat();
-    }
-
     pub inline fn isFloat(self: Object) bool {
         return (self.rawU() & TagMask) == FloatTag;
     }
 
     pub inline fn isBool(self: Object) bool {
-        return self.rawU() == Object.True.rawU() or self.rawU() == Object.False.rawU();
+        return self.rawU() == Object.True().rawU() or self.rawU() == Object.False().rawU();
     }
     pub inline fn toBoolNoCheck(self: Object) bool {
-        return self.rawU() == Object.True.rawU();
+        return self.rawU() == Object.True().rawU();
     }
-    pub inline fn isSymbol() bool {
-        // Spur-encoded symbols are heap objects; this is a stub
-        return false;
+    pub inline fn isSymbol(self: Object) bool {
+        // Spur-encoded symbols are heap objects
+        return self.isHeap() and self.to(HeapObjectPtr).*.getClass() == .Symbol;
     }
     pub inline fn isNil(self: Object) bool {
-        return self.rawU() == Object.Nil.rawU();
+        return self.rawU() == Object.Nil().rawU();
     }
 
     inline fn oImm(c: Group, h: u61) Self {
         return Self{ .immediate = .{ .tag = c, .hash = h } };
     }
-    pub inline fn makeImmediate(cls: Group, hash: u61) object.Object {
-        return oImm(cls, hash);
+    pub inline fn makeImmediate(cls: ClassIndex, hash: u61) object.Object {
+        // Map ClassIndex to appropriate Group
+        const group = switch (cls) {
+            .SmallInteger => Group.smallInteger,
+            .Character => Group.character,
+            .Float => Group.float,
+            else => Group.pointer, // heap objects
+        };
+        return oImm(group, hash);
     }
+
+    // Add fromNativeF for compatibility
+    pub inline fn fromNativeF(t: f64, maybeProcess: ?*Process) object.Object {
+        return from(t, maybeProcess);
+    }
+
+
 
     // Hash helpers
     pub inline fn hash24(self: Object) u24 {
@@ -203,14 +236,26 @@ pub const Object = packed union {
     // Raw access
     pub const testU = rawU;
     pub const testI = rawI;
-    inline fn rawU(self: Object) u64 {
-        return @intFromPtr(self.ref);
+    pub inline fn rawU(self: Object) u64 {
+        return @bitCast(self);
     }
+
     inline fn rawI(self: Object) i64 {
         return @bitCast(self.rawU());
     }
     pub inline fn rawWordAddress(self: Object) u64 {
         return self.rawU() & ~TagMask;
+    }
+
+    pub inline fn toDoubleNoCheck(self: object.Object) f64 {
+        return decode(@bitCast(self));
+    }
+
+    fn memoryFloat(value: f64, maybeProcess: ?*Process) object.Object {
+        if (math.isNan(value)) return object.Object.fromAddress(&InMemory.nanMemObject);
+        if (math.inf(f64) == value) return object.Object.fromAddress(&InMemory.pInfMemObject);
+        if (math.inf(f64) == -value) return object.Object.fromAddress(&InMemory.nInfMemObject);
+        return InMemory.float(value, maybeProcess);
     }
 
     // Conversion from Zig types
@@ -219,10 +264,16 @@ pub const Object = packed union {
         if (T == Object) return value;
         switch (@typeInfo(T)) {
             .int, .comptime_int => return Self.fromSmallInteger(value),
-            .float => return encode(value) catch InMemory.float(value, maybeProcess),
+            .float => {
+                if (encode(value)) |encoded| {
+                    return @bitCast(encoded);
+                } else |_| {
+                    return memoryFloat(value, maybeProcess);
+                }
+            },
             .comptime_float => return from(@as(f64, value), maybeProcess),
-            .bool => return if (value) Object.True else Object.False,
-            .null => return Object.Nil,
+            .bool => return if (value) Object.True() else Object.False(),
+            .null => return Object.Nil(),
             .pointer => |ptr_info| {
                 switch (ptr_info.size) {
                     .one, .many => return Self.fromPointer(value),
@@ -234,9 +285,21 @@ pub const Object = packed union {
         @compileError("Can't convert \"" ++ @typeName(T) ++ "\"");
     }
 
+    pub inline fn isMemoryDouble(self: object.Object) bool {
+        return self.isMemoryAllocated() and self.to(HeapObjectPtr).*.getClass() == .Float;
+    }
+
+    inline fn toDoubleFromMemory(self: object.Object) f64 {
+        return self.to(*InMemory.MemoryFloat).*.value;
+    }
+
     // Conversion to Zig types (partial)
     pub fn toWithCheck(self: Object, comptime T: type, comptime check: bool) T {
         switch (T) {
+            f64 => {
+                if (!check or self.isFloat()) return self.toDoubleNoCheck();
+                if (!check or self.isMemoryDouble()) return self.toDoubleFromMemory();
+            },
             i64 => {
                 if (!check or self.isInt()) return self.nativeI_noCheck();
             },
@@ -252,12 +315,15 @@ pub const Object = packed union {
     }
 
     // Class detection (stub)
-    pub inline fn which_class(self: Object, comptime full: bool) ClassIndex {
-        if (self.isInt()) return .SmallInteger;
-        if (self.isCharacter()) return .Character;
-        if (self.isFloat()) return .Float;
-        if (full) return self.to(HeapObjectPtr).*.getClass();
-        return .Object;
+    pub inline fn which_class(self: Object) ClassIndex {
+        if (self.isInt()) {@branchHint(.likely);
+            return .SmallInteger;
+        } else if (self.isFloat()) {@branchHint(.likely);
+            return .Float;
+        } else if (self.isCharacter()) {@branchHint(.unlikely);
+            return .Character;
+        }
+        return self.to(HeapObjectPtr).*.getClass();
     }
 
     pub inline fn tagMethod(o: object.Object) ?Object {
@@ -273,10 +339,47 @@ pub const Object = packed union {
     }
 
     pub inline fn isMemoryAllocated(self: Object) bool {
-        return if (self.isHeap()) true else false;
+        return self.isHeap();
+    }
+
+    // Add symbolHash method
+    pub inline fn symbolHash(self: Object) ?u24 {
+        if (self.isSymbol()) {
+            return @as(u32, self.to(HeapObjectPtr).*.header.hash);
+        }
+        return null;
+    }
+
+    // Add missing methods
+    pub inline fn signature(_: Object) ?zag.execute.Signature {
+        // Spur doesn't use immediate signatures like other encodings
+        return null;
+    }
+
+    pub inline fn isDouble(self: Object) bool {
+        return self.isFloat() or self.isMemoryDouble();
+    }
+
+    pub inline fn asObject(self: Object) Object {
+        return self;
+    }
+
+    pub inline fn withPrimitive(self: Object, prim: u64) Object {
+        // For spur encoding, we can't easily embed primitives in objects
+        // However, this is only done for signature objects, which already aren't quite valid
+        return @bitCast(self.rawU() | prim << 40);
+    }
+
+    pub inline fn extraValue(self: Object) Object {
+        // For spur encoding, extract value from immediate objects
+        if (self.isImmediate()) {
+            return Object.from(@as(i64, @intCast(self.immediate.hash)), null);
+        }
+        return self;
     }
 
     const OF = object.ObjectFunctions;
+    pub const PackedObject = object.PackedObject;
     pub const arrayAsSlice = OF.arrayAsSlice;
     pub const asMemoryObject = OF.asMemoryObject;
     pub const asObjectArray = OF.asObjectArray;
@@ -287,7 +390,6 @@ pub const Object = packed union {
     pub const format = OF.format;
     pub const getField = OF.getField;
     pub const get_class = OF.get_class;
-    pub const immediate_class = OF.immediate_class;
     pub const isIndexable = OF.isIndexable;
     pub const isUnmoving = OF.isUnmoving;
     pub const numArgs = OF.numArgs;
@@ -295,57 +397,51 @@ pub const Object = packed union {
     pub const rawFromU = OF.rawFromU;
     pub const to = OF.to;
     pub const toUnchecked = OF.toUnchecked;
+    pub const asVariable = zag.Context.asVariable;
+    pub const setField = OF.setField;
+    pub const tests = OF.tests;
 };
 
-test "float conversions" {
-    const cases = [_]struct {
-        value: f64,
-        expectHeap: bool,
-    }{
-        // Normal numbers
-        .{ .value = 5.5, .expectHeap = false },
-        .{ .value = 1.0, .expectHeap = false },
-        .{ .value = -1.0, .expectHeap = false },
-        .{ .value = 3.14159, .expectHeap = false },
+test "float from/to conversion" {
+    std.debug.print("running test", .{});
 
-        // Zeros
-        .{ .value = 0.0, .expectHeap = false },
-        .{ .value = -0.0, .expectHeap = false },
+    // Test immediate float conversion
+    const testValues = [_]f64{ 1.0, -1.0, 0.0, -0.0, math.pi };
 
-        // Edge Cases
-        .{ .value = std.math.floatMin(f64), .expectHeap = true },
-        .{ .value = -std.math.floatMin(f64), .expectHeap = true },
-        .{ .value = std.math.floatMax(f64), .expectHeap = true },
-        .{ .value = -std.math.floatMax(f64), .expectHeap = true },
+    for (testValues) |value| {
+        const obj = Object.fromAddress(value);
+        try expect(obj.isFloat());
+        try expectEqual(value, obj.toWithCheck(f64, false));
+    }
 
-        // Infinities
-        .{ .value = std.math.inf(f64), .expectHeap = true },
-        .{ .value = -std.math.inf(f64), .expectHeap = true },
+    // print immediate float conversion succesfull
+    std.debug.print("Immediate float conversion successful\n", .{});
 
-        // NaNs
-        .{ .value = std.math.nan(f64), .expectHeap = true },
-        .{ .value = -std.math.nan(f64), .expectHeap = true },
+    // Test edge cases that should encode successfully
+    const smallest: f64 = @bitCast(@as(u64, 0x3800_0000_0000_0001));
+    const largest: f64 = @bitCast(@as(u64, 0x47FF_FFFF_FFFF_FFFF));
+
+    const edgeValues = [_]f64{ smallest, -smallest, largest, -largest };
+
+    for (edgeValues) |value| {
+        const obj = Object.fromAddress(value);
+        try expect(obj.isFloat());
+        try expectEqual(value, obj.toWithCheck(f64, false));
+    }
+
+    std.debug.print("edge float conversion successful\n", .{});
+
+    // Test values that should fall back to memory float
+    const memoryValues = [_]f64{
+        @bitCast(@as(u64, 0x3800_0000_0000_0000)), // tooSmall
+        @bitCast(@as(u64, 0x4800_0000_0000_0000)), // tooLarge
     };
 
-    for (cases) |case| {
-        trace("Testing value: {d}\n", .{case.value});
-        const result = Object.encode(case.value);
-
-        if (case.expectHeap) {
-            try testing.expect(result == error.NonFiniteValue or
-                result == error.Underflow or
-                result == error.Overflow);
-        } else {
-            if (result) |encoded| {
-                const decoded = encoded.decode();
-                if (std.math.isNan(case.value)) {
-                    try testing.expect(std.math.isNan(decoded));
-                } else {
-                    try testing.expectEqual(case.value, decoded);
-                }
-            } else |_| {
-                try testing.expect(false); // Should not error for non-heap cases
-            }
-        }
+    for (memoryValues) |value| {
+        const obj = Object.fromAddress(value);
+        try expect(obj.isHeap()); // Should be heap-allocated
+        try expectEqual(value, obj.toWithCheck(f64, false));
     }
+
+    std.debug.print("memory float conversion successful\n", .{});
 }

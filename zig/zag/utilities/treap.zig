@@ -28,10 +28,10 @@ pub fn Treap(comptime Key: type, comptime Index: type, comptime Value: type) typ
             }
             const rands = [_]u8{ 200, 73, 48, 92, 21, 50, 55, 44 };
         } else struct {
+            const hash = @import("hash.zig").Phi.hash(Index);
             inline fn priority(pos: Index) Index { // "random" number based on position in the array
-                return pos *% randomizer;
+                return hash(pos);
             }
-            const randomizer = @import("general.zig").inversePhi(Index);
         };
         const priority = _priority.priority;
         pub fn init(memory: []Element, compare: Compare, empty: Key) Self {
