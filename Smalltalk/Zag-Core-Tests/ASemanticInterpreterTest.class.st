@@ -27,6 +27,25 @@ ASemanticInterpreterTest >> setUp [
 ]
 
 { #category : 'tests' }
+ASemanticInterpreterTest >> testInstallContextIfNone [
+| x y |
+self halt.
+	x := 6.
+	interpreter push: x.
+	y := interpreter pop.
+	self assert: x equals: y.
+	self assert: interpreter stackDepth equals: 0.
+	
+	interpreter push: x.
+	interpreter installContextIfNone.
+	interpreter push: x.
+	y := interpreter pop.
+	self assert: x equals: y.
+	self assert: interpreter stackDepth equals: 0.
+	
+]
+
+{ #category : 'tests' }
 ASemanticInterpreterTest >> testPrimitive [
 
 	self assert: ((1 siPrim1: 2) processPrimitiveResult: self) equals: 3.

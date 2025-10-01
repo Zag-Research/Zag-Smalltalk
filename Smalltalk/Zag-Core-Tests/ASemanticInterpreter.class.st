@@ -175,6 +175,11 @@ ASemanticInterpreter >> inlineDepth: anInteger [
 ]
 
 { #category : 'interpreting' }
+ASemanticInterpreter >> installContextIfNone [
+	self halt
+]
+
+{ #category : 'interpreting' }
 ASemanticInterpreter >> interpret [
 
 	executing := true.
