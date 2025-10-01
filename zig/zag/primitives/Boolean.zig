@@ -40,7 +40,7 @@ pub const threadedFns = struct {
     };
     pub const branchFalse = struct {
         pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
-            process.dumpStack(sp, "branchFalse");
+            process.traceStack(sp, "branchFalse");
             if (sp.top.equals(False())) {
                 const newPc = pc.targetPC();
                 trace("Boolean>>#inlinePrimitive: branchFalse {f} {f}\n", .{ pc, newPc });

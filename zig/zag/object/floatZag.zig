@@ -74,14 +74,14 @@ pub fn encode_valid(iterations: u64) void {
 pub fn encode_invalid(iterations: u64) void {
     for (0..iterations / invalid_values.len) |_| {
         for (invalid_values) |val| {
-            _ = encode(val) catch continue;
+            std.mem.doNotOptimizeAway(encode(val) catch 0);
         }
     }
 }
 pub fn decode_valid(iterations: u64) void {
     for (0..iterations / decode_values.len) |_| {
         for (decode_values) |val| {
-            _ = decode(val);
+            std.mem.doNotOptimizeAway(decode(val));
         }
     }
 }

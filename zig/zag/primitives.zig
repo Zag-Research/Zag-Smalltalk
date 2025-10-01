@@ -141,7 +141,7 @@ const testModule = if (config.is_test) struct {
                 return @call(tailCall, Extra.primitiveFailed, .{ pc, sp, process, context, extra });
             } else {
                 const newSp = sp.dropPut(Object.from(sp.next.equals(sp.top), process));
-                return @call(tailCall, process.check(context.npc), .{ context.tpc, newSp, process, context, extra });
+                return @call(tailCall, process.check(context.npc), .{ context.tpc, newSp, process, context, Extra.fromContextData(context.contextDataPtr(sp)) });
             }
         }
         pub fn primitiveError(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
@@ -150,7 +150,7 @@ const testModule = if (config.is_test) struct {
                 return @call(tailCall, Extra.primitiveFailed, .{ pc, newSp.?, process, context, extra });
             } else {
                 const newSp = sp.dropPut(Object.from(sp.next == sp.top, process));
-                return @call(tailCall, process.check(context.npc), .{ context.tpc, newSp, process, context, extra });
+                return @call(tailCall, process.check(context.npc), .{ context.tpc, newSp, process, context, Extra.fromContextData(context.contextDataPtr(sp)) });
             }
         }
         pub fn inlinePrimitive(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
@@ -512,7 +512,7 @@ pub const threadedFunctions = struct {
     };
     pub const inlinePrimitive = struct {
         pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
-            process.dumpStack(sp, "inlinePrimitive");
+            process.traceStack(sp, "inlinePrimitive");
             const obj = pc.signature();
             const primNumber = obj.primitive();
             trace("inlinePrimitive: {f} {}\n", .{ obj, primNumber });

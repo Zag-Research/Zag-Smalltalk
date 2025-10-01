@@ -446,6 +446,12 @@ pub const threadedFunctions = struct {
         //     trace("init: 8\n", .{});
         // }
     };
+    pub const debug = struct {
+        pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
+            process.dumpStack(sp, "debug");
+            return @call(tailCall, process.check(pc.prim()), .{ pc.next(), sp, process, context, extra });
+        }
+    };
     pub const pushThisContext = struct {
         pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
             if (extra.noContext())

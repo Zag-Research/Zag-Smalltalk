@@ -373,7 +373,6 @@ test "from conversion" {
     var process: Process align(Process.alignment) = Process.new();
     process.init(Nil());
     const p = &process;
-    if (true) unreachable;
     try ee(@as(f64, @bitCast((Object.from(3.14, p)))), 3.14);
     try ee((Object.from(3.14, p)).get_class(), .Float);
     try std.testing.expect((Object.from(3.14, p)).isFloat());
@@ -438,6 +437,9 @@ fn slice1() []const Buf {
 test "order" {
     switch (config.objectEncoding) {
         .zag => {
+            var process: Process align(Process.alignment) = Process.new();
+            process.init(Nil());
+            const p = &process;
             const ee = std.testing.expectEqual;
             const sl1 = slice1()[0].buf;
             try ee(42, sl1[1]);
@@ -445,7 +447,7 @@ test "order" {
             try ee(0, sl1[2]);
             @setRuntimeSafety(false);
             const buf2 = (Buf{
-                .obj = Object.fromAddress(42.0),
+                .obj = Object.from(42.0, p),
             }).buf;
             try ee(buf2[0], 6);
             try ee(buf2[6], 80);

@@ -52,7 +52,7 @@ pub const primitives = struct {
         }
         const newSp = sp.dropPut(inlines.p1(sp.next, sp.top) catch
             return @call(tailCall, process.check(pc.prim()), .{ pc.next(), sp, process, context, extra }));
-        return @call(tailCall, process.check(context.npc), .{ context.tpc, newSp, process, context, undefined, undefined });
+        return @call(tailCall, process.check(context.npc), .{ context.tpc, newSp, process, context, Extra.fromContextData(context.contextDataPtr(sp)) });
     }
 };
 const e = struct {

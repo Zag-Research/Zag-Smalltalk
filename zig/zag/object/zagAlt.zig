@@ -261,6 +261,9 @@ pub const Object = packed struct(u64) {
         return InMemory.float(value, maybeProcess);
     }
 
+    pub fn fromAddress(value: anytype) Object {
+        return @bitCast(@intFromPtr(value));
+    }
     pub inline fn from(value: anytype, maybeProcess: ?*Process) object.Object {
         const T = @TypeOf(value);
         if (T == object.Object) return value;

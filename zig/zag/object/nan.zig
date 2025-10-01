@@ -290,10 +290,13 @@ pub const Object = packed struct(u64) {
     pub inline fn toDoubleNoCheck(self: object.Object) f64 {
         return @bitCast(self);
     }
-    pub inline fn from(value: anytype, _: anytype) object.Object {
-        return fromWithError(value) catch unreachable;
+    pub inline fn fromAddress(value: anytype) object.Object {
+        return cast(@as(u48, @truncate(@intFromPtr(value))) + Start_of_Heap_Objects);
     }
-    pub inline fn fromWithError(value: anytype) !object.Object {
+    pub inline fn from(value: anytype, _: anytype) object.Object {
+    //     return fromWithError(value) catch unreachable;
+    // }
+    // pub inline fn fromWithError(value: anytype) !object.Object {
         const T = @TypeOf(value);
         if (T == object.Object) return value;
         switch (@typeInfo(T)) {

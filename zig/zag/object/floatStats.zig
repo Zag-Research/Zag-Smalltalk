@@ -1,7 +1,7 @@
 const std = @import("std");
 // zig run -Doptimize=ReleaseFast -fomit-frame-pointer floatStats.zig
 pub fn main() void {
-    const iterations = 100_000_000;
+    const iterations = 1_000_000_000;
     const ns = 1.0 / @as(f64, @floatFromInt(iterations));
     var timer = std.time.Timer.start() catch unreachable;
 

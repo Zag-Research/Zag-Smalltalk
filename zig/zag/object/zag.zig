@@ -125,8 +125,8 @@ pub const Object = packed struct(u64) {
         return self.isImmediateDouble() or self.isMemoryDouble();
     }
     pub inline fn nativeF_noCheck(self: object.Object) f64 {
-        if (self.tag == .heap) return self.toDoubleFromMemory();
-        return self.toDoubleNoCheck();
+        if (self.isImmediateDouble()) return self.toDoubleNoCheck();
+        return self.toDoubleFromMemory();
     }
     pub inline fn fromNativeF(t: f64, maybeProcess: ?*Process) object.Object {
         return from(t, maybeProcess);
@@ -184,12 +184,14 @@ pub const Object = packed struct(u64) {
         return @bitCast(@as(u8, @truncate(self.hash & extraMask)));
     }
     test "ThunkImmediate" {
-        trace("Test: ThunkImmediate\n", .{});
+        var process: Process align(Process.alignment) = Process.new();
+        process.init(Nil());
+        const p = &process;
         const ee = std.testing.expectEqual;
         if (thunkImmediate(object.Object.tests[0])) |value|
             try ee(object.Object.tests[0], value.thunkImmediateValue());
-        if (thunkImmediate(object.Object.fromAddress(-42))) |value|
-            try ee(object.Object.fromAddress(-42), value.thunkImmediateValue());
+        if (thunkImmediate(object.Object.from(-42, p))) |value|
+            try ee(object.Object.from(-42, p), value.thunkImmediateValue());
         try ee(null, thunkImmediate(object.Object.from(@as(u64, 1) << 47, null)));
     }
     pub inline fn isImmediateClass(self: object.Object, comptime class: ClassIndex.Compact) bool {
@@ -267,6 +269,9 @@ pub const Object = packed struct(u64) {
         return InMemory.float(value, maybeProcess);
     }
 
+    pub fn fromAddress(value: anytype) Object {
+        return @bitCast(@intFromPtr(value));
+    }
     pub inline fn from(value: anytype, maybeProcess: ?*Process) object.Object {
         const T = @TypeOf(value);
         if (T == object.Object) return value;

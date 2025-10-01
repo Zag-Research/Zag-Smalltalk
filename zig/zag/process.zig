@@ -164,9 +164,14 @@ fn getStack(self: *align(1) const Self, sp: SP) []Object {
     return sp.sliceTo(self.endOfStack());
 }
 pub inline fn dumpStack(self: *align(1) const Self, sp: SP, why: []const u8) void {
-    trace("dumpStack ({s})\n", .{why});
+    std.debug.print("traceStack ({s})\n", .{why});
     for (self.getStack(sp)) |*obj|
-        trace("[{x:0>10}]: {x:0>16}\n", .{ @intFromPtr(obj), @as(u64, @bitCast(obj.*)) });
+        std.debug.print("[{x:0>10}]: {x:0>16}\n", .{ @intFromPtr(obj), @as(u64, @bitCast(obj.*)) });
+}
+pub inline fn traceStack(self: *align(1) const Self, sp: SP, why: []const u8) void {
+    trace("traceStack ({s})\n", .{why});
+    for (self.getStack(sp)) |*obj|
+            trace("[{x:0>10}]: {x:0>16}\n", .{ @intFromPtr(obj), @as(u64, @bitCast(obj.*)) });
 }
 pub inline fn canAllocStackSpace(self: *align(1) Self, sp: SP, words: usize) bool {
     const newSp = sp.reserve(words);

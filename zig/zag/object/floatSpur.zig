@@ -182,27 +182,23 @@ const decode_values = [_]u64{
 pub fn encode_valid(iterations: u64) void {
     for (0..iterations / valid_values.len) |_| {
         for (valid_values) |val| {
-            _ = encode(val) catch return;
+            std.mem.doNotOptimizeAway(encode(val) catch 0);
         }
     }
 }
-pub fn encode_invalid(iterations: u64) u64 {
-    var result : u64 = 0;
-    for (0..iterations / invalid_values.len) |i| {
+pub fn encode_invalid(iterations: u64) void {
+    for (0..iterations / invalid_values.len) |_| {
         for (invalid_values) |val| {
-            result += encode(val) catch @as(u64, @bitCast(val))+i;
+            std.mem.doNotOptimizeAway(encode(val) catch 0);
         }
     }
-    return result;
 }
-pub fn decode_valid(iterations: u64) f64 {
-    var result : f64 = 0.0;
+pub fn decode_valid(iterations: u64) void {
     for (0..iterations / decode_values.len) |_| {
         for (decode_values) |val| {
-            result += @call(.never_inline, decode, .{val});
+            std.mem.doNotOptimizeAway(decode(val));
         }
     }
-    return result;
 }
 // zig run -Doptimize=ReleaseFast floatSpur.zig
 pub fn main() void {

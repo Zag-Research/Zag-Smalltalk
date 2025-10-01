@@ -528,7 +528,7 @@ fn CompileTimeMethod(comptime counts: usize) type {
         //         @compileError("CompiledMethod prefix not the same as CompileTimeMethod == " ++ s);
         // }
         pub fn dump(self: *Self) void {
-            self.asCompiledMethod().dump();
+            self.asCompiledMethodPtr().dump();
             std.debug.print("CompiledMethod dump\n", .{});
         }
         pub fn init(name: anytype, comptime locals: u11, function: ?*const fn (PC, SP, *Process, *Context, Extra) Result, class: ClassIndex, tup: anytype) Self {
@@ -984,7 +984,7 @@ pub const Execution = struct {
             pub fn execute(self: *Self, stackObjects: ?[]const Object) void {
                 self.init(stackObjects);
                 _ = self.method.execute(self.getSp(), &self.process, self.getContext());
-                self.getProcess().dumpStack(self.getSp(), "return from execution");
+                self.getProcess().traceStack(self.getSp(), "return from execution");
             }
             pub fn matchStack(self: *const Self, expected: []const Object) !void {
                 const result = self.stack();
