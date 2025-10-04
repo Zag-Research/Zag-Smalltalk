@@ -1,5 +1,5 @@
 const std = @import("std");
-const Encoding = @import("zag/encoding.zig").Encoding;
+const Encoding = @import("zag/object/encoding.zig").Encoding;
 pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
@@ -43,7 +43,7 @@ pub fn build(b: *std.Build) void {
     const compile_date = std.mem.trim(u8, compile_date_with_extra, " \n\r");
     options.addOption([]const u8, "compile_date", compile_date);
     const encoding_option = b.option(Encoding, "encoding", "Object encoding");
-    options.addOption(Encoding, "objectEncoding", encoding_option orelse .zag);
+    options.addOption(Encoding, "objectEncoding", encoding_option orelse Encoding.default());
     const max_classes = b.option(u16, "maxClasses", "Maximum number of classes") orelse 255;
     options.addOption(u16, "maxClasses", max_classes);
     const trace = b.option(bool, "trace", "trace execution") orelse false;

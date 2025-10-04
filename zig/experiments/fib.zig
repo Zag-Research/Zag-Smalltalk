@@ -181,6 +181,7 @@ const fibIntegerBr = struct {
     const nullMethod = zag.dispatch.nullMethod;
     var fib align(codeAlignment) =
         compileMethod(Sym.fibonacci, 0, .SmallInteger, .{
+            tf.debug,
             tf.push,                  self,
             tf.pushLiteral,           "1const",
             tf.inlinePrimitive,       leq,
@@ -265,7 +266,7 @@ const fibFloat = struct {
             std.debug.print("\n", .{});
             fib.dump();
         } else {
-            const obj = exe.sendTo(Sym.fibonacci, Object.from(@as(f64, @floatFromInt(fibN)), null)) catch unreachable;
+            const obj = exe.sendTo(Sym.fibonacci, exe.object(@as(f64, @floatFromInt(fibN)))) catch unreachable;
             if (obj.nativeF()) |threaded| {
                 const native: f64 = @floatFromInt(fibCheck(fibN));
                 if (threaded != native) {
@@ -276,7 +277,9 @@ const fibFloat = struct {
         }
     }
     fn runIt(comptime _: void, proof: usize) usize {
-        _ = exe.sendTo(Sym.fibonacci, exe.object(@as(f64, @floatFromInt(fibN)))) catch unreachable;
+        const receiver = exe.object(@as(f64, @floatFromInt(fibN)));
+        if (zag.config.show_trace) std.debug.print("receiver={x}\n", .{receiver.rawU()});
+        _ = exe.sendTo(Sym.fibonacci, receiver) catch @panic("Error sending message");
         return proof;
     }
 };
@@ -327,7 +330,8 @@ pub fn timing(args: []const []const u8, default: bool) !void {
             print("          Median   Mean   StdDev  SD/Mean ({} run{s}, {} warmup{s})\n", .{ stat.runs, if (stat.runs != 1) "s" else "", stat.warmups, if (stat.warmups != 1) "s" else "" });
         } else {
             var anyRun = false;
-            inline for (&.{ fibNative, fibNativeFloat, fibInteger, fibInteger0, fibIntegerBr, fibFloat }) |benchmark| {
+            inline for (&.{ fibNative, fibNativeFloat, fibInteger, fibInteger0, fibIntegerBr, fibFloat
+                    }) |benchmark| {
                 if (benchmark.included and std.mem.eql(u8, name(arg), benchmark.info.name)) {
                     anyRun = true;
                     print("{s:>9}", .{benchmark.info.name});
@@ -369,6 +373,6 @@ pub fn main() !void {
     try timing(if (default) @constCast(do_all[0..]) else args[1..], default);
 }
 const testRun = zag.config.testRun;
-const fibN = if (testRun) 5 else 35;
+const fibN = if (testRun) 5 else 3;
 const nRuns = if (testRun) 1 else 5;
 const warmups = if (testRun) 0 else null;

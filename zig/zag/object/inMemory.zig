@@ -157,7 +157,7 @@ pub const PointedObject = packed struct {
         object: Object,
         objects: ?[*]Object,
     };
-    const staticCacheSize = 20;
+    const staticCacheSize = 0;
     var staticCacheUsed: usize = 0;
     var staticCache = [_]PointedObject{.{ .header = .{}, .data = undefined }} ** staticCacheSize;
     fn cached(self: PointedObject) ?*PointedObject {
@@ -188,21 +188,22 @@ pub const PointedObject = packed struct {
 pub const PointedObjectRef = packed struct {
     ref: *PointedObject,
 };
-pub inline fn int(i: i64, maybeProcess: ?*Process) Object {
+pub inline fn int(i: i64, process: *Process) Object {
+    std.debug.print("int({})\n", .{i});
     if (SICache and SICacheMin <= i and i <= SICacheMax)
         return Object.from(&SmallIntegerCache.objects[(@as(usize, @bitCast(i - SICacheMin))) << 1], null);
-    if (maybeProcess) |process| {
-        if (process.alloc(.SmallInteger, 1, null, Object, false)) |allocResult| {
-            allocResult.allocated.array(i64)[1] = i;
-            return allocResult.allocated.asObject();
-        } else |_| {}
-    }
-    if ((PointedObject{
-        .header = .{ .classIndex = .SmallInteger },
-        .data = .{ .int = i },
-    }).cached()) |obj| return Object.fromAddress(obj);
+    if (process.alloc(.SmallInteger, 1, null, Object, false)) |allocResult| {
+        std.debug.print("allocResult = {};\n", .{allocResult});
+        allocResult.allocated.array(i64)[1] = i;
+        std.debug.print("allocResult.allocated.asObject().rawU() = {};\n", .{allocResult.allocated.asObject().rawU()});
+        return allocResult.allocated.asObject();
+    } else |_| {}
+    // if ((PointedObject{
+    //     .header = .{ .classIndex = .SmallInteger },
+    //     .data = .{ .int = i },
+    // }).cached()) |obj| return Object.fromAddress(obj);
     //@compileLog(i,"uncachable");
-    unreachable;
+    @panic("uncachable");
 }
 test "inMemory int()" {
     if (config.immediateIntegers) return error.SkipZigTest;

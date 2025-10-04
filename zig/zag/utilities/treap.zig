@@ -23,13 +23,13 @@ pub fn Treap(comptime Key: type, comptime Index: type, comptime Value: type) typ
         const Less = Order.lt;
         const Greater = Order.gt;
         const _priority = if (includeStdTest) struct {
-            inline fn priority(pos: Index) Index { // "random" number based on position in the array
+            inline fn priority(pos: Index) u64 { // "random" number based on position in the array
                 return rands[pos];
             }
             const rands = [_]u8{ 200, 73, 48, 92, 21, 50, 55, 44 };
         } else struct {
-            const hash = @import("hash.zig").Phi.hash(Index);
-            inline fn priority(pos: Index) Index { // "random" number based on position in the array
+            const hash = @import("hash.zig").Phi.hash(u64);
+            inline fn priority(pos: Index) u64 { // "random" number based on position in the array
                 return hash(pos);
             }
         };

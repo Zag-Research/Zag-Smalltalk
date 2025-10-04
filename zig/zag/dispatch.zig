@@ -42,7 +42,7 @@ const DispatchHandler = struct {
         if (defaultForTest != void)
             return defaultForTest.loadMethodForClass(ci, signature);
         trace("loadMethodForClass({} {f})\n", .{ ci, signature });
-        unreachable;
+        @panic("Method not found");
     }
     fn stats(index: ClassIndex) Dispatch.Stats {
         return dispatches[@intFromEnum(index)].stats();

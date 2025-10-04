@@ -7,6 +7,7 @@ pub const Encoding = enum {
     taggedPtr,
     cachedPtr,
     ptr,
+    onlyInt,
     pub fn fromName(key: []const u8) !Encoding {
         inline for (@typeInfo(Encoding).@"enum".fields) |f| {
             if (std.mem.eql(u8, f.name, key)) {
@@ -14,6 +15,20 @@ pub const Encoding = enum {
             }
         }
         return error.InvalidKey;
+    }
+    pub fn default() Encoding {
+        return .zag;
+    }
+    pub fn module(self: Encoding) type {
+        return switch (self) {
+            .zag, => @import("zag.zig"),
+            .zagAlt => @import("zagAlt.zig"),
+            .nan => @import("nan.zig"),
+            .spur => @import("spur.zig"),
+            .taggedPtr => @import("taggedPtr.zig"),
+            .cachedPtr, .ptr => @import("ptr.zig"),
+            .onlyInt => @import("onlyInt.zig"),
+        };
     }
 };
 test "fromName" {

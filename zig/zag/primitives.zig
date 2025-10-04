@@ -129,6 +129,20 @@ const Module = struct {
         return null;
     }
 };
+pub fn findPrimitiveAtPtr(ptr: *const fn (PC, SP, *Process, *Context, Extra) Result) ?ModulePrimitive {
+    for (&modules) |m| {
+        for (m.primitives) |p| {
+            if (ptr == p.inlinePrimitive)
+                return .{ .module = m.name, .name = p.name, .number = p.number };
+        }
+    }
+    return null;
+}
+const ModulePrimitive = struct{
+    module: []const u8,
+    name: []const u8,
+    number: u32,
+};
 const testModule = if (config.is_test) struct {
     const moduleName = "test module";
     const moduleString = stringOf(moduleName).init().obj();

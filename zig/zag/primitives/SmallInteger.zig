@@ -58,10 +58,10 @@ pub const inlines = struct {
             return self.taggedI_noCheck() != tagged;
         return error.primitiveError;
     }
-    pub inline fn @"*"(self: Object, other: Object, maybeProcess: ?*Process) !Object { // Multiply
+    pub inline fn @"*"(self: Object, other: Object, process: *Process) !Object { // Multiply
         if (other.nativeI()) |untagged| {
             const result, const overflow = @mulWithOverflow(self.untaggedI_noCheck(), untagged);
-            if (overflow == 0) return Object.fromUntaggedI(result, maybeProcess);
+            if (overflow == 0) return Object.fromUntaggedI(result, process);
         }
         return error.primitiveError;
     }
@@ -90,10 +90,10 @@ test "inline primitives" {
 pub const @"+" = struct {
     pub const number = 1;
     pub const inlined = signature(.@"+", number);
-    inline fn with(self: Object, other: Object, maybeProcess: ?*Process) !Object { // INLINED - Add
+    inline fn with(self: Object, other: Object, process: *Process) !Object { // INLINED - Add
         if (other.untaggedI()) |untagged| {
             const result, const overflow = @addWithOverflow(self.taggedI_noCheck(), untagged);
-            if (overflow == 0) return Object.fromTaggedI(result, maybeProcess);
+            if (overflow == 0) return Object.fromTaggedI(result, process);
         }
         return error.primitiveError;
     }
@@ -148,10 +148,10 @@ pub const @"+" = struct {
 pub const @"-" = struct {
     pub const number = 2;
     pub const inlined = signature(.@"-", number);
-    inline fn with(self: Object, other: Object, maybeProcess: ?*Process) !Object { // Subtract
+    inline fn with(self: Object, other: Object, process: *Process) !Object { // Subtract
         if (other.untaggedI()) |untagged| {
             const result, const overflow = @subWithOverflow(self.taggedI_noCheck(), untagged);
-            if (overflow == 0) return Object.fromTaggedI(result, maybeProcess);
+            if (overflow == 0) return Object.fromTaggedI(result, process);
         }
         return error.primitiveError;
     }

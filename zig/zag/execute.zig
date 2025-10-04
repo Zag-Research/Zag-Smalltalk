@@ -127,6 +127,9 @@ pub const PC = packed struct {
         }
         return self.code.packedObject;
     }
+    pub fn offset(self: PC, cm: *const CompiledMethod) usize {
+        return (@intFromPtr(self.code) - @intFromPtr(&cm.code[0])) / @sizeOf(Code);
+    }
     pub inline //
     fn method(self: PC) *const CompiledMethod {
         if (logging) {

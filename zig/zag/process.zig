@@ -60,6 +60,7 @@ const Process = extern struct {
         currHp: HeapObjectArray,
         currEnd: HeapObjectArray,
         otherHeap: HeapObjectArray,
+        singleStepping: bool,
     };
     const headerSize = @sizeOf(Fields);
     const processAvail = (process_total_size - headerSize) / @sizeOf(Object);
@@ -91,7 +92,7 @@ pub inline fn ptr(self: *align(1) const Self) *Process {
 pub inline fn header(self: *align(1) const Self) *Process.Fields {
     return &self.ptr().h;
 }
-pub fn new() Self {
+pub fn new() align(alignment) Self {
     return undefined;
 }
 pub fn init(origin: *align(alignment) Self, process: Object) void {
@@ -108,6 +109,7 @@ pub fn init(origin: *align(alignment) Self, process: Object) void {
         if (@cmpxchgWeak(?*Self, &allProcesses, self.h.next, origin, SeqCst, SeqCst) == null) break;
     }
     self.h.trapContextNumber = 0;
+    self.h.singleStepping = false;
 }
 pub fn deinit(self: *align(1) Self) void {
     self.ptr().* = undefined;
@@ -128,6 +130,8 @@ inline fn needsCheck(self: *align(1) const Self) bool {
 }
 fn fullCheck(pc: PC, sp: SP, process: *align(1) Self, context: *Context, extra: Extra) Result {
     trace("fullCheck: {f}\n", .{extra});
+    if (process.header().singleStepping)
+        return @call(tailCall, Debugger.step, .{ pc, sp, process, context, extra });
     return @call(tailCall, pc.prev().prim(), .{ pc, sp, process, context, extra });
 }
 pub inline fn checkBump(self: *Self) *Self {
@@ -140,6 +144,58 @@ pub inline fn maxCount(self: *align(1) const Self) *align(1) Self {
 pub inline fn clearCount(self: *align(1) const Self) *align(1) Self {
     return @ptrFromInt(@intFromPtr(self) & nonCount);
 }
+pub inline fn singleStep(self: *align(1) const Self) *align(1) Self {
+    self.header().singleStepping = true;
+    return @ptrFromInt(@intFromPtr(self) | othersFlag);
+}
+const Debugger = struct {
+    var buf: [10]u8 = undefined;
+    var stdin = std.fs.File.stdin().reader(&buf);
+    var in = &stdin.interface; // must be separate bc @fieldParentPtr. Thanks @Freakman
+    fn step(pc: PC, sp: SP, process: *align(1) Self, context: *Context, extra: Extra) Result {
+        const primPC = pc.prev();
+        const primitive = primPC.prim();
+        const method = if (extra.getMethod()) |cm| cm else context.method;
+        std.debug.print("{}>>{f}:{d:0>3}: ", .{ method.signature.getClass(), method.signature.asSymbol(), primPC.offset(method) });
+        if (@import("threadedFn.zig").find(primitive)) |name| {
+            std.debug.print("{}", .{ name });
+            switch (name) {
+                .push => {
+                    const variable = pc.variable();
+                    if (variable.stackOffset == 0) {
+                        std.debug.print(" self", .{});
+                    } else {
+                        std.debug.print(" {f}", .{ variable });
+                    }
+                },
+                .pushLiteral => {
+                    std.debug.print(" {f}", .{pc.object()});
+                },
+                .branchFalse, .branchTrue, .branch => {
+                    std.debug.print(" {d:0>3}", .{pc.targetPC().offset(method)});
+                },
+                else => {}
+            }
+            std.debug.print("\n", .{});
+        } else if (@import("primitives.zig").findPrimitiveAtPtr(primitive)) |modPrim| {
+            std.debug.print("{s}:{s}", .{ modPrim.module, modPrim.name });
+            if (modPrim.number > 0) {
+                std.debug.print("({d})", .{ modPrim.number });
+            }
+            std.debug.print("\n", .{});
+        } else {
+            std.debug.print("{x}\n", .{ @intFromPtr(primitive) });
+        }
+        // while (in.takeDelimiterExclusive('\n')) |line| {
+        //     std.debug.print("you typed: {s}\n", .{line});
+        // } else |err| switch (err) {
+        //     error.EndOfStream => {},
+        //     else =>  |_| @panic("fail read stdin"),
+        // }
+        return @call(tailCall, primitive, .{ pc, sp, process, context, extra });
+    }
+
+};
 pub inline fn endOfStack(self: *align(1) const Self) SP {
     return @ptrCast(@as([*]Object, @ptrCast(&self.ptr().stack[0])) + Process.stack_size);
 }
@@ -164,7 +220,7 @@ fn getStack(self: *align(1) const Self, sp: SP) []Object {
     return sp.sliceTo(self.endOfStack());
 }
 pub inline fn dumpStack(self: *align(1) const Self, sp: SP, why: []const u8) void {
-    std.debug.print("traceStack ({s})\n", .{why});
+    std.debug.print("dumpStack ({s})\n", .{why});
     for (self.getStack(sp)) |*obj|
         std.debug.print("[{x:0>10}]: {x:0>16}\n", .{ @intFromPtr(obj), @as(u64, @bitCast(obj.*)) });
 }
@@ -219,7 +275,7 @@ pub fn alloc(self: *align(1) Self, classIndex: ClassIndex, iVars: u11, indexed: 
     const aI = allocationInfo(iVars, indexed, element, makeWeak);
     if (aI.objectSize(Process.maxNurseryObjectSize)) |size| {
         //trace("self: {x} self.header() {x} {} {x}\n", .{ @intFromPtr(self), @intFromPtr(self.header()), size, @intFromPtr(self.header().currHp) });
-        const result = HeapObject.fillToBoundary(self.header().currHp);
+        const result = HeapObject.alignProperBoundary(self.header().currHp);
         const newHp = result + size + 1;
         if (@intFromPtr(newHp) <= @intFromPtr(self.header().currEnd)) {
             self.header().currHp = newHp;
@@ -451,6 +507,12 @@ pub const threadedFunctions = struct {
         pub fn threadedFn(pc: PC, sp: SP, process: *Self, context: *Context, extra: Extra) Result {
             const newSp = sp.push(process.ptr().h.process);
             return @call(tailCall, process.check(pc.prim()), .{ pc.next(), newSp.?, process, context, extra });
+        }
+    };
+    pub const debug = struct {
+        pub fn threadedFn(pc: PC, sp: SP, process: *Self, context: *Context, extra: Extra) Result {
+            const newProcess = process.singleStep();
+            return @call(tailCall, newProcess.check(pc.prim()), .{ pc.next(), sp, newProcess, context, extra });
         }
     };
 };

@@ -44,27 +44,27 @@ pub const Format = enum(u7) {
     indexedWeakWithPointers,
     _,
     comptime {
-        assert(@intFromEnum(Format.notIndexable) == 128 - 16);
-        assert(@intFromEnum(Format.indexedWeakWithPointers) == 127);
+        assert(asU7(.notIndexable) == 128 - 16);
+        assert(asU7(.indexedWeakWithPointers) == 127);
     }
     const Self = @This();
-    const ImmutableSizeZero = @intFromEnum(Format.immutableSizeZero);
+    const ImmutableSizeZero = asU7(.immutableSizeZero);
     const MutableOffset = NotObject;
     const NumberOfBytes = 109;
-    const NotObject = @intFromEnum(Format.notObject);
-    const NotIndexable = @intFromEnum(Format.notIndexable);
-    const LastPointerFree = @intFromEnum(Format.free);
-    const DirectIndexed = @intFromEnum(Format.directIndexed);
-    const Indexed = @intFromEnum(Format.indexed);
-    const External = @intFromEnum(Format.external);
-    const Special = @intFromEnum(Format.special);
-    const FirstWeak = @intFromEnum(Format.externalWeakWithPointers);
-    const LastWeak = @intFromEnum(Format.indexedWeakWithPointers);
+    const NotObject = asU7(.notObject);
+    const NotIndexable = asU7(.notIndexable);
+    const LastPointerFree = asU7(.free);
+    const DirectIndexed = asU7(.directIndexed);
+    const Indexed = asU7(.indexed);
+    const External = asU7(.external);
+    const Special = asU7(.special);
+    const FirstWeak = asU7(.externalWeakWithPointers);
+    const LastWeak = asU7(.indexedWeakWithPointers);
     const Last = 128;
     // comptime {
-    //     assert(@intFromEnum(Format.notIndexable) == 0x6e);
-    //     assert(@intFromEnum(Format.notIndexableWithPointers) == 0x76);
-    //     assert(@intFromEnum(Format.indexedWeakWithPointers) == 0x7f);
+    //     assert(asU7(.notIndexable) == 0x6e);
+    //     assert(asU7(.notIndexableWithPointers) == 0x76);
+    //     assert(asU7(.indexedWeakWithPointers) == 0x7f);
     // }
     pub inline fn asU7(self: Self) u7 {
         return @truncate(@intFromEnum(self));
@@ -767,7 +767,7 @@ pub const HeapObjectConstPtr = *align(@alignOf(u64)) const HeapObject;
 pub const HeapObject = packed struct {
     header: HeapHeader,
     pub inline //
-    fn fillToBoundary(self: HeapObjectArray) HeapObjectArray {
+    fn alignProperBoundary(self: HeapObjectArray) HeapObjectArray {
         if (@intFromPtr(self) & 8 == 0)
             return self;
         self[0].header = HeapHeader.freeHeader(0);
