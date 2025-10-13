@@ -22,3 +22,4 @@ The [Strict Avalanche Criteria](https://en.wikipedia.org/wiki/Avalanche_effect) 
 [Bret Mulvey](https://hacker9.com/author/bret/) has written [about hashing](https://web.archive.org/web/20070115062135/http://bretm.home.comcast.net/hash/) including evaluating hash algorithms.
 [Hacker9](https://hacker9.com/about/) has a lot of information about cybersecurity
 [Here's an article](https://eng.libretexts.org/Courses/Folsom_Lake_College/CISP_430%3A_Data_Structures_(Aljuboori)/07%3A_Hash_Tables/7.02%3A_Choosing_a_good_hash_function) about choosing a good hash function
+[Integer Hash Functions](https://gist.github.com/badboy/6267743) has some good information

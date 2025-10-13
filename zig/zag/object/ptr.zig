@@ -172,7 +172,7 @@ pub const Object = packed struct(u64) {
     pub inline fn toDoubleNoCheck(self: Object) f64 {
         return self.ref.data.float;
     }
-    pub inline fn makeImmediate(cls: ClassIndex.Compact, hash: u56) Object {
+    pub inline fn makeImmediate(cls: ClassIndex.Compact, hash: u64) Object {
         //@compileLog(cls, hash);
         _ = .{ cls, hash, unreachable };
     }
@@ -185,11 +185,8 @@ pub const Object = packed struct(u64) {
     pub inline fn hash32(self: Object) u32 {
         return @truncate(self.ref.data.unsigned >> 8);
     }
-    pub inline //
-    fn fromAddress(value: anytype) Object {
-        //@compileLog("from: ",value);
-        @setRuntimeSafety(false);
-        return Object{ .ref = @ptrCast(@alignCast(@constCast(value))) };
+    pub fn fromAddress(value: anytype) Object {
+        return @bitCast(@intFromPtr(value));
     }
     pub inline fn from(value: anytype, process: *Process) Object {
         const T = @TypeOf(value);

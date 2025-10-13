@@ -83,7 +83,7 @@ pub const TaggedPtrObject = packed struct(u64) {
     pub inline fn toDoubleNoCheck(self: Object) f64 {
         return decode(self);
     }
-    pub inline fn makeImmediate(cls: ClassIndex.Compact, hash: u56) Object {
+    pub inline fn makeImmediate(cls: ClassIndex.Compact, hash: u48) Object {
         return oImm(cls, hash);
     }
     pub inline fn makeThunk(cls: ClassIndex.Compact, ptr: anytype, extra: u8) Object {

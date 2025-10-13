@@ -78,7 +78,7 @@ pub const Object = packed union {
     }
 
     pub inline fn untaggedI_noCheck(self: Object) i64 {
-        return @bitCast(self.rawU() & ~TagMask);
+        return @bitCast(self.rawU() - SmallIntegerTag);
     }
 
     pub inline fn taggedI(self: Object) ?i64 {
@@ -132,7 +132,7 @@ pub const Object = packed union {
         return self.toDoubleFromMemory();
     }
     pub inline fn fromSmallInteger(i: i64) Object {
-        return @bitCast((@as(u64, @bitCast(i)) << 1) | SmallIntegerTag);
+        return @bitCast((@as(u64, @bitCast(i)) << 3) | SmallIntegerTag);
     }
 
     pub inline fn isHeap(self: Object) bool {
@@ -258,6 +258,9 @@ pub const Object = packed union {
         return InMemory.float(value, maybeProcess);
     }
 
+    pub fn fromAddress(value: anytype) Object {
+        return @bitCast(@intFromPtr(value));
+    }
     // Conversion from Zig types
     pub inline fn from(value: anytype, maybeProcess: ?*zag.Process) Object {
         const T = @TypeOf(value);
@@ -345,7 +348,7 @@ pub const Object = packed union {
     // Add symbolHash method
     pub inline fn symbolHash(self: Object) ?u24 {
         if (self.isSymbol()) {
-            return @as(u32, self.to(HeapObjectPtr).*.header.hash);
+            return @as(u24, self.to(HeapObjectPtr).*.header.hash);
         }
         return null;
     }

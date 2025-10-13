@@ -355,7 +355,7 @@ pub const Object = packed struct(u64) {
             bigSwitch,
             rotateTagbits,
         };
-        switch (Choose.table) {
+        switch (Choose.tag) {
             .tag => {
                 switch (self.tag) {
                     .heap => if (self.rawU() == 0) {@branchHint(.unlikely);

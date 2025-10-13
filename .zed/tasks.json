@@ -64,13 +64,18 @@
   },
   {
     "label": "time fib onlyInt",
-    "command": "zig build -Dencoding=onlyInt -Dtrace -Doptimize=ReleaseFast && ./zig-out/bin/fib",
+    "command": "zig build -Dencoding=onlyInt -Doptimize=ReleaseFast && ./zig-out/bin/fib",
     //"command": "zig build -Doptimize=ReleaseFast && taskpolicy -l5 -t5 time ./zig-out/bin/fib",
     "cwd": "$ZED_WORKTREE_ROOT/zig",
   },
   {
     "label": "time fib NaN",
     "command": "zig build -Dencoding=nan -Doptimize=ReleaseFast && ./zig-out/bin/fib",
+    "cwd": "$ZED_WORKTREE_ROOT/zig",
+  },
+  {
+    "label": "time fib spur",
+    "command": "zig build -Dencoding=spur -Doptimize=ReleaseFast && ./zig-out/bin/fib",
     "cwd": "$ZED_WORKTREE_ROOT/zig",
   },
   {

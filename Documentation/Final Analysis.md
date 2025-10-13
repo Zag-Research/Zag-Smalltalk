@@ -26,7 +26,7 @@ This is a special case of a primitive method send. This is very similar to the f
 If there are only a few classes that have access to an implementation of a particular message (i.e they have it themselves or a superclass has an implementation), we emit a class-case instruction and inline the method for each of them, with each of them branching to the original return block on "return". To have the correct/conservative semantics, we need to retain a fall-back of doing the original send, unless we can prove that the list is exhaustive.
 #### Send where the target is the result of a comparison primitive - safe
 As a special case of the previous case, we know that comparison primitives always return `true` or `false` (or an error if the values are incomparable), so we have an exhaustive list. But more, we now know something about the relationship of these values. So, for example, we might know that a value is in the range of 1 to the size of an array, which means that we can safely use that value to index into the array.
-## Removal of redundant `BlockClosure`s 
+## Removal of redundant `BlockClosure`s
 After all inlining is completed there will typically be pushes of `BlockClosure`s that are subsequently inlined so that the block itself need never be created. These are turned into pushes of `nil`.
 ##  Compiling required `BlockClosure`s
 Any `BlockClosure`s that are referenced must be compiled, and the above inlining operations (and probably remove redundant and compile block closures) performed. This entails compiling the block AST into an ASCCompiledClosureBlock (and subsequent values)
@@ -42,7 +42,8 @@ If we have block closures, we now determine the optimum location for each method
 ## Non-structural inlining
 The next stage is to inline primitives that can't affect the control-flow graph, but can use type information that is not available until the data-flow graph is complete. Current examples are `at:` and `at:put:` where the receiver is known to be an `Array`, `String` or one of the other special array types.
 ## Creating `Context` and stack offsets
-Creating a `Context` is fairly expensive (dozens of instructions) and they are only required if we send a message or create a `BlockClosure` that does a non-local return. After inlining, some methods may not require a context along certain paths (see `fibonacci`). Therefore we want to delay creating a `Context` as long as we can. The size of a `Context` is variable, because it contains: `self`, the parameters, the locals, references to any `BlockClosures` we need to reference, as well as space for all the `BlockClosure`s that we create in the method.
+
+Creating a `Context` is fairly expensive (dozens of instructions) and they are only required if we send a message or create a `BlockClosure` that does a non-local return. After inlining, some methods may not require a context along certain paths (see `fibonacci`). Therefore we want to delay creating a `Context` as long as we can. The size of a `Context` is variable, because it contains `self`, the parameters, the locals, references to any `BlockClosures` we need to reference, as well as space for all the `BlockClosure`s that we create in the method.
 
 Each block has a context status:
  - `nil` means it hasn't been established yet

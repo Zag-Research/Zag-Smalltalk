@@ -14,7 +14,7 @@ We will shortly be moving development to a separate branch so that (barring zig 
 ## Zig
 
 ### Get Zig
-Download a recent Zig directory/folder from [ziglang.org](https://ziglang.org/download/)
+Download a recent Zig directory/folder from [ziglang.org](https://ziglang.org/download/) Currently we are holding at Zig 0.15.1 so we're all on the same version.
 Untar or unzip in a convenient place and add the resulting folder to your path.
 
 ### Compiling and Running
@@ -39,10 +39,14 @@ To fix run
 git submodule update --init --recursive
 ```
 Edit the code in an editor of your choice. Run `zig fmt .` before committing zig code (not necessarily our favourite formatting, but it keeps it consistent, and `zig fmt` adjusts for `zig` syntax changes).
+### Editing - Zed
+When editing Zig code, several of us are using [Zed](https://zed.dev) which can be customized to be like several other editors, but by default is similar to VSCode. It uses the zls language server, so it understands Zig syntax quite well, and does a `zig fmt` when it saves a file, so the indenting stays consistent. It also has collaboration and LLM support integrated.
+
+It also has a lot of tasks defined that are useful for testing/development.
 
 ## Smalltalk
 
-Download a recent Pharo image (currently using Pharo 12).
+Download a recent Pharo image (currently using Pharo 13).
 Import the Smalltalk code into Pharo using Iceberg.
 
 (The following doesn't work yet!)

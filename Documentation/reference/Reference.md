@@ -60,7 +60,7 @@ $ make install
 - [Ultralight](https://ultralig.ht/)
 - [DVUI](https://github.com/david-vanderson/dvui)
 - [zig-webui](https://github.com/webui-dev/zig-webui)
-- [curated list of Elecctron alternatives](https://github.com/sudhakar3697/awesome-electron-alternatives)
+- [curated list of Electron alternatives](https://github.com/sudhakar3697/awesome-electron-alternatives)
 - [Ghostty](https://mitchellh.com/writing/ghostty-is-coming#user-content-fn-3) - particularly libghostty - would be a possible Zag TUI
 - [GPUI from Zed](https://www.gpui.rs/) would be a possible Zag GUI (in Rust, so would need interface) [see also](https://zed.dev/blog/videogame) [and](https://github.com/zed-industries/zed/tree/main/crates/gpui) [and](https://github.com/longbridge/gpui-component)
 - A better approach might be to expose Package/Class/Method to Zed as a directory structure. This would allow agentic mode.
@@ -69,6 +69,9 @@ $ make install
 - [CRTDs](https://en.wikipedia.org/wiki/Conflict-free_replicated_data_type)
 ## Architectures
 - [C Is Not a Low-level Language - Your computer is not a fast PDP-11](https://queue.acm.org/detail.cfm?id=3212479)
+
+## Testing
+- [Antithesis](https://antithesis.com/product/what_is_antithesis/)
 
 #### Smalltalk machines
 - [A discussion where most of these links came from](https://narkive.com/NFS7uGan.4)
@@ -153,6 +156,7 @@ The name is escaping me....something like Micro Systems....
 #### ARM
 - [Writing AArch64 code for Apple](https://developer.apple.com/documentation/xcode/writing-arm64-code-for-apple-platforms) and [Code in ARM Assembly (for Apple)](https://eclecticlight.co/2021/06/16/code-in-arm-assembly-registers-explained/)
 - [More AArch64 coding advice](https://thinkingeek.com/2016/10/23/exploring-aarch64-assembler-chapter-3/)
+- [Brief notes on Apple M1 Firestorm microarchitecture](https://github.com/ocxtal/insn_bench_aarch64/blob/master/optimization_notes_apple_m1.md)
 - [AArch64 processor (Windows)](https://devblogs.microsoft.com/oldnewthing/20220726-00/?p=106898)
 - [Computer Organization and Design (book) ARM editions](https://www.academia.edu/keypass/WEp6S1RhVXFYMjhVYUZBTkNCSzJvMnJLRzgyWFFONENMWWh0cVliVGY0OD0tLTExbEJEMUR4RXRLS3BDVDdIbVRYMXc9PQ==--6d9207bbe2f5e142ab68fe654908b0330e763f5d/t/E9U-QZniS8Z-ij15Y/resource/work/31710742/Computer_organization_and_design_arm_edition?auto=download&email_work_card=download-paper)
 - [Application Binary Interface for the Arm® Architecture](https://github.com/ARM-software/abi-aa/) including [Procedure Call Standard for the Arm® 64-bit Architecture (AArch64)](https://github.com/ARM-software/abi-aa/blob/main/aapcs64/aapcs64.rst)

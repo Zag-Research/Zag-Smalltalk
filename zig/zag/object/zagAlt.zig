@@ -30,6 +30,9 @@ pub const Object = packed struct(u64) {
         inline fn u(cg: Group) u3 {
             return @intFromEnum(cg);
         }
+        inline fn isSet(bits: u64, mask: Group) bool {
+            return (bits & @intFromEnum(mask)) != 0;
+        }
     };
     const Self = @This();
     pub const inMemorySymbols = false;
@@ -44,15 +47,15 @@ pub const Object = packed struct(u64) {
     pub inline fn Nil() Object {
         return Self{ .tag = .heap, .class = .none, .hash = 0 };
     }
-    pub const tagged0: i64 = @intFromEnum(Group.int);
+    pub const tagged0: i64 = Group.u(.int);
     pub const LowTagType = TagAndClassType;
-    pub const lowTagSmallInteger = @intFromEnum(Group.int);
+    pub const lowTagSmallInteger = Group.u(.int);
     pub const HighTagType = void;
     pub const highTagSmallInteger = {};
     pub const PackedTagType = u8;
     pub const packedTagSmallInteger = intTag;
-    pub const intTag = @intFromEnum(Group.int);
-    pub const immediatesTag = @intFromEnum(Group.immediates);
+    pub const intTag = Group.u(.int);
+    pub const immediatesTag = Group.u(.immediates);
     const TagAndClassType = u8;
     const tagBits = enumBits(Group);
     const tagAndClassBits = enumBits(Group) + enumBits(ClassIndex.Compact);
@@ -73,8 +76,7 @@ pub const Object = packed struct(u64) {
         return null;
     }
     pub inline fn untaggedI_noCheck(self: object.Object) i64 {
-        return @bitCast(self.rawU() >> tagBits << tagBits);
-        //return @bitCast(self.rawU() & ~tagAndClass);
+        return @bitCast(self.rawU() - Group.u(.int));
     }
     pub inline fn taggedI(self: object.Object) ?i64 {
         if (self.isInt()) return taggedI_noCheck(self);
@@ -87,7 +89,7 @@ pub const Object = packed struct(u64) {
         return @bitCast(i);
     }
     pub inline fn fromUntaggedI(i: i64, _: anytype) object.Object {
-        return @bitCast((i << tagBits) + @intFromEnum(Group.int));
+        return @bitCast(i + Group.u(.int));
     }
     // pub inline fn cast(v: anytype) object.Object {
     //     // stored using little-endian order
@@ -119,11 +121,11 @@ pub const Object = packed struct(u64) {
         return self.isImmediateDouble() or self.isMemoryDouble();
     }
     pub inline fn nativeF_noCheck(self: object.Object) f64 {
-        if (self.tag == .heap) return self.toDoubleFromMemory();
+        if (self.isHeap()) return self.toDoubleFromMemory();
         return self.toDoubleNoCheck();
     }
-    pub inline fn fromNativeF(t: f64, maybeProcess: ?*Process) object.Object {
-        return from(t, maybeProcess);
+    pub inline fn fromNativeF(t: f64, process: *Process) object.Object {
+        return from(t, process);
     }
     pub inline fn symbolHash(self: object.Object) ?u24 {
         if (self.isImmediateClass(.Symbol)) return @truncate(self.hash);
@@ -193,7 +195,7 @@ pub const Object = packed struct(u64) {
         return self.tag == .heap;
     }
     pub inline fn isImmediateDouble(self: object.Object) bool {
-        return (self.rawU() & 4) != 0;
+        return Group.isSet(self.rawU(),.float);
     }
     pub inline fn isMemoryDouble(self: object.Object) bool {
         return self.isMemoryAllocated() and self.to(HeapObjectPtr).*.getClass() == .Float;
@@ -205,7 +207,7 @@ pub const Object = packed struct(u64) {
         return grp.base();
     }
     pub inline fn isInt(self: object.Object) bool {
-        return self.tag == .int;
+        return Group.isSet(self.rawU(),.int);
     }
     pub inline fn isNat(self: object.Object) bool {
         return self.isInt() and self.rawI() >= 0;
@@ -264,15 +266,15 @@ pub const Object = packed struct(u64) {
     pub fn fromAddress(value: anytype) Object {
         return @bitCast(@intFromPtr(value));
     }
-    pub inline fn from(value: anytype, maybeProcess: ?*Process) object.Object {
+    pub inline fn from(value: anytype, process: *Process) object.Object {
         const T = @TypeOf(value);
         if (T == object.Object) return value;
         switch (@typeInfo(T)) {
-            .int, .comptime_int => return @bitCast(@as(i64, value << 3) + 1),
+            .int, .comptime_int => return fromUntaggedI(value << tagBits, process),
             .float => return @bitCast(encode(value) catch {
-                return memoryFloat(value, maybeProcess);
+                return memoryFloat(value, process);
             }),
-            .comptime_float => return from(@as(f64, value), maybeProcess),
+            .comptime_float => return from(@as(f64, value), process),
             .bool => return if (value) object.Object.True() else object.Object.False(),
             .null => return object.Object.Nil(),
             .pointer => |ptr_info| {
@@ -332,11 +334,11 @@ pub const Object = packed struct(u64) {
     }
     pub inline fn which_class(self: object.Object) ClassIndex {
         const bits: u64 = @bitCast(self);
-        if (bits & 1 != 0) {@branchHint(.likely);
+        if (Group.isSet(bits,.int)) {@branchHint(.likely);
             return .SmallInteger;
-        } else if (bits & 4 != 0) {@branchHint(.likely);
+        } else if (Group.isSet(bits,.float)) {@branchHint(.likely);
             return .Float;
-        } else if (bits & 2 != 0) {@branchHint(.unlikely);
+        } else if (Group.isSet(bits,.immediates)) {@branchHint(.unlikely);
             return self.class.classIndex();
         } else if (bits == 0) {@branchHint(.unlikely);
             return .UndefinedObject;

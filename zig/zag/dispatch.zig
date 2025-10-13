@@ -41,7 +41,7 @@ const DispatchHandler = struct {
     fn loadMethodForClass(ci: ClassIndex, signature: Signature) *const CompiledMethod {
         if (defaultForTest != void)
             return defaultForTest.loadMethodForClass(ci, signature);
-        trace("loadMethodForClass({} {f})\n", .{ ci, signature });
+        std.debug.print("loadMethodForClass({} {b} {f})\n", .{ ci, @as(u64, @bitCast(signature)), signature });
         @panic("Method not found");
     }
     fn stats(index: ClassIndex) Dispatch.Stats {
@@ -52,6 +52,7 @@ const DispatchHandler = struct {
     }
     fn addMethod(method: *const CompiledMethod) void {
         const index = method.signature.getClassIndex();
+        //std.debug.print("addMethod({b} {f})\n", .{ @as(u64, @bitCast(method.signature)), method.signature });
         trace("[addMethod] signature: {f}\n", .{method.signature});
         if (dispatches[index].addIfAllocated(method)) return;
         while (true) {
@@ -360,22 +361,20 @@ pub const threadedFunctions = struct {
             process.traceStack(sp, "returnSelf after pop");
             trace("returnSelf: {*}->{*}\n", .{ sp, newSp });
             process.traceStack(sp, "returnSelf after pop");
-            return @call(tailCall, process.check(callerContext.getNPc()), .{ callerContext.getTPc(), newSp, process, callerContext, Extra.fromContextData(callerContext.contextData) });
+            return @call(tailCall, process.branchCheck(callerContext.getNPc()), .{ callerContext.getTPc(), newSp, process, callerContext, Extra.fromContextData(callerContext.contextData) });
         }
         test "returnSelf" {
             if (true) return error.NotImplemented;
-            var exe = Execution.initTest(
-                "returnSelf",
-                .{
-                    tf.pushLiteral,
-                    91,
-                    tf.pushLiteral,
-                    17,
-                    tf.returnSelf,
-                    2,
-                    tf.pushLiteral,
-                    99,
-                });
+            var exe = Execution.initTest("returnSelf", .{
+                tf.pushLiteral,
+                91,
+                tf.pushLiteral,
+                17,
+                tf.returnSelf,
+                2,
+                tf.pushLiteral,
+                99,
+            });
             try exe.runTest(
                 &[_]Object{exe.object(42)},
                 &[_]Object{exe.object(42)},
@@ -393,24 +392,22 @@ pub const threadedFunctions = struct {
                 return @call(tailCall, process.check(context.npc), .{ context.tpc, newSp, process, context, Extra.fromContextData(context.contextDataPtr(sp)) });
             }
             const newSp, const callerContext = context.pop(process, sp);
-            trace("returnTop: {f} {*}\n", .{ top, newSp });
+            trace("returnTop: {f} {*} {*} {*} {f}\n", .{ top, newSp, callerContext, callerContext.npc, callerContext.tpc });
             newSp.top = top;
-            return @call(tailCall, process.check(callerContext.npc), .{ callerContext.tpc, newSp, process, callerContext, Extra.fromContextData(callerContext.contextDataPtr(sp)) });
+            return @call(tailCall, process.branchCheck(callerContext.npc), .{ callerContext.tpc, newSp, process, callerContext, Extra.fromContextData(callerContext.contextDataPtr(sp)) });
         }
         test "returnTopNoContext" {
             if (true) return error.NotImplemented;
-            var exe = Execution.initTest(
-                "returnTopNoContext",
-                .{
-                    tf.pushLiteral,
-                    91,
-                    tf.pushLiteral,
-                    Object.tests[0],
-                    tf.returnTop,
-                    2,
-                    tf.pushLiteral,
-                    99,
-                });
+            var exe = Execution.initTest("returnTopNoContext", .{
+                tf.pushLiteral,
+                91,
+                tf.pushLiteral,
+                Object.tests[0],
+                tf.returnTop,
+                2,
+                tf.pushLiteral,
+                99,
+            });
             try exe.runTest(
                 &[_]Object{True()},
                 &[_]Object{exe.object(42)},

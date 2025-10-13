@@ -50,7 +50,7 @@ pub const module = struct {
 pub const branch = struct {
     pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
         const target = pc.targetPC();
-        return @call(tailCall, process.check(target.prim()), .{ target.next(), sp, process.checkBump(), context, extra });
+        return @call(tailCall, process.branchCheck(target.prim()), .{ target.next(), sp, process.checkBump(), context, extra });
     }
     test "branch" {
         var exe = Execution.initTest("branch", .{
@@ -79,7 +79,7 @@ pub const classCase = struct {
                 if (currentClass == match) {
                     newPc = newPc.targetPC();
                     trace("classCase: match {*} extra: {f}\n", .{ sp, extra });
-                    return @call(tailCall, process.check(newPc.prim()), .{ newPc.next(), sp.drop(), process, context, extra });
+                    return @call(tailCall, process.branchCheck(newPc.prim()), .{ newPc.next(), sp.drop(), process, context, extra });
                 }
                 if (currentClass == 0) {
                     trace("classCase: 0 {*} extra: {f}\n", .{ sp, extra });

@@ -51,7 +51,7 @@ pub const Signature = packed struct {
             return self.tag == sigTag;
         }
     };
-    pub const empty: Signature = .{ .int = 0 };
+    pub const empty: Signature = .{ .int = Create.sigTag };
     pub fn isEmpty(self: Signature) bool {
         return self.int == empty.int;
     }
@@ -67,7 +67,8 @@ pub const Signature = packed struct {
     pub fn fromPrimitive(primitiveNumber: u16) Signature {
         return .{ .int = @bitCast(Create{ .selector = 0, .class = @enumFromInt(primitiveNumber) }) };
     }
-    pub fn fromNameClass(name: anytype, class: ClassIndex) Signature {
+    fn fromNameClass(name: anytype, class: ClassIndex) Signature {
+        //@compileLog(name.numArgs(), name.symbolHash(), class);
         return .{ .int = @bitCast(Create{ .selector = @as(u32, name.numArgs()) << 24 | @as(u32, (name.symbolHash().?)), .class = class }) };
     }
     fn equals(self: Signature, other: Signature) bool {
@@ -106,7 +107,11 @@ pub const Signature = packed struct {
         if (self.isEmpty()) {
             try writer.print("Signature{{empty}}", .{});
         } else {
-            try writer.print("Signature{{{f},{}}}", .{ self.asSymbol(), self.getClass() });
+            switch (self.getClass()) {
+                .none => try writer.print("?", .{}),
+                else => |class| try writer.print("{}", .{ class}),
+            }
+            try writer.print("{f}", .{ self.asSymbol() });
         }
     }
 };
@@ -118,6 +123,11 @@ pub const PC = packed struct {
     pub const inlinePrimitiveFailed = zag.dispatch.inlinePrimitiveFailed;
     pub fn init(code: *const Code) PC { // don't inline this as it triggers a zig bug!
         return .{ .code = code };
+    }
+    pub var exitCode: [1]Code = undefined;
+    pub fn exit() PC {
+        exitCode[0] = Code.endCode;
+        return init(@ptrCast(&exitCode[0]));
     }
     pub inline //
     fn packedObject(self: PC) PackedObject {
@@ -1046,7 +1056,8 @@ pub const Execution = struct {
         pub fn sendTo(self: *MainExecutor, selector: Object, receiver: Object) !Object {
             trace("Sending: {f} to {f}\n", .{ selector, receiver });
             self.exe.init(Object.empty);
-            self.exe.getContext().npc = Code.end;
+            self.exe.getContext().setReturn(PC.exit());
+            trace("SendTo: context {*} {f}\n", .{ self.exe.getContext().npc , self.exe.getContext().tpc });
             const class = receiver.get_class();
             const signature = Signature.from(selector, class);
             self.exe.method = class.lookupMethodForClass(signature);

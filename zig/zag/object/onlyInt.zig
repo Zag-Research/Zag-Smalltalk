@@ -163,8 +163,8 @@ pub const Object = packed struct(u64) {
     pub inline fn toDoubleNoCheck(_: Object) f64 {
         @panic("Not implemented");
     }
-    pub inline fn makeImmediate(cls: ClassIndex.Compact, hash: u56) Object {
-        return @bitCast((@as(u64, @intFromEnum(cls)) << 40) | hash);
+    pub inline fn makeImmediate(_: ClassIndex.Compact, hash: u64) Object {
+        return @bitCast(hash);
     }
     pub inline fn makeThunk(cls: ClassIndex.Compact, ptr: anytype, extra: u8) Object {
         _ = .{ cls, ptr, extra, unreachable };
@@ -177,13 +177,11 @@ pub const Object = packed struct(u64) {
     }
 
     pub inline fn isSymbol(_: object.Object) bool {
-        return false;
+        return true;
     }
     pub inline //
     fn fromAddress(value: anytype) Object {
-        //@compileLog("from: ",value);
-        @setRuntimeSafety(false);
-        return Object{ .ref = @ptrCast(@alignCast(@constCast(value))) };
+        return @bitCast(@intFromPtr(value));
     }
     pub inline fn from(value: anytype, _: *Process) Object {
         const T = @TypeOf(value);

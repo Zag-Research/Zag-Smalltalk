@@ -33,7 +33,7 @@ pub const threadedFns = struct {
         pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
             if (sp.top.equals(True())) {
                 const newPc = pc.targetPC();
-                return @call(tailCall, process.check(newPc.prim()), .{ newPc.next(), sp.drop(), process, context, extra });
+                return @call(tailCall, process.branchCheck(newPc.prim()), .{ newPc.next(), sp.drop(), process, context, extra });
             }
             return @call(tailCall, process.check(pc.prim2()), .{ pc.next2(), sp.drop(), process, context, extra });
         }
@@ -44,7 +44,7 @@ pub const threadedFns = struct {
             if (sp.top.equals(False())) {
                 const newPc = pc.targetPC();
                 trace("Boolean>>#inlinePrimitive: branchFalse {f} {f}\n", .{ pc, newPc });
-                return @call(tailCall, process.check(newPc.prim()), .{ newPc.next(), sp.drop(), process, context, extra });
+                return @call(tailCall, process.branchCheck(newPc.prim()), .{ newPc.next(), sp.drop(), process, context, extra });
             }
             return @call(tailCall, process.check(pc.prim2()), .{ pc.next2(), sp.drop(), process, context, extra });
         }

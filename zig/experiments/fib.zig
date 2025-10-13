@@ -181,7 +181,7 @@ const fibIntegerBr = struct {
     const nullMethod = zag.dispatch.nullMethod;
     var fib align(codeAlignment) =
         compileMethod(Sym.fibonacci, 0, .SmallInteger, .{
-            tf.debug,
+            //            tf.debug,
             tf.push,                  self,
             tf.pushLiteral,           "1const",
             tf.inlinePrimitive,       leq,
@@ -197,6 +197,7 @@ const fibIntegerBr = struct {
             minus,                    tf.send,
             signature(.fibonacci, 0), &nullMethod,
             tf.inlinePrimitive,       plus,
+            //            tf.enddebug,
             tf.returnTop,
         });
     var exe: MainExecutor = undefined;
@@ -204,6 +205,7 @@ const fibIntegerBr = struct {
         exe = MainExecutor.new();
         fib.resolve(&[_]Object{ exe.object(1), exe.object(2) }) catch unreachable;
         fib.initExecute();
+        //std.debug.print("method signature {f}\n", .{@as(*zag.execute.CompiledMethod, @ptrCast(&fib))});
         zag.dispatch.addMethod(@ptrCast(&fib));
         if (zag.config.show_trace) {
             std.debug.print("\n", .{});
@@ -330,8 +332,7 @@ pub fn timing(args: []const []const u8, default: bool) !void {
             print("          Median   Mean   StdDev  SD/Mean ({} run{s}, {} warmup{s})\n", .{ stat.runs, if (stat.runs != 1) "s" else "", stat.warmups, if (stat.warmups != 1) "s" else "" });
         } else {
             var anyRun = false;
-            inline for (&.{ fibNative, fibNativeFloat, fibInteger, fibInteger0, fibIntegerBr, fibFloat
-                    }) |benchmark| {
+            inline for (&.{ fibNative, fibNativeFloat, fibInteger, fibInteger0, fibIntegerBr, fibFloat }) |benchmark| {
                 if (benchmark.included and std.mem.eql(u8, name(arg), benchmark.info.name)) {
                     anyRun = true;
                     print("{s:>9}", .{benchmark.info.name});
@@ -373,6 +374,6 @@ pub fn main() !void {
     try timing(if (default) @constCast(do_all[0..]) else args[1..], default);
 }
 const testRun = zag.config.testRun;
-const fibN = if (testRun) 5 else 3;
+const fibN = if (testRun) 5 else 40;
 const nRuns = if (testRun) 1 else 5;
 const warmups = if (testRun) 0 else null;

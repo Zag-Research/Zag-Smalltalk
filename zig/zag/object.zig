@@ -6,34 +6,9 @@ const zag = @import("zag.zig");
 const config = zag.config;
 const trace = config.trace;
 const assert = std.debug.assert;
-const debugError = false;
 const Process = zag.Process;
 const hash64 = zag.utilities.ProspectorHash.hash64;
-const symbol = if (debugError) struct {
-    const inversePhi24 = @import("utilities.zig").inversePhi(u24);
-    const undoPhi24 = @import("utilities.zig").undoPhi(u24);
-    pub inline fn fromHash32(hash: u32) Object {
-        return Object.makeImmediate(.Symbol, hash);
-    }
-    inline fn symbol_of(index: u24, arity: u4) Object {
-        return fromHash32(@as(u24, index *% inversePhi24) | (@as(u32, arity) << 24));
-    }
-    pub inline fn symbolArity(obj: Object) u4 {
-        return @truncate(obj.hash56() >> 24);
-    }
-    pub inline fn symbol0(index: u24) Object {
-        return symbol_of(index, 0);
-    }
-    pub inline fn symbol1(index: u24) Object {
-        return symbol_of(index, 1);
-    }
-    const symbols = struct {
-        pub const yourself = symbol0(5);
-    };
-    fn asString(self: Object) Object {
-        return self;
-    }
-} else @import("symbol.zig");
+const symbol = @import("symbol.zig");
 const heap = @import("heap.zig");
 const Age = heap.Age;
 const HeapObject = heap.HeapObject;
@@ -307,16 +282,16 @@ pub const ObjectFunctions = struct {
             try writer.print("Object({x})", .{@as(u64, @bitCast(self))});
             return;
         }
-        if (self.nativeI()) |i| {
+        if (self.signature()) |signature| {
+            try writer.print("{f}", .{signature});
+        } else if (self.symbolHash()) |_| {
+            try writer.print("#{s}", .{symbol.asString(self).arrayAsSlice(u8) catch "???"});
+        } else if (self.nativeI()) |i| {
             try writer.print("{d}", .{i});
         } else if (self.equals(False())) {
             try writer.print("false", .{});
         } else if (self.equals(True())) {
             try writer.print("true", .{});
-        } else if (self.symbolHash()) |_| {
-            try writer.print("#{s}", .{symbol.asString(self).arrayAsSlice(u8) catch "???"});
-        } else if (self.signature()) |signature| {
-            try writer.print("{f}", .{signature});
         } else if (self.nativeF()) |float| {
             try writer.print("{}", .{float});
         } else if (self.equals(Nil())) {

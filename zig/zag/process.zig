@@ -86,10 +86,10 @@ comptime {
     assert(process_total_size == @sizeOf(Process));
 }
 var allProcesses: ?*Self = null;
-pub inline fn ptr(self: *align(1) const Self) *Process {
+inline fn ptr(self: *align(1) const Self) *Process {
     return @ptrFromInt(@intFromPtr(self) & nonFlags);
 }
-pub inline fn header(self: *align(1) const Self) *Process.Fields {
+inline fn header(self: *align(1) const Self) *Process.Fields {
     return &self.ptr().h;
 }
 pub fn new() align(alignment) Self {
@@ -123,15 +123,18 @@ const checkFlags = othersFlag | countOverflowFlag;
 const flagMask = checkFlags | countMask;
 const nonFlags = ~flagMask;
 pub inline fn check(self: *align(1) const Self, next: *const fn (PC, SP, *Self, *Context, Extra) Result) *const fn (PC, SP, *Self, *Context, Extra) Result {
+    return if (config.singleSteppable and self.needsCheck()) &fullCheck else next;
+}
+pub inline fn branchCheck(self: *align(1) const Self, next: *const fn (PC, SP, *Self, *Context, Extra) Result) *const fn (PC, SP, *Self, *Context, Extra) Result {
     return if (self.needsCheck()) &fullCheck else next;
 }
 inline fn needsCheck(self: *align(1) const Self) bool {
     return (@intFromPtr(self) & checkFlags) != 0;
 }
 fn fullCheck(pc: PC, sp: SP, process: *align(1) Self, context: *Context, extra: Extra) Result {
-    trace("fullCheck: {f}\n", .{extra});
-    if (process.header().singleStepping)
-        return @call(tailCall, Debugger.step, .{ pc, sp, process, context, extra });
+    trace("fullCheck: {f} {}\n", .{ extra, process.header().singleStepping });
+    // if (process.header().singleStepping)
+    //     return @call(tailCall, Debugger.step, .{ pc, sp, process, context, extra });
     return @call(tailCall, pc.prev().prim(), .{ pc, sp, process, context, extra });
 }
 pub inline fn checkBump(self: *Self) *Self {
@@ -148,15 +151,22 @@ pub inline fn singleStep(self: *align(1) const Self) *align(1) Self {
     self.header().singleStepping = true;
     return @ptrFromInt(@intFromPtr(self) | othersFlag);
 }
+pub inline fn unSingleStep(self: *align(1) const Self) *align(1) Self {
+    self.header().singleStepping = false;
+    return @ptrFromInt(@intFromPtr(self) & ~othersFlag);
+}
 const Debugger = struct {
     var buf: [10]u8 = undefined;
     var stdin = std.fs.File.stdin().reader(&buf);
     var in = &stdin.interface; // must be separate bc @fieldParentPtr. Thanks @Freakman
     fn step(pc: PC, sp: SP, process: *align(1) Self, context: *Context, extra: Extra) Result {
+        trace("step: {f}", .{pc});
         const primPC = pc.prev();
+        trace(" {f}", .{primPC});
         const primitive = primPC.prim();
         const method = if (extra.getMethod()) |cm| cm else context.method;
-        std.debug.print("{}>>{f}:{d:0>3}: ", .{ method.signature.getClass(), method.signature.asSymbol(), primPC.offset(method) });
+        trace(" {*} {*}\n", .{ primitive, method});
+        std.debug.print("{f}:{d:0>3}: ", .{ method.signature, primPC.offset(method) });
         if (@import("threadedFn.zig").find(primitive)) |name| {
             std.debug.print("{}", .{ name });
             switch (name) {
@@ -199,6 +209,9 @@ const Debugger = struct {
 pub inline fn endOfStack(self: *align(1) const Self) SP {
     return @ptrCast(@as([*]Object, @ptrCast(&self.ptr().stack[0])) + Process.stack_size);
 }
+pub inline fn getSp(self: *align(1) const Self) SP {
+    return self.header().sp;
+}
 pub inline fn setSp(self: *align(1) Self, sp: SP) void {
     self.header().sp = sp;
 }
@@ -207,9 +220,6 @@ pub inline fn getContext(self: *align(1) const Self) *Context {
 }
 pub inline fn setContext(self: *align(1) Self, context: *Context) void {
     self.header().context = context;
-}
-pub inline fn getSp(self: *align(1) const Self) SP {
-    return self.header().sp;
 }
 pub inline fn freeStack(self: *align(1) const Self, sp: SP) usize {
     return (@intFromPtr(sp) - @intFromPtr(self.ptr())) / 8;
@@ -229,14 +239,10 @@ pub inline fn traceStack(self: *align(1) const Self, sp: SP, why: []const u8) vo
     for (self.getStack(sp)) |*obj|
             trace("[{x:0>10}]: {x:0>16}\n", .{ @intFromPtr(obj), @as(u64, @bitCast(obj.*)) });
 }
-pub inline fn canAllocStackSpace(self: *align(1) Self, sp: SP, words: usize) bool {
-    const newSp = sp.reserve(words);
-    return @intFromPtr(newSp) > @intFromPtr(self);
-}
 pub inline fn getHeap(self: *align(1) const Self) []HeapObject {
     return self.header().currHeap[0..((@intFromPtr(self.header().currHp) - @intFromPtr(self.header().currHeap)) / @sizeOf(Object))];
 }
-pub inline fn freeNursery(self: *align(1) const Self) usize {
+inline fn freeNursery(self: *align(1) const Self) usize {
     return (@intFromPtr(self.header().currEnd) - @intFromPtr(self.header().currHp)) / 8;
 }
 pub fn spillStackAndPush(self: *align(1) Self, value: Object, sp: SP, context: *Context, extra: Extra) struct { SP, *Context, Extra } {
@@ -512,6 +518,12 @@ pub const threadedFunctions = struct {
     pub const debug = struct {
         pub fn threadedFn(pc: PC, sp: SP, process: *Self, context: *Context, extra: Extra) Result {
             const newProcess = process.singleStep();
+            return @call(tailCall, newProcess.check(pc.prim()), .{ pc.next(), sp, newProcess, context, extra });
+        }
+    };
+    pub const enddebug = struct {
+        pub fn threadedFn(pc: PC, sp: SP, process: *Self, context: *Context, extra: Extra) Result {
+            const newProcess = process.unSingleStep();
             return @call(tailCall, newProcess.check(pc.prim()), .{ pc.next(), sp, newProcess, context, extra });
         }
     };

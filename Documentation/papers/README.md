@@ -1,5 +1,6 @@
 Here are papers and talks about Zag-Smalltalk
 - [IWST 2025: Encoding for Objects Matters](IWST-2025.pdf)
+- [Janat Baig Thesis: Feasibility of leveraging LLVM for JIT Compilation In Dynamic Language Ecosystems](Thesis_Janat_Baig.pdf)
 - [VMIL 2024: Inlined Code Generation for Smalltalk](VMIL-2024.pdf) [talk](VMIL-2024-talk.pdf)
 - [VMIL 2023 paper: Revisiting Dynamic Dispatch for Modern Architectures](VMIL-2023.pdf)
 - [IWST 2023: Threaded-Execution and CPS Provide Smooth Switching Among Execution Modes](IWST-2023.pdf)

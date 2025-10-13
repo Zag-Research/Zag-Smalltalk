@@ -29,31 +29,31 @@ pub var nullContext = Context.init();
 const Self = @This();
 const Context = Self;
 header: HeapHeader,
+trapContextNumber: u64,
 method: *const CompiledMethod,
 tpc: PC, // threaded PC
 npc: *const fn (PC, SP, *Process, *Context, Extra) Result, // native PC - in Continuation Passing Style
 prevCtxt: ?*Context,
-trapContextNumber: u64,
 contextData: *ContextData,
 const contextSize = @sizeOf(Self) / @sizeOf(Object);
 pub const Static = ContextOnStack;
 const ContextOnStack = struct {
     spOffset: u64,
+    trapContextNumber: u64,
     method: *const CompiledMethod,
     tpc: usize,
     npc: *const fn (PC, SP, *Process, *Context, Extra) Result,
     prevCtxt: ?*Context,
-    trapContextNumber: u64,
     contextData: *ContextData,
     selfOffset: u64,
     locals: Object,
     inline fn set(self: *ContextOnStack, method: *const CompiledMethod, context: *Context, selfOffset: u64, numLocals: u64) void {
         self.spOffset = 0;
+        self.trapContextNumber = 0;
         self.method = method;
         self.tpc = undefined;
         self.npc = undefined;
         self.prevCtxt = context;
-        self.trapContextNumber = 0;
         self.contextData = undefined;
         self.selfOffset = selfOffset - 1;
         const locals: [*]Object = @ptrCast(&self.locals);
@@ -63,11 +63,11 @@ const ContextOnStack = struct {
     }
     pub fn initStatic(self: *ContextOnStack) void {
         self.spOffset = @bitCast(HeapHeader.headerStatic(.Context, contextSize, contextSize - 1));
+        self.trapContextNumber = 0;
         self.method = undefined;
-        self.tpc = 0;
+        self.tpc = 41;//undefined;
         self.npc = undefined;
         self.prevCtxt = null;
-        self.trapContextNumber = 0;
         self.contextData = @ptrCast(&self.selfOffset);
         self.selfOffset = undefined;
         self.locals = undefined;
@@ -235,14 +235,14 @@ pub inline fn popTargetContext(target: *Context, process: *Process, result: Obje
     newSp.top = result;
     return .{ newSp, newTarget };
 }
-pub inline fn pop(self: *Context, process: *Process, sp: SP) struct { SP, *Context } {
+pub inline fn pop(self: *Context, _: *Process, sp: SP) struct { SP, *Context } {
     if (self.ifOnStack(sp)) |ctxt| {
         const newSp = ctxt.selfAddress();
-        trace("popContext: {*}, {x}\n", .{ self, @intFromPtr(newSp) });
+        trace("popContext: {*}, {*}\n", .{ self, newSp });
         return .{ @ptrCast(newSp), self.previous() };
     }
-    trace("popContext: {*}\n", .{self});
-    _ = .{ process, @panic("incomplete") };
+    trace("popContext: not on stack, {*}, {*}\n", .{ self, sp });
+    @panic("incomplete");
 }
 pub fn push(self: *Context, sp: SP, process: *Process, method: *const CompiledMethod, extra: Extra) struct { SP, *ContextOnStack } {
     const locals = method.stackStructure.locals;
