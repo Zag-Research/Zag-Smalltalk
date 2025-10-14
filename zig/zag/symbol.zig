@@ -89,66 +89,14 @@ const SymbolsEnum = enum(u32) {
     fibonacci,
     Object,
     _,
+    const lastPredefinedSymbol = std.meta.fields(SymbolsEnum).len;
+    comptime {
+        std.debug.assert(initialSymbolStrings.len == lastPredefinedSymbol);
+    }
     const staticSymbols = blk: {
         var symbolArray = [_]PointedObject{undefined} ** lastPredefinedSymbol;
-        const symbolEnums = [_]SymbolsEnum{
-            .value,
-            .@"=",
-            .@"value:",
-            .@"cull:",
-            .@"doesNotUnderstand:",
-            .@"at:",
-            .@"new:",
-            .@"valueWithArguments:",
-            .@"ifTrue:",
-            .@"ifFalse:",
-            .@"ifNil:",
-            .@"ifNotNil:",
-            .@"perform:",
-            .@"+",
-            .@"-",
-            .@"*",
-            .@"~=",
-            .@"==",
-            .@"~~",
-            .@"<",
-            .@"<=",
-            .@",>=",
-            .@">",
-            .@"at:put:",
-            .@"value:value:",
-            .@"cull:cull:",
-            .@"ifTrue:ifFalse",
-            .@"ifFalse:ifTrue:",
-            .@"ifNil:ifNotNil",
-            .@"ifNotNil:ifNil:",
-            .@"perform:with:",
-            .@"perform:withArguments:",
-            .@"value:value:value:",
-            .@"cull:cull:cull:",
-            .@"perform:with:with:",
-            .@"perform:withArguments:inSuperclass:",
-            .@"value:value:value:value:",
-            .@"cull:cull:cull:cull:",
-            .@"perform:with:with:with:",
-            .yourself,
-            .size,
-            .negated,
-            .new,
-            .self,
-            .name,
-            .class,
-            .Class,
-            .Behavior,
-            .ClassDescription,
-            .Metaclass,
-            .SmallInteger,
-            .noFallback,
-            .fibonacci,
-            .Object,
-        };
-        for (symbolArray[0..], symbolEnums) |*sym, symbol|
-            initSymbol(sym, symbol);
+        for (symbolArray[0..], std.meta.fields(SymbolsEnum)) |*sym, symbol|
+            initSymbol(sym, symbol.value);
         break :blk symbolArray;
     };
     fn initSymbol(sym: *PointedObject, symbol: SymbolsEnum) void {
@@ -176,10 +124,6 @@ const SymbolsEnum = enum(u32) {
     fn signature(sym: SymbolsEnum, primitive: u16) Signature {
         const int = @intFromEnum(sym);
         return Signature.fromHashPrimitive(hash_of(@truncate(int), @truncate(int >> 24)), primitive);
-    }
-    const lastPredefinedSymbol = 54;
-    comptime {
-        std.debug.assert(initialSymbolStrings.len == lastPredefinedSymbol);
     }
     inline fn symbol_of(index: u24, nArgs: u4) Object {
         if (config.immediateSymbols) {
