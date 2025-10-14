@@ -17,7 +17,6 @@ const Process = zag.Process;
 pub const Object = packed struct(u64) {
     ref: *const InMemory.PointedObject,
     const Self = @This();
-    pub const inMemorySymbols = true;
     pub const ZERO = of(0);
     pub fn False() Object {
         return Object.fromAddress(&InMemory.False);

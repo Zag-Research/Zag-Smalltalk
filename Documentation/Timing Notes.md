@@ -4,19 +4,15 @@ zag time: 3253175875ns 3806338333ns 2560578792ns
 Spur time: 4466756208ns 5596710917ns 3774775750ns
 Zag is 1.37x 1.47x 1.47x faster
 #### Native
-   Native  174ms   173ms   0.83ms   0.5%
-  NativeF  251ms   250ms   0.75ms   0.3%
-
+	   Native  174ms   173ms   0.83ms   0.5%
+	   NativeF  251ms   250ms   0.75ms   0.3%
+	   IntegerBr 2181ms  2184ms   4.87ms   0.2%
 #### zag
 tag **fastest**
 	IntegerBr 2469ms  2467ms   5.10ms   0.2%
     Float 3118ms  3120ms  10.13ms   0.3%
-    IntegerBr 2512ms  2508ms   8.32ms   0.3%
-    Float 3124ms  3123ms   5.99ms   0.2%
 table
-	IntegerBr 2480ms  2478ms  11.53ms   0.5%
-    Float 3112ms  3114ms   9.68ms   0.3%
-    IntegerBr 2471ms  2470ms   1.74ms   0.1%
+	IntegerBr 2471ms  2470ms   1.74ms   0.1%
     Float 3131ms  3136ms   8.57ms   0.3%
 firstFloat
 	IntegerBr 2498ms  2513ms  35.62ms   1.4%
@@ -31,8 +27,8 @@ rotateTagbits
 	IntegerBr 2583ms  2577ms  18.66ms   0.7%
     Float 3188ms  3188ms   5.42ms   0.2%
 #### zagAlt
-    IntegerBr 2456ms  2455ms   2.04ms   0.1%
-    Float 3879ms  3883ms  11.03ms   0.3%
+    IntegerBr 2451ms  2452ms   2.79ms   0.1%
+    Float 3859ms  3860ms  14.46ms   0.4%
 #### nan
 nanCompare **fastest**
     IntegerBr 2313ms  2309ms  11.02ms   0.5%

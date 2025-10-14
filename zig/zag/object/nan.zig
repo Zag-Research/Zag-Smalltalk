@@ -47,7 +47,6 @@ pub const Object = packed struct(u64) {
             return @intFromEnum(cg);
         }
     };
-    pub const inMemorySymbols = false;
     pub const maxInt = 0x7f_ffff_ffff_ffff;
     pub const ZERO = of(0);
     pub inline fn False() Object {

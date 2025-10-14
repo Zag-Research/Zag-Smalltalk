@@ -15,9 +15,8 @@ const HeapObjectPtr = heap.HeapObjectPtr;
 const HeapObjectConstPtr = heap.HeapObjectConstPtr;
 const Process = zag.Process;
 pub const Object = packed struct(u64) {
-    ref: *const InMemory.PointedObject,
+    int: u64,
     const Self = @This();
-    pub const inMemorySymbols = false;
     pub const ZERO = of(0);
     pub fn False() Object {
         return @bitCast(@as(u64, 0));
@@ -190,19 +189,8 @@ pub const Object = packed struct(u64) {
             .int, .comptime_int => return @bitCast(@as(i64,value)),
             .bool => return if (value) Object.True() else Object.False(),
             .null => return Object.Nil(),
-            .pointer => |ptr_info| {
-                switch (ptr_info.size) {
-                    .one, .many => {
-                        //@compileLog("from: ",value);
-                        @setRuntimeSafety(false);
-                        return Object{ .ref = @ptrCast(@alignCast(@constCast(value))) };
-                    },
-                    else => {},
-                }
-            },
-            else => {},
+            else => return undefined,
         }
-        @compileError("Can't convert \"" ++ @typeName(T) ++ "\"");
     }
     pub fn toWithCheck(self: Object, comptime T: type, comptime check: bool) T {
         switch (T) {

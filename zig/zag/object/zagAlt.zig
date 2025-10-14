@@ -35,7 +35,6 @@ pub const Object = packed struct(u64) {
         }
     };
     const Self = @This();
-    pub const inMemorySymbols = false;
     pub const maxInt = 0x7f_ffff_ffff_ffff;
     pub const ZERO = of(0);
     pub inline fn False() Object {
@@ -342,7 +341,7 @@ pub const Object = packed struct(u64) {
             return self.class.classIndex();
         } else if (bits == 0) {@branchHint(.unlikely);
             return .UndefinedObject;
-        } else {
+        } else {@branchHint(.likely);
             return self.to(HeapObjectPtr).*.getClass();
         }
     }

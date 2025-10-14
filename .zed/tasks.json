@@ -57,6 +57,11 @@
     "cwd": "$ZED_WORKTREE_ROOT/zig",
   },
   {
+    "label": "trace fib onlyInt",
+    "command": "zig build -Dtrace -Dencoding=onlyInt -Doptimize=Debug -freference-trace=5 && ./zig-out/bin/fib",
+    "cwd": "$ZED_WORKTREE_ROOT/zig",
+  },
+  {
     "label": "time fib zag",
     "command": "zig build -Doptimize=ReleaseFast && ./zig-out/bin/fib",
     //"command": "zig build -Doptimize=ReleaseFast && taskpolicy -l5 -t5 time ./zig-out/bin/fib",

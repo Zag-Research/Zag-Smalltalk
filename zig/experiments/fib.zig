@@ -103,7 +103,7 @@ const fibInteger = struct {
         }
     }
     fn runIt(comptime _: void, proof: usize) usize {
-        const obj = exe.sendTo(Sym.fibonacci, exe.object(fibN)) catch unreachable;
+        const obj = exe.sendTo(Sym.fibonacci.asObject(), exe.object(fibN)) catch unreachable;
         if (obj.nativeU()) |result| {
             return result + proof;
         }
@@ -160,7 +160,7 @@ const fibInteger0 = struct {
         }
     }
     fn runIt(comptime _: void, proof: usize) usize {
-        const obj = exe.sendTo(Sym.fibonacci, exe.object(fibN)) catch unreachable;
+        const obj = exe.sendTo(Sym.fibonacci.asObject(), exe.object(fibN)) catch unreachable;
         if (obj.nativeU()) |result| {
             return result + proof;
         }
@@ -220,7 +220,7 @@ const fibIntegerBr = struct {
         }
     }
     fn runIt(comptime _: void, proof: usize) usize {
-        const obj = exe.sendTo(Sym.fibonacci, exe.object(fibN)) catch unreachable;
+        const obj = exe.sendTo(Sym.fibonacci.asObject(), exe.object(fibN)) catch unreachable;
         if (obj.nativeU()) |result| {
             return result + proof;
         }
@@ -268,7 +268,7 @@ const fibFloat = struct {
             std.debug.print("\n", .{});
             fib.dump();
         } else {
-            const obj = exe.sendTo(Sym.fibonacci, exe.object(@as(f64, @floatFromInt(fibN)))) catch unreachable;
+            const obj = exe.sendTo(Sym.fibonacci.asObject(), exe.object(@as(f64, @floatFromInt(fibN)))) catch unreachable;
             if (obj.nativeF()) |threaded| {
                 const native: f64 = @floatFromInt(fibCheck(fibN));
                 if (threaded != native) {
@@ -281,7 +281,7 @@ const fibFloat = struct {
     fn runIt(comptime _: void, proof: usize) usize {
         const receiver = exe.object(@as(f64, @floatFromInt(fibN)));
         if (zag.config.show_trace) std.debug.print("receiver={x}\n", .{receiver.rawU()});
-        _ = exe.sendTo(Sym.fibonacci, receiver) catch @panic("Error sending message");
+        _ = exe.sendTo(Sym.fibonacci.asObject(), receiver) catch @panic("Error sending message");
         return proof;
     }
 };
@@ -332,7 +332,8 @@ pub fn timing(args: []const []const u8, default: bool) !void {
             print("          Median   Mean   StdDev  SD/Mean ({} run{s}, {} warmup{s})\n", .{ stat.runs, if (stat.runs != 1) "s" else "", stat.warmups, if (stat.warmups != 1) "s" else "" });
         } else {
             var anyRun = false;
-            inline for (&.{ fibNative, fibNativeFloat, fibInteger, fibInteger0, fibIntegerBr, fibFloat }) |benchmark| {
+            inline for (&.{ fibNative, fibNativeFloat, fibInteger, fibInteger0, fibIntegerBr, fibFloat
+            }) |benchmark| {
                 if (benchmark.included and std.mem.eql(u8, name(arg), benchmark.info.name)) {
                     anyRun = true;
                     print("{s:>9}", .{benchmark.info.name});

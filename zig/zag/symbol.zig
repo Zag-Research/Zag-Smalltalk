@@ -18,7 +18,7 @@ const unhash = zag.utilities.PhiHash.unhash24;
 const Signature = zag.execute.Signature;
 pub var globalAllocator = std.heap.page_allocator; //@import("globalArena.zig").allocator();
 
-pub const symbols = SymbolsStruct;
+pub const symbols = SymbolsEnum;
 pub inline fn symbolIndex(obj: object.Object) u24 {
     return unhash(obj.hash24());
 }
@@ -166,111 +166,29 @@ const SymbolsEnum = enum(u32) {
         return .Symbol;
     }
     pub fn asObject(self: SymbolsEnum) Object {
-        const index: u24 = @truncate(@intFromEnum(self) - 1);
+        const index: u24 = @truncate(@intFromEnum(self));
         if (config.immediateSymbols) {
-            return Object.makeImmediate(.Symbol, @truncate(staticSymbols[index].data.unsigned));
+            return Object.makeImmediate(.Symbol, hash_of(index, @truncate(@intFromEnum(self) >> 24)));
         }
         const O = packed struct { sym: *const PointedObject };
-        return @bitCast(O{ .sym = &staticSymbols[index] });
-    }
-    inline fn symbol_of(index: u24, _: u4) Object {
-        return @as(SymbolsEnum, @enumFromInt(index)).asObject();
+        return @bitCast(O{ .sym = &staticSymbols[index - 1] });
     }
     fn signature(sym: SymbolsEnum, primitive: u16) Signature {
         const int = @intFromEnum(sym);
         return Signature.fromHashPrimitive(hash_of(@truncate(int), @truncate(int >> 24)), primitive);
     }
-};
-const SymbolsStruct = struct {
-    pub const @"=" = symbol1(1);
-    pub const value = symbol0(2);
-    pub const @"value:" = symbol1(3);
-    pub const @"cull:" = symbol1(4);
-    pub const yourself = symbol0(5);
-    pub const @"doesNotUnderstand:" = symbol1(6);
-    pub const @"at:" = symbol1(7);
-    pub const @"new:" = symbol1(8);
-    pub const @"valueWithArguments:" = symbol1(9);
-    pub const @"ifTrue:" = symbol1(10);
-    pub const @"ifFalse:" = symbol1(11);
-    pub const @"ifNil:" = symbol1(12);
-    pub const @"ifNotNil:" = symbol1(13);
-    pub const @"perform:" = symbol1(14);
-    pub const @"+" = symbol1(15);
-    pub const @"-" = symbol1(16);
-    pub const @"*" = symbol1(17);
-    pub const @"~=" = symbol1(18);
-    pub const @"==" = symbol1(19);
-    pub const @"~~" = symbol1(20);
-    pub const @"<" = symbol1(21);
-    pub const @"<=" = symbol1(22);
-    pub const @">=" = symbol1(23);
-    pub const @">" = symbol1(24);
-    pub const @"at:put:" = symbol2(25);
-    pub const @"value:value:" = symbol2(26);
-    pub const @"cull:cull:" = symbol2(27);
-    pub const @"ifTrue:ifFalse" = symbol2(28);
-    pub const @"ifFalse:ifTrue:" = symbol2(29);
-    pub const @"ifNil:ifNotNil" = symbol2(30);
-    pub const @"ifNotNil:ifNil:" = symbol2(31);
-    pub const @"perform:with:" = symbol2(32);
-    pub const @"perform:withArguments:" = symbol2(33);
-    pub const @"value:value:value:" = symbol3(34);
-    pub const @"cull:cull:cull:" = symbol3(35);
-    pub const @"perform:with:with:" = symbol3(36);
-    pub const @"perform:withArguments:inSuperclass:" = symbol3(37);
-    pub const @"value:value:value:value:" = symbol4(38);
-    pub const @"cull:cull:cull:cull:" = symbol4(39);
-    pub const @"perform:with:with:with:" = symbol4(40);
-    pub const size = symbol0(41);
-    pub const negated = symbol0(42);
-    pub const new = symbol0(43);
-    pub const self = symbol0(44);
-    pub const name = symbol0(45);
-    pub const class = symbol0(46);
-    pub const Class = symbol0(47);
-    pub const Behavior = symbol0(48);
-    pub const ClassDescription = symbol0(49);
-    pub const Metaclass = symbol0(40);
-    pub const SmallInteger = symbol0(51);
-    pub const noFallback = symbol0(52);
-    pub const fibonacci = symbol0(53);
-    pub const Object = symbol0(lastPredefinedSymbol); // always have this the last initial symbol so the tests verify all the counts are correct
-    const symbol_of = if (object.Object.inMemorySymbols) InMemoryFunctions.symbol_of else ImmediateFunctions.symbol_of;
-    const InMemoryFunctions = struct {
-        inline fn symbol_of(index: u24, _: u4) object.Object {
-            const O = packed struct { sym: *const PointedObject };
-            return @bitCast(O{ .sym = &SymbolsEnum.staticSymbols[index - 1] });
+    const lastPredefinedSymbol = 54;
+    comptime {
+        std.debug.assert(initialSymbolStrings.len == lastPredefinedSymbol);
+    }
+    inline fn symbol_of(index: u24, nArgs: u4) Object {
+        if (config.immediateSymbols) {
+            return Object.makeImmediate(.Symbol, hash_of(index, nArgs));
         }
-    };
-    const ImmediateFunctions = struct {
-        inline fn fromHash32(a_hash: u32) object.Object {
-            return object.Object.makeImmediate(.Symbol, a_hash);
-        }
-        inline fn symbol_of(index: u24, arity: u4) object.Object {
-            return fromHash32(hash_of(index, arity));
-        }
-    };
-    inline fn symbol0(index: u24) object.Object {
-        return symbol_of(index, 0);
-    }
-    inline fn symbol1(index: u24) object.Object {
-        return symbol_of(index, 1);
-    }
-    inline fn symbol2(index: u24) object.Object {
-        return symbol_of(index, 2);
-    }
-    inline fn symbol3(index: u24) object.Object {
-        return symbol_of(index, 3);
-    }
-    inline fn symbol4(index: u24) object.Object {
-        return symbol_of(index, 4);
+        const O = packed struct { sym: *const PointedObject };
+        return @bitCast(O{ .sym = &staticSymbols[index - 1] });
     }
 };
-const lastPredefinedSymbol = 54;
-comptime {
-    std.debug.assert(initialSymbolStrings.len == lastPredefinedSymbol);
-}
 const initialSymbolStrings = heap.compileStrings(.{ // must be in exactly same order as above
     "=",                                   "value",                    "value:",                 "cull:",                   "yourself",        "doesNotUnderstand:",
     "at:",                                 "new:",                     "valueWithArguments:",    "ifTrue:",                 "ifFalse:",        "ifNil:",
@@ -285,8 +203,11 @@ const initialSymbolStrings = heap.compileStrings(.{ // must be in exactly same o
                  "fibonacci",       "Object",
 });
 var symbolTable = SymbolTable.init(&globalAllocator);
-pub fn asString(string: Object) Object {
-    return symbolTable.asString(string);
+pub fn asString(obj: Object) Object {
+    return symbolTable.asString(symbolIndex(obj));
+}
+pub fn asStringFromHash(h: u24) Object {
+    return symbolTable.asString(unhash(h));
 }
 pub fn loadSymbols(strs: []const heap.HeapObjectConstPtr) void {
     symbolTable.loadSymbols(strs);
@@ -297,7 +218,7 @@ pub inline fn lookup(string: Object) Object {
 pub inline fn intern(string: Object) Object {
     return symbolTable.intern(string);
 }
-const SymbolTreap = if (Object.inMemorySymbols) Treap(Object, u32, *PointedObject) else Treap(Object, u32, u0);
+const SymbolTreap = if (config.immediateSymbols) Treap(Object, u32, u0) else Treap(Object, u32, *PointedObject);
 fn numArgs(obj: Object) u4 {
     const string = obj.arrayAsSlice(u8) catch return 0;
     if (string.len == 0) return 0;
@@ -343,8 +264,8 @@ pub const SymbolTable = struct {
         self.allocator.free(self.mem);
         self.* = undefined;
     }
-    fn asString(self: *Self, string: Object) Object {
-        return self.theTreap(0).getKey(symbolIndex(string));
+    fn asString(self: *Self, index: u32) Object {
+        return self.theTreap(0).getKey(index);
     }
     pub fn lookup(self: *Self, string: Object) Object {
         return lookupDirect(self.theTreap(0), string);
@@ -352,8 +273,11 @@ pub const SymbolTable = struct {
     fn lookupDirect(trp: *SymbolTreap, string: Object) Object {
         const index = trp.lookup(string);
         if (index > 0) {
-            const nArgs = numArgs(string);
-            return if (Object.inMemorySymbols) @bitCast(@intFromPtr(trp.getValue(index))) else SymbolsEnum.symbol_of(@truncate(index), nArgs);
+            if (config.immediateSymbols) {
+                const nArgs = numArgs(string);
+                return SymbolsEnum.symbol_of(@truncate(index), nArgs);
+            }
+            return @bitCast(@intFromPtr(trp.getValue(index)));
         }
         return Nil();
     }
@@ -373,17 +297,13 @@ pub const SymbolTable = struct {
         if (!result.isNil()) return result;
         const str = string.promoteToUnmovable() catch return Nil();
         const index = trp.insert(str) catch unreachable;
-        const nArgs = numArgs(string);
-        return if (Object.inMemorySymbols) blk: {
-            const obj: *PointedObject = @ptrCast(self.allocator.alloc(PointedObject, 1) catch @panic("can't alloc"));
-            obj.setHeader(.Symbol, string.hash24());
-            obj.data.object = string;
-            trp.setValue(index, obj);
-            break :blk @bitCast(@intFromPtr(obj));
-        } else SymbolsEnum.symbol_of(
-            @truncate(index),
-            nArgs,
-        );
+        if (config.immediateSymbols)
+            return SymbolsEnum.symbol_of(@truncate(index), numArgs(string));
+        const obj: *PointedObject = @ptrCast(self.allocator.alloc(PointedObject, 1) catch @panic("can't alloc"));
+        obj.setHeader(.Symbol, string.hash24());
+        obj.data.object = string;
+        trp.setValue(index, obj);
+        return @bitCast(@intFromPtr(obj));
     }
     fn loadSymbols(self: *Self, strings: []const heap.HeapObjectConstPtr) void {
         const trp = self.theTreap(strings.len);
@@ -415,7 +335,7 @@ test "symbols match initialized symbol table" {
     try expectEqual(0, symbolArity(symbols.Object));
     try expectEqual(2, symbolArity(symbols.@"at:put:"));
     try expectEqual(1, symbolArity(symbols.@"<="));
-    try expectEqual(lastPredefinedSymbol, symbolIndex(symbols.Object));
+    try expectEqual(SymbolsEnum.lastPredefinedSymbol, symbolIndex(symbols.Object));
     try expectEqual(0, symbolArity(symbols.Object));
     switch (config.objectEncoding) {
         .zag => {

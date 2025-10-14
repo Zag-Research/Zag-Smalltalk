@@ -41,7 +41,6 @@ pub const Object = packed union {
     const TagMask = SmallIntegerTag | CharacterTag | FloatTag;
 
     const Self = @This();
-    pub const inMemorySymbols = true;
     pub const ZERO: Object = @bitCast(@as(u64, 0));
     pub const LowTagType = TagAndClassType;
     pub const lowTagSmallInteger = makeImmediate(.SmallInteger, 0).tagbits();

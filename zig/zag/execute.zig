@@ -69,6 +69,7 @@ pub const Signature = packed struct {
     }
     fn fromNameClass(name: anytype, class: ClassIndex) Signature {
         //@compileLog(name.numArgs(), name.symbolHash(), class);
+        //@compileLog(name, name.numArgs(), name.symbolHash(), class);
         return .{ .int = @bitCast(Create{ .selector = @as(u32, name.numArgs()) << 24 | @as(u32, (name.symbolHash().?)), .class = class }) };
     }
     fn equals(self: Signature, other: Signature) bool {
@@ -79,9 +80,10 @@ pub const Signature = packed struct {
     }
     pub fn signature(self: Object) ?Signature {
         const sig: Create = @bitCast(self);
-        trace("sig = {}\n", .{sig});
-        if (sig.isTagged())
+        if (sig.isTagged()) {
+            trace("sig = {}\n", .{sig});
             return @bitCast(self);
+        }
         return null;
     }
     fn asObject(self: Signature) Object {
@@ -111,7 +113,7 @@ pub const Signature = packed struct {
                 .none => try writer.print("?", .{}),
                 else => |class| try writer.print("{}", .{ class}),
             }
-            try writer.print("{f}", .{ self.asSymbol() });
+            try writer.print(" {x} {x} {} #{s}", .{ self.int, (self.int & 0xffffff00) >> 8, (self.int & 0xffffff00) >> 8, symbol.asStringFromHash(@truncate((self.int & 0xffffff00) >> 8)).arrayAsSlice(u8) catch "???" });
         }
     }
 };
@@ -1057,7 +1059,7 @@ pub const Execution = struct {
             trace("Sending: {f} to {f}\n", .{ selector, receiver });
             self.exe.init(Object.empty);
             self.exe.getContext().setReturn(PC.exit());
-            trace("SendTo: context {*} {f}\n", .{ self.exe.getContext().npc , self.exe.getContext().tpc });
+            trace("\nSendTo: context {*} {*} {f}\n", .{ self.exe.getContext(), self.exe.getContext().npc , self.exe.getContext().tpc });
             const class = receiver.get_class();
             const signature = Signature.from(selector, class);
             self.exe.method = class.lookupMethodForClass(signature);

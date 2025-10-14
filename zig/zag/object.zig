@@ -251,7 +251,7 @@ pub const ObjectFunctions = struct {
         const ord = std.math.Order;
         if (self.equals(other)) return ord.eq;
         if (!self.isHeapObject() or !other.isHeapObject()) {
-            unreachable;
+            //unreachable;
             // const u64s = self.rawU();
             // const u64o = other.rawU();
             // return std.math.order(u64s, u64o);
@@ -284,10 +284,10 @@ pub const ObjectFunctions = struct {
         }
         if (self.signature()) |signature| {
             try writer.print("{f}", .{signature});
-        } else if (self.symbolHash()) |_| {
-            try writer.print("#{s}", .{symbol.asString(self).arrayAsSlice(u8) catch "???"});
         } else if (self.nativeI()) |i| {
             try writer.print("{d}", .{i});
+        } else if (self.symbolHash()) |_| {
+            try writer.print("#{s}", .{symbol.asString(self).arrayAsSlice(u8) catch "???"});
         } else if (self.equals(False())) {
             try writer.print("false", .{});
         } else if (self.equals(True())) {
