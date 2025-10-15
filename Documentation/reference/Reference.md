@@ -193,7 +193,8 @@ The name is escaping me....something like Micro Systems....
 - [Why Japanese Developers Write Code Completely Differently (And Why It Works Better)](https://medium.com/@sohail_saifi/why-japanese-developers-write-code-completely-differently-and-why-it-works-better-de84d6244fab)
 - [Hash Function Prospector](https://github.com/skeeto/hash-prospector?tab=readme-ov-file)
 - [Lab Practices](https://labspractices.com/) Stories from an eXtreme Programming conssultancy
-
+- [Linux on M1/M2 Macs](https://www.youtube.com/watch?v=EJy3Xtbkn74&t=177s)
+- [WordPerfect](https://liam-on-linux.livejournal.com/80768.html) [WPMacApp](https://mendelson.org/wpdos/mac-intel.html) [WPS Office](https://www.wps.com/blog/guide-on-downloading-wordperfect-on-windows-and-mac/) 
 ### Rust
 - [Learn Rust](https://www.rust-lang.org/learn)
 - [Are we Teaching Rust Effectively?](https://blog.kodewerx.org/2025/08/are-we-teaching-rust-effectively.html)

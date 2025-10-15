@@ -22,7 +22,3 @@ In Pharo, the String `asSymbol` checks for the existence in a Dictionary, but AS
 6. Reorder the tree to put this new location into the correct position in the BST.
 7. Return the Symbol with the hash code from the new location.
 
-### Web resources
-- [Open Data Structures Treap](http://opendatastructures.org/versions/edition-0.1g/ods-python/7_2_Treap_Randomized_Binary.html)
-- Treaps need "random" priorities, but I don't want to save it in the data structure. But I have a unique counter value (the Symbol number) so could use [CBRNG](https://en.wikipedia.org/wiki/Counter-based_random_number_generator_(CBRNG)) to generate one. But simply doing `symNum*2654435769` as u32 does well enough (this is a Fibonacci hash (2^32/phi))
-- [Evaluating RNGs](https://pit-claudel.fr/clement/blog/how-random-is-pseudo-random-testing-pseudo-random-number-generators-and-measuring-randomness/)

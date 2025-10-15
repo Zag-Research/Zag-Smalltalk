@@ -23,3 +23,13 @@ The [Strict Avalanche Criteria](https://en.wikipedia.org/wiki/Avalanche_effect) 
 [Hacker9](https://hacker9.com/about/) has a lot of information about cybersecurity
 [Here's an article](https://eng.libretexts.org/Courses/Folsom_Lake_College/CISP_430%3A_Data_Structures_(Aljuboori)/07%3A_Hash_Tables/7.02%3A_Choosing_a_good_hash_function) about choosing a good hash function
 [Integer Hash Functions](https://gist.github.com/badboy/6267743) has some good information
+- [Evaluating RNGs](https://pit-claudel.fr/clement/blog/how-random-is-pseudo-random-testing-pseudo-random-number-generators-and-measuring-randomness/)
+## Treaps
+- [Open Data Structures Treap](http://opendatastructures.org/versions/edition-0.1g/ods-python/7_2_Treap_Randomized_Binary.html)
+- [On Random Cartesian Trtees](https://luc.devroye.org/devroye_1994_on_random_cartesian_trees.pdf)
+- [A Faster CREW PRAM Algorithm for Computing Cartesian Trees](https://link.springer.com/chapter/10.1007/978-3-642-38233-8_28)
+- [A Simple Parallel Cartesian Tree Algorithm and its Application to Parallel Suffix Tree Construction](https://www.cs.cmu.edu/afs/cs.cmu.edu/Web/People/blelloch/papers/SBx14.pdf)
+- [Treaps for Competitive Programming](https://cp-algorithms.com/data_structures/treap.html)
+- [Stack Overflow: Treap with Implicit keys](https://stackoverflow.com/questions/3497875/treap-with-implicit-keys)
+- Treaps need "random" priorities, but I don't want to save it in the data structure. But I have a unique counter value (the Symbol number) so could use [CBRNG](https://en.wikipedia.org/wiki/Counter-based_random_number_generator_(CBRNG)) to generate one. But simply doing `symNum*2654435769` as u32 does well enough (this is a Fibonacci hash (2^32/phi))
+
