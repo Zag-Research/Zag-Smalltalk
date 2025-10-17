@@ -1,5 +1,8 @@
 const std = @import("std");
 const zag = @import("zag");
+const config = zag.config;
+const trace = config.trace;
+const tailCall = config.tailCall;
 const Object = zag.Object;
 const MainExecutor = zag.execute.Execution.MainExecutor;
 const compileMethod = zag.execute.compileMethod;
@@ -7,6 +10,16 @@ const tf = zag.threadedFn.Enum;
 const Sym = zag.symbol.symbols;
 const SmallInteger = zag.primitives.SmallInteger;
 const Float = zag.primitives.Float;
+const PC = zag.execute.PC;
+const Process = zag.Process;
+const SP = Process.SP;
+const Context = zag.Context;
+const Extra = Context.Extra;
+const Result = zag.execute.Result;
+const object = zag.object;
+const Nil = object.Nil;
+const True = object.True;
+const False = object.False;
 
 fn fibCheck(n: u32) u64 {
     if (n < 2) return n;
@@ -229,6 +242,191 @@ const fibIntegerBr = struct {
     }
 };
 
+const fibIntegerCnP = struct {
+    const included = true;
+    var info = Info{ .name = "IntegerCnP" };
+    const self = zag.Context.makeVariable(0, 1, .Parameter, &.{});
+    const leq = SmallInteger.@"<=".inlined;
+    const plus = SmallInteger.@"+".inlined;
+    const minus = SmallInteger.@"-".inlined;
+    const classes = Object.PackedObject.classes;
+    const signature = zag.symbol.signature;
+    const nullMethod = zag.dispatch.nullMethod;
+    var fib align(codeAlignment) =
+        compileMethod(Sym.fibonacci, 0, .SmallInteger, .{
+            //            tf.debug,
+            tf.push,                  self,
+            tf.pushLiteral,           "1const",
+            tf.inlinePrimitive,       leq,
+            tf.branchFalse,           "false",
+            tf.returnSelf,            ":false",
+            tf.push,                  self,
+            tf.pushLiteral,           "0const",
+            tf.inlinePrimitive,       minus,
+            tf.send,                  signature(.fibonacci, 0),
+            &nullMethod,              tf.push,
+            self,                     tf.pushLiteral,
+            "1const",                 tf.inlinePrimitive,
+            minus,                    tf.send,
+            signature(.fibonacci, 0), &nullMethod,
+            tf.inlinePrimitive,       plus,
+            //            tf.enddebug,
+            tf.returnTop,
+        });
+    fn cps1(_pc: PC, _sp: SP, _process: *Process, _context: *Context, _extra: Extra) Result {
+        const Labels = enum {
+            lFalse,
+            lStart,
+        };
+        var pc = _pc;
+        var sp = _sp;
+        var process = _process;
+        var context = _context;
+        var extra = _extra;
+        sw: switch(Labels.lStart) {
+            .lStart => {
+                { // tf.push
+                    const variable = pc.variable();
+                    if (variable.isLocal and extra.noContext()) {
+                        if (sp.push(Nil())) |newSp| {
+                            pc = pc.next2();
+                            sp = newSp;
+                        } else {
+                            const newSp, const newContext, const newExtra = process.spillStackAndPush(Nil(), sp, context, extra);
+                            pc = pc.next2();
+                            sp = newSp;
+                            context = newContext;
+                            extra = newExtra;
+                        }
+                    } else {
+                        const address = variable.getAddress(sp, extra);
+                        const value = address[0];
+                        if (sp.push(value)) |newSp| {
+                            pc = pc.next2();
+                            sp = newSp;
+                        } else {
+                            const newSp, const newContext, const newExtra = process.spillStackAndPush(value, sp, context, extra);
+                            pc = pc.next2();
+                            sp = newSp;
+                            context = newContext;
+                            extra = newExtra;
+                        }
+                    }
+                } // end of tf.push
+                { // tf.pushLiteral
+                    const value = pc.object();
+                    if (sp.push(value)) |newSp| {
+                        pc = pc.next2();
+                        sp = newSp;
+                    } else {
+                        const newSp, const newContext, const newExtra = process.spillStackAndPush(value, sp, context, extra);
+                        pc = pc.next2();
+                        sp = newSp;
+                        context = newContext;
+                        extra = newExtra;
+                    }
+                } // end of tf.pushLiteral
+                { // leq
+                    const receiver = sp.next;
+                    if (!receiver.isInt()) {
+                        @panic("unreachable");
+                    }
+                    const newSp = sp.dropPut(Object.from(SmallInteger.@"<=".with(receiver, sp.top) catch
+                        @panic("inlinePrimitiveFailed"), process));
+                    pc = pc.next2();
+                    sp = newSp;
+                } // end of leq
+                { // tf.branchFalse
+                    if (sp.top.equals(False())) {
+                        const newPc = pc.targetPC();
+                        pc = newPc.next();
+                        sp = sp.drop();
+                        continue :sw .lFalse;
+                    } else {
+                        pc = pc.next2();
+                        sp = sp.drop();
+                    }
+                } // end of branchFalse
+                { // returnSelf
+                    if (extra.selfAddress(sp)) |address| {
+                        const newSp: SP = @ptrCast(address);
+                        return @call(tailCall, process.check(context.npc), .{ context.tpc, newSp, process, context, Extra.fromContextData(context.contextDataPtr(sp)) });
+                    }
+                    const newSp, const callerContext = context.pop(process, sp);                    return @call(tailCall, process.branchCheck(callerContext.getNPc()), .{ callerContext.getTPc(), newSp, process, callerContext, Extra.fromContextData(callerContext.contextData) });
+                } // end of returnSelf
+            },
+            .lFalse => {
+            },
+        }
+        @panic("falling off the end of cps1");
+    }
+    fn cps2(_pc: PC, _sp: SP, _process: *Process, _context: *Context, _extra: Extra) Result {
+        const pc = _pc;
+        const sp = _sp;
+        const process = _process;
+        const context = _context;
+        const extra = _extra;
+        _ = .{ pc, sp, process, context, extra };
+        @panic("falling off the end of cps2");
+    }
+    fn cps3(_pc: PC, _sp: SP, _process: *Process, _context: *Context, _extra: Extra) Result {
+        var pc = _pc;
+        var sp = _sp;
+        const process = _process;
+        const context = _context;
+        const extra = _extra;
+        { // plus
+            const receiver = sp.next;
+            if (!receiver.isInt()) {
+                @panic("unreachable");
+            }
+            const newSp = sp.dropPut(Object.from(SmallInteger.@"+".with(receiver, sp.top) catch
+                @panic("inlinePrimitiveFailed"), process));
+            pc = pc.next2();
+            sp = newSp;
+        } // end of plus
+        { // tf.returnTop
+            const top = sp.top;
+            if (extra.selfAddress(sp)) |address| {
+                const newSp: SP = @ptrCast(address);
+                newSp.top = top;
+                return @call(tailCall, process.check(context.npc), .{ context.tpc, newSp, process, context, Extra.fromContextData(context.contextDataPtr(sp)) });
+            }
+            const newSp, const callerContext = context.pop(process, sp);
+            newSp.top = top;
+            return @call(tailCall, process.branchCheck(callerContext.npc), .{ callerContext.tpc, newSp, process, callerContext, Extra.fromContextData(callerContext.contextDataPtr(sp)) });
+        } // end of tf.returnTop
+    }
+    var exe: MainExecutor = undefined;
+    fn init() void {
+        exe = MainExecutor.new();
+        fib.resolve(&[_]Object{ exe.object(1), exe.object(2) }) catch unreachable;
+        fib.initExecute();
+        fib.executeFn = &cps1;
+        //std.debug.print("method signature {f}\n", .{@as(*zag.execute.CompiledMethod, @ptrCast(&fib))});
+        zag.dispatch.addMethod(@ptrCast(&fib));
+        if (zag.config.show_trace) {
+            std.debug.print("\n", .{});
+            fib.dump();
+        } else {
+            const threaded = runIt({}, 0);
+            const native = fibCheck(fibN);
+            if (threaded != native) {
+                std.debug.print("threaded={}, native={}\n", .{ threaded, native });
+                @panic("mismatch");
+            }
+        }
+    }
+    fn runIt(comptime _: void, proof: usize) usize {
+        const obj = exe.sendTo(Sym.fibonacci.asObject(), exe.object(fibN)) catch unreachable;
+        if (obj.nativeU()) |result| {
+            return result + proof;
+        }
+        std.debug.print("fib object: {f}\n", .{obj});
+        unreachable;
+    }
+};
+
 const fibFloat = struct {
     const included = true;
     var info = Info{ .name = "Float" };
@@ -273,7 +471,7 @@ const fibFloat = struct {
                 const native: f64 = @floatFromInt(fibCheck(fibN));
                 if (threaded != native) {
                     std.debug.print("threaded={}, native={}\n", .{ threaded, native });
-                    unreachable;
+                    @panic("mismatch");
                 }
             }
         }
@@ -332,8 +530,7 @@ pub fn timing(args: []const []const u8, default: bool) !void {
             print("          Median   Mean   StdDev  SD/Mean ({} run{s}, {} warmup{s})\n", .{ stat.runs, if (stat.runs != 1) "s" else "", stat.warmups, if (stat.warmups != 1) "s" else "" });
         } else {
             var anyRun = false;
-            inline for (&.{ fibNative, fibNativeFloat, fibInteger, fibInteger0, fibIntegerBr, fibFloat
-            }) |benchmark| {
+            inline for (&.{ fibNative, fibNativeFloat, fibInteger, fibInteger0, fibIntegerBr, fibFloat, fibIntegerCnP }) |benchmark| {
                 if (benchmark.included and std.mem.eql(u8, name(arg), benchmark.info.name)) {
                     anyRun = true;
                     print("{s:>9}", .{benchmark.info.name});
@@ -360,6 +557,7 @@ pub fn main() !void {
         //"Integer",
         "IntegerBr?Integer",
         //"Integer0?Integer",
+        //"IntegerCnP",
         "Float",
     };
     // var gpa = std.heap.GeneralPurposeAllocator(.{}){};
