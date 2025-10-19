@@ -138,6 +138,7 @@ pub const Object = switch (config.objectEncoding) {
     .taggedPtr => @import("object/taggedPtr.zig").Object,
     .cachedPtr, .ptr => @import("object/ptr.zig").Object,
     .onlyInt => @import("object/onlyInt.zig").Object,
+    .onlyFloat => @import("object/onlyFloat.zig").Object,
 };
 const n_testObjects = 5;
 fn testObjects() [n_testObjects]Object {
