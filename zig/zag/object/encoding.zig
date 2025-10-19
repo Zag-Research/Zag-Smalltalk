@@ -8,6 +8,7 @@ pub const Encoding = enum {
     cachedPtr,
     ptr,
     onlyInt,
+    onlyFloat,
     pub fn fromName(key: []const u8) !Encoding {
         inline for (@typeInfo(Encoding).@"enum".fields) |f| {
             if (std.mem.eql(u8, f.name, key)) {
@@ -28,6 +29,7 @@ pub const Encoding = enum {
             .taggedPtr => @import("taggedPtr.zig"),
             .cachedPtr, .ptr => @import("ptr.zig"),
             .onlyInt => @import("onlyInt.zig"),
+            .onlyFloat => @import("onlyFloat.zig"),
         };
     }
 };

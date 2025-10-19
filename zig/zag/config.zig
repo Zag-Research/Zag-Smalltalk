@@ -29,7 +29,7 @@ pub const immediateIntegers = switch (objectEncoding) {
     else => false,
 };
 pub const immediateSymbols = switch (objectEncoding) {
-    .zag, .nan, .zagAlt, .onlyInt => true,
+    .zag, .nan, .zagAlt, .onlyInt, .onlyFloat => true,
     else => false,
 };
 pub const notZag = objectEncoding != .zag;
