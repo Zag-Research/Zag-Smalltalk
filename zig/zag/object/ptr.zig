@@ -19,12 +19,23 @@ pub const Object = packed struct(u64) {
     const Self = @This();
     pub const ZERO = of(0);
     pub fn False() Object {
+        if (@inComptime()) {
+            return Object{ .ref = undefined };
+        }
         return Object.fromAddress(&InMemory.False);
     }
+    
     pub fn True() Object {
+        if (@inComptime()) {
+            return Object{ .ref = undefined };
+        }
         return Object.fromAddress(&InMemory.True);
     }
+    
     pub fn Nil() Object {
+        if (@inComptime()) {
+            return Object{ .ref = undefined };
+        }
         return Object.fromAddress(&InMemory.Nil);
     }
     pub const maxInt = 0x7fff_ffff_ffff_ffff;
@@ -182,7 +193,7 @@ pub const Object = packed struct(u64) {
         return self.ref.header.hash;
     }
     pub inline fn hash32(self: Object) u32 {
-        return @truncate(self.ref.data.unsigned >> 8);
+        return @truncate(self.ref.data.unsigned);
     }
     pub fn fromAddress(value: anytype) Object {
         return @bitCast(@intFromPtr(value));

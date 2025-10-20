@@ -96,7 +96,7 @@ const SymbolsEnum = enum(u32) {
     const staticSymbols = blk: {
         var symbolArray = [_]PointedObject{undefined} ** lastPredefinedSymbol;
         for (symbolArray[0..], std.meta.fields(SymbolsEnum)) |*sym, symbol|
-            initSymbol(sym, symbol.value);
+            initSymbol(sym, @enumFromInt(symbol.value));
         break :blk symbolArray;
     };
     fn initSymbol(sym: *PointedObject, symbol: SymbolsEnum) void {
