@@ -24,14 +24,14 @@ pub const Object = packed struct(u64) {
         }
         return Object.fromAddress(&InMemory.False);
     }
-    
+
     pub fn True() Object {
         if (@inComptime()) {
             return Object{ .ref = undefined };
         }
         return Object.fromAddress(&InMemory.True);
     }
-    
+
     pub fn Nil() Object {
         if (@inComptime()) {
             return Object{ .ref = undefined };
@@ -265,7 +265,6 @@ pub const Object = packed struct(u64) {
     }
     pub inline //
     fn which_class(self: Object) ClassIndex {
-        std.debug.print("which_class\n", .{});
         return self.ref.header.classIndex;
     }
     pub inline fn isMemoryAllocated(self: Object) bool {

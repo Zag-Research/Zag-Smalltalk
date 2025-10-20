@@ -7,6 +7,7 @@ Zag is 1.37x 1.47x 1.47x faster
 	   Native  174ms   173ms   0.83ms   0.5%
 	   NativeF  251ms   250ms   0.75ms   0.3%
 	   IntegerBr 2181ms  2184ms   4.87ms   0.2%
+	   Float 2162ms  2167ms  13.21ms   0.6%
 #### zag
 tag **fastest**
 	IntegerBr 2469ms  2467ms   5.10ms   0.2%

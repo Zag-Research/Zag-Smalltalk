@@ -189,13 +189,10 @@ pub const PointedObjectRef = packed struct {
     ref: *PointedObject,
 };
 pub inline fn int(i: i64, process: *Process) Object {
-    std.debug.print("int({})\n", .{i});
     if (SICache and SICacheMin <= i and i <= SICacheMax)
         return Object.from(&SmallIntegerCache.objects[(@as(usize, @bitCast(i - SICacheMin))) << 1], null);
     if (process.alloc(.SmallInteger, 1, null, Object, false)) |allocResult| {
-        std.debug.print("allocResult = {};\n", .{allocResult});
         allocResult.allocated.array(i64)[1] = i;
-        std.debug.print("allocResult.allocated.asObject().rawU() = {};\n", .{allocResult.allocated.asObject().rawU()});
         return allocResult.allocated.asObject();
     } else |_| {}
     // if ((PointedObject{

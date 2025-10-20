@@ -218,7 +218,6 @@ const fibIntegerBr = struct {
         exe = MainExecutor.new();
         fib.resolve(&[_]Object{ exe.object(1), exe.object(2) }) catch unreachable;
         fib.initExecute();
-        //std.debug.print("method signature {f}\n", .{@as(*zag.execute.CompiledMethod, @ptrCast(&fib))});
         zag.dispatch.addMethod(@ptrCast(&fib));
         if (zag.config.show_trace) {
             std.debug.print("\n", .{});
@@ -403,7 +402,6 @@ const fibIntegerCnP = struct {
         fib.resolve(&[_]Object{ exe.object(1), exe.object(2) }) catch unreachable;
         fib.initExecute();
         fib.executeFn = &cps1;
-        //std.debug.print("method signature {f}\n", .{@as(*zag.execute.CompiledMethod, @ptrCast(&fib))});
         zag.dispatch.addMethod(@ptrCast(&fib));
         if (zag.config.show_trace) {
             std.debug.print("\n", .{});
@@ -573,6 +571,6 @@ pub fn main() !void {
     try timing(if (default) @constCast(do_all[0..]) else args[1..], default);
 }
 const testRun = zag.config.testRun;
-const fibN = if (testRun) 5 else 40;
+const fibN = if (testRun) 5 else 10;
 const nRuns = if (testRun) 1 else 5;
 const warmups = if (testRun) 0 else null;

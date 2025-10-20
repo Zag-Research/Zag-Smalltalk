@@ -96,7 +96,7 @@
   },
   {
     "label": "time fib ptr",
-    "command": "zig build -Dencoding=ptr -Doptimize=ReleaseFast -Dtrace && ./zig-out/bin/fib",
+    "command": "zig build -Dencoding=ptr -Doptimize=ReleaseFast && ./zig-out/bin/fib",
     "cwd": "$ZED_WORKTREE_ROOT/zig",
   },
   {
