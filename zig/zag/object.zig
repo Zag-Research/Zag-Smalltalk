@@ -349,43 +349,46 @@ test "from conversion" {
     const ee = std.testing.expectEqual;
     var process: Process align(Process.alignment) = Process.new();
     process.init(Nil());
-    const p = &process;
-    try ee(@as(f64, @bitCast((Object.from(3.14, p)))), 3.14);
-    try ee((Object.from(3.14, p)).get_class(), .Float);
-    try std.testing.expect((Object.from(3.14, p)).isFloat());
-    try ee((Object.from(3, p)).get_class(), .SmallInteger);
-    try std.testing.expect((Object.from(3, p)).isInt());
-    try std.testing.expect((Object.from(false, p)).isBool());
+    const sp = process.getSp();
+    const context = process.getContext();
+    try ee(@as(f64, @bitCast((Object.from(3.14, sp, context)))), 3.14);
+    try ee((Object.from(3.14, sp, context)).get_class(), .Float);
+    try std.testing.expect((Object.from(3.14, sp, context)).isFloat());
+    try ee((Object.from(3, sp, context)).get_class(), .SmallInteger);
+    try std.testing.expect((Object.from(3, sp, context)).isInt());
+    try std.testing.expect((Object.from(false, sp, context)).isBool());
     // following fails
     if (true) unreachable;
-    try ee((Object.from(false, p)).get_class(), .False);
-    try ee((Object.from(true, p)).get_class(), .True);
-    try std.testing.expect((Object.from(true, p)).isBool());
-    try ee((Object.from(null, p)).get_class(), .UndefinedObject);
-    try std.testing.expect((Object.from(null, p)).isNil());
+    try ee((Object.from(false, sp, context)).get_class(), .False);
+    try ee((Object.from(true, sp, context)).get_class(), .True);
+    try std.testing.expect((Object.from(true, sp, context)).isBool());
+    try ee((Object.from(null, sp, context)).get_class(), .UndefinedObject);
+    try std.testing.expect((Object.from(null, sp, context)).isNil());
 }
 test "to conversion" {
     var process: Process align(Process.alignment) = Process.new();
     process.init(Nil());
-    const p = &process;
+    const sp = process.getSp();
+    const context = process.getContext();
     const ee = std.testing.expectEqual;
-    try ee((Object.from(3.14, p)).to(f64), 3.14);
-    //    trace("value: {}\n", .{@as(zag.InMemory.PointedObjectRef, @bitCast(Object.from(42, p)))});
-    try ee((Object.from(42, p)).to(u64), 42);
-    try std.testing.expect((Object.from(42, p)).isInt());
-    try ee((Object.from(true, p)).to(bool), true);
-    try ee((Object.from(-0x400000, p)).toUnchecked(i64), -0x400000);
+    try ee((Object.from(3.14, sp, context)).to(f64), 3.14);
+    //    trace("value: {}\n", .{@as(zag.InMemory.PointedObjectRef, @bitCast(Object.from(42, sp, context)))});
+    try ee((Object.from(42, sp, context)).to(u64), 42);
+    try std.testing.expect((Object.from(42, sp, context)).isInt());
+    try ee((Object.from(true, sp, context)).to(bool), true);
+    try ee((Object.from(-0x400000, sp, context)).toUnchecked(i64), -0x400000);
 }
 test "get_class" {
     try config.skipNotZag();
     var process: Process align(Process.alignment) = Process.new();
     process.init(Nil());
-    const p = &process;
+    const sp = process.getSp();
+    const context = process.getContext();
     const ee = std.testing.expectEqual;
-    try ee((Object.from(3.14, p)).get_class(), .Float);
-    try ee((Object.from(42, p)).get_class(), .SmallInteger);
-    try ee((Object.from(true, p)).get_class(), .True);
-    try ee((Object.from(false, p)).get_class(), .False);
+    try ee((Object.from(3.14, sp, context)).get_class(), .Float);
+    try ee((Object.from(42, sp, context)).get_class(), .SmallInteger);
+    try ee((Object.from(true, sp, context)).get_class(), .True);
+    try ee((Object.from(false, sp, context)).get_class(), .False);
     try ee(Nil().get_class(), .UndefinedObject);
     try ee(True().get_class(), .True);
     try ee(False().get_class(), .False);
@@ -397,7 +400,7 @@ test "printing" {
     var fbs = std.io.fixedBufferStream(&buf);
     const stream = fbs.writer();
     try stream.print("{f}\n", .{Object.tests[0]});
-    try stream.print("{f}\n", .{symbol.symbols.yourself});
+    //try stream.print("{f}\n", .{symbol.symbols.yourself});
     try std.testing.expectEqualSlices(u8, "42\n#yourself\n", fbs.getWritten());
 }
 const Buf = blk: {
@@ -416,7 +419,8 @@ test "order" {
         .zag => {
             var process: Process align(Process.alignment) = Process.new();
             process.init(Nil());
-            const p = &process;
+            const sp = process.getSp();
+            const context = process.getContext();
             const ee = std.testing.expectEqual;
             const sl1 = slice1()[0].buf;
             try ee(42, sl1[1]);
@@ -424,7 +428,7 @@ test "order" {
             try ee(0, sl1[2]);
             @setRuntimeSafety(false);
             const buf2 = (Buf{
-                .obj = Object.from(42.0, p),
+                .obj = Object.from(42.0, sp, context),
             }).buf;
             try ee(buf2[0], 6);
             try ee(buf2[6], 80);

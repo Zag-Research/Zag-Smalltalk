@@ -282,7 +282,7 @@ const fibIntegerCnP = struct {
         var process = _process;
         var context = _context;
         var extra = _extra;
-        sw: switch(Labels.lStart) {
+        sw: switch (Labels.lStart) {
             .lStart => {
                 { // tf.push
                     const variable = pc.variable();
@@ -331,7 +331,7 @@ const fibIntegerCnP = struct {
                         @panic("unreachable");
                     }
                     const newSp = sp.dropPut(Object.from(SmallInteger.@"<=".with(receiver, sp.top) catch
-                        @panic("inlinePrimitiveFailed"), process));
+                        @panic("inlinePrimitiveFailed"), sp, context));
                     pc = pc.next2();
                     sp = newSp;
                 } // end of leq
@@ -351,11 +351,11 @@ const fibIntegerCnP = struct {
                         const newSp: SP = @ptrCast(address);
                         return @call(tailCall, process.check(context.npc), .{ context.tpc, newSp, process, context, Extra.fromContextData(context.contextDataPtr(sp)) });
                     }
-                    const newSp, const callerContext = context.pop(process, sp);                    return @call(tailCall, process.branchCheck(callerContext.getNPc()), .{ callerContext.getTPc(), newSp, process, callerContext, Extra.fromContextData(callerContext.contextData) });
+                    const newSp, const callerContext = context.pop(process, sp);
+                    return @call(tailCall, process.branchCheck(callerContext.getNPc()), .{ callerContext.getTPc(), newSp, process, callerContext, Extra.fromContextData(callerContext.contextData) });
                 } // end of returnSelf
             },
-            .lFalse => {
-            },
+            .lFalse => {},
         }
         @panic("falling off the end of cps1");
     }
@@ -571,6 +571,6 @@ pub fn main() !void {
     try timing(if (default) @constCast(do_all[0..]) else args[1..], default);
 }
 const testRun = zag.config.testRun;
-const fibN = if (testRun) 5 else 10;
+const fibN = if (testRun) 5 else 11;
 const nRuns = if (testRun) 1 else 5;
 const warmups = if (testRun) 0 else null;

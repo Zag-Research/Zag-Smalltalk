@@ -4,6 +4,8 @@ const config = zag.config;
 const trace = config.trace;
 const objectEncoding = config.objectEncoding;
 const Process = zag.Process;
+const SP = Process.SP;
+const Context = zag.Context;
 const object = zag.object;
 const Object = object.Object;
 const heap = zag.heap;
@@ -188,19 +190,12 @@ pub const PointedObject = packed struct {
 pub const PointedObjectRef = packed struct {
     ref: *PointedObject,
 };
-pub inline fn int(i: i64, process: *Process) Object {
+pub inline fn int(i: i64, sp: SP, context: *Context) Object {
     if (SICache and SICacheMin <= i and i <= SICacheMax)
         return Object.from(&SmallIntegerCache.objects[(@as(usize, @bitCast(i - SICacheMin))) << 1], null);
-    if (process.alloc(.SmallInteger, 1, null, Object, false)) |allocResult| {
-        allocResult.allocated.array(i64)[1] = i;
-        return allocResult.allocated.asObject();
-    } else |_| {}
-    // if ((PointedObject{
-    //     .header = .{ .classIndex = .SmallInteger },
-    //     .data = .{ .int = i },
-    // }).cached()) |obj| return Object.fromAddress(obj);
-    //@compileLog(i,"uncachable");
-    @panic("uncachable");
+    const allocResult = sp.alloc(context, .SmallInteger, 1, null, Object, false);
+    allocResult.allocated.array(i64)[1] = i;
+    return allocResult.allocated.asObject();
 }
 test "inMemory int()" {
     if (config.immediateIntegers) return error.SkipZigTest;
@@ -244,7 +239,7 @@ const FCache = switch (objectEncoding) {
     .cachedPtr, .taggedPtr => true,
     else => false,
 };
-pub inline fn float(v: f64, maybeProcess: ?*Process) Object {
+pub inline fn float(v: f64, sp: SP, context: *Context) Object {
     if (std.math.isNan(v))
         return Object.fromAddress(&nanMemObject);
     if (std.math.isInf(v)) {
@@ -258,12 +253,7 @@ pub inline fn float(v: f64, maybeProcess: ?*Process) Object {
         if (v == 1.0)
             return Object.fromAddress(&fOne);
     }
-    if (maybeProcess) |process| {
-        if (process.alloc(.Float, 1, null, Object, false)) |allocResult| {
-            allocResult.allocated.array(f64)[1] = v;
-            return allocResult.allocated.asObject();
-        } else |_| {}
-    }
-    //@compileLog(v);
-    unreachable;
+    const allocResult = sp.alloc(context, .Float, 1, null, Object, false);
+    allocResult.allocated.array(f64)[1] = v;
+    return allocResult.allocated.asObject();
 }

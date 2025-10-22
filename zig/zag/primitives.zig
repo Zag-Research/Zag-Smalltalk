@@ -154,16 +154,16 @@ const testModule = if (config.is_test) struct {
             if (sp.next.get_class() != sp.top.get_class()) {
                 return @call(tailCall, Extra.primitiveFailed, .{ pc, sp, process, context, extra });
             } else {
-                const newSp = sp.dropPut(Object.from(sp.next.equals(sp.top), process));
+                const newSp = sp.dropPut(Object.from(sp.next.equals(sp.top), sp, context));
                 return @call(tailCall, process.check(context.npc), .{ context.tpc, newSp, process, context, Extra.fromContextData(context.contextDataPtr(sp)) });
             }
         }
         pub fn primitiveError(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
             if (sp.next.get_class() != sp.top.get_class()) {
-                const newSp = sp.push(Sym.value);
+                const newSp = sp.push(Sym.value.asObject());
                 return @call(tailCall, Extra.primitiveFailed, .{ pc, newSp.?, process, context, extra });
             } else {
-                const newSp = sp.dropPut(Object.from(sp.next == sp.top, process));
+                const newSp = sp.dropPut(Object.from(sp.next == sp.top, sp, context));
                 return @call(tailCall, process.check(context.npc), .{ context.tpc, newSp, process, context, Extra.fromContextData(context.contextDataPtr(sp)) });
             }
         }
@@ -171,7 +171,7 @@ const testModule = if (config.is_test) struct {
             if (sp.next.get_class() != sp.top.get_class()) {
                 return @call(tailCall, Extra.inlinePrimitiveFailed, .{ pc, sp, process, context, extra });
             } else {
-                const newSp = sp.dropPut(Object.from(sp.next == sp.top, process));
+                const newSp = sp.dropPut(Object.from(sp.next == sp.top, sp, context));
                 return @call(tailCall, process.check(pc.prim2()), .{ pc.next2(), newSp, process, context, extra });
             }
         }
@@ -329,7 +329,7 @@ pub const threadedFunctions = struct {
                 },
                 &[_]Object{
                     Object.tests[0],
-                    Sym.value,
+                    Sym.value.asObject(),
                     True(),
                     exe.object(17),
                 },
@@ -498,7 +498,7 @@ pub const threadedFunctions = struct {
             });
             try expectEqualSlices(Object, &[_]Object{
                 Object.tests[0],
-                Sym.value,
+                Sym.value.asObject(),
                 True(),
                 exe.object(17),
             }, exe.stack());
@@ -526,7 +526,7 @@ pub const threadedFunctions = struct {
     };
     pub const inlinePrimitive = struct {
         pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
-            process.traceStack(sp, "inlinePrimitive");
+            sp.traceStack("inlinePrimitive");
             const obj = pc.signature();
             const primNumber = obj.primitive();
             trace("inlinePrimitive: {f} {}\n", .{ obj, primNumber });

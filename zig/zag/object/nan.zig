@@ -180,7 +180,7 @@ pub const Object = packed struct(u64) {
     }
     pub const taggedI_noCheck = untaggedI_noCheck;
     pub const fromTaggedI = fromUntaggedI;
-    pub inline fn fromUntaggedI(i: i64, _: anytype) object.Object {
+    pub inline fn fromUntaggedI(i: i64, _: anytype, _: anytype) object.Object {
         return cast(math.rotr(u64, @as(u64, @bitCast(i)) | (Group.u(.smallInteger) >> 2), 14));
         // return cast(@as(u64, @bitCast(i)) >> 14 | g(.smallInteger));
     }
@@ -221,8 +221,8 @@ pub const Object = packed struct(u64) {
     pub inline fn nativeF_noCheck(self: object.Object) f64 {
         return self.toDoubleNoCheck();
     }
-    pub inline fn fromNativeF(t: f64, maybeProcess: ?*Process) object.Object {
-        return from(t, maybeProcess);
+    pub inline fn fromNativeF(t: f64, _: anytype, _: anytype) object.Object {
+        return from(t, undefined, undefined);
     }
     pub inline fn symbolHash(self: object.Object) ?u24 {
         if (self.isImmediateClass(.Symbol)) return @truncate(self.hash32());
@@ -231,7 +231,7 @@ pub const Object = packed struct(u64) {
     pub inline fn extraValue(self: object.Object) object.Object {
         const val = self.rawU() & 0xFFFF_FFFF_FFFF;
         if (val & 0x8000_0000_0000 != 0)
-            return object.Object.from(@as(i64, @bitCast(val << 13)) >> 13, null);
+            return object.Object.from(@as(i64, @bitCast(val << 13)) >> 13, null, null);
         return @bitCast(g(.immediates) | val);
     }
     pub inline fn isPIC(self: object.Object) bool {
@@ -294,7 +294,7 @@ pub const Object = packed struct(u64) {
     pub inline fn fromAddress(value: anytype) object.Object {
         return cast(@as(u48, @truncate(@intFromPtr(value))) + Start_of_Heap_Objects);
     }
-    pub inline fn from(value: anytype, _: anytype) object.Object {
+    pub inline fn from(value: anytype, _: anytype, _: anytype) object.Object {
     //     return fromWithError(value) catch unreachable;
     // }
     // pub inline fn fromWithError(value: anytype) !object.Object {
@@ -536,7 +536,7 @@ test "all generated NaNs are positive" {
     const fns = struct {
         const nanU: u64 = @bitCast(math.nan(f64));
         fn d(x: anytype) !void {
-            try std.testing.expect(object.Object.fromAddress(x).isDouble());
+            try std.testing.expect(object.Object.from(x, null, null).isDouble());
         }
         fn v(x: anytype) !void {
             try d(x);

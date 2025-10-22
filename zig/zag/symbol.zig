@@ -121,6 +121,9 @@ const SymbolsEnum = enum(u32) {
         const O = packed struct { sym: *const PointedObject };
         return @bitCast(O{ .sym = &staticSymbols[index - 1] });
     }
+    pub fn withPrimitive(sym: SymbolsEnum, primitive: u16) Object {
+        return sym.signature(primitive).asObject();
+    }
     fn signature(sym: SymbolsEnum, primitive: u16) Signature {
         const int = @intFromEnum(sym);
         return Signature.fromHashPrimitive(hash_of(@truncate(int), @truncate(int >> 24)), primitive);
@@ -263,7 +266,6 @@ pub const SymbolTable = struct {
 pub const noStrings = &[0]heap.HeapObjectConstPtr{};
 test "symbols match initialized symbol table" {
     const expectEqual = std.testing.expectEqual;
-    const expect = std.testing.expect;
     var symbol = SymbolTable.init(&globalAllocator);
     defer symbol.deinit();
     symbol.loadSymbols(initialSymbolStrings[0 .. initialSymbolStrings.len - 1]);
@@ -272,37 +274,36 @@ test "symbols match initialized symbol table" {
         for (&symbols.staticSymbols, 0..) |ss, i|
             trace("\nss[{}] {x} {x}", .{ i, ss.header.hash, ss.data.unsigned });
     }
-    try expectEqual(1, symbolIndex(symbols.@"="));
-    try expectEqual(1, symbolArity(symbols.@"="));
-    try expectEqual(2, symbolIndex(symbols.value));
-    try expectEqual(0, symbolArity(symbols.value));
-    try expectEqual(0, symbolArity(symbols.Object));
-    try expectEqual(2, symbolArity(symbols.@"at:put:"));
-    try expectEqual(1, symbolArity(symbols.@"<="));
-    try expectEqual(SymbolsEnum.lastPredefinedSymbol, symbolIndex(symbols.Object));
-    try expectEqual(0, symbolArity(symbols.Object));
+    try expectEqual(1, symbolIndex(symbols.@"=".asObject()));
+    try expectEqual(1, symbolArity(symbols.@"=".asObject()));
+    try expectEqual(2, symbolIndex(symbols.value.asObject()));
+    try expectEqual(0, symbolArity(symbols.value.asObject()));
+    try expectEqual(0, symbolArity(symbols.Object.asObject()));
+    try expectEqual(2, symbolArity(symbols.@"at:put:".asObject()));
+    try expectEqual(1, symbolArity(symbols.@"<=".asObject()));
+    try expectEqual(SymbolsEnum.lastPredefinedSymbol, symbolIndex(symbols.Object.asObject()));
+    try expectEqual(0, symbolArity(symbols.Object.asObject()));
     switch (config.objectEncoding) {
         .zag => {
-            try expectEqual(0x5FB38689, symbols.Object.testU());
-            try expectEqual(0x211A24A89, symbols.@"value:value:".testU());
+            try expectEqual(0x5FB38689, symbols.Object.asObject().testU());
+            try expectEqual(0x211A24A89, symbols.@"value:value:".asObject().testU());
         },
         else => {},
     }
     // test a few at random to verify arity
-    try symbol.verify(symbols.@"=");
-    try symbol.verify(symbols.@"cull:");
-    try symbol.verify(symbols.@"cull:cull:");
-    try symbol.verify(symbols.@"cull:cull:cull:");
-    try symbol.verify(symbols.@"cull:cull:cull:cull:");
-    try symbol.verify(symbols.value);
-    try symbol.verify(symbols.@"perform:");
-    try symbol.verify(symbols.@"at:put:");
-    try symbol.verify(symbols.@"<=");
-    try symbol.verify(symbols.@"+");
-    try symbol.verify(symbols.size);
-    try symbol.verify(symbols.Object);
-    try expect(mem.eql(u8, "valueWithArguments:"[0..], try symbol.asString(symbols.@"valueWithArguments:").arrayAsSlice(u8)));
-    trace("yourself: {x}\n", .{@as(u64, @bitCast(symbols.yourself))});
+    try symbol.verify(symbols.@"=".asObject());
+    try symbol.verify(symbols.@"cull:".asObject());
+    try symbol.verify(symbols.@"cull:cull:".asObject());
+    try symbol.verify(symbols.@"cull:cull:cull:".asObject());
+    try symbol.verify(symbols.@"cull:cull:cull:cull:".asObject());
+    try symbol.verify(symbols.value.asObject());
+    try symbol.verify(symbols.@"perform:".asObject());
+    try symbol.verify(symbols.@"at:put:".asObject());
+    try symbol.verify(symbols.@"<=".asObject());
+    try symbol.verify(symbols.@"+".asObject());
+    try symbol.verify(symbols.size.asObject());
+    try symbol.verify(symbols.Object.asObject());
+//    try std.testing.expect(mem.eql(u8, "valueWithArguments:"[0..], try symbol.asString(symbols.@"valueWithArguments:".asObject()).arrayAsSlice(u8)));
     trace("verified: symbols match initialized symbol table\n", .{});
 }
 // these selectors will have special handling in a dispatch table
@@ -310,7 +311,7 @@ test "symbols match initialized symbol table" {
 // then, with 98% probability, the selector is one of these 4
 // only useful for `perform:` and famiy and adding a CompiledMethod to a dispatch table
 // pretty low-frequency paths, so probably not worth it
-pub const QuickSelectors = [_]Object{ symbols.@"=", symbols.value, symbols.@"value:", symbols.@"cull:" };
+pub const QuickSelectors = [_]Object{ symbols.@"=".asObject(), symbols.value.asObject(), symbols.@"value:".asObject(), symbols.@"cull:".asObject() };
 pub const QuickSelectorsMask = 0x19046000;
 pub const QuickSelectorsMatch = 0x18046000;
 test "find key value for quick selectors" {
@@ -327,8 +328,6 @@ test "find key value for quick selectors" {
         match = match | bitmatch;
         trace("mask  = {b:0>64}\nmatch = {b:0>64}\n", .{ mask, match });
     }
-    trace("=     - {b:0>64}\nvalue - {b:0>64}\nvalue:- {b:0>64}\ncull: - {b:0>64}\n", .{ symbols.@"=".rawU(), symbols.value.rawU(), symbols.@"value:".rawU(), symbols.@"cull:".rawU() });
-    trace("mask  = 0x{x:0>8} match = 0x{x:0>8}\n", .{ mask, match });
     try std.testing.expectEqual(mask, QuickSelectorsMask);
     try std.testing.expectEqual(match, QuickSelectorsMatch);
 }

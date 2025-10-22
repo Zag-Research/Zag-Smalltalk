@@ -14,6 +14,8 @@ const HeapHeader = heap.HeapHeader;
 const HeapObjectPtr = heap.HeapObjectPtr;
 const HeapObjectConstPtr = heap.HeapObjectConstPtr;
 const Process = zag.Process;
+const SP = Process.SP;
+const Context = zag.Context;
 const InMemory = zag.InMemory;
 const encode = @import("floatSpur.zig").encode;
 const decode = @import("floatSpur.zig").decode;
@@ -84,10 +86,10 @@ pub const Object = packed struct(u64) {
     pub inline fn taggedI_noCheck(self: object.Object) i64 {
         return @bitCast(self);
     }
-    pub inline fn fromTaggedI(i: i64, _: anytype) object.Object {
+    pub inline fn fromTaggedI(i: i64, _: anytype, _: anytype) object.Object {
         return @bitCast(i);
     }
-    pub inline fn fromUntaggedI(i: i64, _: anytype) object.Object {
+    pub inline fn fromUntaggedI(i: i64, _: anytype, _: anytype) object.Object {
         return @bitCast(i + Group.u(.int));
     }
     // pub inline fn cast(v: anytype) object.Object {
@@ -123,8 +125,8 @@ pub const Object = packed struct(u64) {
         if (self.isHeap()) return self.toDoubleFromMemory();
         return self.toDoubleNoCheck();
     }
-    pub inline fn fromNativeF(t: f64, process: *Process) object.Object {
-        return from(t, process);
+    pub inline fn fromNativeF(t: f64, sp: SP, context: *Context) object.Object {
+        return from(t, sp, context);
     }
     pub inline fn symbolHash(self: object.Object) ?u24 {
         if (self.isImmediateClass(.Symbol)) return @truncate(self.hash);
@@ -183,9 +185,9 @@ pub const Object = packed struct(u64) {
         const ee = std.testing.expectEqual;
         if (thunkImmediate(object.Object.tests[0])) |value|
             try ee(object.Object.tests[0], value.thunkImmediateValue());
-        if (thunkImmediate(object.Object.fromAddress(-42))) |value|
-            try ee(object.Object.fromAddress(-42), value.thunkImmediateValue());
-        try ee(null, thunkImmediate(object.Object.from(@as(u64, 1) << 47, null)));
+        if (thunkImmediate(object.Object.from(-42, undefined, undefined))) |value|
+            try ee(object.Object.from(-42, undefined, undefined), value.thunkImmediateValue());
+        try ee(null, thunkImmediate(object.Object.from(@as(u64, 1) << 47, undefined, undefined)));
     }
     pub inline fn isImmediateClass(self: object.Object, comptime class: ClassIndex.Compact) bool {
         return self.tagbits() == oImm(class, 0).tagbits();
@@ -255,25 +257,25 @@ pub const Object = packed struct(u64) {
         return @truncate(self.hash);
     }
 
-    fn memoryFloat(value: f64, maybeProcess: ?*Process) object.Object {
+    fn memoryFloat(value: f64, sp: SP, context: *Context) object.Object {
         if (math.isNan(value)) return object.Object.fromAddress(&InMemory.nanMemObject);
         if (math.inf(f64) == value) return object.Object.fromAddress(&InMemory.pInfMemObject);
         if (math.inf(f64) == -value) return object.Object.fromAddress(&InMemory.nInfMemObject);
-        return InMemory.float(value, maybeProcess);
+        return InMemory.float(value, sp, context);
     }
 
     pub fn fromAddress(value: anytype) Object {
         return @bitCast(@intFromPtr(value));
     }
-    pub inline fn from(value: anytype, process: *Process) object.Object {
+    pub inline fn from(value: anytype, sp: SP, context: *Context) object.Object {
         const T = @TypeOf(value);
         if (T == object.Object) return value;
         switch (@typeInfo(T)) {
-            .int, .comptime_int => return fromUntaggedI(value << tagBits, process),
+            .int, .comptime_int => return fromUntaggedI(value << tagBits, sp, context),
             .float => return @bitCast(encode(value) catch {
-                return memoryFloat(value, process);
+                return memoryFloat(value, sp, context);
             }),
-            .comptime_float => return from(@as(f64, value), process),
+            .comptime_float => return from(@as(f64, value), sp, context),
             .bool => return if (value) object.Object.True() else object.Object.False(),
             .null => return object.Object.Nil(),
             .pointer => |ptr_info| {

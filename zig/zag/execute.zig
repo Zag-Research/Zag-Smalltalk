@@ -67,9 +67,7 @@ pub const Signature = packed struct {
     pub fn fromPrimitive(primitiveNumber: u16) Signature {
         return .{ .int = @bitCast(Create{ .selector = 0, .class = @enumFromInt(primitiveNumber) }) };
     }
-    fn fromNameClass(name: anytype, class: ClassIndex) Signature {
-        //@compileLog(name.numArgs(), name.symbolHash(), class);
-        //@compileLog(name, name.numArgs(), name.symbolHash(), class);
+    pub fn fromNameClass(name: anytype, class: ClassIndex) Signature {
         return .{ .int = @bitCast(Create{ .selector = @as(u32, name.numArgs()) << 24 | @as(u32, (name.symbolHash().?)), .class = class }) };
     }
     fn equals(self: Signature, other: Signature) bool {
@@ -86,7 +84,7 @@ pub const Signature = packed struct {
         }
         return null;
     }
-    fn asObject(self: Signature) Object {
+    pub fn asObject(self: Signature) Object {
         return @bitCast(self);
     }
     pub inline fn asSymbol(self: Signature) Object {
@@ -874,7 +872,7 @@ test "compileObject" {
         for (&o.objects, 0..) |*ob, idx|
             trace("\no[{}]: 0x{x:0>16}", .{ idx, @as(u64, @bitCast(ob.*)) });
     }
-    o.setLiterals(&.{ True(), Nil(), True(), Object.from(42.0, &process) }, &.{@enumFromInt(0xdead)});
+    o.setLiterals(&.{ True(), Nil(), True(), Object.from(42.0, process.getSp(), process.getContext()) }, &.{@enumFromInt(0xdead)});
     if (debugging) {
         for (&o.objects, 0..) |*ob, idx|
             trace("\no[{}]=0x{x:0>8}: 0x{x:0>16}", .{ idx, @intFromPtr(ob), @as(u64, @bitCast(ob.*)) });
@@ -885,7 +883,7 @@ test "compileObject" {
     //try expect(o.objects[9].equals(o.asObject()));
     //    try expectEqual(@as(u48, @truncate(o.asObject().rawU())), @as(u48, @truncate(@intFromPtr(&o.objects[8]))));
     try expect(o.objects[2].equals(Object.tests[0]));
-    try expectEqual(o.objects[10].to(f64), Object.from(42.0, &process).to(f64));
+    try expectEqual(o.objects[10].to(f64), Object.from(42.0, process.getSp(), process.getContext()).to(f64));
     try expect(o.objects[3].equals(Nil()));
     try expect(o.objects[5].equals(True()));
     const h1: HeapObjectConstPtr = @ptrCast(&o.objects[0]);
@@ -975,10 +973,10 @@ pub const Execution = struct {
                 try self.method.resolve(objects);
             }
             pub fn stack(self: *const Self) []Object {
-                return self.process.getContext().stack(self.process.getSp(), &self.process);
+                return self.process.getContext().stack(self.process.getSp());
             }
             pub fn fullStack(self: *const Self) []Object {
-                return self.process.getStack(self.process.getSp());
+                return self.getSp().getStack();
             }
             pub fn getHeap(self: *const Self) []HeapObject {
                 return self.process.getHeap();
@@ -994,12 +992,12 @@ pub const Execution = struct {
             }
             pub inline fn object(self: *Self, value: anytype) Object {
                 self.initProcess();
-                return Object.from(value, &self.process);
+                return Object.from(value, self.getSp(), self.getContext());
             }
             pub fn execute(self: *Self, stackObjects: ?[]const Object) void {
                 self.init(stackObjects);
                 _ = self.method.execute(self.getSp(), &self.process, self.getContext());
-                self.getProcess().traceStack(self.getSp(), "return from execution");
+                self.getSp().traceStack("return from execution");
             }
             pub fn matchStack(self: *const Self, expected: []const Object) !void {
                 const result = self.stack();

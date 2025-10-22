@@ -293,8 +293,8 @@ pub inline fn endOfStack(self: *const Context, sp: SP) ?SP {
     }
     return null;
 }
-pub fn stack(self: *const Self, sp: SP, process: *const Process) []Object {
-    return sp.slice((@intFromPtr(self.endOfStack(sp) orelse process.endOfStack()) - @intFromPtr(sp)) / @sizeOf(Object));
+pub fn stack(self: *const Self, sp: SP) []Object {
+    return sp.slice((@intFromPtr(self.endOfStack(sp) orelse sp.endOfStack()) - @intFromPtr(sp)) / @sizeOf(Object));
 }
 // pub inline fn allLocals(self: *const Context, process: *const Process) []Object {
 //     const size = self.tempSize(process);
@@ -420,8 +420,8 @@ pub const threadedFunctions = struct {
                 tf.pushLiteral,
                 Object.tests[0],
             });
-            exe.execute(&[_]Object{Object.from(17, &exe.process)});
-            try exe.matchStack(&[_]Object{Object.from(42, &exe.process)});
+            exe.execute(&[_]Object{Object.from(17, exe.process.getSp(), exe.process.getContext())});
+            try exe.matchStack(&[_]Object{Object.from(42, exe.process.getSp(), exe.process.getContext())});
             try expect(exe.getContext() != @as(*Context, @ptrCast(&exe.ctxt)));
         }
         // test "init context" {
@@ -450,7 +450,7 @@ pub const threadedFunctions = struct {
         pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
             if (extra.noContext())
                 return @call(tailCall, pushContext.threadedFn, .{ pc.prev(), sp, process, context, extra });
-            const value = Object.from(context, process);
+            const value = Object.fromAddress(context);
             if (true) unreachable;
             if (sp.push(value)) |newSp| {
                 return @call(tailCall, process.check(pc.prim()), .{ pc.next(), newSp, process, context, extra });

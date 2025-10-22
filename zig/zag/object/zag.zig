@@ -14,6 +14,8 @@ const HeapHeader = heap.HeapHeader;
 const HeapObjectPtr = heap.HeapObjectPtr;
 const HeapObjectConstPtr = heap.HeapObjectConstPtr;
 const Process = zag.Process;
+const SP = Process.SP;
+const Context = zag.Context;
 const InMemory = zag.InMemory;
 const encode = @import("floatZag.zig").encode;
 const decode = @import("floatZag.zig").decode;
@@ -88,10 +90,10 @@ pub const Object = packed struct(u64) {
     pub inline fn taggedI_noCheck(self: object.Object) i64 {
         return @bitCast(self);
     }
-    pub inline fn fromTaggedI(i: i64, _: anytype) object.Object {
+    pub inline fn fromTaggedI(i: i64, _: anytype, _: anytype) object.Object {
         return @bitCast(i);
     }
-    pub inline fn fromUntaggedI(i: i64, _: anytype) object.Object {
+    pub inline fn fromUntaggedI(i: i64, _: anytype, _: anytype) object.Object {
         return @bitCast(i + oImm(.SmallInteger, 0).tagbits());
     }
     // pub inline fn cast(v: anytype) object.Object {
@@ -127,8 +129,8 @@ pub const Object = packed struct(u64) {
         if (self.isImmediateDouble()) return self.toDoubleNoCheck();
         return self.toDoubleFromMemory();
     }
-    pub inline fn fromNativeF(t: f64, maybeProcess: ?*Process) object.Object {
-        return from(t, maybeProcess);
+    pub inline fn fromNativeF(t: f64, sp: SP, context: *Context) object.Object {
+        return from(t, sp, context);
     }
     pub inline fn symbolHash(self: object.Object) ?u24 {
         if (self.isImmediateClass(.Symbol)) return @truncate(self.hash);
@@ -185,13 +187,15 @@ pub const Object = packed struct(u64) {
     test "ThunkImmediate" {
         var process: Process align(Process.alignment) = Process.new();
         process.init(Nil());
-        const p = &process;
+        //        const p = &process;
+        const sp = process.getSp();
+        const context = process.getContext();
         const ee = std.testing.expectEqual;
         if (thunkImmediate(object.Object.tests[0])) |value|
             try ee(object.Object.tests[0], value.thunkImmediateValue());
-        if (thunkImmediate(object.Object.from(-42, p))) |value|
-            try ee(object.Object.from(-42, p), value.thunkImmediateValue());
-        try ee(null, thunkImmediate(object.Object.from(@as(u64, 1) << 47, null)));
+        if (thunkImmediate(object.Object.from(-42, sp, context))) |value|
+            try ee(object.Object.from(-42, sp, context), value.thunkImmediateValue());
+        try ee(null, thunkImmediate(object.Object.from(@as(u64, 1) << 47, sp, context)));
     }
     pub inline fn isImmediateClass(self: object.Object, comptime class: ClassIndex.Compact) bool {
         return self.tagbits() == oImm(class, 0).tagbits();
@@ -261,25 +265,25 @@ pub const Object = packed struct(u64) {
         return @truncate(self.hash);
     }
 
-    fn memoryFloat(value: f64, maybeProcess: ?*Process) object.Object {
+    fn memoryFloat(value: f64, sp: SP, context: *Context) object.Object {
         if (math.isNan(value)) return object.Object.fromAddress(&InMemory.nanMemObject);
         if (math.inf(f64) == value) return object.Object.fromAddress(&InMemory.pInfMemObject);
         if (math.inf(f64) == -value) return object.Object.fromAddress(&InMemory.nInfMemObject);
-        return InMemory.float(value, maybeProcess);
+        return InMemory.float(value, sp, context);
     }
 
     pub fn fromAddress(value: anytype) Object {
         return @bitCast(@intFromPtr(value));
     }
-    pub inline fn from(value: anytype, maybeProcess: ?*Process) object.Object {
+    pub inline fn from(value: anytype, sp: SP, context: *Context) object.Object {
         const T = @TypeOf(value);
         if (T == object.Object) return value;
         switch (@typeInfo(T)) {
             .int, .comptime_int => return oImm(.SmallInteger, @as(u56, @bitCast(@as(i56, value)))),
             .float => return @bitCast(encode(value) catch {
-                return memoryFloat(value, maybeProcess);
+                return memoryFloat(value, sp, context);
             }),
-            .comptime_float => return from(@as(f64, value), maybeProcess),
+            .comptime_float => return from(@as(f64, value), sp, context),
             .bool => return if (value) object.Object.True() else object.Object.False(),
             .null => return object.Object.Nil(),
             .pointer => |ptr_info| {
@@ -357,19 +361,26 @@ pub const Object = packed struct(u64) {
         switch (Choose.tag) {
             .tag => {
                 switch (self.tag) {
-                    .heap => if (self.rawU() == 0) {@branchHint(.unlikely);
+                    .heap => if (self.rawU() == 0) {
+                        @branchHint(.unlikely);
                         return .UndefinedObject;
                     } else return self.toUnchecked(HeapObjectPtr).*.getClass(),
-                    .immediates => {@branchHint(.likely);
-                        return self.class.classIndex();},
-                    else => {@branchHint(.likely);
-                        return .Float;},
+                    .immediates => {
+                        @branchHint(.likely);
+                        return self.class.classIndex();
+                    },
+                    else => {
+                        @branchHint(.likely);
+                        return .Float;
+                    },
                 }
             },
             .table => {
                 const class = class_table[self.tagbits()];
-                if (class == .none) {@branchHint(.unlikely);
-                    if (self.rawU() == 0) {@branchHint(.unlikely);
+                if (class == .none) {
+                    @branchHint(.unlikely);
+                    if (self.rawU() == 0) {
+                        @branchHint(.unlikely);
                         return .UndefinedObject;
                     } else return self.toUnchecked(HeapObjectPtr).*.getClass();
                 }
@@ -378,64 +389,129 @@ pub const Object = packed struct(u64) {
             .bigSwitch => {
                 const t = ClassIndex.Compact.tag;
                 switch (@as(u8, @truncate(self.rawU()))) {
-                    0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38,
-                    0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, 0x78,
-                    0x80, 0x88, 0x90, 0x98, 0xA0, 0xA8, 0xB0, 0xB8,
-                    0xC0, 0xC8, 0xD0, 0xD8, 0xE0, 0xE8, 0xF0, 0xF8 => {
-                        if (self.rawU() == 0) {@branchHint(.unlikely);
+                    0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, 0x78, 0x80, 0x88, 0x90, 0x98, 0xA0, 0xA8, 0xB0, 0xB8, 0xC0, 0xC8, 0xD0, 0xD8, 0xE0, 0xE8, 0xF0, 0xF8 => {
+                        if (self.rawU() == 0) {
+                            @branchHint(.unlikely);
                             return .UndefinedObject;
                         } else return self.toUnchecked(HeapObjectPtr).*.getClass();
                     },
-                    t(.ThunkReturnLocal) => {@branchHint(.unlikely); return .ThunkReturnLocal;},
-                    t(.ThunkReturnInstance) => {@branchHint(.unlikely); return .ThunkReturnInstance;},
-                    t(.ThunkReturnSmallInteger) => {@branchHint(.unlikely); return .ThunkReturnSmallInteger;},
-                    t(.ThunkReturnImmediate) => {@branchHint(.unlikely); return .ThunkReturnImmediate;},
-                    t(.ThunkReturnCharacter) => {@branchHint(.unlikely); return .ThunkReturnCharacter;},
-                    t(.ThunkReturnFloat) => {@branchHint(.unlikely); return .ThunkReturnFloat;},
-                    t(.ThunkLocal) => {@branchHint(.unlikely); return .ThunkLocal;},
-                    t(.BlockAssignLocal) => {@branchHint(.unlikely); return .BlockAssignLocal;},
-                    t(.ThunkInstance) => {@branchHint(.unlikely); return .ThunkInstance;},
-                    t(.BlockAssignInstance) => {@branchHint(.unlikely); return .BlockAssignInstance;},
-                    t(.ThunkHeap) => {@branchHint(.unlikely); return .ThunkHeap;},
-                    t(.LLVM) => {@branchHint(.unlikely); return .LLVM;},
-                    t(.ThunkImmediate) => {@branchHint(.unlikely); return .ThunkImmediate;},
-                    t(.ThunkFloat) => {@branchHint(.unlikely); return .ThunkFloat;},
-                    t(.SmallInteger) => {@branchHint(.likely); return .SmallInteger;},
-                    t(.Symbol) => {@branchHint(.unlikely); return .Symbol;},
-                    t(.Signature) => {@branchHint(.unlikely); return .Signature;},
-                    t(.False) => {@branchHint(.likely); return .False;},
-                    t(.True) => {@branchHint(.likely); return .True;},
-                    t(.Character) => {@branchHint(.unlikely); return .Character;},
-                          0xa9, 0xb1, 0xb9,
-                    0xc1, 0xc9, 0xd1, 0xd9,
-                    0xe1, 0xe9, 0xf1, 0xf9 => {@branchHint(.unlikely); @panic("Unexpected tag");},
-                    else => {@branchHint(.likely); return .Float;}
+                    t(.ThunkReturnLocal) => {
+                        @branchHint(.unlikely);
+                        return .ThunkReturnLocal;
+                    },
+                    t(.ThunkReturnInstance) => {
+                        @branchHint(.unlikely);
+                        return .ThunkReturnInstance;
+                    },
+                    t(.ThunkReturnSmallInteger) => {
+                        @branchHint(.unlikely);
+                        return .ThunkReturnSmallInteger;
+                    },
+                    t(.ThunkReturnImmediate) => {
+                        @branchHint(.unlikely);
+                        return .ThunkReturnImmediate;
+                    },
+                    t(.ThunkReturnCharacter) => {
+                        @branchHint(.unlikely);
+                        return .ThunkReturnCharacter;
+                    },
+                    t(.ThunkReturnFloat) => {
+                        @branchHint(.unlikely);
+                        return .ThunkReturnFloat;
+                    },
+                    t(.ThunkLocal) => {
+                        @branchHint(.unlikely);
+                        return .ThunkLocal;
+                    },
+                    t(.BlockAssignLocal) => {
+                        @branchHint(.unlikely);
+                        return .BlockAssignLocal;
+                    },
+                    t(.ThunkInstance) => {
+                        @branchHint(.unlikely);
+                        return .ThunkInstance;
+                    },
+                    t(.BlockAssignInstance) => {
+                        @branchHint(.unlikely);
+                        return .BlockAssignInstance;
+                    },
+                    t(.ThunkHeap) => {
+                        @branchHint(.unlikely);
+                        return .ThunkHeap;
+                    },
+                    t(.LLVM) => {
+                        @branchHint(.unlikely);
+                        return .LLVM;
+                    },
+                    t(.ThunkImmediate) => {
+                        @branchHint(.unlikely);
+                        return .ThunkImmediate;
+                    },
+                    t(.ThunkFloat) => {
+                        @branchHint(.unlikely);
+                        return .ThunkFloat;
+                    },
+                    t(.SmallInteger) => {
+                        @branchHint(.likely);
+                        return .SmallInteger;
+                    },
+                    t(.Symbol) => {
+                        @branchHint(.unlikely);
+                        return .Symbol;
+                    },
+                    t(.Signature) => {
+                        @branchHint(.unlikely);
+                        return .Signature;
+                    },
+                    t(.False) => {
+                        @branchHint(.likely);
+                        return .False;
+                    },
+                    t(.True) => {
+                        @branchHint(.likely);
+                        return .True;
+                    },
+                    t(.Character) => {
+                        @branchHint(.unlikely);
+                        return .Character;
+                    },
+                    0xa9, 0xb1, 0xb9, 0xc1, 0xc9, 0xd1, 0xd9, 0xe1, 0xe9, 0xf1, 0xf9 => {
+                        @branchHint(.unlikely);
+                        @panic("Unexpected tag");
+                    },
+                    else => {
+                        @branchHint(.likely);
+                        return .Float;
+                    },
                 }
             },
             .firstFloat => {
-                if (self.isImmediateDouble()) {@branchHint(.likely);
+                if (self.isImmediateDouble()) {
+                    @branchHint(.likely);
                     return .Float;
-                } else if (self.isImmediateWhenNotDouble()) {@branchHint(.likely);
+                } else if (self.isImmediateWhenNotDouble()) {
+                    @branchHint(.likely);
                     return ClassIndex.classIndexFromInt(@truncate(self.rawU() >> 3));
-                } else if (self.rawU() == 0) {@branchHint(.unlikely);
+                } else if (self.rawU() == 0) {
+                    @branchHint(.unlikely);
                     return .UndefinedObject;
                 } else return self.toUnchecked(HeapObjectPtr).*.getClass();
             },
             .andTagbits => {
                 const tag_bits = self.tagbits();
                 const tag = tag_bits & 7;
-                if (tag == 1) return @enumFromInt(tag_bits >> 3)
-                else if (tag > 1) return .Float
-                else if (self.rawU() == 0) return .UndefinedObject
-                else return self.toUnchecked(HeapObjectPtr).*.getClass();
+                if (tag == 1) return @enumFromInt(tag_bits >> 3) else if (tag > 1) return .Float else if (self.rawU() == 0) return .UndefinedObject else return self.toUnchecked(HeapObjectPtr).*.getClass();
             },
             .rotateTagbits => {
                 const tag_bits = std.math.rotl(u8, self.tagbits(), 5);
-                if (tag_bits >= 2 << 5) {@branchHint(.likely);
+                if (tag_bits >= 2 << 5) {
+                    @branchHint(.likely);
                     return .Float;
-                } else if (tag_bits > 1 << 5) {@branchHint(.likely);
+                } else if (tag_bits > 1 << 5) {
+                    @branchHint(.likely);
                     return ClassIndex.classIndexFromInt(@truncate(tag_bits));
-                } else if (self.rawU() == 0) {@branchHint(.unlikely);
+                } else if (self.rawU() == 0) {
+                    @branchHint(.unlikely);
                     return .UndefinedObject;
                 } else return self.toUnchecked(HeapObjectPtr).*.getClass();
             },

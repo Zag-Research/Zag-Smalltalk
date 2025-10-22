@@ -14,6 +14,8 @@ const HeapHeader = heap.HeapHeader;
 const HeapObjectPtr = heap.HeapObjectPtr;
 const HeapObjectConstPtr = heap.HeapObjectConstPtr;
 const Process = zag.Process;
+const SP = Process.SP;
+const Context = zag.Context;
 pub const Object = packed struct(u64) {
     ref: *const InMemory.PointedObject,
     const Self = @This();
@@ -57,8 +59,8 @@ pub const Object = packed struct(u64) {
     }
     pub const taggedI = untaggedI;
     pub const taggedI_noCheck = untaggedI_noCheck;
-    pub inline fn fromTaggedI(i: i64, process: *Process) object.Object {
-        return InMemory.int(i, process);
+    pub inline fn fromTaggedI(i: i64, sp: SP, context: *Context) object.Object {
+        return InMemory.int(i, sp, context);
     }
     pub const fromUntaggedI = fromTaggedI;
     pub inline fn symbol40(self: object.Object) u40 {
@@ -83,8 +85,8 @@ pub const Object = packed struct(u64) {
     pub inline fn nativeF_noCheck(self: object.Object) f64 {
         return self.toDoubleFromMemory();
     }
-    pub inline fn fromNativeF(t: f64, process: *Process) object.Object {
-        return from(t, process);
+    pub inline fn fromNativeF(t: f64, sp: SP, context: *Context) object.Object {
+        return from(t, sp, context);
     }
     pub inline fn symbolHash(self: object.Object) ?u24 {
         if (self.isImmediateClass(.Symbol)) return self.ref.header.hash;
@@ -198,13 +200,13 @@ pub const Object = packed struct(u64) {
     pub fn fromAddress(value: anytype) Object {
         return @bitCast(@intFromPtr(value));
     }
-    pub inline fn from(value: anytype, process: *Process) Object {
+    pub inline fn from(value: anytype, sp: SP, context: *Context) Object {
         const T = @TypeOf(value);
         if (T == Object) return value;
         switch (@typeInfo(T)) {
-            .int, .comptime_int => return InMemory.int(value, process),
-            .float => return InMemory.float(value, process),
-            .comptime_float => return from(@as(f64, value), process),
+            .int, .comptime_int => return InMemory.int(value, sp, context),
+            .float => return InMemory.float(value, sp, context),
+            .comptime_float => return from(@as(f64, value), sp, context),
             .bool => return if (value) Object.True() else Object.False(),
             .null => return Object.Nil(),
             .pointer => |ptr_info| {

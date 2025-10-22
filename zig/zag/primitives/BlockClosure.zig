@@ -131,7 +131,7 @@ pub const threadedFns = struct {
 
         test "asThunk ptr" {
             try config.skipNotZag();
-            const obj = Object.fromAddress(&ThunkReturnSmallInteger.method);
+            const obj = Object.fromAddress(&ThunkReturnSmallInteger.primitive);
             var exe = Execution.initTest(
                 "asThunk ptr",
                 .{tf.asThunk});
