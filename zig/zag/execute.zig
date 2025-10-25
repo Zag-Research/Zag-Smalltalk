@@ -9,6 +9,8 @@ const ProcessPtr = *Process;
 const SP = Process.SP;
 const object = zag.object;
 const Object = object.Object;
+const o0 = object.testObjects[0];
+const o1 = object.testObjects[1];
 const PackedObject = object.PackedObject;
 const ClassIndex = object.ClassIndex;
 const Nil = object.Nil;
@@ -385,7 +387,7 @@ pub const StackStructure = packed struct {
     _fillerHigh: std.meta.Int(.unsigned, 64 - 48 - @bitSizeOf(Object.HighTagType)) = 0,
     highTag: object.Object.HighTagType = object.Object.highTagSmallInteger,
 };
-pub const endMethod = CompiledMethod.init(Nil(), Code.end);
+pub const endMethod = CompiledMethod.init(Sym.value, Code.end);
 pub const CompiledMethod = struct {
     header: HeapHeader,
     signature: Signature,
@@ -420,12 +422,12 @@ pub const CompiledMethod = struct {
         }
         std.debug.print("methodSize:       {}\n", .{methodSize});
     }
-    pub fn init(name: Object, methodFn: *const fn (PC, SP, *Process, *Context, Extra) Result) Self {
+    pub fn init(name: anytype, methodFn: *const fn (PC, SP, *Process, *Context, Extra) Result) Self {
         return Self{
             .header = HeapHeader.calc(.CompiledMethod, codeOffsetInObjects + codeSize, 42 //name.hash24()
                 , .static, null, Object, false) catch unreachable,
             .stackStructure = StackStructure{},
-            .signature = Signature.from(name, .testClass),
+            .signature = Signature.fromNameClass(name, .testClass),
             .executeFn = methodFn,
             .jitted = methodFn,
             .code = .{ Code.primOf(methodFn), undefined },
@@ -724,15 +726,13 @@ test "LookupLabel" {
 const print = std.io.getStdOut().writer().print;
 const p = @import("threadedFn.zig").Enum;
 test "compiling method" {
-    const o1 = Object.tests[0];
-    const o2 = Object.tests[1];
     const expectEqual = std.testing.expectEqual;
     //@compileLog(&p.send);
     var m = compileMethod(Sym.yourself, 0, .testClass, .{
         ":abc", p.branch,
         "def",  "0True",
-        o1,     ":def",
-        "abc",  o2,
+        o0,     ":def",
+        "abc",  o1,
         null,
     });
     //TODO    m.setLiterals(&[_]Object{Sym.value}, &[_]Object{Object.from(42)});
@@ -743,9 +743,9 @@ test "compiling method" {
     try expectEqual(t[0].prim(), threadedFn.threadedFn(.branch));
     try expectEqual(t[1].codePtr, &m.code[4]);
     try expectEqual(t[2].object, True());
-    try expectEqual(t[3].object, o1);
+    try expectEqual(t[3].object, o0);
     try expectEqual(t[4].codePtr, &m.code[0]);
-    try expectEqual(t[5].object, o2);
+    try expectEqual(t[5].object, o1);
     try expectEqual(t[6].object, Nil());
 }
 
@@ -845,8 +845,8 @@ pub fn compileObject(comptime tup: anytype) CompileTimeObject(countNonLabels(tup
     return objType.init(tup, false);
 }
 test "compileObject" {
-    var process: Process align(Process.alignment) = Process.new();
-    process.init(Nil());
+    var process: Process align(Process.alignment) = undefined;
+    process.init();
     trace("Test: compileObject\n", .{});
     const expectEqual = std.testing.expectEqual;
     const expect = std.testing.expect;
@@ -855,7 +855,7 @@ test "compileObject" {
         ":def",
         c.Class, // first HeapObject
         "second", // pointer to second object
-        Object.tests[0],
+        o0,
         "1mref", // reference to replacement Object #1
         "third", // pointer to third object
         "0mref",
@@ -882,7 +882,7 @@ test "compileObject" {
     try expect(o.asObject().isHeapObject());
     //try expect(o.objects[9].equals(o.asObject()));
     //    try expectEqual(@as(u48, @truncate(o.asObject().rawU())), @as(u48, @truncate(@intFromPtr(&o.objects[8]))));
-    try expect(o.objects[2].equals(Object.tests[0]));
+    try expect(o.objects[2].equals(o0));
     try expectEqual(o.objects[10].to(f64), Object.from(42.0, process.getSp(), process.getContext()).to(f64));
     try expect(o.objects[3].equals(Nil()));
     try expect(o.objects[5].equals(True()));
@@ -937,26 +937,22 @@ pub const Execution = struct {
     fn Executer(MethodType: type) type {
         return struct {
             process: Process align(Process.alignment),
-            ctxt: Context.Static,
             method: MethodType,
             process_initted: bool = false,
             const Self = @This();
             pub fn new(method: MethodType) Self {
                 return Self{
                     .process = Process.new(),
-                    .ctxt = Context.Static.new(),
                     .method = method,
                 };
             }
             pub fn initProcess(self: *Self) void {
                 if (!self.process_initted) {
-                    self.process.init(Nil());
+                    self.process.init();
                     self.process_initted = true;
                 }
             }
             pub fn init(self: *Self, stackObjects: ?[]const Object) void {
-                self.ctxt.initStatic();
-                self.process.setContext(@ptrCast(&self.ctxt));
                 self.initProcess();
                 if (stackObjects) |source| {
                     self.initStack(source);
@@ -1017,10 +1013,9 @@ pub const Execution = struct {
                 return self.runWithValidator(validator, Object.empty, source, expected);
             }
             fn runWithValidator(exe: *Self, validator: *const fn (*Self, []const Object) ValidateErrors!void, objects: []const Object, source: []const Object, expected: []const Object) !void {
-                exe.process.init(Nil());
+                exe.process.init();
                 try exe.resolve(objects);
                 exe.execute(source);
-                try std.testing.expect(exe.getContext() == @as(*Context, @ptrCast(&exe.ctxt)));
                 try validator(exe, expected);
             }
             fn validate(exe: *Self, expected: []const Object) ValidateErrors!void {

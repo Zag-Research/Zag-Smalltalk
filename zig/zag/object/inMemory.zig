@@ -201,16 +201,18 @@ test "inMemory int()" {
     if (config.immediateIntegers) return error.SkipZigTest;
     const ee = std.testing.expectEqual;
     trace("inMemory int()\n", .{});
-    var process: Process align(Process.alignment) = Process.new();
-    process.init(Object.Nil());
-    const one_ = int(1, &process);
+    var process: Process align(Process.alignment) = undefined;
+    process.init();
+    const sp = process.getSp();
+    const context = process.getContext();
+    const one_ = int(1, sp, context);
     const one: PointedObjectRef = @bitCast(one_);
     trace("one: {}\n", .{one});
     for (&SmallIntegerCache.objects, 0..) |*o, i| trace("[{}](0x{x:0>4}): 0x{x:0>16}\n", .{ i, @intFromPtr(o), @as(u64, @bitCast(o.*)) });
     try ee(.SmallInteger, one.ref.header.classIndex);
     try ee(1, one.ref.data.int);
-    try ee(one_, int(1, &process));
-    try ee(int(42, &process), int(42, null));
+    try ee(one_, int(1, sp, context));
+    try ee(int(42, sp, context), int(42, sp, context));
 }
 
 pub const MemoryFloat = struct {

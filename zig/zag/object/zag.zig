@@ -185,14 +185,13 @@ pub const Object = packed struct(u64) {
         return @bitCast(@as(u8, @truncate(self.hash & extraMask)));
     }
     test "ThunkImmediate" {
-        var process: Process align(Process.alignment) = Process.new();
-        process.init(Nil());
-        //        const p = &process;
+        var process: Process align(Process.alignment) = undefined;
+        process.init();
         const sp = process.getSp();
         const context = process.getContext();
         const ee = std.testing.expectEqual;
-        if (thunkImmediate(object.Object.tests[0])) |value|
-            try ee(object.Object.tests[0], value.thunkImmediateValue());
+        if (thunkImmediate(object.testObjects[0])) |value|
+            try ee(object.testObjects[0], value.thunkImmediateValue());
         if (thunkImmediate(object.Object.from(-42, sp, context))) |value|
             try ee(object.Object.from(-42, sp, context), value.thunkImmediateValue());
         try ee(null, thunkImmediate(object.Object.from(@as(u64, 1) << 47, sp, context)));
@@ -584,5 +583,4 @@ pub const Object = packed struct(u64) {
     pub const asVariable = zag.Context.asVariable;
     pub const PackedObject = object.PackedObject;
     pub const signature = zag.execute.Signature.signature;
-    pub const tests = OF.tests;
 };

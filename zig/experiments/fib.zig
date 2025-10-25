@@ -291,7 +291,7 @@ const fibIntegerCnP = struct {
                             pc = pc.next2();
                             sp = newSp;
                         } else {
-                            const newSp, const newContext, const newExtra = process.spillStackAndPush(Nil(), sp, context, extra);
+                            const newSp, const newContext, const newExtra = sp.spillStackAndPush(Nil(), context, extra);
                             pc = pc.next2();
                             sp = newSp;
                             context = newContext;
@@ -304,7 +304,7 @@ const fibIntegerCnP = struct {
                             pc = pc.next2();
                             sp = newSp;
                         } else {
-                            const newSp, const newContext, const newExtra = process.spillStackAndPush(value, sp, context, extra);
+                            const newSp, const newContext, const newExtra = sp.spillStackAndPush(value, context, extra);
                             pc = pc.next2();
                             sp = newSp;
                             context = newContext;
@@ -318,7 +318,7 @@ const fibIntegerCnP = struct {
                         pc = pc.next2();
                         sp = newSp;
                     } else {
-                        const newSp, const newContext, const newExtra = process.spillStackAndPush(value, sp, context, extra);
+                        const newSp, const newContext, const newExtra = sp.spillStackAndPush(value, context, extra);
                         pc = pc.next2();
                         sp = newSp;
                         context = newContext;
@@ -571,6 +571,6 @@ pub fn main() !void {
     try timing(if (default) @constCast(do_all[0..]) else args[1..], default);
 }
 const testRun = zag.config.testRun;
-const fibN = if (testRun) 5 else 11;
+const fibN = if (testRun) 5 else 15;
 const nRuns = if (testRun) 1 else 5;
 const warmups = if (testRun) 0 else null;

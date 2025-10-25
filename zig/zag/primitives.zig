@@ -6,9 +6,12 @@ const config = zag.config;
 const tailCall = config.tailCall;
 const trace = config.trace;
 const stdCall = config.stdCall;
-const Object = zag.object.Object;
-const Nil = zag.object.Nil;
-const True = zag.object.True;
+const object = zag.object;
+const Object = object.Object;
+const o0 = object.testObjects[0];
+const o1 = object.testObjects[1];
+const Nil = object.Nil;
+const True = object.True;
 const False = zag.object.False;
 const execute = zag.execute;
 const PC = execute.PC;
@@ -218,7 +221,7 @@ pub const threadedFunctions = struct {
                     tf.primitive,
                     comptime fromPrimitive(998),
                     tf.pushLiteral,
-                    Object.tests[0],
+                    o0,
                 });
             try exe.runTest(
                 &[_]Object{
@@ -237,7 +240,7 @@ pub const threadedFunctions = struct {
                     tf.primitive,
                     comptime fromPrimitive(998),
                     tf.pushLiteral,
-                    Object.tests[0],
+                    o0,
                 });
             try exe.runTest(
                 &[_]Object{
@@ -245,7 +248,7 @@ pub const threadedFunctions = struct {
                     exe.object(17),
                 },
                 &[_]Object{
-                    Object.tests[0],
+                    o0,
                     True(),
                     exe.object(17),
                 },
@@ -258,7 +261,7 @@ pub const threadedFunctions = struct {
                     tf.primitive,
                     comptime fromPrimitive(999),
                     tf.pushLiteral,
-                    Object.tests[0],
+                    o0,
                 });
             try exe.runTest(
                 &[_]Object{
@@ -266,7 +269,7 @@ pub const threadedFunctions = struct {
                     exe.object(17),
                 },
                 &[_]Object{
-                    Object.tests[0],
+                    o0,
                     exe.object(42),
                     exe.object(17),
                 },
@@ -301,7 +304,7 @@ pub const threadedFunctions = struct {
                     tf.primitiveError,
                     comptime fromPrimitive(998),
                     tf.pushLiteral,
-                    Object.tests[0],
+                    o0,
                 });
             try exe.runTest(
                 &[_]Object{
@@ -320,7 +323,7 @@ pub const threadedFunctions = struct {
                     tf.primitiveError,
                     comptime fromPrimitive(998),
                     tf.pushLiteral,
-                    Object.tests[0],
+                    o0,
                 });
             try exe.runTest(
                 &[_]Object{
@@ -328,7 +331,7 @@ pub const threadedFunctions = struct {
                     exe.object(17),
                 },
                 &[_]Object{
-                    Object.tests[0],
+                    o0,
                     Sym.value.asObject(),
                     True(),
                     exe.object(17),
@@ -342,7 +345,7 @@ pub const threadedFunctions = struct {
                     tf.primitiveError,
                     comptime fromPrimitive(999),
                     tf.pushLiteral,
-                    Object.tests[0],
+                    o0,
                 });
             try exe.runTest(
                 &[_]Object{
@@ -350,7 +353,7 @@ pub const threadedFunctions = struct {
                     exe.object(17),
                 },
                 &[_]Object{
-                    Object.tests[0],
+                    o0,
                     Nil(),
                     exe.object(42),
                     exe.object(17),
@@ -390,7 +393,7 @@ pub const threadedFunctions = struct {
                 "0name",
                 "1module",
                 tf.pushLiteral,
-                Object.tests[0],
+                o0,
             });
             try exe.resolve(&[_]Object{ primitive998.asObject(), testModule.moduleString.asObject() });
             exe.execute(&[_]Object{
@@ -407,7 +410,7 @@ pub const threadedFunctions = struct {
                 "0name",
                 "1module",
                 tf.pushLiteral,
-                Object.tests[0],
+                o0,
             });
             try exe.resolve(&[_]Object{ primitive998.asObject(), testModule.moduleString.asObject() });
             exe.execute(&[_]Object{
@@ -415,7 +418,7 @@ pub const threadedFunctions = struct {
                 exe.object(17),
             });
             try expectEqualSlices(Object, &[_]Object{
-                Object.tests[0],
+                o0,
                 True(),
                 exe.object(17),
             }, exe.stack());
@@ -426,7 +429,7 @@ pub const threadedFunctions = struct {
                 "0name",
                 "1module",
                 tf.pushLiteral,
-                Object.tests[0],
+                o0,
             });
             try exe.resolve(&[_]Object{ primitiveNotDefined.asObject(), testModule.moduleString.asObject() });
             exe.execute(&[_]Object{
@@ -434,7 +437,7 @@ pub const threadedFunctions = struct {
                 exe.object(17),
             });
             try expectEqualSlices(Object, &[_]Object{
-                Object.tests[0],
+                o0,
                 exe.object(42),
                 exe.object(17),
             }, exe.stack());
@@ -472,7 +475,7 @@ pub const threadedFunctions = struct {
                 "0name",
                 "1module",
                 tf.pushLiteral,
-                Object.tests[0],
+                o0,
             });
             try exe.resolve(&[_]Object{ primitive998.asObject(), testModule.moduleString.asObject() });
             exe.execute(&[_]Object{
@@ -489,7 +492,7 @@ pub const threadedFunctions = struct {
                 "0name",
                 "1module",
                 tf.pushLiteral,
-                Object.tests[0],
+                o0,
             });
             try exe.resolve(&[_]Object{ primitive998.asObject(), testModule.moduleString.asObject() });
             exe.execute(&[_]Object{
@@ -497,7 +500,7 @@ pub const threadedFunctions = struct {
                 exe.object(17),
             });
             try expectEqualSlices(Object, &[_]Object{
-                Object.tests[0],
+                o0,
                 Sym.value.asObject(),
                 True(),
                 exe.object(17),
@@ -509,7 +512,7 @@ pub const threadedFunctions = struct {
                 "0name",
                 "1module",
                 tf.pushLiteral,
-                Object.tests[0],
+                o0,
             });
             try exe.resolve(&[_]Object{ primitiveNotDefined.asObject(), testModule.moduleString.asObject() });
             exe.execute(&[_]Object{
@@ -517,7 +520,7 @@ pub const threadedFunctions = struct {
                 exe.object(17),
             });
             try expectEqualSlices(Object, &[_]Object{
-                Object.tests[0],
+                o0,
                 Nil(),
                 exe.object(42),
                 exe.object(17),
@@ -549,7 +552,7 @@ pub const threadedFunctions = struct {
                 tf.inlinePrimitive,
                 "0prim",
                 tf.pushLiteral,
-                Object.tests[0],
+                o0,
             });
             try exe.resolve(&[_]Object{Sym.value.withPrimitive(998)});
             exe.execute(&[_]Object{
@@ -558,7 +561,7 @@ pub const threadedFunctions = struct {
                 False(),
             });
             try expectEqualSlices(Object, &[_]Object{
-                Object.tests[0],
+                o0,
                 True(),
             }, exe.stack());
         }
@@ -576,7 +579,7 @@ pub const threadedFunctions = struct {
                     exe.object(17),
                 },
                 &[_]Object{
-                    Object.tests[0],
+                    o0,
                     exe.object(42),
                     exe.object(17),
                 },
@@ -601,7 +604,7 @@ pub const threadedFunctions = struct {
                 tf.inlinePrimitiveModule,
                 "0prim",
                 tf.pushLiteral,
-                Object.tests[0],
+                o0,
             });
             try exe.resolve(&[_]Object{Sym.value.withPrimitive(998)});
             exe.execute(&[_]Object{
@@ -610,7 +613,7 @@ pub const threadedFunctions = struct {
                 False(),
             });
             try expectEqualSlices(Object, &[_]Object{
-                Object.tests[0],
+                o0,
                 True(),
             }, exe.stack());
         }
@@ -628,7 +631,7 @@ pub const threadedFunctions = struct {
                     exe.object(17),
                 },
                 &[_]Object{
-                    Object.tests[0],
+                    o0,
                     exe.object(42),
                     exe.object(17),
                 },

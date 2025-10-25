@@ -140,19 +140,15 @@ pub const Object = switch (config.objectEncoding) {
     .onlyInt => @import("object/onlyInt.zig").Object,
     .onlyFloat => @import("object/onlyFloat.zig").Object,
 };
-const n_testObjects = 5;
-fn testObjects() [n_testObjects]Object {
-    return blk: {
-        var testArray: [n_testObjects]Object = undefined;
+pub const testObjects = blk: {
+        var testArray: [5]Object = undefined;
         for (&testArray, 1..) |*elem, i| {
             elem.* = @bitCast(hash64(i) | 7);
         }
         break :blk testArray;
     };
-}
 pub const ObjectFunctions = struct {
     pub const empty = &[0]Object{};
-    pub const tests = testObjects();
     pub const Sentinel = Object.from(@as(*Object, @ptrFromInt(8)), null);
     pub inline fn equals(self: Object, other: Object) bool {
         return @as(u64, @bitCast(self)) == @as(u64, @bitCast(other));
@@ -347,8 +343,8 @@ pub const PackedObject = packed struct {
 test "from conversion" {
     try config.skipNotZag();
     const ee = std.testing.expectEqual;
-    var process: Process align(Process.alignment) = Process.new();
-    process.init(Nil());
+    var process: Process align(Process.alignment) = undefined;
+    process.init();
     const sp = process.getSp();
     const context = process.getContext();
     try ee(@as(f64, @bitCast((Object.from(3.14, sp, context)))), 3.14);
@@ -366,8 +362,8 @@ test "from conversion" {
     try std.testing.expect((Object.from(null, sp, context)).isNil());
 }
 test "to conversion" {
-    var process: Process align(Process.alignment) = Process.new();
-    process.init(Nil());
+    var process: Process align(Process.alignment) = undefined;
+    process.init();
     const sp = process.getSp();
     const context = process.getContext();
     const ee = std.testing.expectEqual;
@@ -380,8 +376,8 @@ test "to conversion" {
 }
 test "get_class" {
     try config.skipNotZag();
-    var process: Process align(Process.alignment) = Process.new();
-    process.init(Nil());
+    var process: Process align(Process.alignment) = undefined;
+    process.init();
     const sp = process.getSp();
     const context = process.getContext();
     const ee = std.testing.expectEqual;
@@ -399,7 +395,7 @@ test "printing" {
     var buf: [80]u8 = undefined;
     var fbs = std.io.fixedBufferStream(&buf);
     const stream = fbs.writer();
-    try stream.print("{f}\n", .{Object.tests[0]});
+    try stream.print("{f}\n", .{testObjects[0]});
     //try stream.print("{f}\n", .{symbol.symbols.yourself});
     try std.testing.expectEqualSlices(u8, "42\n#yourself\n", fbs.getWritten());
 }
@@ -410,15 +406,15 @@ const Buf = blk: {
         obj: Object,
     };
 };
-const buf1: [1]Buf = .{Buf{ .obj = Object.tests[0] }};
+const buf1: [1]Buf = .{Buf{ .obj = testObjects[0] }};
 fn slice1() []const Buf {
     return &buf1;
 }
 test "order" {
     switch (config.objectEncoding) {
         .zag => {
-            var process: Process align(Process.alignment) = Process.new();
-            process.init(Nil());
+            var process: Process align(Process.alignment) = undefined;
+            process.init();
             const sp = process.getSp();
             const context = process.getContext();
             const ee = std.testing.expectEqual;

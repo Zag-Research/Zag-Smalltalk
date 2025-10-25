@@ -69,8 +69,8 @@ pub const inlines = struct {
 
 const expectEqual = std.testing.expectEqual;
 test "inline primitives" {
-    var process: Process align(Process.alignment) = Process.new();
-    process.init(Nil());
+    var process: Process align(Process.alignment) = undefined;
+    process.init();
     const sp = process.getSp();
     const context = process.getContext();
     try expectEqual(Object.from(12, sp, context), inlines.@"*"(Object.from(3, sp, context), Object.from(4, sp, context), sp, context));
@@ -120,14 +120,14 @@ pub const @"+" = struct {
     test "simple add with overflow" {
         var exe = Execution.initTest(
             "simple add with overflow",
-            .{ tf.primitive, comptime fromPrimitive(1), tf.pushLiteral, Object.tests[0] });
+            .{ tf.primitive, comptime fromPrimitive(1), tf.pushLiteral, object.testObjects[0] });
         try exe.runTest(
             &[_]Object{
                 exe.object(4),
                 exe.object(Object.maxInt),
             },
             &[_]Object{
-                Object.tests[0],
+                object.testObjects[0],
                 exe.object(4),
                 exe.object(Object.maxInt),
             },
@@ -200,8 +200,8 @@ pub const @"<=" = struct {
         return @call(tailCall, process.check(pc.prim2()), .{ pc.next2(), newSp, process, context, extra });
     }
     test "inline primitives" {
-        var process: Process align(Process.alignment) = Process.new();
-        process.init(Nil());
+        var process: Process align(Process.alignment) = undefined;
+        process.init();
         const sp = process.getSp();
         const context = process.getContext();
         try expectEqual(true, try with(Object.from(0, sp, context), Object.from(0, sp, context)));

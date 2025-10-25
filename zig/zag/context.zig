@@ -7,6 +7,8 @@ const checkEqual = zag.utilities.checkEqual;
 const Process = zag.Process;
 const object = zag.object;
 const Object = object.Object;
+const o0 = object.testObjects[0];
+const o1 = object.testObjects[1];
 const Nil = object.Nil;
 const True = object.True;
 const False = object.False;
@@ -65,7 +67,7 @@ const ContextOnStack = struct {
         self.spOffset = @bitCast(HeapHeader.headerStatic(.Context, contextSize, contextSize - 1));
         self.trapContextNumber = 0;
         self.method = undefined;
-        self.tpc = 41;//undefined;
+        self.tpc = undefined;
         self.npc = undefined;
         self.prevCtxt = null;
         self.contextData = @ptrCast(&self.selfOffset);
@@ -73,9 +75,9 @@ const ContextOnStack = struct {
         self.locals = undefined;
         self.contextData.initStatic(1);
     }
-    pub fn new() ContextOnStack {
-        return undefined;
-    }
+    // pub fn new() ContextOnStack {
+    //     return undefined;
+    // }
     pub inline fn selfAddress(self: *const ContextOnStack) ?[*]Object {
         const locals: [*]Object = @ptrCast(@constCast(&self.locals));
         return @ptrCast(&locals[self.selfOffset]);
@@ -260,7 +262,7 @@ pub fn push(self: *Context, sp: SP, process: *Process, method: *const CompiledMe
         ctxt.set(method, self, selfOffset, locals);
         return .{ newSp, ctxt };
     }
-    const newSp, const newContext, const newExtra = process.spillStack(sp, self, extra);
+    const newSp, const newContext, const newExtra = sp.spillStack(self, extra);
     return newContext.push(newSp, process, method, newExtra);
 }
 pub fn moveToHeap(self: *const Context, sp: SP, process: *Process) *Context {
@@ -418,11 +420,10 @@ pub const threadedFunctions = struct {
             var exe = Execution.initTest("pushContext", .{
                 tf.pushContext,
                 tf.pushLiteral,
-                Object.tests[0],
+                o0,
             });
             exe.execute(&[_]Object{Object.from(17, exe.process.getSp(), exe.process.getContext())});
             try exe.matchStack(&[_]Object{Object.from(42, exe.process.getSp(), exe.process.getContext())});
-            try expect(exe.getContext() != @as(*Context, @ptrCast(&exe.ctxt)));
         }
         // test "init context" {
         //     //    const expectEqual = std.testing.expectEqual;

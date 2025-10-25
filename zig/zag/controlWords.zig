@@ -32,6 +32,8 @@ const HeapHeader = heap.HeapHeader;
 const object14 = object.PackedObject.object14;
 const tf = zag.threadedFn.Enum;
 const c = object.ClassIndex;
+const o0 = object.testObjects[0];
+const o1 = object.testObjects[1];
 pub fn init() void {}
 pub const module = struct {
     pub const moduleName = "zag";
@@ -57,7 +59,7 @@ pub const branch = struct {
             tf.branch,
             "label",
             tf.push,
-            Object.tests[0],
+            o0,
             ":label",
         });
         assert(@alignOf(@TypeOf(exe)) > 50);
@@ -103,17 +105,17 @@ pub const classCase = struct {
                 comptime classes(&.{.True}),
                 "true",
                 tf.pushLiteral,
-                Object.tests[1],
+                o1,
                 tf.branch,
                 "end",
                 ":true",
                 tf.pushLiteral,
-                Object.tests[0],
+                o0,
                 ":end",
             });
         try exe.runTest(
             &[_]Object{True()},
-            &[_]Object{Object.tests[0]},
+            &[_]Object{o0},
         );
     }
     test "classCase no match" {
@@ -125,17 +127,17 @@ pub const classCase = struct {
                 comptime classes(&.{ .True, .False }),
                 "true",
                 tf.pushLiteral,
-                Object.tests[0],
+                o0,
                 tf.branch,
                 "end",
                 ":true",
                 tf.pushLiteral,
-                Object.tests[1],
+                o1,
                 ":end",
             });
         try exe.runTest(
             &[_]Object{False()},
-            &[_]Object{Object.tests[0]},
+            &[_]Object{o0},
         );
     }
     test "classCase no match - leave" {
@@ -150,7 +152,7 @@ pub const classCase = struct {
                 "end",
                 ":true",
                 tf.pushLiteral,
-                Object.tests[0],
+                o0,
                 ":end",
             });
         try exe.runTest(
@@ -185,7 +187,7 @@ pub const dup = struct {
         if (sp.push(value)) |newSp| {
             return @call(tailCall, process.check(pc.prim()), .{ pc.next(), newSp, process, context, extra });
         } else {
-            const newSp, const newContext, const newExtra = process.spillStackAndPush(value, sp, context, extra);
+            const newSp, const newContext, const newExtra = sp.spillStackAndPush(value, context, extra);
             return @call(tailCall, process.check(pc.prim()), .{ pc.next(), newSp, process, newContext, newExtra });
         }
     }
@@ -212,7 +214,7 @@ pub const over = struct {
         if (sp.push(value)) |newSp| {
             return @call(tailCall, process.check(pc.prim()), .{ pc.next(), newSp, process, context, extra });
         } else {
-            const newSp, const newContext, const newExtra = process.spillStackAndPush(value, sp, context, extra);
+            const newSp, const newContext, const newExtra = sp.spillStackAndPush(value, context, extra);
             return @call(tailCall, process.check(pc.prim()), .{ pc.next(), newSp, process, newContext, newExtra });
         }
     }
@@ -287,7 +289,7 @@ pub const push = struct {
             if (sp.push(Nil())) |newSp| {
                 return @call(tailCall, process.check(pc.prim2()), .{ pc.next2(), newSp, process, context, extra });
             } else {
-                const newSp, const newContext, const newExtra = process.spillStackAndPush(Nil(), sp, context, extra);
+                const newSp, const newContext, const newExtra = sp.spillStackAndPush(Nil(), context, extra);
                 return @call(tailCall, process.check(pc.prim2()), .{ pc.next2(), newSp, process, newContext, newExtra });
             }
         }
@@ -297,7 +299,7 @@ pub const push = struct {
         if (sp.push(value)) |newSp| {
             return @call(tailCall, process.check(pc.prim2()), .{ pc.next2(), newSp, process, context, extra });
         } else {
-            const newSp, const newContext, const newExtra = process.spillStackAndPush(value, sp, context, extra);
+            const newSp, const newContext, const newExtra = sp.spillStackAndPush(value, context, extra);
             return @call(tailCall, process.check(pc.prim2()), .{ pc.next2(), newSp, process, newContext, newExtra });
         }
     }
@@ -330,7 +332,7 @@ pub const pushAssociationValue = struct {
         if (sp.push(value)) |newSp| {
             return @call(tailCall, process.check(pc.prim2()), .{ pc.next2(), newSp, process, context, extra });
         } else {
-            const newSp, const newContext, const newExtra = process.spillStackAndPush(value, sp, context, extra);
+            const newSp, const newContext, const newExtra = sp.spillStackAndPush(value, context, extra);
             return @call(tailCall, process.check(pc.prim2()), .{ pc.next2(), newSp, process, newContext, newExtra });
         }
     }
@@ -339,7 +341,7 @@ pub const pushAssociationValue = struct {
             ":def",
             c.Association,
             "0Nil",
-            Object.tests[0],
+            o0,
         });
         var exe = Execution.initTest(
             "pushAssociationValue",
@@ -366,7 +368,7 @@ pub const pushLiteral = struct {
             trace("pushLiteral: {*} {f}\n", .{ newSp, extra });
             return @call(tailCall, process.check(pc.prim2()), .{ pc.next2(), newSp, process, context, extra });
         } else {
-            const newSp, const newContext, const newExtra = process.spillStackAndPush(value, sp, context, extra);
+            const newSp, const newContext, const newExtra = sp.spillStackAndPush(value, context, extra);
             trace("pushLiteral: {*} {f} {f}\n", .{ newSp, extra, newExtra });
             return @call(tailCall, process.check(pc.prim2()), .{ pc.next2(), newSp, process, newContext, newExtra });
         }
@@ -376,13 +378,13 @@ pub const pushLiteral = struct {
             "pushLiteral",
             .{
                 tf.pushLiteral,
-                Object.tests[1],
+                o1,
                 tf.pushLiteral,
-                Object.tests[0],
+                o0,
             });
         try exe.runTest(
             &[_]Object{},
-            &[_]Object{ Object.tests[0], Object.tests[1] },
+            &[_]Object{ o0, o1 },
         );
     }
 };

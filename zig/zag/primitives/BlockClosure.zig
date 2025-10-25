@@ -232,7 +232,7 @@ pub const threadedFns = struct {
             const newSp, const newContext, const newExtra =
                 if (sp.reserve(3 + includeContext)) |anSp| blk: {
                     break :blk .{ anSp, context, extra };
-                } else process.spillStackAndReserve(3 + includeContext, sp, context, extra);
+                } else sp.spillStackAndReserve(3 + includeContext, context, extra);
             const copySize = stackOffset - stackedFields;
             for (newSp.unreserve(1).slice(copySize), sp.unreserve(stackedFields).slice(copySize)) |*d, s|
                 d.* = s;
@@ -496,7 +496,7 @@ pub fn generalClosureX(pc: PC, sp: SP, process: *Process, context: *Context, ext
 // }
 // test "immutableClosures" {
 //     const ee = std.testing.expectEqual;
-//     var process = Process.new();
+//     var process: Process align(Process.alignment) = undefined;
 //     process.init();
 //     try ee(try testImmutableClosure(&process, Object.from(1)), .numericThunk);
 //     try ee(try testImmutableClosure(&process, Object.from(-1)), .numericThunk);
@@ -525,7 +525,7 @@ pub fn generalClosureX(pc: PC, sp: SP, process: *Process, context: *Context, ext
 // }
 // test "nonlocalClosures" {
 //     const ee = std.testing.expectEqual;
-//     var process = Process.new();
+//     var process: Process align(Process.alignment) = undefined;
 //     process.init();
 //         // [^self] [^true] [^false] [^nil] [^-1] [^0] [^1] [^2]
 //     try ee(try testNonlocalClosure(&process, True), .nonLocalThunk);

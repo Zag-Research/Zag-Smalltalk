@@ -37,25 +37,26 @@ const Result = execute.Result;
 const Self = @This();
 m: [process_total_size]u8 align(1), // alignment explicitly stated to emphasize the difference from Process
 const process_total_size = config.process_total_size;
-pub const alignment = @max(stack_mask_overflow, flagMask + 1);
+pub const alignment = @as(u64, @max(stack_mask_overflow * 2, flagMask + 1)) * 2;
+const alignment_mask = @as(u64, @bitCast(-@as(i64, alignment)));
 const stack_mask_overflow: usize = zag.utilities.largerPowerOf2(Process.stack_size * @sizeOf(Object));
 pub const stack_mask = stack_mask_overflow - 1;
 const stack_mask_shift = @ctz(stack_mask_overflow);
 pub const process_stack_size = Process.stack_size;
 pub const process_nursery_size = Process.nursery_size;
-const Process = extern struct {
+const Process = struct {
     stack: [stack_size]Object align(alignment),
     h: Fields,
+    staticContext: Context,
     nursery0: [nursery_size]HeapObject,
     nursery1: [nursery_size]HeapObject,
-    const Fields = extern struct {
+    const Fields = struct {
         next: ?*Self,
         id: u64,
         context: *Context,
         trapContextNumber: u64,
         debugFn: ?*const fn (programCounter: PC, stackPointer: SP, process: *Self, context: *Context, signature: Extra) Result,
         sp: SP,
-        process: Object,
         currHeap: HeapObjectArray,
         currHp: HeapObjectArray,
         currEnd: HeapObjectArray,
@@ -63,7 +64,7 @@ const Process = extern struct {
         singleStepping: bool,
     };
     const headerSize = @sizeOf(Fields);
-    const processAvail = (process_total_size - headerSize) / @sizeOf(Object);
+    const processAvail = (process_total_size - headerSize - @sizeOf(Context)) / @sizeOf(Object);
     const approx_nursery_size = (processAvail - processAvail / 9) / 2;
     const stack_size: usize = @min(zag.utilities.largerPowerOf2(processAvail - approx_nursery_size * 2), (1 << 16) / @sizeOf(Object) - 1);
     const nursery_size = (processAvail - stack_size) / 2;
@@ -163,14 +164,15 @@ inline fn header(self: *align(1) const Self) *Process.Fields {
 pub fn new() align(alignment) Self {
     return undefined;
 }
-pub fn init(origin: *align(alignment) Self, process: Object) void {
+pub fn init(origin: *align(alignment) Self) void {
     const self = origin.ptr();
     self.h.sp = origin.endOfStack();
     self.h.currHeap = HeapObject.fromObjectPtr(@ptrCast(&self.nursery0));
     self.h.currEnd = self.h.currHeap + Process.nursery_size;
     self.h.currHp = self.h.currHeap;
     self.h.otherHeap = HeapObject.fromObjectPtr(@ptrCast(&self.nursery1));
-    self.h.process = process;
+    self.h.context = &self.staticContext;
+    @as(*Context.Static, @ptrCast(&self.staticContext)).initStatic();
     while (true) {
         self.h.next = allProcesses;
         self.h.id = if (allProcesses) |p| p.header().id + 1 else 1;
@@ -208,7 +210,7 @@ fn fullCheck(pc: PC, sp: SP, process: *align(1) Self, context: *Context, extra: 
     //     return @call(tailCall, Debugger.step, .{ pc, sp, process, context, extra });
     return @call(tailCall, pc.prev().prim(), .{ pc, sp, process, context, extra });
 }
-pub inline fn checkBump(self: *Self) *Self {
+pub inline fn checkBump(self: *align(1) Self) *align(1) Self {
     if (self.needsCheck()) return self;
     return @ptrFromInt(@intFromPtr(self) + 1);
 }
@@ -298,20 +300,6 @@ pub inline fn freeStack(self: *align(1) const Self, sp: SP) usize {
 pub inline fn getHeap(self: *align(1) const Self) []HeapObject {
     return self.header().currHeap[0..((@intFromPtr(self.header().currHp) - @intFromPtr(self.header().currHeap)) / @sizeOf(Object))];
 }
-pub fn spillStackAndPush(self: *align(1) Self, value: Object, sp: SP, context: *Context, extra: Extra) struct { SP, *Context, Extra } {
-    const newSp, const newContext, const newExtra = self.spillStackAndReserve(1, sp, context, extra);
-    newSp.top = value;
-    return .{ newSp, newContext, newExtra };
-}
-pub fn spillStackAndReserve(self: *align(1) Self, reserve: usize, sp: SP, context: *Context, extra: Extra) struct { SP, *Context, Extra } {
-    const newSp, const newContext, const newExtra = self.spillStack(sp, context, extra);
-    return .{ newSp.safeReserve(reserve), newContext, newExtra };
-}
-pub fn spillStack(self: *align(1) Self, sp: SP, context: *Context, extra: Extra) struct { SP, *Context, Extra } {
-    if (!context.isOnStack(sp)) return .{ sp, context, extra };
-    // if the Context is on the stack, the Context, Extra and SP will move
-    _ = .{ self, @panic("unimplemented") };
-}
 pub fn allocArray(self: *align(1) Self, slice: []const Object, sp: SP, context: *Context) HeapObjectArray {
     const len: u11 = @truncate(slice.len);
     const hop = self.allocSpace(len, sp, context);
@@ -335,33 +323,32 @@ pub fn resetForTest() void {
 }
 test "nursery allocation" {
     const ee = std.testing.expectEqual;
-    var process align(alignment) = new();
-    var pr = &process;
-    pr.init(Nil());
+    var process: Self align(alignment) = undefined;
+    process.init();
     const emptySize = Process.nursery_size;
     try ee(32, Process.stack_size);
-    try ee(emptySize, pr.freeNursery());
-    var sp = pr.endOfStack();
+    try ee(emptySize, process.freeNursery());
+    var sp = process.endOfStack();
     var initialContext = Context.init();
     var ar = sp.alloc(&initialContext, ClassIndex.Class, 4, null, void, false);
     _ = ar.initAll();
     const o1 = ar.allocated;
-    try ee(emptySize - 5, pr.freeNursery());
+    try ee(emptySize - 5, process.freeNursery());
     ar = sp.alloc(&initialContext, ClassIndex.Class, 5, null, void, false);
     _ = ar.initAll();
     ar = sp.alloc(&initialContext, ClassIndex.Class, 6, null, void, false);
     const o2 = ar.initAll();
-    try ee(emptySize - 19, pr.freeNursery());
+    try ee(emptySize - 19, process.freeNursery());
     try o1.instVarPut(0, o2.asObject());
     sp = sp.push(o1.asObject()).?;
-    const news, const newContext, _ = pr.spillStack(sp, &initialContext, Extra.none);
+    const news, const newContext, _ = sp.spillStack(&initialContext, Extra.none);
     try ee(sp, news);
     try ee(&initialContext, newContext);
-    pr.ptr().collectNursery(sp, &initialContext, 0);
+    process.ptr().collectNursery(sp, &initialContext, 0);
     try ee(emptySize - switch (config.objectEncoding) {
         .zag, .nan => 12,
         else => 7,
-    }, pr.freeNursery());
+    }, process.freeNursery());
     // age test
     // o1 still contains corrected address of o2
     // add second reference to o2 and circulare ref to o1
@@ -369,9 +356,9 @@ test "nursery allocation" {
 }
 test "check flag" {
     const testing = std.testing;
-    var process: struct { f: [alignment]u8 align(alignment) = undefined, p: Self } = .{ .p = new() };
-    @as(*align(alignment) Self, @alignCast(&process.p)).init(Nil());
-    var pr align(1) = &process.p;
+    var process: Self align(alignment) = undefined;
+    process.init();
+    var pr: *Self align(1) = &process;
     try testing.expect(!pr.needsCheck());
     const origEOS = pr.endOfStack();
     try testing.expect(!pr.needsCheck());
@@ -426,10 +413,11 @@ const Stack = struct {
         return self.unreserve(1);
     }
     pub inline fn reserve(self: SP, n: anytype) ?SP {
-        const newSP: SP = @ptrFromInt(@intFromPtr(self) - @sizeOf(Object) * n);
-        if (self.contains(newSP)) {
-            return newSP;
-        } else return null;
+        const newP = @intFromPtr(self) - @sizeOf(Object) * n;
+        if (newP < @intFromPtr(&self.theProcess().stack)) {@branchHint(.unlikely);
+            return null;
+        }
+        return @ptrFromInt(newP);
     }
     pub inline fn safeReserve(self: SP, n: anytype) SP {
         return @ptrFromInt(@intFromPtr(self) - @sizeOf(Object) * n);
@@ -476,7 +464,7 @@ const Stack = struct {
             trace("[{x:0>10}]: {x:0>16}\n", .{ @intFromPtr(obj), @as(u64, @bitCast(obj.*)) });
     }
     pub inline fn theProcess(self: SP) *Process {
-        return @ptrFromInt(@intFromPtr(self) & ~stack_mask);
+        return @ptrFromInt(@intFromPtr(self) & alignment_mask);
     }
     pub inline fn endOfStack(self: SP) SP {
         return @ptrFromInt((@intFromPtr(self) | stack_mask) + 1);
@@ -486,6 +474,7 @@ const Stack = struct {
         const process = self.theProcess();
         if (aI.objectSize(Process.maxNurseryObjectSize)) |size| {
             for (0..2) |_| {
+//                if (true) @panic("here 490");
                 const result = HeapObject.alignProperBoundary(process.h.currHp);
                 const newHp = result + size + 1;
                 if (@intFromPtr(newHp) <= @intFromPtr(process.h.currEnd)) {
@@ -504,29 +493,40 @@ const Stack = struct {
         }
         @panic("Need Global Allocation");
     }
-
+    pub fn spillStackAndPush(sp: SP, value: Object, context: *Context, extra: Extra) struct { SP, *Context, Extra } {
+        const newSp, const newContext, const newExtra = sp.spillStackAndReserve(1,context, extra);
+        newSp.top = value;
+        return .{ newSp, newContext, newExtra };
+    }
+    pub fn spillStackAndReserve(sp: SP, n: usize, context: *Context, extra: Extra) struct { SP, *Context, Extra } {
+        const newSp, const newContext, const newExtra = sp.spillStack(context, extra);
+        return .{ newSp.safeReserve(n), newContext, newExtra };
+    }
+    pub fn spillStack(sp: SP, context: *Context, extra: Extra) struct { SP, *Context, Extra } {
+        if (!context.isOnStack(sp)) return .{ sp, context, extra };
+        // if the Context is on the stack, the Context, Extra and SP will move
+        @panic("unimplemented");
+    }
 };
+
 test "Stack" {
     trace("Test: Stack\n", .{});
-    var process: Self align(alignment) = new();
-    process.init(Nil());
+    var process: Self align(alignment) = undefined;
+    process.init();
+    const sp = process.getSp();
     const context = process.getContext();
     const ee = std.testing.expectEqual;
-    var stack: [11]Object = undefined;
-    const sp0 = @as(SP, @ptrCast(&stack[10]));
-    sp0.top = True();
-    try ee(True(), stack[10]);
+    const sp0 = sp.push(True()).?;
     const sp1 = sp0.push(False()).?;
-    try ee(True(), stack[10]);
-    try ee(False(), stack[9]);
+    try ee(True(), sp1.next);
+    try ee(False(), sp1.top);
     _ = sp1.drop().push(Object.from(42, sp1, context));
-    try ee(Object.from(42, sp1, context).to(i64), 42);
-    try ee(stack[9].to(i64), 42);
+    try ee(sp1.top.to(i64), 42);
 }
 pub const threadedFunctions = struct {
     pub const pushThisProcess = struct {
         pub fn threadedFn(pc: PC, sp: SP, process: *Self, context: *Context, extra: Extra) Result {
-            const newSp = sp.push(process.ptr().h.process);
+            const newSp = sp.push(Object.fromAddress(process.ptr()));
             return @call(tailCall, process.check(pc.prim()), .{ pc.next(), newSp.?, process, context, extra });
         }
     };

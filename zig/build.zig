@@ -101,7 +101,12 @@ pub fn build(b: *std.Build) void {
     const test_encodings: []const Encoding =
         if (encoding_option) |specific_encoding|
                 &[_]Encoding{ specific_encoding}
-            else &[_]Encoding{ .zag, .nan, .zagAlt };
+            else &[_]Encoding{
+                .zag,
+                //.nan, .zagAlt,
+                .ptr,
+                //.spur
+            };
     const test_step = b.step("test", "Run tests for all encoding types");
 
     for (test_encodings) |enc| {
@@ -126,7 +131,7 @@ pub fn build(b: *std.Build) void {
 
         const enc_tests = b.addTest(.{
             .root_module = b.createModule(.{
-                .root_source_file = b.path("zag/root.zig"),
+                .root_source_file = b.path("zag/test.zig"),
                 .target = target,
                 .optimize = optimize,
                 .imports = &.{

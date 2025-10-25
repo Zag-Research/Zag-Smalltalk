@@ -35,7 +35,7 @@ pub const Object = packed struct(u64) {
     }
 
     pub fn Nil() Object {
-        if (@inComptime()) {
+        if (false and @inComptime()) {
             return Object{ .ref = undefined };
         }
         return Object.fromAddress(&InMemory.Nil);
@@ -315,5 +315,4 @@ pub const Object = packed struct(u64) {
     pub const asVariable = zag.Context.asVariable;
     pub const PackedObject = object.PackedObject;
     pub const signature = zag.execute.Signature.signature;
-    pub const tests = OF.tests;
 };

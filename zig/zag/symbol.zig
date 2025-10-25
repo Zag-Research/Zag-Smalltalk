@@ -186,7 +186,7 @@ pub const SymbolTable = struct {
     pub fn init(allocator: *Allocator) Self {
         return SymbolTable{
             .mem = &[0]SymbolTreap.Element{},
-            .treap = SymbolTreap.initEmpty(object.compareObject, Nil()),
+            .treap = SymbolTreap.initEmpty(object.compareObject, Object.ZERO),
             .allocator = allocator,
         };
     }
