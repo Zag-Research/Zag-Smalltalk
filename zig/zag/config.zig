@@ -7,7 +7,7 @@ pub const debugMode = builtin.mode == .Debug;
 pub const native_endian = builtin.target.cpu.arch.endian();
 pub const tailCall: std.builtin.CallModifier = if (show_error_stack) .never_inline else .always_tail;
 pub fn trace(comptime format: anytype, values: anytype) void {
-    if (show_trace) std.debug.print(format, values);
+    if (show_trace) std.log.debug(format, values);
 }
 const options = @import("options");
 pub const includeLLVM = options.includeLLVM;
@@ -37,7 +37,7 @@ pub fn skipNotZag() !void {
     if (notZag) return error.SkipZigTest;
 }
 pub fn printConfig() void {
-    std.debug.print(
+    std.log.err(
         \\Config:
         \\  compile_date   = {s}
         \\  git_version    = {s}
@@ -57,10 +57,10 @@ pub fn printConfig() void {
         Process.process_nursery_size,
     });
     if (show_trace) {
-        std.debug.print("  Trace enabled\n", .{});
+        std.log.err("  Trace enabled\n", .{});
     }
     if (show_error_stack) {
-        std.debug.print("  Error stack enabled\n", .{});
+        std.log.err("  Error stack enabled\n", .{});
     }
 }
 comptime {

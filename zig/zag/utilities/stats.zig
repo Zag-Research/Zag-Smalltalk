@@ -49,7 +49,7 @@ pub fn Stats(comptime Arg: type, comptime K: type, runs: comptime_int, warmups: 
         warmups: usize = if (warmups) |w| w else @min(3, @max(1, (runs + 1) / 3)),
         const Self = @This();
         pub fn print(self: *Self) void {
-            std.debug.print("sum={} sumsq={} n={} values={any}\n", .{ self.sum, self.sumsq, self.n, self.values });
+            std.log.err("sum={} sumsq={} n={} values={any}\n", .{ self.sum, self.sumsq, self.n, self.values });
         }
         const isInt = switch (@typeInfo(T)) {
             .int => true,
@@ -220,7 +220,7 @@ test "larger int stats with runner" {
     try expectEqual(stat.mean(), 8);
     try expectEqual(stat.median(), 10);
     try expectEqual(stat.stdDev(), 4.422668877499195);
-    //trace("\nstats {nmxsrM}",.{stat});
+    //trace("stats {nmxsrM}",.{stat});
 }
 test "simple float stats" {
     const expectEqual = @import("std").testing.expectEqual;
@@ -235,7 +235,7 @@ test "simple float stats" {
     const buf: [200]u8 = undefined;
     const buf2: [200]u8 = undefined;
     //    const ebuf: []const u8 = "2.0--3.0--4.0--1.0";
-    //    trace("\nstats {<FOO>nmxs}",.{stat});
+    //    trace("stats {<FOO>nmxs}",.{stat});
     _ = .{ expect, buf, buf2 }; //    try expect(std.mem.eql(u8,try std.fmt.bufPrint(buf2[0..],"2--3--4--1",.{}),try std.fmt.bufPrint(buf[0..], "{}",.{stat})));
 }
 fn timeRunner(comptime _: usize, proof: usize) usize {

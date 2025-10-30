@@ -53,13 +53,13 @@ const ZagImageHeader = struct {
 };
 var zagImageHeader: ZagImageHeader = undefined;
 fn usage() void {
-    std.debug.print(
+    std.log.err(
         \\Usage: zag image-directory
         \\
     , .{});
 }
 fn version() void {
-    std.debug.print("{s}\n", .{config.git_version});
+    std.log.err("{s}\n", .{config.git_version});
 }
 fn extensionMatches(name: []const u8, ext: []const u8) bool {
     if (name.len <= ext.len) return false;
@@ -92,7 +92,7 @@ fn parseAddress(name: []const u8) u64 {
 }
 fn checkHeader(file: std.fs.File) !void {
     const stat = try file.stat();
-    //std.debug.print("header stat: {}\n", .{stat});
+    //std.log.err("header stat: {}\n", .{stat});
     if (stat.size < @sizeOf(ZagImageHeader) or (stat.size & 7) != 0)
         return error.WrongImageFileSize;
     _ = try file.read(@as([*]u8, @ptrCast(&zagImageHeader))[0..@sizeOf(ZagImageHeader)]);
@@ -104,7 +104,7 @@ fn loadSymbols() !void {
     outer: while (!exportedSymbols.isNil()) {
         for (try exportedSymbols.arrayAsSlice(Object)) |obj| {
             // if (obj.isString()) {
-            //     std.debug.print("LoadingSymbol: {}\n", .{symbol.intern(obj)});
+            //     std.log.err("LoadingSymbol: {}\n", .{symbol.intern(obj)});
             // } else {
             //     exportedSymbols = obj;
             //     continue :outer;
@@ -133,14 +133,14 @@ fn loadCodeAddresses() !void {
     var map: [threadedFunctions.len]Element = undefined;
     const codeAddresses = try zagImageHeader.codeAddresses.arrayAsSlice(u64);
     if (threadedFunctions.len != codeAddresses.len)
-        std.debug.print("my primitives length: {} file:{}\n", .{ threadedFunctions.len, codeAddresses.len });
+        std.log.err("my primitives length: {} file:{}\n", .{ threadedFunctions.len, codeAddresses.len });
     for (&map, &threadedFunctions, codeAddresses) |*element, o, f| {
         element.files = f;
         element.ours = @intFromPtr(o.f);
     }
 }
 fn processHeader(file: std.fs.File) !void {
-    //std.debug.print("Zag header: {}\n",.{zagImageHeader});
+    //std.log.err("Zag header: {}\n",.{zagImageHeader});
     try loadSymbols();
     try loadCodeAddresses();
     try loadDispatchTable(file);
@@ -150,7 +150,7 @@ fn runImage() !void {
     _ = try execute.mainSendTo(zagImageHeader.selector, zagImageHeader.target);
 }
 fn readHeap(file: std.fs.File, address: u64) !void {
-    //const stat = try file.stat();std.debug.print("heap stat: {}\naddress: 0x{x}\n", .{ stat, address });
+    //const stat = try file.stat();std.log.err("heap stat: {}\naddress: 0x{x}\n", .{ stat, address });
     try globalArena.HeapAllocation.loadHeap(file, address);
 }
 fn readLargeHeapObject(file: std.fs.File, address: u64) !void {
@@ -185,12 +185,12 @@ fn loadAndRun(directory: [*:0]const u8) !void {
                     } else if (extensionMatches(name, ".process")) {
                         try readProcess(file, address);
                     } else {
-                        std.debug.print("unknown file: {s}\n", .{name});
+                        std.log.err("unknown file: {s}\n", .{name});
                         return error.UnknownFile;
                     }
                 }
             } else {
-                std.debug.print("unknown non-file: {s}\n", .{name});
+                std.log.err("unknown non-file: {s}\n", .{name});
                 return error.UnknownNonFile;
             }
         }
@@ -215,7 +215,7 @@ pub fn main() !void {
             // try loadAndRun(arg);
         }
         while (argsIterator.next()) |extra|
-            std.debug.print(
+            std.log.err(
                 \\unused argument: {s}
                 \\
             , .{extra});

@@ -121,19 +121,19 @@ pub fn main() !void {
     };
     inline for (data) |x| {
         const u = Object.from(x);
-        // std.debug.print("{} {} {}\n\t",.{u.tag,u.classIndex,u.hash});
+        // std.log.err("{} {} {}\n\t",.{u.tag,u.classIndex,u.hash});
         if (u.immediate_class() == .Object) {
-            std.debug.print("{x:0>16} {x:0>16} {} coded as Object {s}\n", .{ cvtU64(x), u.u(), x, switch (u.u() >> 3) {
+            std.log.err("{x:0>16} {x:0>16} {} coded as Object {s}\n", .{ cvtU64(x), u.u(), x, switch (u.u() >> 3) {
                 else => "",
                 2 => "NaN",
                 3 => "+inf",
                 4 => "-inf",
             } });
-        } else std.debug.print("{x:0>16} {x:0>16} {} {} {}\n", .{ cvtU64(x), u.u(), x, u, u.immediate_class() });
+        } else std.log.err("{x:0>16} {x:0>16} {} {} {}\n", .{ cvtU64(x), u.u(), x, u, u.immediate_class() });
     }
     for (0..16) |x| {
         const w: u64 = x +% 0xffff_ffff_ffff_fff0;
         const u: Object = @bitCast(w);
-        std.debug.print("{x:0>16} {} {x:0>16}\n", .{ w, u, rotr(u64, w -% 3, 4) });
+        std.log.err("{x:0>16} {} {x:0>16}\n", .{ w, u, rotr(u64, w -% 3, 4) });
     }
 }

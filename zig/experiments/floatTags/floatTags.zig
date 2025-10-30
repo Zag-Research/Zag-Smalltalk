@@ -171,16 +171,16 @@ pub fn main() !void {
         const u = Object.from(x);
         if (u.immediate_class() == .Object) {
             // if (@TypeOf(x)=
-            // std.debug.print("{x:0>16} {x:0>16} {} coded as Object {s}\n",.{cvtU64(x),u.u(),x, switch (u.u()>>3) {
+            // std.log.err("{x:0>16} {x:0>16} {} coded as Object {s}\n",.{cvtU64(x),u.u(),x, switch (u.u()>>3) {
             //     else => "",
             //     2 => "NaN",
             //     3 => "+inf",
             //     4 => "-inf",
             // }});
         } else if (print_x) {
-            std.debug.print("{x:0>16} {x:0>16} {} {} {}\n", .{ cvtU64(x), u.u(), x, u, u.immediate_class() });
+            std.log.err("{x:0>16} {x:0>16} {} {} {}\n", .{ cvtU64(x), u.u(), x, u, u.immediate_class() });
         } else {
-            std.debug.print("{x:0>16} {x:0>16} {} {}\n", .{ cvtU64(x), u.u(), u, u.immediate_class() });
+            std.log.err("{x:0>16} {x:0>16} {} {}\n", .{ cvtU64(x), u.u(), u, u.immediate_class() });
         }
     }
     for (0..128) |bits| {
@@ -195,9 +195,9 @@ pub fn main() !void {
             const exponent_mantissa = @as(u64, @bitCast(@as(i64, @bitCast((val & 0x3f00) << 50)) >> 6)) >> 2;
             break :blk2 @as(f64, @bitCast(sign_exponent | exponent_mantissa));
         };
-        std.debug.print("{:>3}: {x:0>16} ", .{ bits, cvtU64(x) });
+        std.log.err("{:>3}: {x:0>16} ", .{ bits, cvtU64(x) });
         if (@abs(x) < 0.0001 or @abs(x) > 1000.0) {
-            std.debug.print("{e:10.5} {e:10.5}\n", .{ x, f });
-        } else std.debug.print("{d:11.7} {d:11.7}\n", .{ x, f });
+            std.log.err("{e:10.5} {e:10.5}\n", .{ x, f });
+        } else std.log.err("{d:11.7} {d:11.7}\n", .{ x, f });
     }
 }

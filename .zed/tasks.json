@@ -4,114 +4,120 @@
   {
     "label": "grep",
     "command": "grep -rne \"$ZED_SELECTED_TEXT\" *|grep zig:",
-    "cwd": "$ZED_WORKTREE_ROOT/zig/zag",
+    "cwd": "$ZED_WORKTREE_ROOT/zig/zag"
   },
   {
     "label": "test-current",
     "command": "zig test -freference-trace=20 $ZED_FILENAME",
     "cwd": "$ZED_WORKTREE_ROOT/$ZED_RELATIVE_DIR",
-    "hide": "on_success",
+    "hide": "on_success"
   },
   {
     "label": "test",
     "command": "zig build test --summary all -freference-trace=20",
-    "cwd": "$ZED_WORKTREE_ROOT/zig/zag",
+    "cwd": "$ZED_WORKTREE_ROOT/zig/zag"
+    //"hide": "on_success",
+  },
+  {
+    "label": "test with trace",
+    "command": "zig build test -Dtrace --summary all -freference-trace=20",
+    "cwd": "$ZED_WORKTREE_ROOT/zig/zag"
     //"hide": "on_success",
   },
   {
     "label": "test zag encoding",
     "command": "zig build test -Dencoding=zag --summary all -freference-trace=5",
-    "cwd": "$ZED_WORKTREE_ROOT/zig/zag",
+    "cwd": "$ZED_WORKTREE_ROOT/zig/zag"
     //"hide": "on_success",
   },
   {
     "label": "test ptr encoding",
     "command": "zig build test -Dencoding=ptr -Dtrace --summary all -freference-trace=5",
-    "cwd": "$ZED_WORKTREE_ROOT/zig/zag",
+    "cwd": "$ZED_WORKTREE_ROOT/zig/zag"
     //"hide": "on_success",
   },
   {
     "label": "test-llvm",
     "command": "zig build test --summary all -freference-trace=20 -Dllvm",
     "cwd": "$ZED_WORKTREE_ROOT/zig",
-    "hide": "on_success",
+    "hide": "on_success"
   },
   {
     "label": "test fib",
     "command": "zig build -Doptimize=Debug -freference-trace=5 && ./zig-out/bin/fib",
-    "cwd": "$ZED_WORKTREE_ROOT/zig",
+    "cwd": "$ZED_WORKTREE_ROOT/zig"
   },
   {
     "label": "trace fib",
     "command": "zig build -Dtrace -Doptimize=Debug -freference-trace=5 && ./zig-out/bin/fib",
-    "cwd": "$ZED_WORKTREE_ROOT/zig",
+    "cwd": "$ZED_WORKTREE_ROOT/zig"
   },
   {
     "label": "trace fib ptr",
     "command": "zig build -Dtrace -Dencoding=ptr -Doptimize=Debug -freference-trace=5 && ./zig-out/bin/fib",
-    "cwd": "$ZED_WORKTREE_ROOT/zig",
+    "cwd": "$ZED_WORKTREE_ROOT/zig"
   },
   {
     "label": "trace fib zagAlt",
     "command": "zig build -Dtrace -Dencoding=zagAlt -Doptimize=Debug -freference-trace=5 && ./zig-out/bin/fib",
-    "cwd": "$ZED_WORKTREE_ROOT/zig",
+    "cwd": "$ZED_WORKTREE_ROOT/zig"
   },
   {
     "label": "trace fib onlyInt",
     "command": "zig build -Dtrace -Dencoding=onlyInt -Doptimize=Debug -freference-trace=5 && ./zig-out/bin/fib",
-    "cwd": "$ZED_WORKTREE_ROOT/zig",
+    "cwd": "$ZED_WORKTREE_ROOT/zig"
   },
   {
     "label": "time fib zag",
     "command": "zig build -Doptimize=ReleaseFast && ./zig-out/bin/fib",
     //"command": "zig build -Doptimize=ReleaseFast && taskpolicy -l5 -t5 time ./zig-out/bin/fib",
-    "cwd": "$ZED_WORKTREE_ROOT/zig",
+    "cwd": "$ZED_WORKTREE_ROOT/zig"
   },
   {
     "label": "time fib onlyInt",
     "command": "zig build -Dencoding=onlyInt -Doptimize=ReleaseFast && ./zig-out/bin/fib",
     //"command": "zig build -Doptimize=ReleaseFast && taskpolicy -l5 -t5 time ./zig-out/bin/fib",
-    "cwd": "$ZED_WORKTREE_ROOT/zig",
+    "cwd": "$ZED_WORKTREE_ROOT/zig"
   },
   {
     "label": "time fib onlyFloat",
     "command": "zig build -Dencoding=onlyFloat -Doptimize=ReleaseFast -freference-trace=20 && ./zig-out/bin/fib",
     //"command": "zig build -Doptimize=ReleaseFast && taskpolicy -l5 -t5 time ./zig-out/bin/fib",
-    "cwd": "$ZED_WORKTREE_ROOT/zig",
+    "cwd": "$ZED_WORKTREE_ROOT/zig"
   },
   {
     "label": "trace fib onlyFloat",
     "command": "zig build -Dtrace -Dencoding=onlyFloat -Doptimize=Debug -freference-trace=5 && ./zig-out/bin/fib",
-    "cwd": "$ZED_WORKTREE_ROOT/zig",
+    "cwd": "$ZED_WORKTREE_ROOT/zig"
   },
   {
     "label": "time fib NaN",
     "command": "zig build -Dencoding=nan -Doptimize=ReleaseFast && ./zig-out/bin/fib",
-    "cwd": "$ZED_WORKTREE_ROOT/zig",
+    "cwd": "$ZED_WORKTREE_ROOT/zig"
   },
   {
     "label": "time fib spur",
     "command": "zig build -Dencoding=spur -Doptimize=ReleaseFast && ./zig-out/bin/fib",
-    "cwd": "$ZED_WORKTREE_ROOT/zig",
+    "cwd": "$ZED_WORKTREE_ROOT/zig"
   },
   {
     "label": "time fib ptr",
     "command": "zig build -Dencoding=ptr -Doptimize=ReleaseFast && ./zig-out/bin/fib",
-    "cwd": "$ZED_WORKTREE_ROOT/zig",
+    "cwd": "$ZED_WORKTREE_ROOT/zig"
   },
   {
     "label": "time fib zagAlt",
     "command": "zig build -Dencoding=zagAlt -Doptimize=ReleaseFast && ./zig-out/bin/fib",
-    "cwd": "$ZED_WORKTREE_ROOT/zig",
+    "cwd": "$ZED_WORKTREE_ROOT/zig"
   },
   {
     "label": "branchPrediction",
     "command": "zig build -Doptimize=ReleaseFast && time ./branchPrediction",
-    "cwd": "$ZED_WORKTREE_ROOT/zig",
+    "cwd": "$ZED_WORKTREE_ROOT/zig"
   },
   {
     "label": "sacTest",
     "command": "cc -o sacTest sacTest.c halfsiphash.c && ./sacTest",
-    "cwd": "$ZED_WORKTREE_ROOT/c",
-  },
+    "cwd": "$ZED_WORKTREE_ROOT/c"
+  }
 ]

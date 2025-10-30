@@ -93,7 +93,7 @@ pub fn main() void {
 
     if (false) {
         for (valid_values) |val| {
-            std.debug.print("0x{x:0>16},\n", .{encode(val) catch unreachable});
+            std.log.err("0x{x:0>16},\n", .{encode(val) catch unreachable});
         }
     }
 
@@ -107,7 +107,7 @@ pub fn main() void {
     const invalid_time = timer.lap();
     decode_valid(iterations);
     const decode_time = timer.lap();
-    std.debug.print("encode time: {d:.3}s {d:.3}s {d:.3}s\n", .{ @as(f64, @floatFromInt(valid_time))*ns, @as(f64, @floatFromInt(invalid_time))*ns, @as(f64, @floatFromInt(decode_time))*ns });
+    std.log.err("encode time: {d:.3}s {d:.3}s {d:.3}s\n", .{ @as(f64, @floatFromInt(valid_time))*ns, @as(f64, @floatFromInt(invalid_time))*ns, @as(f64, @floatFromInt(decode_time))*ns });
 }
 
 fn delta(spec: u64, check: u64) f64 {

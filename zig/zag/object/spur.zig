@@ -405,7 +405,7 @@ pub const Object = packed union {
 };
 
 test "float from/to conversion" {
-    std.debug.print("running test", .{});
+    std.log.err("running test", .{});
 
     // Test immediate float conversion
     const testValues = [_]f64{ 1.0, -1.0, 0.0, -0.0, math.pi };
@@ -417,7 +417,7 @@ test "float from/to conversion" {
     }
 
     // print immediate float conversion succesfull
-    std.debug.print("Immediate float conversion successful\n", .{});
+    std.log.err("Immediate float conversion successful\n", .{});
 
     // Test edge cases that should encode successfully
     const smallest: f64 = @bitCast(@as(u64, 0x3800_0000_0000_0001));
@@ -431,7 +431,7 @@ test "float from/to conversion" {
         try expectEqual(value, obj.toWithCheck(f64, false));
     }
 
-    std.debug.print("edge float conversion successful\n", .{});
+    std.log.err("edge float conversion successful\n", .{});
 
     // Test values that should fall back to memory float
     const memoryValues = [_]f64{
@@ -445,5 +445,5 @@ test "float from/to conversion" {
         try expectEqual(value, obj.toWithCheck(f64, false));
     }
 
-    std.debug.print("memory float conversion successful\n", .{});
+    std.log.err("memory float conversion successful\n", .{});
 }

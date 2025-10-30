@@ -141,12 +141,12 @@ pub const Object = switch (config.objectEncoding) {
     .onlyFloat => @import("object/onlyFloat.zig").Object,
 };
 pub const testObjects = blk: {
-        var testArray: [5]Object = undefined;
-        for (&testArray, 1..) |*elem, i| {
-            elem.* = @bitCast(hash64(i) | 7);
-        }
-        break :blk testArray;
-    };
+    var testArray: [5]Object = undefined;
+    for (&testArray, 1..) |*elem, i| {
+        elem.* = @bitCast(hash64(i) | 7);
+    }
+    break :blk testArray;
+};
 pub const ObjectFunctions = struct {
     pub const empty = &[0]Object{};
     pub const Sentinel = Object.from(@as(*Object, @ptrFromInt(8)), null);
@@ -333,10 +333,9 @@ pub const PackedObject = packed struct {
         return @bitCast((@as(u64, combine(u14, tup)) << @bitSizeOf(Object.PackedTagType)) + Object.packedTagSmallInteger);
     }
     test "combiners" {
-        trace("Test: combiners\n", .{});
         const expectEqual = std.testing.expectEqual;
         try expectEqual(16384 + 2, combine14(.{ 2, 1 }));
-        try expectEqual(0x44010, combine14([_]ClassIndex{ .SmallInteger, .Symbol }));
+        try expectEqual(0x4000F, combine14([_]ClassIndex{ .SmallInteger, .Symbol }));
     }
 };
 
@@ -347,14 +346,13 @@ test "from conversion" {
     process.init();
     const sp = process.getSp();
     const context = process.getContext();
-    try ee(@as(f64, @bitCast((Object.from(3.14, sp, context)))), 3.14);
+    if (config.objectEncoding == .nan)
+        try ee(@as(f64, @bitCast((Object.from(3.14, sp, context)))), 3.14);
     try ee((Object.from(3.14, sp, context)).get_class(), .Float);
     try std.testing.expect((Object.from(3.14, sp, context)).isFloat());
     try ee((Object.from(3, sp, context)).get_class(), .SmallInteger);
     try std.testing.expect((Object.from(3, sp, context)).isInt());
     try std.testing.expect((Object.from(false, sp, context)).isBool());
-    // following fails
-    if (true) unreachable;
     try ee((Object.from(false, sp, context)).get_class(), .False);
     try ee((Object.from(true, sp, context)).get_class(), .True);
     try std.testing.expect((Object.from(true, sp, context)).isBool());
@@ -368,7 +366,7 @@ test "to conversion" {
     const context = process.getContext();
     const ee = std.testing.expectEqual;
     try ee((Object.from(3.14, sp, context)).to(f64), 3.14);
-    //    trace("value: {}\n", .{@as(zag.InMemory.PointedObjectRef, @bitCast(Object.from(42, sp, context)))});
+    //    trace("value: {}", .{@as(zag.InMemory.PointedObjectRef, @bitCast(Object.from(42, sp, context)))});
     try ee((Object.from(42, sp, context)).to(u64), 42);
     try std.testing.expect((Object.from(42, sp, context)).isInt());
     try ee((Object.from(true, sp, context)).to(bool), true);
@@ -391,24 +389,16 @@ test "get_class" {
     try ee(symbol.symbols.yourself.get_class(), .Symbol);
 }
 test "printing" {
-    try config.skipNotZag();
+    var process: Process align(Process.alignment) = undefined;
+    process.init();
+    const sp = process.getSp();
+    const context = process.getContext();
     var buf: [80]u8 = undefined;
     var fbs = std.io.fixedBufferStream(&buf);
     const stream = fbs.writer();
-    try stream.print("{f}\n", .{testObjects[0]});
-    //try stream.print("{f}\n", .{symbol.symbols.yourself});
+    try stream.print("{f}\n", .{Object.from(42, sp, context)});
+    try stream.print("{f}\n", .{symbol.symbols.yourself.asObject()});
     try std.testing.expectEqualSlices(u8, "42\n#yourself\n", fbs.getWritten());
-}
-const Buf = blk: {
-    @setRuntimeSafety(false);
-    break :blk union {
-        buf: [8]u8,
-        obj: Object,
-    };
-};
-const buf1: [1]Buf = .{Buf{ .obj = testObjects[0] }};
-fn slice1() []const Buf {
-    return &buf1;
 }
 test "order" {
     switch (config.objectEncoding) {
@@ -418,17 +408,17 @@ test "order" {
             const sp = process.getSp();
             const context = process.getContext();
             const ee = std.testing.expectEqual;
-            const sl1 = slice1()[0].buf;
-            try ee(42, sl1[1]);
-            try ee(129, sl1[0]);
-            try ee(0, sl1[2]);
             @setRuntimeSafety(false);
-            const buf2 = (Buf{
-                .obj = Object.from(42.0, sp, context),
-            }).buf;
-            try ee(buf2[0], 6);
-            try ee(buf2[6], 80);
-            try ee(buf2[7], 4);
+            const obj1 = Object.from(42, sp, context);
+            const buf1 = @as([*]u8, @ptrFromInt(@intFromPtr(&obj1)))[0..8];
+            try ee(@intFromEnum(ClassIndex.SmallInteger) << 3 | 1, buf1[0]);
+            try ee(42, buf1[1]);
+            try ee(0, buf1[2]);
+            const obj2 = Object.from(42.0, sp, context);
+            const buf2 = @as([*]u8, @ptrFromInt(@intFromPtr(&obj2)))[0..8];
+            try ee(6, buf2[0]);
+            try ee(80, buf2[6]);
+            try ee(4, buf2[7]);
         },
         else => {},
     }

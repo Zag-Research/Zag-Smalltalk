@@ -136,18 +136,12 @@ const SymbolsEnum = enum(u32) {
         return @bitCast(O{ .sym = &staticSymbols[index - 1] });
     }
 };
-const initialSymbolStrings = heap.compileStrings(.{ // must be in exactly same order as above
-    "=",                                   "value",                    "value:",                 "cull:",                   "yourself",        "doesNotUnderstand:",
-    "at:",                                 "new:",                     "valueWithArguments:",    "ifTrue:",                 "ifFalse:",        "ifNil:",
-    "ifNotNil:",                           "perform:",                 "+",                      "-",                       "*",               "~=",
-    "==",                                  "~~",                       "<",                      "<=",                      ",>=",             ">",
-    "at:put:",                             "value:value:",             "cull:cull:",             "ifTrue:ifFalse",          "ifFalse:ifTrue:", "ifNil:ifNotNil",
-    "ifNotNil:ifNil:",                     "perform:with:",            "perform:withArguments:", "value:value:value:",      "cull:cull:cull:", "perform:with:with:",
-    "perform:withArguments:inSuperclass:", "value:value:value:value:", "cull:cull:cull:cull:",   "perform:with:with:with:", "size",            "negated",
-    "new",                                 "self",                     "name",                   "class",                   "Class",           "Behavior",
-    "ClassDescription",                    "Metaclass",                "SmallInteger",           "noFallback",
-    // add any new values here
-                 "fibonacci",       "Object",
+const initialSymbolStrings = heap.compileStrings(blk: {
+    var array: [std.meta.fields(SymbolsEnum).len][]const u8 = undefined;
+    for (0.., std.meta.fields(SymbolsEnum)) |i, sym| {
+        array[i] = sym.name;
+    }
+    break :blk array;
 });
 var symbolTable = SymbolTable.init(&globalAllocator);
 pub fn asString(obj: Object) Object {
@@ -272,12 +266,12 @@ test "symbols match initialized symbol table" {
     const debugging = false;
     if (debugging) {
         for (&symbols.staticSymbols, 0..) |ss, i|
-            trace("\nss[{}] {x} {x}", .{ i, ss.header.hash, ss.data.unsigned });
+            trace("ss[{}] {x} {x}", .{ i, ss.header.hash, ss.data.unsigned });
     }
-    try expectEqual(1, symbolIndex(symbols.@"=".asObject()));
-    try expectEqual(1, symbolArity(symbols.@"=".asObject()));
-    try expectEqual(2, symbolIndex(symbols.value.asObject()));
+    try expectEqual(1, symbolIndex(symbols.value.asObject()));
     try expectEqual(0, symbolArity(symbols.value.asObject()));
+    try expectEqual(2, symbolIndex(symbols.@"=".asObject()));
+    try expectEqual(1, symbolArity(symbols.@"=".asObject()));
     try expectEqual(0, symbolArity(symbols.Object.asObject()));
     try expectEqual(2, symbolArity(symbols.@"at:put:".asObject()));
     try expectEqual(1, symbolArity(symbols.@"<=".asObject()));
@@ -285,8 +279,12 @@ test "symbols match initialized symbol table" {
     try expectEqual(0, symbolArity(symbols.Object.asObject()));
     switch (config.objectEncoding) {
         .zag => {
-            try expectEqual(0x5FB38689, symbols.Object.asObject().testU());
-            try expectEqual(0x211A24A89, symbols.@"value:value:".asObject().testU());
+            try expectEqual(0x5FB38681, symbols.Object.asObject().testU());
+            try expectEqual(0x2736AD181, symbols.@"value:value:".asObject().testU());
+        },
+        .nan => {
+            try expectEqual(0x0, symbols.Object.asObject().testU());
+            try expectEqual(0x0, symbols.@"value:value:".asObject().testU());
         },
         else => {},
     }
@@ -303,8 +301,8 @@ test "symbols match initialized symbol table" {
     try symbol.verify(symbols.@"+".asObject());
     try symbol.verify(symbols.size.asObject());
     try symbol.verify(symbols.Object.asObject());
-//    try std.testing.expect(mem.eql(u8, "valueWithArguments:"[0..], try symbol.asString(symbols.@"valueWithArguments:".asObject()).arrayAsSlice(u8)));
-    trace("verified: symbols match initialized symbol table\n", .{});
+    //    try std.testing.expect(mem.eql(u8, "valueWithArguments:"[0..], try symbol.asString(symbols.@"valueWithArguments:".asObject()).arrayAsSlice(u8)));
+    trace("verified: symbols match initialized symbol table", .{});
 }
 // these selectors will have special handling in a dispatch table
 // if anding a selector with QuickSelectorsMask == QuickSelectorsMatch
@@ -326,7 +324,7 @@ test "find key value for quick selectors" {
         }
         mask = mask | bitmask;
         match = match | bitmatch;
-        trace("mask  = {b:0>64}\nmatch = {b:0>64}\n", .{ mask, match });
+        trace("mask  = {b:0>64}\nmatch = {b:0>64}", .{ mask, match });
     }
     try std.testing.expectEqual(mask, QuickSelectorsMask);
     try std.testing.expectEqual(match, QuickSelectorsMatch);

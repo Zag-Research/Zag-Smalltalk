@@ -18,7 +18,7 @@ const Age = heap.Age;
 const class = @import("class.zig");
 const Sym = @import("symbol.zig").symbols;
 const indexSymbol0 = object.indexSymbol0;
-const print = std.debug.print;
+const print = std.log.err;
 const execute = @import("execute.zig");
 const SendCache = execute.SendCache;
 const TestExecution = execute.TestExecution;
@@ -70,12 +70,12 @@ pub const ByteCode = enum(i8) {
     _,
     const Self = @This();
     fn interpretReturn(pc: PC, sp: SP, process: *Process, context: *Context, _: Object, _: Extra) Result {
-        trace("\ninterpretReturn: 0x{x}", .{@intFromPtr(context.method)});
+        trace("interpretReturn: 0x{x}", .{@intFromPtr(context.method)});
         return @call(tailCall, interpret, .{ pc, sp, process, context, @as(Object, @bitCast(@intFromPtr(context.method))), undefined });
     }
     fn interpretFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
         const method = pc.compiledMethodPtr(1); // must be first word in method, pc already bumped
-        trace("\ninterpretFn: {} {} {} 0x{x}", .{ method.selector, selector, pc, @intFromPtr(method) });
+        trace("interpretFn: {} {} {} 0x{x}", .{ method.selector, selector, pc, @intFromPtr(method) });
         if (!method.selector.selectorEquals(selector)) {
             const dPc = cache.current();
             return @call(tailCall, dPc.prim, .{ dPc.next(), sp, process, context, extra.next() });
@@ -91,7 +91,7 @@ pub const ByteCode = enum(i8) {
         const inlines = @import("primitives.zig").inlines;
         interp: while (true) {
             const code = pc[0];
-            //            trace("\ninterp: [0x{x}]: {} {any}", .{ @intFromPtr(pc), code, process.getStack(sp) });
+            //            trace("interp: [0x{x}]: {} {any}", .{ @intFromPtr(pc), code, process.getStack(sp) });
             pc += 1;
             branch: while (true) {
                 switch (code) {
@@ -282,7 +282,7 @@ pub fn CompileTimeByteCodeMethod(comptime counts: execute.CountSizes) type {
             const footer = heap.HeapObject.calcHeapObject(object.ClassIndex.CompiledMethod, @offsetOf(Self, "references") / 8 + refsSize, name.hash24(), Age.static, null, Object, false) catch @compileError("too many refs");
             const header = heap.HeapObject.staticHeaderWithLength(@sizeOf(Self) / 8 - 2);
             //            @compileLog(codeSize,refsSize);
-            //            trace("\nfooter={}",.{footer});
+            //            trace("footer={}",.{footer});
             return .{
                 .header = header,
                 .selector = name,
@@ -410,7 +410,7 @@ test "compiling method" {
     //    m.update(mref,mcmp);
     var t = m.code[0..];
     for (m.code, 0..) |v, idx| {
-        trace("t[{}] = {}\n", .{ idx, v });
+        trace("t[{}] = {}", .{ idx, v });
     }
     try expectEqual(t.len, 11);
     try expectEqual(t[0], b.return_tos);

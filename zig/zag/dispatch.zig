@@ -33,7 +33,7 @@ const DispatchHandler = struct {
     const loadFactor = 70; // hashing load factor
     var dispatches = [_]*Dispatch{&Dispatch.empty} ** config.max_classes;
     inline fn lookupMethodForClass(ci: ClassIndex, signature: Signature) *const CompiledMethod {
-        trace("lookupMethodForClass({} {f})\n", .{ ci, signature });
+        trace("lookupMethodForClass({} {f})", .{ ci, signature });
         if (dispatches[@intFromEnum(ci)].lookupMethod(signature)) |method|
             return method;
         return loadMethodForClass(ci, signature);
@@ -41,7 +41,7 @@ const DispatchHandler = struct {
     fn loadMethodForClass(ci: ClassIndex, signature: Signature) *const CompiledMethod {
         if (defaultForTest != void)
             return defaultForTest.loadMethodForClass(ci, signature);
-        std.debug.print("loadMethodForClass({} {b} {f})\n", .{ ci, @as(u64, @bitCast(signature)), signature });
+        std.log.err("loadMethodForClass({} {b} {f})\n", .{ ci, @as(u64, @bitCast(signature)), signature });
         @panic("Method not found");
     }
     fn stats(index: ClassIndex) Dispatch.Stats {
@@ -52,16 +52,16 @@ const DispatchHandler = struct {
     }
     fn addMethod(method: *const CompiledMethod) void {
         const index = method.signature.getClassIndex();
-        //std.debug.print("addMethod({b} {f})\n", .{ @as(u64, @bitCast(method.signature)), method.signature });
-        trace("[addMethod] signature: {f}\n", .{method.signature});
+        //std.log.err("addMethod({b} {f})\n", .{ @as(u64, @bitCast(method.signature)), method.signature });
+        trace("[addMethod] signature: {f}", .{method.signature});
         if (dispatches[index].addIfAllocated(method)) return;
         while (true) {
-            trace("[addMethod] index: {}\n", .{index});
+            trace("[addMethod] index: {}", .{index});
             if (dispatches[index].lock()) |dispatch| {
                 defer {
                     dispatch.state = if (dispatch != &Dispatch.empty) .dead else .clean;
                 }
-                trace("locked {} {}\n", .{ index, dispatch });
+                trace("locked {} {}", .{ index, dispatch });
                 var numMethods: usize = 3;
                 while (true) {
                     numMethods = @max(numMethods, dispatch.nMethods + 1) * 100 / loadFactor;
@@ -69,15 +69,15 @@ const DispatchHandler = struct {
                     if (dispatch.addMethodsTo(newDispatch, method)) {
                         dispatches[index] = newDispatch;
                         // for (newDispatch.methodsAllocatedSlice(), 0..) |*ptr,idx| {
-                        //     trace("[{}]: {*}\n", .{idx, ptr.method});
+                        //     trace("[{}]: {*}", .{idx, ptr.method});
                         // }
-                        trace("[addMethod] return\n", .{});
+                        trace("[addMethod] return", .{});
                         return;
                     }
                 }
             }
         }
-        trace("[addMethod] end\n", .{});
+        trace("[addMethod] end", .{});
     }
     fn alloc(words: usize) *Dispatch {
         const nMethods = smallestPrimeAtLeast(words);
@@ -343,7 +343,7 @@ fn doDispatch(tE: *Execution, dispatch: *Dispatch, extra: Extra) []Object {
 //     try std.testing.expectEqual(dispatch.add(@ptrCast(&code2)), error.Conflict);
 // }
 pub fn inlinePrimitiveFailed(pc: PC, sp: SP, process: *Process, context: *Context, _: Extra) Result {
-    trace("Inline primitive failed, sp: {}\n", .{sp});
+    trace("Inline primitive failed, sp: {}", .{sp});
     _ = pc.prev().prim();
     _ = .{ pc, sp, process, context, unreachable };
 }
@@ -354,12 +354,12 @@ pub const threadedFunctions = struct {
             sp.traceStack("returnSelf");
             if (extra.selfAddress(sp)) |address| {
                 const newSp: SP = @ptrCast(address);
-                trace("returnSelf: {*}->{*} {f}\n", .{ sp, newSp, extra });
+                trace("returnSelf: {*}->{*} {f}", .{ sp, newSp, extra });
                 return @call(tailCall, process.check(context.npc), .{ context.tpc, newSp, process, context, Extra.fromContextData(context.contextDataPtr(sp)) });
             }
             const newSp, const callerContext = context.pop(process, sp);
             sp.traceStack("returnSelf after pop");
-            trace("returnSelf: {*}->{*}\n", .{ sp, newSp });
+            trace("returnSelf: {*}->{*}", .{ sp, newSp });
             sp.traceStack("returnSelf after pop");
             return @call(tailCall, process.branchCheck(callerContext.getNPc()), .{ callerContext.getTPc(), newSp, process, callerContext, Extra.fromContextData(callerContext.contextData) });
         }
@@ -387,12 +387,12 @@ pub const threadedFunctions = struct {
             sp.traceStack("returnTop");
             if (extra.selfAddress(sp)) |address| {
                 const newSp: SP = @ptrCast(address);
-                trace("returnTop: {f} {*} {*} {f}\n", .{ top, sp, newSp, extra });
+                trace("returnTop: {f} {*} {*} {f}", .{ top, sp, newSp, extra });
                 newSp.top = top;
                 return @call(tailCall, process.check(context.npc), .{ context.tpc, newSp, process, context, Extra.fromContextData(context.contextDataPtr(sp)) });
             }
             const newSp, const callerContext = context.pop(process, sp);
-            trace("returnTop: {f} {*} {*} {*} {f}\n", .{ top, newSp, callerContext, callerContext.npc, callerContext.tpc });
+            trace("returnTop: {f} {*} {*} {*} {f}", .{ top, newSp, callerContext, callerContext.npc, callerContext.tpc });
             newSp.top = top;
             return @call(tailCall, process.branchCheck(callerContext.npc), .{ callerContext.tpc, newSp, process, callerContext, Extra.fromContextData(callerContext.contextDataPtr(sp)) });
         }
@@ -426,15 +426,15 @@ pub const threadedFunctions = struct {
         const methodSignature = method.signature;
         const signature = selector.withClass(class);
         if (methodSignature == signature) {
-            //trace("getMethod: cached {f} {any}\n", .{ signature, method });
+            //trace("getMethod: cached {f} {any}", .{ signature, method });
             return method;
         }
         method = class.lookupMethodForClass(signature);
         if (methodSignature.isEmpty()) {
-            trace("getMethod: patch {f} {any}\n", .{ signature, method });
+            trace("getMethod: patch {f} {any}", .{ signature, method });
             methodAddress.patchPtr().patchMethod(method);
         } else {
-            //trace("getMethod: alt {f} {any}\n", .{ signature, method });
+            //trace("getMethod: alt {f} {any}", .{ signature, method });
         }
         return method;
     }
@@ -446,7 +446,7 @@ pub const threadedFunctions = struct {
             const newPc = method.codePc();
             const newSp, const newContext =
                 if (extra.installContextIfNone(sp, process, context)) |new| .{ new.sp, new.context } else .{ sp, context };
-            //trace("sending...: sp:{x} {f} method:{x}\n", .{ @intFromPtr(sp), extra, @intFromPtr(method) });
+            //trace("sending...: sp:{x} {f} method:{x}", .{ @intFromPtr(sp), extra, @intFromPtr(method) });
             newSp.traceStack("send maybe new");
             newContext.setReturn(pc.next2());
             return @call(tailCall, newPc.prim(), .{ newPc.next(), newSp, process, newContext, Extra.forMethod(method, newSp) });
@@ -455,13 +455,13 @@ pub const threadedFunctions = struct {
     pub const send0 = struct {
         pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
             sp.traceStack("send");
-            trace("send0: {f} {f}\n", .{ pc, extra });
+            trace("send0: {f} {f}", .{ pc, extra });
             const signature = pc.signature();
             const method = getMethod(pc, signature, sp.top);
             const newPc = method.codePc();
             const newSp, const newContext =
                 if (extra.installContextIfNone(sp, process, context)) |new| .{ new.sp, new.context } else .{ sp, context };
-            //trace("sending...: sp:{x} {f} method:{x}\n", .{ @intFromPtr(sp), extra, @intFromPtr(method) });
+            //trace("sending...: sp:{x} {f} method:{x}", .{ @intFromPtr(sp), extra, @intFromPtr(method) });
             newSp.traceStack("send maybe new");
             newContext.setReturn(pc.next2());
             return @call(tailCall, newPc.prim(), .{ newPc.next(), newSp, process, newContext, Extra.forMethod(method, newSp) });

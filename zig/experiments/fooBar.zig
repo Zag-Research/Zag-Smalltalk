@@ -144,7 +144,7 @@ const p = @import("zag/primitives.zig").primitives;
 //         var te =  TestExecution.new();
 //         te.init();
 //         const result = te.run(objs[0..],method);
-//         std.debug.print("\nfib({}) = {any}",.{n,result});
+//         std.log.err("\nfib({}) = {any}",.{n,result});
 //         try std.testing.expectEqual(result.len,1);
 //         try std.testing.expectEqual(result[0].toInt(),@truncate(i51,fibNative(n)));
 //     }

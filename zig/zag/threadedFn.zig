@@ -141,9 +141,9 @@ const nProduction = enumAndFunctions[2];
 
 test "print threadedFns" {
     for (0..nProduction) |index| {
-        trace("{s} \n", .{@tagName(@as(Enum, @enumFromInt(index)))});
+        trace("{s} ", .{@tagName(@as(Enum, @enumFromInt(index)))});
     }
-    trace("\n", .{});
+    trace("", .{});
 }
 
 pub fn initialize() void {}
@@ -165,14 +165,14 @@ test "number of threaded functions" {
         inline for (std.meta.fields(Enum), 0..) |f, i| {
             trace("{s:<25}", .{f.name});
             if (i < functions.len) {
-                trace("{x:0>16}\n", .{@intFromPtr(functions[i])});
-            } else trace("?\n", .{});
+                trace("{x:0>16}", .{@intFromPtr(functions[i])});
+            } else trace("?", .{});
         }
         return err;
     };
 }
 // test "test list" {
 //     for (@import("builtin").test_functions) |f| {
-//         trace("tests: {s}\n",.{f.name});
+//         trace("tests: {s}",.{f.name});
 //     }
 // }

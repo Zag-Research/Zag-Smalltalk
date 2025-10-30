@@ -688,7 +688,7 @@ pub fn dumpStackPointerAddr(prefix: []const u8) void {
         : [argc] "={sp}" (-> [*]usize),
     );
     const sps: []usize = spp[0..14];
-    std.debug.print("{s} lr = 0x{x} sp = 0x{x} {any}\n", .{ prefix, lr, sp, sps });
+    std.log.err("{s} lr = 0x{x} sp = 0x{x} {any}\n", .{ prefix, lr, sp, sps });
 }
 pub fn main() !void {
     dumpStackPointerAddr("main");

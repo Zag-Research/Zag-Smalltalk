@@ -57,6 +57,6 @@ fn testExecute(method: CompiledMethodPtr) []Object {
     te.init();
     var objs = [_]Object{};
     const result = te.run(objs[0..], method);
-    trace("result = {any}\n", .{result});
+    trace("result = {any}", .{result});
     return result;
 }

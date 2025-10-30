@@ -43,7 +43,7 @@ const fibThread = if (threadIncluded) struct {
             var te = TestExecution.new();
             te.init();
             const result = te.run(objs[0..], fibThreadMethod);
-            std.debug.print("\nfib({}) = {any}", .{ n, result });
+            std.log.err("\nfib({}) = {any}", .{ n, result });
             try std.testing.expectEqual(result.len, 1);
             try std.testing.expectEqual(result[0].toInt(), @as(i51, @truncate(fibNative.fib(n))));
         }
@@ -96,7 +96,7 @@ const fibDispatch = if (dispatchIncluded) struct {
             var te = TestExecution.new();
             te.init();
             const result = te.run(objs[0..], start);
-            std.debug.print("\nfib({}) = {any}", .{ n, result });
+            std.log.err("\nfib({}) = {any}", .{ n, result });
             std.testing.expectEqual(result.len, 1) catch @panic("result.len");
             try std.testing.expectEqual(result[0].toInt(), @as(i51, @truncate(fibNative.fib(n))));
         }
@@ -168,7 +168,7 @@ const fibByte = if (byteIncluded) struct {
             var te = TestExecution.new();
             te.init();
             const result = te.run(objs[0..], method);
-            std.debug.print("\nfib({}) = {any}", .{ n, result });
+            std.log.err("\nfib({}) = {any}", .{ n, result });
             try std.testing.expectEqual(result.len, 1);
             try std.testing.expectEqual(result[0].toInt(), @as(i51, @truncate(fibNative.fib(n))));
         }
@@ -224,7 +224,7 @@ const fibFull = if (fullIncluded) struct {
             var te = TestExecution.new();
             te.init();
             const result = te.run(objs[0..], method);
-            std.debug.print("\nfib({}) = {any}", .{ n, result });
+            std.log.err("\nfib({}) = {any}", .{ n, result });
             try std.testing.expectEqual(result.len, 1);
             try std.testing.expectEqual(result[0].toInt(), @as(i51, @truncate(fibNative.fib(n))));
         }
@@ -300,7 +300,7 @@ const fibFull = if (fullIncluded) struct {
         @"False>>ifTrue:".asCompiledMethodPtr().forDispatch(.False);
         fibFull.asCompiledMethodPtr().forDispatch(.SmallInteger);
 
-        trace("\nfibFullSetup: code pointers" ++
+        trace("fibFullSetup: code pointers" ++
             \\  @Integer>>+={x}
             \\  @Integer>>-={x}
             \\  @Integer>><=={x}
@@ -342,7 +342,7 @@ const Stats = @import("zag/utilities/stats.zig").Stats;
 pub fn timing(args: [][]const u8, default: bool) !void {
     const nRuns = 5;
     const eql = std.mem.eql;
-    const print = std.debug.print;
+    const print = std.log.err;
     var stat = Stats(usize, nRuns, .milliseconds).init();
     const cached = "";
     for (args) |arg| {

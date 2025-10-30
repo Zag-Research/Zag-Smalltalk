@@ -65,7 +65,7 @@ test "fibObject" {
     var n: i32 = 1;
     while (n <= testReps) : (n += 1) {
         const result = fibObject(Object.from(n));
-        std.debug.print("\nfib({}) = {any}", .{ n, result });
+        std.log.err("\nfib({}) = {any}", .{ n, result });
         try std.testing.expectEqual(result.toInt(), @as(i51, @truncate(fibNative(n))));
     }
 }

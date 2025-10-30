@@ -205,7 +205,7 @@ inline fn needsCheck(self: *align(1) const Self) bool {
     return (@intFromPtr(self) & checkFlags) != 0;
 }
 fn fullCheck(pc: PC, sp: SP, process: *align(1) Self, context: *Context, extra: Extra) Result {
-    trace("fullCheck: {f} {}\n", .{ extra, process.header().singleStepping });
+    trace("fullCheck: {f} {}", .{ extra, process.header().singleStepping });
     // if (process.header().singleStepping)
     //     return @call(tailCall, Debugger.step, .{ pc, sp, process, context, extra });
     return @call(tailCall, pc.prev().prim(), .{ pc, sp, process, context, extra });
@@ -238,39 +238,39 @@ const Debugger = struct {
         trace(" {f}", .{primPC});
         const primitive = primPC.prim();
         const method = if (extra.getMethod()) |cm| cm else context.method;
-        trace(" {*} {*}\n", .{ primitive, method });
-        std.debug.print("{f}:{d:0>3}: ", .{ method.signature, primPC.offset(method) });
+        trace(" {*} {*}", .{ primitive, method });
+        std.log.err("{f}:{d:0>3}: ", .{ method.signature, primPC.offset(method) });
         if (@import("threadedFn.zig").find(primitive)) |name| {
-            std.debug.print("{}", .{name});
+            std.log.err("{}", .{name});
             switch (name) {
                 .push => {
                     const variable = pc.variable();
                     if (variable.stackOffset == 0) {
-                        std.debug.print(" self", .{});
+                        std.log.err(" self", .{});
                     } else {
-                        std.debug.print(" {f}", .{variable});
+                        std.log.err(" {f}", .{variable});
                     }
                 },
                 .pushLiteral => {
-                    std.debug.print(" {f}", .{pc.object()});
+                    std.log.err(" {f}", .{pc.object()});
                 },
                 .branchFalse, .branchTrue, .branch => {
-                    std.debug.print(" {d:0>3}", .{pc.targetPC().offset(method)});
+                    std.log.err(" {d:0>3}", .{pc.targetPC().offset(method)});
                 },
                 else => {},
             }
-            std.debug.print("\n", .{});
+            std.log.err("\n", .{});
         } else if (@import("primitives.zig").findPrimitiveAtPtr(primitive)) |modPrim| {
-            std.debug.print("{s}:{s}", .{ modPrim.module, modPrim.name });
+            std.log.err("{s}:{s}", .{ modPrim.module, modPrim.name });
             if (modPrim.number > 0) {
-                std.debug.print("({d})", .{modPrim.number});
+                std.log.err("({d})", .{modPrim.number});
             }
-            std.debug.print("\n", .{});
+            std.log.err("\n", .{});
         } else {
-            std.debug.print("{x}\n", .{@intFromPtr(primitive)});
+            std.log.err("{x}\n", .{@intFromPtr(primitive)});
         }
         // while (in.takeDelimiterExclusive('\n')) |line| {
-        //     std.debug.print("you typed: {s}\n", .{line});
+        //     std.log.err("you typed: {s}\n", .{line});
         // } else |err| switch (err) {
         //     error.EndOfStream => {},
         //     else =>  |_| @panic("fail read stdin"),
@@ -414,7 +414,8 @@ const Stack = struct {
     }
     pub inline fn reserve(self: SP, n: anytype) ?SP {
         const newP = @intFromPtr(self) - @sizeOf(Object) * n;
-        if (newP < @intFromPtr(&self.theProcess().stack)) {@branchHint(.unlikely);
+        if (newP < @intFromPtr(&self.theProcess().stack)) {
+            @branchHint(.unlikely);
             return null;
         }
         return @ptrFromInt(newP);
@@ -454,14 +455,14 @@ const Stack = struct {
         return self.sliceTo(self.endOfStack());
     }
     pub inline fn dumpStack(self: SP, why: []const u8) void {
-        std.debug.print("dumpStack ({s})\n", .{why});
+        std.log.err("dumpStack ({s})\n", .{why});
         for (self.getStack()) |*obj|
-            std.debug.print("[{x:0>10}]: {x:0>16}\n", .{ @intFromPtr(obj), @as(u64, @bitCast(obj.*)) });
+            std.log.err("[{x:0>10}]: {x:0>16}\n", .{ @intFromPtr(obj), @as(u64, @bitCast(obj.*)) });
     }
     pub inline fn traceStack(self: SP, why: []const u8) void {
-        trace("traceStack ({s})\n", .{why});
+        trace("traceStack ({s})", .{why});
         for (self.getStack()) |*obj|
-            trace("[{x:0>10}]: {x:0>16}\n", .{ @intFromPtr(obj), @as(u64, @bitCast(obj.*)) });
+            trace("[{x:0>10}]: {x:0>16}", .{ @intFromPtr(obj), @as(u64, @bitCast(obj.*)) });
     }
     pub inline fn theProcess(self: SP) *Process {
         return @ptrFromInt(@intFromPtr(self) & alignment_mask);
@@ -474,7 +475,7 @@ const Stack = struct {
         const process = self.theProcess();
         if (aI.objectSize(Process.maxNurseryObjectSize)) |size| {
             for (0..2) |_| {
-//                if (true) @panic("here 490");
+                //                if (true) @panic("here 490");
                 const result = HeapObject.alignProperBoundary(process.h.currHp);
                 const newHp = result + size + 1;
                 if (@intFromPtr(newHp) <= @intFromPtr(process.h.currEnd)) {
@@ -494,7 +495,7 @@ const Stack = struct {
         @panic("Need Global Allocation");
     }
     pub fn spillStackAndPush(sp: SP, value: Object, context: *Context, extra: Extra) struct { SP, *Context, Extra } {
-        const newSp, const newContext, const newExtra = sp.spillStackAndReserve(1,context, extra);
+        const newSp, const newContext, const newExtra = sp.spillStackAndReserve(1, context, extra);
         newSp.top = value;
         return .{ newSp, newContext, newExtra };
     }
@@ -510,7 +511,6 @@ const Stack = struct {
 };
 
 test "Stack" {
-    trace("Test: Stack\n", .{});
     var process: Self align(alignment) = undefined;
     process.init();
     const sp = process.getSp();

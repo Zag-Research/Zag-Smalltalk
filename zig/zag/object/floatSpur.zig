@@ -207,7 +207,7 @@ pub fn main() void {
 
     if (false) {
         for (valid_values) |val| {
-            std.debug.print("0x{x:0>16},\n", .{encode(val) catch unreachable});
+            std.log.err("0x{x:0>16},\n", .{encode(val) catch unreachable});
         }
     }
 
@@ -227,7 +227,7 @@ pub fn main() void {
         }
     }
     const dave_invalid_time = timer.lap();
-    std.debug.print("dave time: {d:.3}ns {d:.3}ns\n", .{ @as(f64, @floatFromInt(dave_valid_time))*ns, @as(f64, @floatFromInt(dave_invalid_time))*ns });
+    std.log.err("dave time: {d:.3}ns {d:.3}ns\n", .{ @as(f64, @floatFromInt(dave_valid_time))*ns, @as(f64, @floatFromInt(dave_invalid_time))*ns });
 
     _ = timer.lap();
     for (0..iterations / valid_values.len) |_| {
@@ -242,7 +242,7 @@ pub fn main() void {
         }
     }
     const spec_invalid_time = timer.lap();
-    std.debug.print("Spec time: {d:.3}ns {d:.3}ns\n", .{ @as(f64, @floatFromInt(spec_valid_time))*ns, @as(f64, @floatFromInt(spec_invalid_time))*ns });
+    std.log.err("Spec time: {d:.3}ns {d:.3}ns\n", .{ @as(f64, @floatFromInt(spec_valid_time))*ns, @as(f64, @floatFromInt(spec_invalid_time))*ns });
 
     _ = timer.lap();
     encode_valid(iterations);
@@ -252,11 +252,11 @@ pub fn main() void {
     std.mem.doNotOptimizeAway(decode_valid(iterations));
     const decode_time = timer.lap();
 
-    std.debug.print("Foo time: {d:.3}ns {d:.3}ns {d:.3}ns\n", .{ @as(f64, @floatFromInt(valid_time))*ns, @as(f64, @floatFromInt(invalid_time))*ns, @as(f64, @floatFromInt(decode_time))*ns });
+    std.log.err("Foo time: {d:.3}ns {d:.3}ns {d:.3}ns\n", .{ @as(f64, @floatFromInt(valid_time))*ns, @as(f64, @floatFromInt(invalid_time))*ns, @as(f64, @floatFromInt(decode_time))*ns });
 
-    std.debug.print("Dave is {d:.2}x {d:.2}x faster than Foo\n", .{ delta(dave_valid_time, valid_time), delta(dave_invalid_time, invalid_time) });
-    std.debug.print("Spec is {d:.2}x {d:.2}x faster than Foo\n", .{ delta(spec_valid_time, valid_time), delta(spec_invalid_time, invalid_time) });
-    std.debug.print("Dave is {d:.2}x {d:.2}x faster than Spec\n", .{ delta(dave_valid_time, spec_valid_time), delta(dave_invalid_time, spec_invalid_time) });
+    std.log.err("Dave is {d:.2}x {d:.2}x faster than Foo\n", .{ delta(dave_valid_time, valid_time), delta(dave_invalid_time, invalid_time) });
+    std.log.err("Spec is {d:.2}x {d:.2}x faster than Foo\n", .{ delta(spec_valid_time, valid_time), delta(spec_invalid_time, invalid_time) });
+    std.log.err("Dave is {d:.2}x {d:.2}x faster than Spec\n", .{ delta(dave_valid_time, spec_valid_time), delta(dave_invalid_time, spec_invalid_time) });
 }
 
 fn delta(spec: u64, check: u64) f64 {

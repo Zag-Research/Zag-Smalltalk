@@ -124,7 +124,7 @@ test "prime diffs" {
             tests += 1;
         }
         if (i + 1 == p) {
-            trace("average bit tests - first {}: {d:.2} ({} primes)\n", .{ p, @as(f64, @floatFromInt(tests)) / @as(f64, @floatFromInt(n)), n });
+            trace("average bit tests - first {}: {d:.2} ({} primes)", .{ p, @as(f64, @floatFromInt(tests)) / @as(f64, @floatFromInt(n)), n });
             p *= 16;
             tests = 0;
         }

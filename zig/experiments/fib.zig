@@ -104,13 +104,13 @@ const fibInteger = struct {
         fib.initExecute();
         zag.dispatch.addMethod(@ptrCast(&fib));
         if (zag.config.show_trace) {
-            std.debug.print("\n", .{});
+            std.log.err("\n", .{});
             fib.dump();
         } else {
             const threaded = runIt({}, 0);
             const native = fibCheck(fibN);
             if (threaded != native) {
-                std.debug.print("threaded={}, native={}\n", .{ threaded, native });
+                std.log.err("threaded={}, native={}\n", .{ threaded, native });
                 unreachable;
             }
         }
@@ -120,7 +120,7 @@ const fibInteger = struct {
         if (obj.nativeU()) |result| {
             return result + proof;
         }
-        std.debug.print("fib object: {f}\n", .{obj});
+        std.log.err("fib object: {f}\n", .{obj});
         unreachable;
     }
 };
@@ -161,13 +161,13 @@ const fibInteger0 = struct {
         fib.initExecute();
         zag.dispatch.addMethod(@ptrCast(&fib));
         if (zag.config.show_trace) {
-            std.debug.print("\n", .{});
+            std.log.err("\n", .{});
             fib.dump();
         } else {
             const threaded = runIt({}, 0);
             const native = fibCheck(fibN);
             if (threaded != native) {
-                std.debug.print("threaded={}, native={}\n", .{ threaded, native });
+                std.log.err("threaded={}, native={}\n", .{ threaded, native });
                 unreachable;
             }
         }
@@ -177,7 +177,7 @@ const fibInteger0 = struct {
         if (obj.nativeU()) |result| {
             return result + proof;
         }
-        std.debug.print("fib object: {f}\n", .{obj});
+        std.log.err("fib object: {f}\n", .{obj});
         unreachable;
     }
 };
@@ -220,13 +220,13 @@ const fibIntegerBr = struct {
         fib.initExecute();
         zag.dispatch.addMethod(@ptrCast(&fib));
         if (zag.config.show_trace) {
-            std.debug.print("\n", .{});
+            std.log.err("\n", .{});
             fib.dump();
         } else {
             const threaded = runIt({}, 0);
             const native = fibCheck(fibN);
             if (threaded != native) {
-                std.debug.print("threaded={}, native={}\n", .{ threaded, native });
+                std.log.err("threaded={}, native={}\n", .{ threaded, native });
                 unreachable;
             }
         }
@@ -236,7 +236,7 @@ const fibIntegerBr = struct {
         if (obj.nativeU()) |result| {
             return result + proof;
         }
-        std.debug.print("fib object: {f}\n", .{obj});
+        std.log.err("fib object: {f}\n", .{obj});
         unreachable;
     }
 };
@@ -404,13 +404,13 @@ const fibIntegerCnP = struct {
         fib.executeFn = &cps1;
         zag.dispatch.addMethod(@ptrCast(&fib));
         if (zag.config.show_trace) {
-            std.debug.print("\n", .{});
+            std.log.err("\n", .{});
             fib.dump();
         } else {
             const threaded = runIt({}, 0);
             const native = fibCheck(fibN);
             if (threaded != native) {
-                std.debug.print("threaded={}, native={}\n", .{ threaded, native });
+                std.log.err("threaded={}, native={}\n", .{ threaded, native });
                 @panic("mismatch");
             }
         }
@@ -420,7 +420,7 @@ const fibIntegerCnP = struct {
         if (obj.nativeU()) |result| {
             return result + proof;
         }
-        std.debug.print("fib object: {f}\n", .{obj});
+        std.log.err("fib object: {f}\n", .{obj});
         unreachable;
     }
 };
@@ -461,14 +461,14 @@ const fibFloat = struct {
         fib.initExecute();
         zag.dispatch.addMethod(@ptrCast(&fib));
         if (zag.config.show_trace) {
-            std.debug.print("\n", .{});
+            std.log.err("\n", .{});
             fib.dump();
         } else {
             const obj = exe.sendTo(Sym.fibonacci.asObject(), exe.object(@as(f64, @floatFromInt(fibN)))) catch unreachable;
             if (obj.nativeF()) |threaded| {
                 const native: f64 = @floatFromInt(fibCheck(fibN));
                 if (threaded != native) {
-                    std.debug.print("threaded={}, native={}\n", .{ threaded, native });
+                    std.log.err("threaded={}, native={}\n", .{ threaded, native });
                     @panic("mismatch");
                 }
             }
@@ -476,12 +476,12 @@ const fibFloat = struct {
     }
     fn runIt(comptime _: void, proof: usize) usize {
         const receiver = exe.object(@as(f64, @floatFromInt(fibN)));
-        if (zag.config.show_trace) std.debug.print("receiver={x}\n", .{receiver.rawU()});
+        if (zag.config.show_trace) std.log.err("receiver={x}\n", .{receiver.rawU()});
         _ = exe.sendTo(Sym.fibonacci.asObject(), receiver) catch @panic("Error sending message");
         return proof;
     }
 };
-const print = std.debug.print;
+const print = std.log.err;
 fn showDelta(infos: ?*Info, new: u64, target: []const u8) void {
     if (infos) |info| {
         if (std.mem.eql(u8, info.name, target)) {

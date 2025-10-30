@@ -55,10 +55,10 @@ pub fn main() void {
     _ = timer.lap();
     std.mem.doNotOptimizeAway(decode_valid(iterations, &decodez));
     const z_decode_time = timer.lap();
-    std.debug.print("z time: {d:.3}ns\n", .{ @as(f64, @floatFromInt(z_decode_time))*ns });
+    std.log.err("z time: {d:.3}ns\n", .{ @as(f64, @floatFromInt(z_decode_time))*ns });
 
     _ = timer.lap();
     std.mem.doNotOptimizeAway(decode_valid(iterations, &decodes));
     const s_decode_time = timer.lap();
-    std.debug.print("s time: {d:.3}ns\n", .{ @as(f64, @floatFromInt(s_decode_time))*ns });
+    std.log.err("s time: {d:.3}ns\n", .{ @as(f64, @floatFromInt(s_decode_time))*ns });
 }

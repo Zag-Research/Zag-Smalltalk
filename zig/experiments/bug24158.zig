@@ -17,7 +17,7 @@ fn initSymbol(sym: *PointedObject) void {
     };
 }
 test "make it run" {
-    std.debug.print("in test {}\n", .{&staticSymbols[0]});
+    std.log.err("in test {}\n", .{&staticSymbols[0]});
 }
 const PointedObject = packed struct {
     header: HeapHeader,

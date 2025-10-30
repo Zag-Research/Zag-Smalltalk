@@ -69,7 +69,7 @@ test "benchObject" {
     var n: i32 = 1;
     while (n < 10) : (n += 1) {
         const result = benchObject(Object.from(n));
-        std.debug.print("\nbench({}) = {any}", .{ n, result });
+        std.log.err("\nbench({}) = {any}", .{ n, result });
         try std.testing.expectEqual(result.toInt(), @as(i51, @truncate(benchNative(n))));
     }
 }
@@ -185,7 +185,7 @@ test "benchThread" {
         var te = TestExecution.new();
         te.init();
         const result = te.run(objs[0..], method);
-        std.debug.print("\nbench({}) = {any}", .{ n, result });
+        std.log.err("\nbench({}) = {any}", .{ n, result });
         try std.testing.expectEqual(result.len, 1);
         try std.testing.expectEqual(result[0].toInt(), @as(i51, @truncate(benchNative(n))));
     }
@@ -207,7 +207,7 @@ test "benchComp" {
         var te = TestExecution.new();
         te.init();
         const result = te.run(objs[0..], method.asCompiledMethodPtr());
-        std.debug.print("bench({}) = {any}\n", .{ n, result });
+        std.log.err("bench({}) = {any}\n", .{ n, result });
         try std.testing.expectEqual(result.len, 1);
         try std.testing.expectEqual(result[0].toInt(), @as(i51, @truncate(benchNative(n))));
     }
@@ -261,7 +261,7 @@ fn timeComp(n: i64) void {
 //         var te =  TestExecution.new();
 //         te.init();
 //         const result = te.run(objs[0..],method);
-//         std.debug.print("bench({}) = {any}\n",.{n,result});
+//         std.log.err("bench({}) = {any}\n",.{n,result});
 //         try std.testing.expectEqual(result.len,1);
 //         try std.testing.expectEqual(result[0].toInt(),@truncate(i51,benchNative(n)));
 //     }

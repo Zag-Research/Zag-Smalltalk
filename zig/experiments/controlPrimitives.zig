@@ -33,14 +33,14 @@ fn popInstVar(pc: PC, sp: SP, process: *Process, context: *Context, signature: E
 fn popLocalData(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
     const ref = pc.uint();
     const local = context.getLocal(ref & 0xff);
-    trace("\npopLocalData: {} {}", .{ ref, sp.top });
+    trace("popLocalData: {} {}", .{ ref, sp.top });
     local.setField(ref >> 12, sp.top);
     return @call(tailCall, process.check(pc.prim2()), .{ pc.next2(), sp.drop(), process, context, undefined });
 }
 fn popLocalField(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
     const ref = pc.uint();
     const local = context.getLocal(ref & 0xfff);
-    trace("\npopLocalField: {} {}", .{ ref, sp.top });
+    trace("popLocalField: {} {}", .{ ref, sp.top });
     local.setField(ref >> 12, sp.top);
     return @call(tailCall, process.check(pc.prim2()), .{ pc.next2(), sp.drop(), process, context, undefined });
 }
@@ -116,7 +116,7 @@ fn primitiveFailed(pc: PC, sp: SP, process: *Process, context: *Context, signatu
     _ = .{ pc, sp, process, context, signature, unreachable };
 }
 fn returnWithContext(_: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
-    trace("\nreturnWithContext: {any} -> ", .{context.stack(sp, process)});
+    trace("returnWithContext: {any} -> ", .{context.stack(sp, process)});
     const result = context.pop(process);
     const newSp = result.sp;
     var callerContext = result.ctxt;
@@ -124,7 +124,7 @@ fn returnWithContext(_: PC, sp: SP, process: *Process, context: *Context, extra:
     if (stack.len < 20) {
         trace("{any}", .{stack});
     } else trace("{}", .{stack.len});
-    trace("\nrWC: sp={*} newSp={*}\n", .{ sp, newSp });
+    trace("rWC: sp={*} newSp={*}", .{ sp, newSp });
     return @call(tailCall, process.check(callerContext.getNPc()), .{ callerContext.getTPc(), newSp, process, @constCast(callerContext), undefined });
 }
 
@@ -138,7 +138,7 @@ fn push42(_: PC, sp: SP, _: *Process, _: *Context, extra: Extra) Result {
 }
 test "send with dispatch direct" {
     if (true) return error.XSkipZigTest;
-    std.debug.print("Test: send with dispatch direct\n", .{});
+    std.log.debug("Test: send with dispatch direct\n", .{});
     const expectEqual = std.testing.expectEqual;
     Process.resetForTest();
     const method = compileMethod(Sym.yourself, 0, 0, .testClass, .{
@@ -162,7 +162,7 @@ test "send with dispatch direct" {
     try expectEqual(result[0], Object.from(42));
 }
 test "simple return via Execution" {
-    std.debug.print("Test: simple return via Execution\n", .{});
+    std.log.debug("Test: simple return via Execution\n", .{});
     const expectEqual = std.testing.expectEqual;
     Process.resetForTest();
     var method = compileMethod(Sym.yourself, 0, 0, .testClass, .{
@@ -179,7 +179,7 @@ test "simple return via Execution" {
     try expectEqual(result[2], True);
 }
 test "context return via Execution" {
-    std.debug.print("Test: context return via Execution\n", .{});
+    std.log.debug("Test: context return via Execution\n", .{});
     const expectEqual = std.testing.expectEqual;
     Process.resetForTest();
     var method = compileMethod(Sym.@"at:", 0, 0, .testClass, .{
@@ -195,7 +195,7 @@ test "context return via Execution" {
     try expectEqual(result[0], True);
 }
 test "context returnTop via Execution" {
-    std.debug.print("Test: context returnTop via Execution\n", .{});
+    std.log.debug("Test: context returnTop via Execution\n", .{});
     const expectEqual = std.testing.expectEqual;
     Process.resetForTest();
     var method = compileMethod(Sym.yourself, 3, 0, .testClass, .{
@@ -211,7 +211,7 @@ test "context returnTop via Execution" {
     try expectEqual(result[0], Object.from(42));
 }
 // test "context returnTop twice via Execution" {
-// std.debug.print("Test: context returnTop twice via Execution\n",.{});
+// std.log.debug("Test: context returnTop twice via Execution\n",.{});
 //     const expectEqual = std.testing.expectEqual;
 //     Process.resetForTest();
 //     const empty = Object.empty;
@@ -235,7 +235,7 @@ test "context returnTop via Execution" {
 //     try expectEqual(result[0], Object.from(42));
 // }
 test "simple executable" {
-    std.debug.print("Test: simple executable\n", .{});
+    std.log.debug("Test: simple executable\n", .{});
     const expectEqual = std.testing.expectEqual;
     Process.resetForTest();
     var method = compileMethod(Sym.yourself, 1, 0, .testClass, .{
@@ -266,7 +266,7 @@ pub const controlPrimitivesX = struct {
 
     // pub fn verifyMethod(pc: PC, sp: SP, process: *Process, context: *Context, signature: Extra) Result {
     //     const method = pc.method();
-    //     trace("\nverifyMethod: {*} {} {}", .{ method, signature, method.signature });
+    //     trace("verifyMethod: {*} {} {}", .{ method, signature, method.signature });
     //     if (!method.signature.equals(signature)) {
     //         trace(" failed match", .{});
     //         return @call(tailCall, process.check(pc.prim2()), .{ pc.next2(), sp, process, context, signature });
@@ -278,7 +278,7 @@ pub const controlPrimitivesX = struct {
     // pub fn ifTrue(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
     //     const process = tfAsProcess(_process);
     //     const context = tfAsContext(_context);
-    //     trace("\nifTrue: {any}", .{context.stack(sp, process)});
+    //     trace("ifTrue: {any}", .{context.stack(sp, process)});
     //     const v = sp.top;
     //     if (True.equals(v)) return @call(tailCall, process.check(branch), .{ pc, sp.drop(), process, context, undefined });
     //     if (False.equals(v)) return @call(tailCall, process.check(pc.prim2()), .{ pc.next2(), sp.drop(), process, context, undefined });
@@ -287,7 +287,7 @@ pub const controlPrimitivesX = struct {
     // pub fn ifFalse(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
     //     const process = tfAsProcess(_process);
     //     const context = tfAsContext(_context);
-    //     trace("\nifFalse: {any}", .{context.stack(sp, process)});
+    //     trace("ifFalse: {any}", .{context.stack(sp, process)});
     //     const v = sp.top;
     //     if (False.equals(v)) return @call(tailCall, process.check(branch), .{ pc, sp.drop(), process, context, undefined });
     //     if (True.equals(v)) return @call(tailCall, process.check(pc.next().prim()), .{ pc.skip(2), sp.drop(), process, context, undefined });
@@ -308,22 +308,22 @@ pub const controlPrimitivesX = struct {
     // }
     // pub fn replaceLiteral(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
     //     sp.top = pc.object();
-    //     trace("\nreplaceLiteral: {any}", .{context.stack(sp, process)});
+    //     trace("replaceLiteral: {any}", .{context.stack(sp, process)});
     //     return @call(tailCall, process.check(pc.prim2()), .{ pc.next2(), sp, process, context, undefined });
     // }
     // pub fn replaceLiteral0(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
     //     sp.top = Object.from(0);
-    //     trace("\nreplaceLiteral0: {any}", .{context.stack(sp, process)});
+    //     trace("replaceLiteral0: {any}", .{context.stack(sp, process)});
     //     return @call(tailCall, process.check(pc.prim()), .{ pc.next(), sp, process, context, undefined });
     // }
     // pub fn replaceLiteral1(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
     //     sp.top = Object.from(1);
-    //     trace("\nreplaceLiteral0: {any}", .{context.stack(sp, process)});
+    //     trace("replaceLiteral0: {any}", .{context.stack(sp, process)});
     //     return @call(tailCall, process.check(pc.prim()), .{ pc.next(), sp, process, context, undefined });
     // }
     // pub fn pushLiteral0(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
     //     const newSp = sp.push(Object.from(0));
-    //     trace("\npushLiteral0: {any}", .{context.stack(newSp, process)});
+    //     trace("pushLiteral0: {any}", .{context.stack(newSp, process)});
     //     return @call(tailCall, process.check(pc.prim()), .{ pc.next(), newSp, process, context, undefined });
     // }
     // pub fn pushLiteral1(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
@@ -355,17 +355,17 @@ pub const controlPrimitivesX = struct {
     //     return @call(tailCall, process.check(pc.prim()), .{ pc.next(), newSp, process, context, undefined });
     // }
     // pub fn printStack(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
-    //     trace("\nstack: {any}", .{context.stack(sp, process)});
+    //     trace("stack: {any}", .{context.stack(sp, process)});
     //     return @call(tailCall, process.check(pc.prim()), .{ pc.next(), sp, process, context, undefined });
     // }
     pub fn returnNoContextSwitchToThreaded(_: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
-        trace("\nreturnNoContext: {any} N={} T={}", .{ context.stack(sp, process), context.getNPc(), context.getTPc() });
+        trace("returnNoContext: {any} N={} T={}", .{ context.stack(sp, process), context.getNPc(), context.getTPc() });
         const tPc = context.getTPc();
         const nPc = tPc.prev().prim();
         return @call(tailCall, process.check(nPc), .{ tPc, sp, process, context, undefined });
     }
     pub fn isCallerInThreadedMode(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
-        trace("\nreturnNoContext: {any} N={} T={}", .{ context.stack(sp, process), context.getNPc(), context.getTPc() });
+        trace("returnNoContext: {any} N={} T={}", .{ context.stack(sp, process), context.getNPc(), context.getTPc() });
         const tPc = context.getTPc();
         const nPc = tPc.prev().prim();
         const newSp = sp.push(if (nPc == context.getNPc()) True else False);

@@ -194,7 +194,7 @@ var sieveThread =
 test "sieveNative" {
     const n = 5;
     const result = sieveNative(n);
-    std.debug.print("sieve({}) = {any}\n", .{ n, result });
+    std.log.err("sieve({}) = {any}\n", .{ n, result });
     try std.testing.expectEqual(result, 1028);
 }
 test "sieveThread" {
@@ -205,7 +205,7 @@ test "sieveThread" {
     var te = TestExecution.new();
     te.init();
     const result = te.run(objs[0..], method);
-    std.debug.print("sieve({}) = {any}\n", .{ n, result });
+    std.log.err("sieve({}) = {any}\n", .{ n, result });
     try std.testing.expectEqual(result.len, 1);
     try std.testing.expectEqual(result[0].toInt(), @as(i51, @truncate(sieveNative(n))));
 }
@@ -226,7 +226,7 @@ test "sieveComp" {
     var te = TestExecution.new();
     te.init();
     const result = te.run(objs[0..], method.asCompiledMethodPtr());
-    std.debug.print("sieve({}) = {any}\n", .{ n, result });
+    std.log.err("sieve({}) = {any}\n", .{ n, result });
     try std.testing.expectEqual(result.len, 1);
     try std.testing.expectEqual(result[0].toInt(), @as(i51, @truncate(sieveNative(n))));
 }

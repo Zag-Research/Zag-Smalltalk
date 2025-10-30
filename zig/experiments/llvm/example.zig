@@ -19,7 +19,7 @@ pub fn main() !void {
 
     // Create downward growing stack - smaller indices for more pushes
     var stack: [5]i64 = .{ 0, 0, 0, 10, 5 };
-    std.debug.print("Stack before: {any}\n", .{stack});
+    std.log.err("Stack before: {any}\n", .{stack});
     _ = &stack[3]; // top is at index 3 = value 4
 
     // Create LLVM module (context created by default)
@@ -59,7 +59,7 @@ pub fn main() !void {
     const stackAddTopTwoFn: *const fn (*i64) callconv(.C) *i64 = @ptrFromInt(result);
     const newSp = stackAddTopTwoFn(&stack[3]);
     const valueAtNewSp: *const i64 = @ptrCast(newSp);
-    std.debug.print("Value at stack pointer: {}\n", .{valueAtNewSp.*});
+    std.log.err("Value at stack pointer: {}\n", .{valueAtNewSp.*});
 }
 
 pub fn populateModule(module: types.LLVMModuleRef, builder: types.LLVMBuilderRef) !types.LLVMModuleRef {
@@ -101,18 +101,18 @@ pub fn populateModule(module: types.LLVMModuleRef, builder: types.LLVMBuilderRef
     if (analysis.LLVMVerifyModule(module, types.LLVMVerifierFailureAction.LLVMPrintMessageAction, &errorMessage) != 0) {
         if (errorMessage) |msg| {
             defer core.LLVMDisposeMessage(msg); // ensures cleanup
-            std.debug.print("Verification failed: {s}\n", .{msg});
+            std.log.err("Verification failed: {s}\n", .{msg});
             return error.ModuleVerificationFailure;
         } else {
             return error.UnknownCauseModuleVerificationFailure;
         }
     } else {
-        std.debug.print("Module verification passed.\n", .{});
+        std.log.err("Module verification passed.\n", .{});
     }
 
-    std.debug.print("\n--- IR DUMP ---\n", .{});
+    std.log.err("\n--- IR DUMP ---\n", .{});
     core.LLVMDumpModule(module);
-    std.debug.print("--- END IR ---\n\n", .{});
+    std.log.err("--- END IR ---\n\n", .{});
 
     // Cleanup builder
     core.LLVMDisposeBuilder(builder);

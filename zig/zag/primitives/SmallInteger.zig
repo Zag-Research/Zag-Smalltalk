@@ -104,9 +104,7 @@ pub const @"+" = struct {
         return @call(tailCall, process.check(context.npc), .{ context.tpc, newSp, process, context, Extra.fromContextData(context.contextDataPtr(sp)) });
     }
     test "simple add" {
-        var exe = Execution.initTest(
-            "simple add",
-            .{ tf.primitive, comptime fromPrimitive(1) });
+        var exe = Execution.initTest("simple add", .{ tf.primitive, comptime fromPrimitive(1) });
         try exe.runTest(
             &[_]Object{
                 exe.object(25),
@@ -118,9 +116,7 @@ pub const @"+" = struct {
         );
     }
     test "simple add with overflow" {
-        var exe = Execution.initTest(
-            "simple add with overflow",
-            .{ tf.primitive, comptime fromPrimitive(1), tf.pushLiteral, object.testObjects[0] });
+        var exe = Execution.initTest("simple add with overflow", .{ tf.primitive, comptime fromPrimitive(1), tf.pushLiteral, object.testObjects[0] });
         try exe.runTest(
             &[_]Object{
                 exe.object(4),
@@ -165,7 +161,7 @@ pub const @"-" = struct {
         sp.traceStack("-");
         const receiver = sp.next;
         if (!receiver.isInt()) {
-            trace("SmallInteger>>#inlinePrimitive: - {f}\n", .{receiver});
+            trace("SmallInteger>>#inlinePrimitive: - {f}", .{receiver});
             return @call(tailCall, PC.inlinePrimitiveFailed, .{ pc, sp, process, context, extra });
         }
         const newSp = sp.dropPut(with(receiver, sp.top, sp, context) catch
@@ -190,13 +186,13 @@ pub const @"<=" = struct {
         sp.traceStack("<=");
         const receiver = sp.next;
         if (!receiver.isInt()) {
-            trace("SmallInteger>>#inlinePrimitive: <= {f}\n", .{receiver});
+            trace("SmallInteger>>#inlinePrimitive: <= {f}", .{receiver});
             if (true) unreachable;
             return @call(tailCall, PC.inlinePrimitiveFailed, .{ pc, sp, process, context, extra });
         }
         const newSp = sp.dropPut(Object.from(with(receiver, sp.top) catch
             return @call(tailCall, PC.inlinePrimitiveFailed, .{ pc, sp, process, context, extra }), sp, context));
-        trace("Inline <= called, {*} {f}\n", .{ newSp, extra });
+        trace("Inline <= called, {*} {f}", .{ newSp, extra });
         return @call(tailCall, process.check(pc.prim2()), .{ pc.next2(), newSp, process, context, extra });
     }
     test "inline primitives" {
@@ -220,7 +216,7 @@ pub const @"*" = struct {
     pub fn inlinePrimitive(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
         const receiver = sp.next;
         if (!receiver.isInt()) {
-            trace("SmallInteger>>#inlinePrimitive: * {f}\n", .{receiver});
+            trace("SmallInteger>>#inlinePrimitive: * {f}", .{receiver});
             return @call(tailCall, PC.inlinePrimitiveFailed, .{ pc, sp, process, context, extra });
         }
         const newSp = sp.dropPut(inlines.@"*"(receiver, sp.top, sp, context) catch

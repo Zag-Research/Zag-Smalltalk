@@ -25,12 +25,12 @@ fn Extract(funcName: [:0]const u8, M: type) type {
 const combined = struct {
     pub const struct1 = struct {
         pub fn func() void {
-            std.debug.print("Hello, struct1\n", .{});
+            std.log.err("Hello, struct1\n", .{});
         }
     };
     pub const struct2 = struct {
         pub fn func() void {
-            std.debug.print("Goodbye, struct2\n", .{});
+            std.log.err("Goodbye, struct2\n", .{});
         }
     };
 };

@@ -171,9 +171,9 @@ const Sequential = struct {
 };
 fn showSequence(sequence: Sequence) void {
     while (sequence.next8()) |value| {
-        std.debug.print("{x} ", .{value});
+        std.log.err("{x} ", .{value});
     }
-    std.debug.print("\n", .{});
+    std.log.err("\n", .{});
 }
 // From: "The strict avalanche criterion randomness test"
 //     February 2005Mathematics and Computers in Simulation 68(1):1-7
@@ -395,7 +395,7 @@ fn SAC_print() void {
     // 16     26.29  32.00
     // 32     46.19  53.48
     // 64     83.67  93.21
-    const print = std.debug.print;
+    const print = std.log.err;
     print("'triple64' has a chi-square-8 value of {d}\n", .{SAC_test(u64, Prospector.hash64, 8)});
     print("'triple64' has a chi-square-16 value of {d}\n", .{SAC_test(u64, Prospector.hash64, 16)});
     print("'triple64' has a chi-square-32 value of {d}\n", .{SAC_test(u64, Prospector.hash64, 32)});

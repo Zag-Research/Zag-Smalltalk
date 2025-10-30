@@ -43,7 +43,7 @@ pub const threadedFns = struct {
             sp.traceStack("branchFalse");
             if (sp.top.equals(False())) {
                 const newPc = pc.targetPC();
-                trace("Boolean>>#inlinePrimitive: branchFalse {f} {f}\n", .{ pc, newPc });
+                trace("Boolean>>#inlinePrimitive: branchFalse {f} {f}", .{ pc, newPc });
                 return @call(tailCall, process.branchCheck(newPc.prim()), .{ newPc.next(), sp.drop(), process, context, extra });
             }
             return @call(tailCall, process.check(pc.prim2()), .{ pc.next2(), sp.drop(), process, context, extra });

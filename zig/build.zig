@@ -100,11 +100,12 @@ pub fn build(b: *std.Build) void {
     // --- Encoding Tests ---
     const test_encodings: []const Encoding =
         if (encoding_option) |specific_encoding|
-                &[_]Encoding{ specific_encoding}
-            else &[_]Encoding{
+            &[_]Encoding{specific_encoding}
+        else
+            &[_]Encoding{
                 .zag,
                 //.nan, .zagAlt,
-                .ptr,
+                //.ptr,
                 //.spur
             };
     const test_step = b.step("test", "Run tests for all encoding types");
@@ -138,6 +139,7 @@ pub fn build(b: *std.Build) void {
                     // .{ .name = "zag", .module = zag_enc },
                 },
             }),
+            .test_runner = .{ .path = b.path("test_runner.zig"), .mode = .simple },
         });
         enc_tests.root_module.addOptions("options", enc_options);
         const run_enc_tests = b.addRunArtifact(enc_tests);

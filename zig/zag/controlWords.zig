@@ -49,9 +49,30 @@ pub const module = struct {
         }
     };
 };
+pub const dropX = struct {
+    pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
+        sp.dumpStack("dropX");
+        const newSp = sp.drop();
+        return @call(tailCall, process.check(pc.prim()), .{ pc.next(), newSp, process, context, extra });
+    }
+    test "dropX" {
+        var exe = Execution.initTest("dropX", .{tf.dropX});
+        try exe.runTest(
+            &[_]Object{
+                exe.object(17),
+                exe.object(42),
+            },
+            &[_]Object{
+                exe.object(42),
+            },
+        );
+    }
+};
 pub const branch = struct {
     pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
+        std.log.err("\n***************Branching from {f}\n", .{pc});
         const target = pc.targetPC();
+        std.log.err("\n***************Branching to {f}\n", .{target});
         return @call(tailCall, process.branchCheck(target.prim()), .{ target.next(), sp, process.checkBump(), context, extra });
     }
     test "branch" {
@@ -80,15 +101,15 @@ pub const classCase = struct {
                 const currentClass: u14 = @truncate(classes);
                 if (currentClass == match) {
                     newPc = newPc.targetPC();
-                    trace("classCase: match {*} extra: {f}\n", .{ sp, extra });
+                    trace("classCase: match {*} extra: {f}", .{ sp, extra });
                     return @call(tailCall, process.branchCheck(newPc.prim()), .{ newPc.next(), sp.drop(), process, context, extra });
                 }
                 if (currentClass == 0) {
-                    trace("classCase: 0 {*} extra: {f}\n", .{ sp, extra });
+                    trace("classCase: 0 {*} extra: {f}", .{ sp, extra });
                     return @call(tailCall, process.check(newPc.prim()), .{ newPc.next(), sp.drop(), process, context, extra });
                 }
                 if (currentClass == 0x3FFF) {
-                    trace("classCase: 3fff {*} extra: {f}\n", .{ sp, extra });
+                    trace("classCase: 3fff {*} extra: {f}", .{ sp, extra });
                     return @call(tailCall, process.check(newPc.prim()), .{ newPc.next(), sp, process, context, extra });
                 }
                 classes >>= 14;
@@ -98,21 +119,19 @@ pub const classCase = struct {
     }
     test "classCase match" {
         const classes = Object.PackedObject.classes;
-        var exe = Execution.initTest(
-            "classCase match",
-            .{
-                tf.classCase,
-                comptime classes(&.{.True}),
-                "true",
-                tf.pushLiteral,
-                o1,
-                tf.branch,
-                "end",
-                ":true",
-                tf.pushLiteral,
-                o0,
-                ":end",
-            });
+        var exe = Execution.initTest("classCase match", .{
+            tf.classCase,
+            comptime classes(&.{.True}),
+            "true",
+            tf.pushLiteral,
+            o1,
+            tf.branch,
+            "end",
+            ":true",
+            tf.pushLiteral,
+            o0,
+            ":end",
+        });
         try exe.runTest(
             &[_]Object{True()},
             &[_]Object{o0},
@@ -120,21 +139,19 @@ pub const classCase = struct {
     }
     test "classCase no match" {
         const classes = Object.PackedObject.classes;
-        var exe = Execution.initTest(
-            "classCase no match",
-            .{
-                tf.classCase,
-                comptime classes(&.{ .True, .False }),
-                "true",
-                tf.pushLiteral,
-                o0,
-                tf.branch,
-                "end",
-                ":true",
-                tf.pushLiteral,
-                o1,
-                ":end",
-            });
+        var exe = Execution.initTest("classCase no match", .{
+            tf.classCase,
+            comptime classes(&.{ .True, .False }),
+            "true",
+            tf.pushLiteral,
+            o0,
+            tf.branch,
+            "end",
+            ":true",
+            tf.pushLiteral,
+            o1,
+            ":end",
+        });
         try exe.runTest(
             &[_]Object{False()},
             &[_]Object{o0},
@@ -142,19 +159,17 @@ pub const classCase = struct {
     }
     test "classCase no match - leave" {
         const classes = Object.PackedObject.classes;
-        var exe = Execution.initTest(
-            "classCase no match - leave",
-            .{
-                tf.classCase,
-                comptime classes(&.{ .True, .leaveObjectOnStack }),
-                "true",
-                tf.branch,
-                "end",
-                ":true",
-                tf.pushLiteral,
-                o0,
-                ":end",
-            });
+        var exe = Execution.initTest("classCase no match - leave", .{
+            tf.classCase,
+            comptime classes(&.{ .True, .leaveObjectOnStack }),
+            "true",
+            tf.branch,
+            "end",
+            ":true",
+            tf.pushLiteral,
+            o0,
+            ":end",
+        });
         try exe.runTest(
             &[_]Object{False()},
             &[_]Object{False()},
@@ -167,9 +182,7 @@ pub const drop = struct {
         return @call(tailCall, process.check(pc.prim()), .{ pc.next(), newSp, process, context, extra });
     }
     test "drop" {
-        var exe = Execution.initTest(
-            "drop",
-            .{tf.drop});
+        var exe = Execution.initTest("drop", .{tf.drop});
         try exe.runTest(
             &[_]Object{
                 exe.object(17),
@@ -192,9 +205,7 @@ pub const dup = struct {
         }
     }
     test "dup" {
-        var exe = Execution.initTest(
-            "dup",
-            .{tf.dup});
+        var exe = Execution.initTest("dup", .{tf.dup});
         try exe.runTest(
             &[_]Object{
                 exe.object(42),
@@ -219,9 +230,7 @@ pub const over = struct {
         }
     }
     test "over" {
-        var exe = Execution.initTest(
-            "over",
-            .{tf.over});
+        var exe = Execution.initTest("over", .{tf.over});
         try exe.runTest(
             &[_]Object{
                 exe.object(17),
@@ -255,19 +264,17 @@ pub const popAssociationValue = struct {
         return @call(tailCall, process.check(pc.prim2()), .{ pc.next2(), sp.drop(), process, context, extra });
     }
     test "popAssociationValue" {
-        var exe = Execution.initTest(
-            "popAssociationValue",
-            .{
-                tf.popAssociationValue,
-                "0object",
-            });
+        var exe = Execution.initTest("popAssociationValue", .{
+            tf.popAssociationValue,
+            "0object",
+        });
         var association = compileObject(.{
             ":def",
             c.Association,
             "0Nil",
             "1Zero",
         });
-        association.setLiterals(&.{Nil(), exe.object(0)}, &.{});
+        association.setLiterals(&.{ Nil(), exe.object(0) }, &.{});
         try exe.runTestWithObjects(
             &.{
                 association.asObject(),
@@ -284,7 +291,7 @@ pub const push = struct {
     pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
         sp.traceStack("push");
         const variable = pc.variable();
-        trace("Pushing variable...{*} {f} {f} {f}\n", .{ sp, pc, extra, variable });
+        trace("Pushing variable...{*} {f} {f} {f}", .{ sp, pc, extra, variable });
         if (variable.isLocal and extra.noContext()) {
             if (sp.push(Nil())) |newSp| {
                 return @call(tailCall, process.check(pc.prim2()), .{ pc.next2(), newSp, process, context, extra });
@@ -295,7 +302,7 @@ pub const push = struct {
         }
         const address = variable.getAddress(sp, extra);
         const value = address[0];
-        trace(" .... {*} {f}\n", .{ address, value });
+        trace(" .... {*} {f}", .{ address, value });
         if (sp.push(value)) |newSp| {
             return @call(tailCall, process.check(pc.prim2()), .{ pc.next2(), newSp, process, context, extra });
         } else {
@@ -305,9 +312,7 @@ pub const push = struct {
     }
     test "push" {
         if (true) return error.UnimplementedTest;
-        var exe = Execution.initTest(
-            "push",
-            .{ tf.pushLocal, 1, tf.pushLocal, 4 });
+        var exe = Execution.initTest("push", .{ tf.pushLocal, 1, tf.pushLocal, 4 });
         try exe.runTest(
             &[_]Object{
                 exe.object(42),
@@ -343,12 +348,10 @@ pub const pushAssociationValue = struct {
             "0Nil",
             o0,
         });
-        var exe = Execution.initTest(
-            "pushAssociationValue",
-            .{
-                tf.pushAssociationValue,
-                "0object",
-            });
+        var exe = Execution.initTest("pushAssociationValue", .{
+            tf.pushAssociationValue,
+            "0object",
+        });
         try exe.runTestWithObjects(
             &.{
                 association.asObject(),
@@ -365,23 +368,21 @@ pub const pushLiteral = struct {
         sp.traceStack("pushLiteral");
         const value = pc.object();
         if (sp.push(value)) |newSp| {
-            trace("pushLiteral: {*} {f}\n", .{ newSp, extra });
+            trace("pushLiteral: {*} {f}", .{ newSp, extra });
             return @call(tailCall, process.check(pc.prim2()), .{ pc.next2(), newSp, process, context, extra });
         } else {
             const newSp, const newContext, const newExtra = sp.spillStackAndPush(value, context, extra);
-            trace("pushLiteral: {*} {f} {f}\n", .{ newSp, extra, newExtra });
+            trace("pushLiteral: {*} {f} {f}", .{ newSp, extra, newExtra });
             return @call(tailCall, process.check(pc.prim2()), .{ pc.next2(), newSp, process, newContext, newExtra });
         }
     }
     test "pushLiteral" {
-        var exe = Execution.initTest(
-            "pushLiteral",
-            .{
-                tf.pushLiteral,
-                o1,
-                tf.pushLiteral,
-                o0,
-            });
+        var exe = Execution.initTest("pushLiteral", .{
+            tf.pushLiteral,
+            o1,
+            tf.pushLiteral,
+            o0,
+        });
         try exe.runTest(
             &[_]Object{},
             &[_]Object{ o0, o1 },

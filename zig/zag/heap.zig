@@ -89,7 +89,7 @@ pub const Format = enum(u7) {
         return self.operations().size(self, header, obj);
     }
     pub inline fn pointerIterator(self: Self, header: HeapHeader, obj: *HeapObject) ?HeapObjectPtrIterator {
-        trace("pointerIterator: {} {}\n", .{ self, self.operations() });
+        trace("pointerIterator: {} {}", .{ self, self.operations() });
         if (self.operations().iterator) |iteratorFn|
             return iteratorFn(header, obj);
         return null;
@@ -140,13 +140,13 @@ pub const Format = enum(u7) {
     }
     fn expectTrue(self: Self, ok: bool) !void {
         if (!ok) {
-            trace("unexpected false for {}\n", .{self});
+            trace("unexpected false for {}", .{self});
             return error.TestUnexpectedFalse;
         }
     }
     fn expectFalse(self: Self, ok: bool) !void {
         if (ok) {
-            trace("unexpected true for {}\n", .{self});
+            trace("unexpected true for {}", .{self});
             return error.TestUnexpectedTrue;
         }
     }
@@ -894,7 +894,7 @@ pub const HeapObject = packed struct {
         const head = self.header;
         const ivs = try self.instVars();
         if (index < 0 or index >= ivs.len) return error.indexOutOfRange;
-        trace("\nbefore\n", .{});
+        trace("before", .{});
         if (obj.asMemoryObject()) |otherHeapObject| {
             if (otherHeapObject.header.age.needsPromotionTo(head.age))
                 return error.needsPromotion;

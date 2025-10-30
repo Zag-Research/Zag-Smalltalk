@@ -293,17 +293,17 @@ pub fn FullTreap(comptime Key: type, comptime Index: type, comptime Value: type,
         }
         // Only for tests
         pub fn inorderPrint(self: *Self) void {
-            std.debug.print("root: {}\n", .{self.root()});
+            std.log.err("root: {}\n", .{self.root()});
             self.inorderWalkPrint(self.root());
         }
         fn inorderWalkPrint(self: *const Self, pos: Index) void {
             if (pos > 0) {
                 const node = self.table[pos];
                 self.inorderWalkPrint(node.left);
-                std.debug.print("pos:{:3}({})", .{ pos, node.key });
-                if (node.left > 0) std.debug.print(" | left: {:3}({})", .{ node.left, self.table[node.left].key });
-                if (node.right > 0) std.debug.print(" | right:{:3}({})", .{ node.right, self.table[node.right].key });
-                std.debug.print(" priority: {:10}\n", .{priority(pos)});
+                std.log.err("pos:{:3}({})", .{ pos, node.key });
+                if (node.left > 0) std.log.err(" | left: {:3}({})", .{ node.left, self.table[node.left].key });
+                if (node.right > 0) std.log.err(" | right:{:3}({})", .{ node.right, self.table[node.right].key });
+                std.log.err(" priority: {:10}\n", .{priority(pos)});
                 self.inorderWalkPrint(node.right);
             }
         }
@@ -345,23 +345,23 @@ test "from https://www.geeksforgeeks.org/treap-set-2-implementation-of-search-in
         _ = try treap.insert(70);
         _ = try treap.insert(60);
         _ = try treap.insert(80);
-        std.debug.print("\nInorder traversal of the given tree \n", .{});
+        std.log.err("\nInorder traversal of the given tree \n", .{});
         treap.inorderPrint();
         treap.remove(20);
-        std.debug.print("Inorder traversal of the tree after remove 20 \n", .{});
+        std.log.err("Inorder traversal of the tree after remove 20 \n", .{});
         treap.inorderPrint();
         treap.remove(30);
-        std.debug.print("Inorder traversal of the tree after remove 20,30 \n", .{});
+        std.log.err("Inorder traversal of the tree after remove 20,30 \n", .{});
         treap.inorderPrint();
         treap.remove(50);
-        std.debug.print("Inorder traversal of the tree after remove 20,30,50 \n", .{});
+        std.log.err("Inorder traversal of the tree after remove 20,30,50 \n", .{});
         treap.inorderPrint();
         _ = try treap.insert(20);
         _ = try treap.insert(30);
         _ = try treap.insert(50);
-        std.debug.print("Inorder traversal of the tree after added back \n", .{});
+        std.log.err("Inorder traversal of the tree after added back \n", .{});
         treap.inorderPrint();
-    } else std.debug.print(" - Set includeStdTest=true to include this test ", .{});
+    } else std.log.err(" - Set includeStdTest=true to include this test ", .{});
 }
 test "simple u64 treap alloc with nextFree" {
     const expectEqual = @import("std").testing.expectEqual;
@@ -445,12 +445,12 @@ test "simple u64 treap alloc" {
     try expectEqual(treap.lookup(44), 5);
     var depths = [_]u32{0} ** ((n + 1) * 3);
     treap.depths(depths[0..]);
-    // std.debug.print("treap={}\n",.{treap});
-    // std.debug.print("depths={any}\n",.{depths});
+    // std.log.err("treap={}\n",.{treap});
+    // std.log.err("depths={any}\n",.{depths});
 }
 test "full u64 treap alloc" {
     if (includeStdTest) {
-        std.debug.print(" - Set includeStdTest=false to include this test ", .{});
+        std.log.err(" - Set includeStdTest=false to include this test ", .{});
     } else {
         const expectEqual = @import("std").testing.expectEqual;
         const n = 21;
@@ -463,8 +463,8 @@ test "full u64 treap alloc" {
         try expectEqual(treap.lookup(20), 20);
         var depths = [_]u32{0} ** (n + 1);
         treap.depths(depths[0..]);
-        // std.debug.print("depths={any}\n",.{depths});
-        // std.debug.print("treap={}\n",.{treap});
+        // std.log.err("depths={any}\n",.{depths});
+        // std.log.err("treap={}\n",.{treap});
     }
 }
 test "simple u64 treap range" {

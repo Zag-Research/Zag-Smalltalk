@@ -87,9 +87,7 @@ pub const @"+" = struct {
         return @call(tailCall, process.check(context.npc), .{ context.tpc, newSp, process, context, Extra.fromContextData(context.contextDataPtr(sp)) });
     }
     test "simple add" {
-        var exe = Execution.initTest(
-            "simple add",
-            .{ tf.primitive, comptime fromPrimitive(1) });
+        var exe = Execution.initTest("simple add", .{ tf.primitive, comptime fromPrimitive(1) });
         try exe.runTest(
             &[_]Object{
                 exe.object(25.0),
@@ -132,7 +130,7 @@ pub const @"-" = struct {
         sp.traceStack("-");
         const receiver = sp.next;
         if (!receiver.isFloat()) {
-            trace("Float>>#inlinePrimitive: - {f}\n", .{receiver});
+            trace("Float>>#inlinePrimitive: - {f}", .{receiver});
             return @call(tailCall, PC.inlinePrimitiveFailed, .{ pc, sp, process, context, extra });
         }
         const newSp = sp.dropPut(with(receiver, sp.top, sp, context) catch
@@ -152,13 +150,13 @@ pub const @"<=" = struct {
         sp.traceStack("<=");
         const receiver = sp.next;
         if (!receiver.isFloat()) {
-            trace("Float>>#inlinePrimitive: <= {f}\n", .{receiver});
+            trace("Float>>#inlinePrimitive: <= {f}", .{receiver});
             if (true) unreachable;
             return @call(tailCall, PC.inlinePrimitiveFailed, .{ pc, sp, process, context, extra });
         }
         const newSp = sp.dropPut(Object.from(inlines.@"<="(receiver, sp.top) catch
             return @call(tailCall, PC.inlinePrimitiveFailed, .{ pc, sp, process, context, extra }), sp, context));
-        trace("Inline <= called, {*} {f}\n", .{ newSp, extra });
+        trace("Inline <= called, {*} {f}", .{ newSp, extra });
         return @call(tailCall, process.check(pc.prim2()), .{ pc.next2(), newSp, process, context, extra });
     }
 };
@@ -173,7 +171,7 @@ pub const @"*" = struct {
     pub fn inlinePrimitive(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
         const receiver = sp.next;
         if (!receiver.isFloat()) {
-            trace("Float>>#inlinePrimitive: * {f}\n", .{receiver});
+            trace("Float>>#inlinePrimitive: * {f}", .{receiver});
             return @call(tailCall, PC.inlinePrimitiveFailed, .{ pc, sp, process, context, extra });
         }
         const newSp = sp.dropPut(inlines.@"*"(receiver, sp.top, sp, context) catch

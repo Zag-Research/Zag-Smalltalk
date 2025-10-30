@@ -1,5 +1,5 @@
 const std = @import("std");
-const print = std.debug.print;
+const print = std.log.err;
 const math = std.math;
 const builtin = @import("builtin");
 const SeqCst = std.builtin.AtomicOrder.seq_cst;

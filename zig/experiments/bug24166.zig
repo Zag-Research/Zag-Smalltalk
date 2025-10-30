@@ -23,10 +23,10 @@ const symbols = struct {
     const value = symbol0(2);
 };
 test "make it run" {
-    std.debug.print("All three of these should be the same:\n", .{});
-    std.debug.print("the compile-time value:     {}\n", .{symbols.value.raw()});
-    std.debug.print("the run-time value:         {}\n", .{symbol0(2).raw()});
-    std.debug.print("not inlined run-time value: {}\n", .{symbolX(2).raw()});
+    std.log.info("All three of these should be the same:\n", .{});
+    std.log.info("the compile-time value:     {}\n", .{symbols.value.raw()});
+    std.log.info("the run-time value:         {}\n", .{symbol0(2).raw()});
+    std.log.info("not inlined run-time value: {}\n", .{symbolX(2).raw()});
     try std.testing.expectEqual(symbol0(2).raw(), symbols.value.raw());
     try std.testing.expectEqual(symbol0(2).raw(), symbolX(2).raw());
 }

@@ -181,7 +181,6 @@ pub const Object = packed struct(u64) {
         return @bitCast(@as(u8, @truncate(self.hash & extraMask)));
     }
     test "ThunkImmediate" {
-        trace("Test: ThunkImmediate\n", .{});
         const ee = std.testing.expectEqual;
         if (thunkImmediate(object.Object.tests[0])) |value|
             try ee(object.Object.tests[0], value.thunkImmediateValue());
@@ -196,7 +195,7 @@ pub const Object = packed struct(u64) {
         return self.tag == .heap;
     }
     pub inline fn isImmediateDouble(self: object.Object) bool {
-        return Group.isSet(self.rawU(),.float);
+        return Group.isSet(self.rawU(), .float);
     }
     pub inline fn isMemoryDouble(self: object.Object) bool {
         return self.isMemoryAllocated() and self.to(HeapObjectPtr).*.getClass() == .Float;
@@ -208,7 +207,7 @@ pub const Object = packed struct(u64) {
         return grp.base();
     }
     pub inline fn isInt(self: object.Object) bool {
-        return Group.isSet(self.rawU(),.int);
+        return Group.isSet(self.rawU(), .int);
     }
     pub inline fn isNat(self: object.Object) bool {
         return self.isInt() and self.rawI() >= 0;
@@ -335,15 +334,20 @@ pub const Object = packed struct(u64) {
     }
     pub inline fn which_class(self: object.Object) ClassIndex {
         const bits: u64 = @bitCast(self);
-        if (Group.isSet(bits,.int)) {@branchHint(.likely);
+        if (Group.isSet(bits, .int)) {
+            @branchHint(.likely);
             return .SmallInteger;
-        } else if (Group.isSet(bits,.float)) {@branchHint(.likely);
+        } else if (Group.isSet(bits, .float)) {
+            @branchHint(.likely);
             return .Float;
-        } else if (Group.isSet(bits,.immediates)) {@branchHint(.unlikely);
+        } else if (Group.isSet(bits, .immediates)) {
+            @branchHint(.unlikely);
             return self.class.classIndex();
-        } else if (bits == 0) {@branchHint(.unlikely);
+        } else if (bits == 0) {
+            @branchHint(.unlikely);
             return .UndefinedObject;
-        } else {@branchHint(.likely);
+        } else {
+            @branchHint(.likely);
             return self.to(HeapObjectPtr).*.getClass();
         }
     }

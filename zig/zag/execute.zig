@@ -81,7 +81,7 @@ pub const Signature = packed struct {
     pub fn signature(self: Object) ?Signature {
         const sig: Create = @bitCast(self);
         if (sig.isTagged()) {
-            trace("sig = {}\n", .{sig});
+            trace("sig = {}", .{sig});
             return @bitCast(self);
         }
         return null;
@@ -111,7 +111,7 @@ pub const Signature = packed struct {
         } else {
             switch (self.getClass()) {
                 .none => try writer.print("?", .{}),
-                else => |class| try writer.print("{}", .{ class}),
+                else => |class| try writer.print("{}", .{class}),
             }
             try writer.print(" {x} {x} {} #{s}", .{ self.int, (self.int & 0xffffff00) >> 8, (self.int & 0xffffff00) >> 8, symbol.asStringFromHash(@truncate((self.int & 0xffffff00) >> 8)).arrayAsSlice(u8) catch "???" });
         }
@@ -135,7 +135,7 @@ pub const PC = packed struct {
     fn packedObject(self: PC) PackedObject {
         if (logging) {
             @setRuntimeSafety(false);
-            std.debug.print("PC_packed:       {x:0>12}: {}\n", .{ @intFromPtr(self.code), self.code.packedObject });
+            std.log.err("PC_packed:       {x:0>12}: {}\n", .{ @intFromPtr(self.code), self.code.packedObject });
         }
         return self.code.packedObject;
     }
@@ -146,7 +146,7 @@ pub const PC = packed struct {
     fn method(self: PC) *const CompiledMethod {
         if (logging) {
             @setRuntimeSafety(false);
-            std.debug.print("PC_method:       {x:0>12}: {f}\n", .{ @intFromPtr(self.code), self.code.method });
+            std.log.err("PC_method:       {x:0>12}: {f}\n", .{ @intFromPtr(self.code), self.code.method });
         }
         return self.code.method;
     }
@@ -154,7 +154,7 @@ pub const PC = packed struct {
     fn codeAddress(self: PC) *const Code {
         if (logging) {
             @setRuntimeSafety(false);
-            std.debug.print("PC_codeAddress:  {x:0>12}: {f}\n", .{ @intFromPtr(self.code), self.code.codePtr });
+            std.log.err("PC_codeAddress:  {x:0>12}: {f}\n", .{ @intFromPtr(self.code), self.code.codePtr });
         }
         return self.code.codePtr;
     }
@@ -165,7 +165,7 @@ pub const PC = packed struct {
     pub inline //
     fn asThreadedFn(self: PC) *const fn (PC, SP, *Process, *Context, Extra) Result {
         if (logging) {
-            std.debug.print("PC_asThreadedFn: {x:0>12}: {f}\n", .{ @intFromPtr(self.code), self });
+            std.log.err("PC_asThreadedFn: {x:0>12}: {f}\n", .{ @intFromPtr(self.code), self });
         }
         return self.code.prim();
     }
@@ -177,9 +177,9 @@ pub const PC = packed struct {
         if (logging) {
             @setRuntimeSafety(false);
             if (@import("threadedFn.zig").find(code.prim())) |name| {
-                std.debug.print("PC_prim:         {x:0>12}: {}\n", .{ @intFromPtr(code), name });
+                std.log.err("PC_prim:         {x:0>12}: {}\n", .{ @intFromPtr(code), name });
             } else {
-                std.debug.print("PC_prim:         {x:0>12}: {x}\n", .{ @intFromPtr(code), @intFromPtr(code.prim()) });
+                std.log.err("PC_prim:         {x:0>12}: {x}\n", .{ @intFromPtr(code), @intFromPtr(code.prim()) });
             }
         }
         return code.prim();
@@ -188,7 +188,7 @@ pub const PC = packed struct {
     fn object(self: PC) Object {
         if (logging) {
             @setRuntimeSafety(false);
-            std.debug.print("PC_object:       {x:0>12}: {f}\n", .{ @intFromPtr(self.code), self.code.object });
+            std.log.err("PC_object:       {x:0>12}: {f}\n", .{ @intFromPtr(self.code), self.code.object });
         }
         return self.code.object;
     }
@@ -196,7 +196,7 @@ pub const PC = packed struct {
     fn variable(self: PC) Variable {
         if (logging) {
             @setRuntimeSafety(false);
-            std.debug.print("PC_variable:     {x:0>12}: {f}\n", .{ @intFromPtr(self.code), self.code.variable });
+            std.log.err("PC_variable:     {x:0>12}: {f}\n", .{ @intFromPtr(self.code), self.code.variable });
         }
         return self.code.variable;
     }
@@ -204,7 +204,7 @@ pub const PC = packed struct {
     fn signature(self: PC) Signature {
         if (logging) {
             @setRuntimeSafety(false);
-            std.debug.print("PC_signature:    {x:0>12}: {f}\n", .{ @intFromPtr(self.code), self.code.signature });
+            std.log.err("PC_signature:    {x:0>12}: {f}\n", .{ @intFromPtr(self.code), self.code.signature });
         }
         return self.code.signature;
     }
@@ -224,7 +224,7 @@ pub const PC = packed struct {
     fn uint(self: PC) u64 {
         if (logging) {
             @setRuntimeSafety(false);
-            std.debug.print("PC_uint:         {x:0>12}: {f}\n", .{ @intFromPtr(self.code), self.code.object });
+            std.log.err("PC_uint:         {x:0>12}: {f}\n", .{ @intFromPtr(self.code), self.code.object });
         }
         return self.code.object.to(u64);
     }
@@ -232,7 +232,7 @@ pub const PC = packed struct {
     fn int(self: PC) i64 {
         if (logging) {
             @setRuntimeSafety(false);
-            std.debug.print("PC_int:          {x:0>12}: {f}\n", .{ @intFromPtr(self.code), self.code.object });
+            std.log.err("PC_int:          {x:0>12}: {f}\n", .{ @intFromPtr(self.code), self.code.object });
         }
         return self.code.object.to(i64);
     }
@@ -334,7 +334,7 @@ pub const Code = union(enum) {
         return self.threadedFn;
     }
     fn endM(_: PC, sp: SP, process: *Process, context: *Context, _: Extra) Result { // not embedded
-        trace("endM: {*} {?*}\n", .{ context, context.prevCtxt });
+        trace("endM: {*} {?*}", .{ context, context.prevCtxt });
         process.setContext(context);
         process.setSp(sp);
         return sp;
@@ -409,18 +409,18 @@ pub const CompiledMethod = struct {
         try writer.print("CompiledMethod{{.stackStructure={}, .signature={f}, .executeFn={x}}}", .{ self.stackStructure, self.signature, @intFromPtr(self.executeFn) });
     }
     pub fn dump(self: *const Self) void {
-        std.debug.print("Header:           {}\n", .{self.header});
-        std.debug.print("Stack Structure:  {}\n", .{self.stackStructure});
-        std.debug.print("Signature:        {f}\n", .{self.signature});
-        std.debug.print("Execute Function: {}\n", .{self.executeFn});
-        std.debug.print("Jitted Function:  {?}\n", .{self.jitted});
+        std.log.err("Header:           {}\n", .{self.header});
+        std.log.err("Stack Structure:  {}\n", .{self.stackStructure});
+        std.log.err("Signature:        {f}\n", .{self.signature});
+        std.log.err("Execute Function: {}\n", .{self.executeFn});
+        std.log.err("Jitted Function:  {?}\n", .{self.jitted});
         const code: [*]const Code = @ptrCast(&self.code);
         const methodSize = self.header.length - codeOffsetInObjects;
-        std.debug.print("methodSize:       {}\n", .{methodSize});
+        std.log.err("methodSize:       {}\n", .{methodSize});
         for (code[0..methodSize]) |*instruction| {
-            std.debug.print("[{x:0>12}]: {f}\n", .{ @intFromPtr(instruction), instruction.* });
+            std.log.err("[{x:0>12}]: {f}\n", .{ @intFromPtr(instruction), instruction.* });
         }
-        std.debug.print("methodSize:       {}\n", .{methodSize});
+        std.log.err("methodSize:       {}\n", .{methodSize});
     }
     pub fn init(name: anytype, methodFn: *const fn (PC, SP, *Process, *Context, Extra) Result) Self {
         return Self{
@@ -446,7 +446,7 @@ pub const CompiledMethod = struct {
     pub fn execute(self: *const Self, sp: SP, process: *Process, context: *Context) Result {
         const newExtra = Extra.forMethod(self, sp);
         const pc = PC.init(&self.code[1]);
-        trace("executing: pc={f} {f} executeFn={*} ({?}) newExtra={f}\n", .{ pc, self.signature, self.executeFn, @import("threadedFn.zig").find(self.executeFn), newExtra });
+        trace("executing: pc={f} {f} executeFn={*} ({?}) newExtra={f}", .{ pc, self.signature, self.executeFn, @import("threadedFn.zig").find(self.executeFn), newExtra });
         return self.executeFn(pc, sp, process, context, newExtra);
     }
     inline fn asHeapObjectPtr(self: *const Self) HeapObjectConstPtr {
@@ -474,7 +474,6 @@ fn intOf(comptime str: []const u8) u12 {
     return n;
 }
 test "intOf" {
-    trace("Test: intOf\n", .{});
     const expectEqual = std.testing.expectEqual;
     try expectEqual(comptime intOf("012Abc"), 12);
     try expectEqual(comptime intOf("1230Abc"), 1230);
@@ -510,7 +509,6 @@ fn countNonLabels(comptime tup: anytype) usize {
     return c;
 }
 test "countNonLabels" {
-    trace("Test: countNonLabels\n", .{});
     const expectEqual = std.testing.expectEqual;
     try expectEqual(8, countNonLabels(.{
         ":abc",
@@ -544,7 +542,7 @@ fn CompileTimeMethod(comptime counts: usize) type {
         // }
         pub fn dump(self: *Self) void {
             self.asCompiledMethodPtr().dump();
-            std.debug.print("CompiledMethod dump\n", .{});
+            std.log.err("CompiledMethod dump\n", .{});
         }
         pub fn init(name: anytype, comptime locals: u11, function: ?*const fn (PC, SP, *Process, *Context, Extra) Result, class: ClassIndex, tup: anytype) Self {
             const header = comptime HeapHeader.calc(.CompiledMethod, codeOffsetInUnits + codes, 0, Age.static, null, Object, false) catch @compileError("method too big");
@@ -655,7 +653,6 @@ fn CompileTimeMethod(comptime counts: usize) type {
     };
 }
 test "CompileTimeMethod" {
-    trace("Test: CompileTimeMethod\n", .{});
     const expectEqual = std.testing.expectEqual;
     const c1 = CompileTimeMethod(countNonLabels(.{
         ":abc",
@@ -708,7 +705,6 @@ fn lookupLabel(tup: anytype, comptime field: []const u8) i56 {
     @compileError("missing label: \"" ++ field ++ "\"");
 }
 test "LookupLabel" {
-    trace("Test: LookupLabel\n", .{});
     const expectEqual = std.testing.expectEqual;
     const def: []const u8 = "def";
     const c1 = lookupLabel(.{
@@ -770,9 +766,9 @@ fn CompileTimeObject(comptime counts: usize) type {
                     bool => if (field) True() else False(),
                     @TypeOf(null) => Nil(),
                     comptime_int => blk: {
-                          hash = field;
-                          break :blk if (raw) Object.rawFromU(@bitCast(@as(i64, field))) else unreachable;
-                      },
+                        hash = field;
+                        break :blk if (raw) Object.rawFromU(@bitCast(@as(i64, field))) else unreachable;
+                    },
                     comptime_float => if (raw) Object.rawFromU(@bitCast(@as(f64, field))) else unreachable,
                     ClassIndex => blk: {
                         if (last >= 0)
@@ -847,7 +843,6 @@ pub fn compileObject(comptime tup: anytype) CompileTimeObject(countNonLabels(tup
 test "compileObject" {
     var process: Process align(Process.alignment) = undefined;
     process.init();
-    trace("Test: compileObject\n", .{});
     const expectEqual = std.testing.expectEqual;
     const expect = std.testing.expect;
     const c = ClassIndex;
@@ -870,13 +865,13 @@ test "compileObject" {
     const debugging = false;
     if (debugging) {
         for (&o.objects, 0..) |*ob, idx|
-            trace("\no[{}]: 0x{x:0>16}", .{ idx, @as(u64, @bitCast(ob.*)) });
+            trace("o[{}]: 0x{x:0>16}", .{ idx, @as(u64, @bitCast(ob.*)) });
     }
     o.setLiterals(&.{ True(), Nil(), True(), Object.from(42.0, process.getSp(), process.getContext()) }, &.{@enumFromInt(0xdead)});
     if (debugging) {
         for (&o.objects, 0..) |*ob, idx|
-            trace("\no[{}]=0x{x:0>8}: 0x{x:0>16}", .{ idx, @intFromPtr(ob), @as(u64, @bitCast(ob.*)) });
-        trace("\nTrue=0x{x:0>8}", .{@as(u64, @bitCast(True()))});
+            trace("o[{}]=0x{x:0>8}: 0x{x:0>16}", .{ idx, @intFromPtr(ob), @as(u64, @bitCast(ob.*)) });
+        trace("True=0x{x:0>8}", .{@as(u64, @bitCast(True()))});
     }
 
     try expect(o.asObject().isHeapObject());
@@ -906,7 +901,6 @@ pub fn compileRaw(comptime tup: anytype) CompileTimeObject(countNonLabels(tup)) 
     return objType.init(tup, true);
 }
 test "compileRaw" {
-    trace("Test: compileRaw\n", .{});
     const expectEqual = std.testing.expectEqual;
     const expect = std.testing.expect;
     const c = ClassIndex;
@@ -919,7 +913,7 @@ test "compileRaw" {
     if (debugging) {
         @setRuntimeSafety(false);
         for (&o.objects, 0..) |*ob, idx|
-            trace("\no[{}]: 0x{x:0>16}", .{ idx, @as(u64, @bitCast(ob.*)) });
+            trace("o[{}]: 0x{x:0>16}", .{ idx, @as(u64, @bitCast(ob.*)) });
     }
     try expectEqual(@as(i64, @bitCast(o.objects[1])), 42);
     try expectEqual(@as(f64, @bitCast(o.objects[2])), 42.0);
@@ -1032,7 +1026,7 @@ pub const Execution = struct {
         };
     }
     pub fn initTest(title: []const u8, tup: anytype) Executer(CompileTimeMethod(countNonLabels(tup))) {
-        trace("ExecutionTest: {s}\n", .{title});
+        trace("ExecutionTest: {s}", .{title});
         return init(tup);
     }
     fn init(comptime tup: anytype) Executer(CompileTimeMethod(countNonLabels(tup))) {
@@ -1043,16 +1037,16 @@ pub const Execution = struct {
     pub const MainExecutor = struct {
         exe: Executer(*const CompiledMethod),
         pub fn new() MainExecutor {
-            return .{.exe = Executer(*const CompiledMethod).new(undefined)};
+            return .{ .exe = Executer(*const CompiledMethod).new(undefined) };
         }
         pub inline fn object(self: *MainExecutor, value: anytype) Object {
             return self.exe.object(value);
         }
         pub fn sendTo(self: *MainExecutor, selector: Object, receiver: Object) !Object {
-            trace("Sending: {f} to {f}\n", .{ selector, receiver });
+            trace("Sending: {f} to {f}", .{ selector, receiver });
             self.exe.init(Object.empty);
             self.exe.getContext().setReturn(PC.exit());
-            trace("\nSendTo: context {*} {*} {f}\n", .{ self.exe.getContext(), self.exe.getContext().npc , self.exe.getContext().tpc });
+            trace("SendTo: context {*} {*} {f}", .{ self.exe.getContext(), self.exe.getContext().npc, self.exe.getContext().tpc });
             const class = receiver.get_class();
             const signature = Signature.from(selector, class);
             self.exe.method = class.lookupMethodForClass(signature);

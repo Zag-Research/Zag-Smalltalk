@@ -50,7 +50,7 @@ pub fn main() void {
         const test_type = @field(Tests, field.name);
         var stat = @import("zag").Stats(Tests, usize, 10, null, .milliseconds).init();
         stat.time(compute, test_type);
-        std.debug.print("{s:<12}: {}ms±{?d:.1}%", .{ @tagName(test_type), stat.mean(), stat.stDevPercent() });
+        std.log.err("{s:<12}: {}ms±{?d:.1}%", .{ @tagName(test_type), stat.mean(), stat.stDevPercent() });
         switch (test_type) {
             .True => {
                 baseline += stat.mean();
@@ -59,9 +59,9 @@ pub fn main() void {
                 baseline = (baseline + stat.mean()) / 2;
             },
             else => {
-                std.debug.print(" {:3}ms", .{stat.mean() - baseline});
+                std.log.err(" {:3}ms", .{stat.mean() - baseline});
             },
         }
-        std.debug.print("\n", .{});
+        std.log.err("\n", .{});
     }
 }

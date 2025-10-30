@@ -149,20 +149,20 @@ pub fn verifyModule(module: types.LLVMModuleRef) !void {
     if (analysis.LLVMVerifyModule(module, types.LLVMVerifierFailureAction.LLVMPrintMessageAction, cErrorMessagePtr) != 0) {
         if (errorMessage) |msg| {
             defer core.LLVMDisposeMessage(msg); // ensures cleanup
-            std.debug.print("Verification failed: {s}\n", .{msg});
+            std.log.err("Verification failed: {s}\n", .{msg});
             return error.ModuleVerificationFailure;
         } else {
             return error.UnknownCauseModuleVerificationFailure;
         }
     } else {
-        std.debug.print("Module verification passed.\n", .{});
+        std.log.err("Module verification passed.\n", .{});
     }
 }
 
 pub fn printModule(module: types.LLVMModuleRef) void {
-    std.debug.print("\n--- IR DUMP ---\n", .{});
+    std.log.err("\n--- IR DUMP ---\n", .{});
     core.LLVMDumpModule(module);
-    std.debug.print("--- END IR ---\n\n", .{});
+    std.log.err("--- END IR ---\n\n", .{});
 }
 
 inline fn singleIndexGEP(builder: types.LLVMBuilderRef, elementType: types.LLVMTypeRef, base: types.LLVMValueRef, offset: i64, name: []const u8) types.LLVMValueRef {

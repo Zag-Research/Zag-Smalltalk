@@ -185,6 +185,8 @@ The name is escaping me....something like Micro Systems....
 - [Zig 0.10.0 release notes](https://ziglang.org/download/0.10.0/release-notes.html#Function-Pointers)
 - [alternate test runner](https://gist.github.com/karlseguin/c6bea5b35e4e8d26af6f81c22cb5d76b)
 - [Custom Test Runner Blog Post: Karl Seguin](https://www.openmymind.net/Using-A-Custom-Test-Runner-In-Zig/)
+- [std.log](https://gist.github.com/kassane/a81d1ae2fa2e8c656b91afee8b949426)
+- 
 
 ## Miscellaneous
 - [Hidden Heroes](https://hiddenheroes.netguru.com/)

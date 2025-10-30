@@ -165,11 +165,11 @@ pub const Extra = packed struct {
         return self.stack_offset & is_encoded != 0;
     }
     pub fn primitiveFailed(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
-        trace("primitiveFailed: {f} {f}\n", .{ extra, pc });
+        trace("primitiveFailed: {f} {f}", .{ extra, pc });
         return @call(tailCall, process.check(pc.prev().prim()), .{ pc, sp, process, context, extra.encoded() });
     }
     pub fn inlinePrimitiveFailed(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
-        trace("inlinePrimitiveFailed: {f} {f}\n", .{ extra, pc });
+        trace("inlinePrimitiveFailed: {f} {f}", .{ extra, pc });
         _ = .{ sp, process, context, std.debug.panic("inlinePrimitiveFailed: {f} {f}\n", .{ extra, pc }) };
         //return @call(tailCall, process.check(pc.prev().prim()), .{ pc, sp, process, context, extra.encoded() });
     }
@@ -240,10 +240,10 @@ pub inline fn popTargetContext(target: *Context, process: *Process, result: Obje
 pub inline fn pop(self: *Context, _: *Process, sp: SP) struct { SP, *Context } {
     if (self.ifOnStack(sp)) |ctxt| {
         const newSp = ctxt.selfAddress();
-        trace("popContext: {*}, {*}\n", .{ self, newSp });
+        trace("popContext: {*}, {*}", .{ self, newSp });
         return .{ @ptrCast(newSp), self.previous() };
     }
-    trace("popContext: not on stack, {*}, {*}\n", .{ self, sp });
+    trace("popContext: not on stack, {*}, {*}", .{ self, sp });
     @panic("incomplete");
 }
 pub fn push(self: *Context, sp: SP, process: *Process, method: *const CompiledMethod, extra: Extra) struct { SP, *ContextOnStack } {
@@ -253,7 +253,7 @@ pub fn push(self: *Context, sp: SP, process: *Process, method: *const CompiledMe
         const selfAddress = extra.selfAddress(sp).?;
         const sizeToMove = selfOffset - locals;
         const contextAddr = selfAddress - selfOffset - (sizeOnStack - 1);
-        trace("context push: selfAddress={*} contextAddr={*} newSp={*} sp={*} sizeToMove={} stackStructure={} selfOffset={}\n", .{ selfAddress, contextAddr, newSp, sp, sizeToMove, method.stackStructure, selfOffset });
+        trace("context push: selfAddress={*} contextAddr={*} newSp={*} sp={*} sizeToMove={} stackStructure={} selfOffset={}", .{ selfAddress, contextAddr, newSp, sp, sizeToMove, method.stackStructure, selfOffset });
         std.debug.assert(contextAddr == newSp.array() + sizeToMove);
         for (newSp.array()[0..sizeToMove], sp.array()[0..sizeToMove]) |*target, *source| {
             target.* = source.*;
@@ -347,7 +347,7 @@ inline fn fromObjectPtr(op: [*]Object) *Context {
     return @as(*Context, @ptrCast(op));
 }
 pub fn print(self: *const Context, process: *const Process) void {
-    const pr = std.debug.print;
+    const pr = std.log.err;
     pr("Context: {*} {any}\n", .{ self, self.header });
     if (self.prevCtxt) |ctxt| {
         ctxt.print(process);
@@ -382,9 +382,9 @@ pub const Variable = packed struct {
     }
     pub inline fn getSimpleAddress(v: Variable, sp: SP, extra: Extra) [*]Object {
         return if (extra.selfAddress(sp)) |selfAddress|
-                selfAddress - v.stackOffset
-            else
-                extra.contextDataPtr().localAddress(v.localIndex);
+            selfAddress - v.stackOffset
+        else
+            extra.contextDataPtr().localAddress(v.localIndex);
     }
     pub inline fn getAddress(v: Variable, sp: SP, extra: Extra) [*]Object {
         var objs: [*]Object =
@@ -428,23 +428,23 @@ pub const threadedFunctions = struct {
         // test "init context" {
         //     //    const expectEqual = std.testing.expectEqual;
         //     //    const objs = comptime [_]Object{True,Object.from(42)};
-        //     trace("init: 1\n", .{});
+        //     trace("init: 1", .{});
         //     var result = execute.Execution.initTest("init context",.{});
-        //     trace("init: 2\n", .{});
+        //     trace("init: 2", .{});
         //     var c = result.ctxt;
-        //     trace("init: 3\n", .{});
+        //     trace("init: 3", .{});
         //     var process = &result.process;
-        //     trace("init: 4\n", .{});
+        //     trace("init: 4", .{});
         //     //c.print(process);
-        //     trace("init: 5\n", .{});
+        //     trace("init: 5", .{});
         //     //    try expectEqual(result.o()[3].u(),4);
         //     //    try expectEqual(result.o()[6],True);
         //     const sp = process.endOfStack();
-        //     trace("init: 6\n", .{});
+        //     trace("init: 6", .{});
         //     const newC = c.moveToHeap(sp, process);
-        //     trace("init: 7\n", .{});
+        //     trace("init: 7", .{});
         //     newC.print(process);
-        //     trace("init: 8\n", .{});
+        //     trace("init: 8", .{});
         // }
     };
     pub const pushThisContext = struct {

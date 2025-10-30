@@ -250,17 +250,17 @@ pub fn Treap(comptime Key: type, comptime Index: type, comptime Value: type) typ
         }
         // Only for tests
         pub fn inorderPrint(self: *Self) void {
-            std.debug.print("root: {}\n", .{self.root()});
+            std.log.err("root: {}\n", .{self.root()});
             self.inorderWalkPrint(self.root());
         }
         fn inorderWalkPrint(self: *const Self, pos: Index) void {
             if (pos > 0) {
                 const node = self.table[pos];
                 self.inorderWalkPrint(node.left);
-                std.debug.print("pos:{:3}({})", .{ pos, node.key });
-                if (node.left > 0) std.debug.print(" | left: {:3}({})", .{ node.left, self.table[node.left].key });
-                if (node.right > 0) std.debug.print(" | right:{:3}({})", .{ node.right, self.table[node.right].key });
-                std.debug.print(" priority: {:10}\n", .{priority(pos)});
+                std.log.err("pos:{:3}({})", .{ pos, node.key });
+                if (node.left > 0) std.log.err(" | left: {:3}({})", .{ node.left, self.table[node.left].key });
+                if (node.right > 0) std.log.err(" | right:{:3}({})", .{ node.right, self.table[node.right].key });
+                std.log.err(" priority: {:10}\n", .{priority(pos)});
                 self.inorderWalkPrint(node.right);
             }
         }
@@ -292,7 +292,7 @@ test "treap element sizes" {
 }
 test "from https://www.geeksforgeeks.org/treap-set-2-implementation-of-search-insert-and-delete/" {
     if (!includeStdTest) {
-        trace(" - Set includeStdTest=true to include this test\n", .{});
+        trace(" - Set includeStdTest=true to include this test", .{});
         return error.SkipZigTest;
     }
     const n = 20;
@@ -305,21 +305,21 @@ test "from https://www.geeksforgeeks.org/treap-set-2-implementation-of-search-in
     _ = try treap.insert(70);
     _ = try treap.insert(60);
     _ = try treap.insert(80);
-    trace("\nInorder traversal of the given tree \n", .{});
+    trace("Inorder traversal of the given tree ", .{});
     treap.inorderPrint();
     treap.remove(20);
-    trace("Inorder traversal of the tree after remove 20 \n", .{});
+    trace("Inorder traversal of the tree after remove 20 ", .{});
     treap.inorderPrint();
     treap.remove(30);
-    trace("Inorder traversal of the tree after remove 20,30 \n", .{});
+    trace("Inorder traversal of the tree after remove 20,30 ", .{});
     treap.inorderPrint();
     treap.remove(50);
-    trace("Inorder traversal of the tree after remove 20,30,50 \n", .{});
+    trace("Inorder traversal of the tree after remove 20,30,50 ", .{});
     treap.inorderPrint();
     _ = try treap.insert(20);
     _ = try treap.insert(30);
     _ = try treap.insert(50);
-    trace("Inorder traversal of the tree after added back \n", .{});
+    trace("Inorder traversal of the tree after added back ", .{});
     treap.inorderPrint();
 }
 test "simple u64 treap alloc with nextFree" {
@@ -404,12 +404,12 @@ test "simple u64 treap alloc" {
     try expectEqual(treap.lookup(44), 5);
     var depths = [_]u32{0} ** ((n + 1) * 3);
     treap.depths(depths[0..]);
-    // trace("treap={}\n",.{treap});
-    // trace("depths={any}\n",.{depths});
+    // trace("treap={}",.{treap});
+    // trace("depths={any}",.{depths});
 }
 test "full u64 treap alloc" {
     if (includeStdTest) {
-        trace(" - Set includeStdTest=false to include this test\n", .{});
+        trace(" - Set includeStdTest=false to include this test", .{});
         return error.SkipZigTest;
     }
     const expectEqual = @import("std").testing.expectEqual;
@@ -423,8 +423,8 @@ test "full u64 treap alloc" {
     try expectEqual(treap.lookup(20), 20);
     var depths = [_]u32{0} ** (n + 1);
     treap.depths(depths[0..]);
-    // trace("depths={any}\n",.{depths});
-    // trace("treap={}\n",.{treap});
+    // trace("depths={any}",.{depths});
+    // trace("treap={}",.{treap});
 }
 test "simple u64 treap range" {
     const expectEqual = @import("std").testing.expectEqual;
