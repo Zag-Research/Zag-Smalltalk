@@ -19,6 +19,12 @@
     //"hide": "on_success",
   },
   {
+    "label": "test sequential",
+    "command": "zig build test -Dsequential --summary all -freference-trace=20",
+    "cwd": "$ZED_WORKTREE_ROOT/zig/zag"
+    //"hide": "on_success",
+  },
+  {
     "label": "test with trace",
     "command": "zig build test -Dtrace --summary all -freference-trace=20",
     "cwd": "$ZED_WORKTREE_ROOT/zig/zag"

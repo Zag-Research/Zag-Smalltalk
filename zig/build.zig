@@ -48,6 +48,7 @@ pub fn build(b: *std.Build) void {
     options.addOption(u16, "maxClasses", max_classes);
     const trace = b.option(bool, "trace", "trace execution") orelse false;
     options.addOption(bool, "trace", trace);
+    const sequential = b.option(bool, "sequential", "sequential test") orelse false;
 
     if (includeLLVM) {
         zag.addImport("llvm-build-module", llvm_module);
@@ -130,17 +131,20 @@ pub fn build(b: *std.Build) void {
             zag_enc.addImport("llvm-build-module", llvm_module);
         }
 
-        const enc_tests = b.addTest(.{
-            .root_module = b.createModule(.{
-                .root_source_file = b.path("zag/test.zig"),
-                .target = target,
-                .optimize = optimize,
-                .imports = &.{
-                    // .{ .name = "zag", .module = zag_enc },
-                },
-            }),
-            .test_runner = .{ .path = b.path("test_runner.zig"), .mode = .simple },
+        const test_module = b.createModule(.{
+            .root_source_file = b.path("zag/test.zig"),
+            .target = target,
+            .optimize = optimize,
         });
+        const enc_tests = if (trace or sequential)
+            b.addTest(.{
+                .root_module = test_module,
+                .test_runner = .{ .path = b.path("test_runner.zig"), .mode = .simple },
+            })
+        else
+            b.addTest(.{
+                .root_module = test_module,
+            });
         enc_tests.root_module.addOptions("options", enc_options);
         const run_enc_tests = b.addRunArtifact(enc_tests);
         test_step.dependOn(&run_enc_tests.step);

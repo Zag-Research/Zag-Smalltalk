@@ -1,16 +1,19 @@
 const std = @import("std");
 const builtin = @import("builtin");
 
+var test_name: []const u8 = "no test active";
+
 pub fn main() !void {
-    //const out = std.io.getStdOut().writer();
+    @disableInstrumentation();
     // The ANSI escape codes for red and reset
     const on_terminal = true;
-    const red = if (on_terminal) "\x1b[31m" else "";
-    const green = if (on_terminal) "\x1b[32m" else "";
-    const yellow = if (on_terminal) "\x1b[33m" else "";
+    const red = if (on_terminal) "\x1b[1;31m" else "";
+    const green = if (on_terminal) "\x1b[1;32m" else "";
+    const yellow = if (on_terminal) "\x1b[1;33m" else "";
     const reset = if (on_terminal) "\x1b[0m" else "";
 
     for (builtin.test_functions) |t| {
+        test_name = t.name;
         const start = std.time.milliTimestamp();
         const result = t.func();
         const elapsed = std.time.milliTimestamp() - start;
@@ -30,7 +33,7 @@ pub fn main() !void {
                 std.debug.print("{s}{s} skipped{s}\n", .{ name, yellow, reset });
             } else {
                 //try std.fmt.format(out,
-                std.debug.print("{s}{s} failed - {}{s}\n", .{ name, red, err, reset });
+                std.debug.print("{s}{s} failed - {s}{s}\n", .{ name, red, @errorName(err), reset });
             }
         }
     }
@@ -41,12 +44,15 @@ fn extractName(t: std.builtin.TestFn) []const u8 {
     return t.name[marker + 6 ..];
 }
 
-//pub const panic = std.debug.FullPanic(myPanic);
+pub const panic = std.debug.FullPanic(myPanic);
 
 fn myPanic(msg: []const u8, first_trace_addr: ?usize) noreturn {
-    _ = first_trace_addr;
-    std.debug.print("Panic! {s}\n", .{msg});
-    std.process.exit(1);
+    const on_terminal = true;
+    const red = if (on_terminal) "\x1b[1;31m" else "";
+    const reset = if (on_terminal) "\x1b[0m" else "";
+    //try std.fmt.format(out,
+    std.debug.print("{s}{s} panic{s}\n", .{ red, test_name, reset });
+    std.debug.defaultPanic(msg, first_trace_addr);
 }
 
 //pub const std_options: std.Options = .{.logFn = myLogFn, };
