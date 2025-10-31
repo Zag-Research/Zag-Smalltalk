@@ -324,7 +324,6 @@ test "find key value for quick selectors" {
         }
         mask = mask | bitmask;
         match = match | bitmatch;
-        trace("mask  = {b:0>64}\nmatch = {b:0>64}", .{ mask, match });
     }
     try std.testing.expectEqual(mask, QuickSelectorsMask);
     try std.testing.expectEqual(match, QuickSelectorsMatch);
