@@ -40,22 +40,25 @@ pub fn main() !void {
         if (testing.allocator_instance.deinit() == .leak) {
             leaks += 1;
         }
+        var buffer: [128]u8 = undefined;
+        const stderr = std.debug.lockStderrWriter(&buffer);
+        defer std.debug.unlockStderrWriter();
 
         if (result) |_| {
             if (elapsed > 100) {
-                std.debug.print("{s}{s} passed - ({d}ms){s}\n", .{ test_name, green, elapsed, reset });
+                stderr.print("{s}{s} passed - ({d}ms){s}\n", .{ test_name, green, elapsed, reset }) catch return;
             } else {
-                std.debug.print("{s}{s} passed{s}\n", .{ test_name, green, reset });
+                stderr.print("{s}{s} passed{s}\n", .{ test_name, green, reset }) catch return;
             }
         } else |err| switch (err) {
             error.SkipZigTest => {
-                std.debug.print("{s}{s} skipped{s}\n", .{ test_name, yellow, reset });
-                handleTraces(false);
+                stderr.print("{s}{s} skipped{s}\n", .{ test_name, yellow, reset }) catch return;
+                handleTraces(null);
             },
             else => {
                 fail_count += 1;
-                std.debug.print("{s}{s} failed - {s}{s}\n", .{ test_name, red, @errorName(err), reset });
-                handleTraces(true);
+                stderr.print("{s}{s} failed - {s}{s}\n", .{ test_name, red, @errorName(err), reset }) catch return;
+                handleTraces(stderr);
             },
         }
     }
@@ -69,9 +72,9 @@ const Trace_Option = enum {
     short,
     full,
 };
-fn handleTraces(print: bool) void {
+fn handleTraces(stderr: ?*Writer) void {
     if (@errorReturnTrace()) |trace| {
-        if (print) dumpStackTrace(trace.*);
+        if (stderr) |writer| dumpStackTrace(writer, trace.*);
         trace.index = 0;
         trace.instruction_addresses[0] = 0;
     }
@@ -88,18 +91,14 @@ const SelfInfo = std.debug.SelfInfo;
 const SourceLocation = std.debug.SourceLocation;
 /// Tries to print a stack trace to stderr, unbuffered, and ignores any error returned.
 /// TODO multithreaded awareness
-fn dumpStackTrace(stack_trace: std.builtin.StackTrace) void {
+fn dumpStackTrace(stderr: *Writer, stack_trace: std.builtin.StackTrace) void {
     nosuspend {
         if (builtin.target.cpu.arch.isWasm()) {
             if (native_os == .wasi) {
-                const stderr = lockStderrWriter(&.{});
-                defer unlockStderrWriter();
                 stderr.writeAll("Unable to dump stack trace: not implemented for Wasm\n") catch return;
             }
             return;
         }
-        const stderr = lockStderrWriter(&.{});
-        defer unlockStderrWriter();
         if (builtin.strip_debug_info) {
             stderr.writeAll("Unable to dump stack trace: debug info stripped\n") catch return;
             return;
@@ -293,8 +292,8 @@ pub const panic = std.debug.FullPanic(myPanic);
 
 fn myPanic(msg: []const u8, first_trace_addr: ?usize) noreturn {
     @branchHint(.cold);
-    std.debug.print("{s}panic in test: {s}{s}\n", .{ red, reset, test_name });
-    std.debug.defaultPanic(msg, first_trace_addr);
+    std.debug.print("{s}panic in test: {s}{s} {s}{s}{s}\n", .{ red, reset, test_name, red, msg, reset });
+    std.debug.defaultPanic("", first_trace_addr);
 }
 
 pub const std_options: std.Options = .{
@@ -311,9 +310,9 @@ pub fn myLogFn(
     comptime format: []const u8,
     args: anytype,
 ) void {
-    std.debug.lockStdErr();
-    defer std.debug.unlockStdErr();
-    const stderr = std.fs.File.stderr().deprecatedWriter();
+    var buffer: [128]u8 = undefined;
+    const stderr = std.debug.lockStderrWriter(&buffer);
+    defer std.debug.unlockStderrWriter();
     const color = switch (level) {
         .debug => cyan,
         .info => green,
