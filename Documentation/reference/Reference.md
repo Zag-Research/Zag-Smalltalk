@@ -160,7 +160,7 @@ The name is escaping me....something like Micro Systems....
 - [AArch64 processor (Windows)](https://devblogs.microsoft.com/oldnewthing/20220726-00/?p=106898)
 - [Computer Organization and Design (book) ARM editions](https://www.academia.edu/keypass/WEp6S1RhVXFYMjhVYUZBTkNCSzJvMnJLRzgyWFFONENMWWh0cVliVGY0OD0tLTExbEJEMUR4RXRLS3BDVDdIbVRYMXc9PQ==--6d9207bbe2f5e142ab68fe654908b0330e763f5d/t/E9U-QZniS8Z-ij15Y/resource/work/31710742/Computer_organization_and_design_arm_edition?auto=download&email_work_card=download-paper)
 - [Application Binary Interface for the Arm® Architecture](https://github.com/ARM-software/abi-aa/) including [Procedure Call Standard for the Arm® 64-bit Architecture (AArch64)](https://github.com/ARM-software/abi-aa/blob/main/aapcs64/aapcs64.rst)
-- [AArch64 encoding literals](https://dinfuehr.github.io/blog/encoding-of-immediate-values-on-aarch64/)
+- [AArch64 encoding literals](https://dinfuehr.github.io/blog/encoding-of-immediate-values-on-aarch64/) [description of the `orr` instruction](https://developer.arm.com/documentation/dui0802/a/A64-General-Instructions/ORR--immediate-)
 - [Wikipedia on ARM64 calling conventions](https://en.wikipedia.org/wiki/Calling_convention#ARM_(A64))
 #### RISC-V
 - [Computer Organization and Design](https://www.academia.edu/38301807/Computer_organization_and_design_RISC_V?auto=download&email_work_card=download-paper)
@@ -198,6 +198,7 @@ The name is escaping me....something like Micro Systems....
 - [Linux on M1/M2 Macs](https://www.youtube.com/watch?v=EJy3Xtbkn74&t=177s)
 - [WordPerfect](https://liam-on-linux.livejournal.com/80768.html) [WPMacApp](https://mendelson.org/wpdos/mac-intel.html) [WPS Office](https://www.wps.com/blog/guide-on-downloading-wordperfect-on-windows-and-mac/) 
 - [Micro-optimization](https://cat-solstice.github.io/test-pqueue/)
+- [Lisp at JPL](https://flownet.com/gat/jpl-lisp.html) and 
 ### Rust
 - [Learn Rust](https://www.rust-lang.org/learn)
 - [Are we Teaching Rust Effectively?](https://blog.kodewerx.org/2025/08/are-we-teaching-rust-effectively.html)
