@@ -89,7 +89,6 @@ pub const Format = enum(u7) {
         return self.operations().size(self, header, obj);
     }
     pub inline fn pointerIterator(self: Self, header: HeapHeader, obj: *HeapObject) ?HeapObjectPtrIterator {
-        trace("pointerIterator: {} {}", .{ self, self.operations() });
         if (self.operations().iterator) |iteratorFn|
             return iteratorFn(header, obj);
         return null;
@@ -894,7 +893,6 @@ pub const HeapObject = packed struct {
         const head = self.header;
         const ivs = try self.instVars();
         if (index < 0 or index >= ivs.len) return error.indexOutOfRange;
-        trace("before", .{});
         if (obj.asMemoryObject()) |otherHeapObject| {
             if (otherHeapObject.header.age.needsPromotionTo(head.age))
                 return error.needsPromotion;

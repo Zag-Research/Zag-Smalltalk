@@ -35,12 +35,12 @@ const Result = execute.Result;
 
 /// this is really a Process object with the low bits encoding additional information
 const Self = @This();
-m: [process_total_size]u8 align(1), // alignment explicitly stated to emphasize the difference from Process
 const process_total_size = config.process_total_size;
+m: [process_total_size]u8 align(1), // alignment explicitly stated to emphasize the difference from Process
 pub const alignment = @as(u64, @max(stack_mask_overflow * 2, flagMask + 1)) * 2;
 const alignment_mask = @as(u64, @bitCast(-@as(i64, alignment)));
 const stack_mask_overflow: usize = zag.utilities.largerPowerOf2(Process.stack_size * @sizeOf(Object));
-pub const stack_mask = stack_mask_overflow - 1;
+pub const stack_mask = stack_mask_overflow - @sizeOf(Object);
 const stack_mask_shift = @ctz(stack_mask_overflow);
 pub const process_stack_size = Process.stack_size;
 pub const process_nursery_size = Process.nursery_size;
@@ -63,10 +63,9 @@ const Process = struct {
         otherHeap: HeapObjectArray,
         singleStepping: bool,
     };
-    const headerSize = @sizeOf(Fields);
-    const processAvail = (process_total_size - headerSize - @sizeOf(Context)) / @sizeOf(Object);
+    const processAvail = (process_total_size - @sizeOf(Fields) - @sizeOf(Context)) / @sizeOf(Object);
     const approx_nursery_size = (processAvail - processAvail / 9) / 2;
-    const stack_size: usize = @min(zag.utilities.largerPowerOf2(processAvail - approx_nursery_size * 2), (1 << 16) / @sizeOf(Object) - 1);
+    const stack_size: usize = @min(zag.utilities.largerPowerOf2(processAvail - approx_nursery_size * 2), (1 << 16) / @sizeOf(Object) - 1) - 1;
     const nursery_size = (processAvail - stack_size) / 2;
     comptime {
         assert(stack_size <= nursery_size);
@@ -326,25 +325,25 @@ test "nursery allocation" {
     var process: Self align(alignment) = undefined;
     process.init();
     const emptySize = Process.nursery_size;
-    try ee(32, Process.stack_size);
+    try ee(31, Process.stack_size);
     try ee(emptySize, process.freeNursery());
     var sp = process.endOfStack();
-    var initialContext = Context.init();
-    var ar = sp.alloc(&initialContext, ClassIndex.Class, 4, null, void, false);
+    const initialContext = process.getContext();
+    var ar = sp.alloc(initialContext, ClassIndex.Class, 4, null, void, false);
     _ = ar.initAll();
     const o1 = ar.allocated;
-    try ee(emptySize - 5, process.freeNursery());
-    ar = sp.alloc(&initialContext, ClassIndex.Class, 5, null, void, false);
+    try ee(emptySize - 5 - 1, process.freeNursery());
+    ar = sp.alloc(initialContext, ClassIndex.Class, 5, null, void, false);
     _ = ar.initAll();
-    ar = sp.alloc(&initialContext, ClassIndex.Class, 6, null, void, false);
+    ar = sp.alloc(initialContext, ClassIndex.Class, 6, null, void, false);
     const o2 = ar.initAll();
-    try ee(emptySize - 19, process.freeNursery());
+    try ee(emptySize - 19 - 1, process.freeNursery());
     try o1.instVarPut(0, o2.asObject());
     sp = sp.push(o1.asObject()).?;
-    const news, const newContext, _ = sp.spillStack(&initialContext, Extra.none);
+    const news, const newContext, _ = sp.spillStack(initialContext, Extra.none);
     try ee(sp, news);
-    try ee(&initialContext, newContext);
-    process.ptr().collectNursery(sp, &initialContext, 0);
+    try ee(initialContext, newContext);
+    process.ptr().collectNursery(sp, initialContext, 0);
     try ee(emptySize - switch (config.objectEncoding) {
         .zag, .nan => 12,
         else => 7,
@@ -468,7 +467,7 @@ const Stack = struct {
         return @ptrFromInt(@intFromPtr(self) & alignment_mask);
     }
     pub inline fn endOfStack(self: SP) SP {
-        return @ptrFromInt((@intFromPtr(self) | stack_mask) + 1);
+        return @ptrFromInt((@intFromPtr(self) | stack_mask));
     }
     pub fn alloc(self: SP, context: *Context, classIndex: ClassIndex, iVars: u11, indexed: ?usize, comptime element: type, makeWeak: bool) AllocResult {
         const aI = allocationInfo(iVars, indexed, element, makeWeak);

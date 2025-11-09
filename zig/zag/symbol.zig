@@ -302,7 +302,6 @@ test "symbols match initialized symbol table" {
     try symbol.verify(symbols.size.asObject());
     try symbol.verify(symbols.Object.asObject());
     //    try std.testing.expect(mem.eql(u8, "valueWithArguments:"[0..], try symbol.asString(symbols.@"valueWithArguments:".asObject()).arrayAsSlice(u8)));
-    trace("verified: symbols match initialized symbol table", .{});
 }
 // these selectors will have special handling in a dispatch table
 // if anding a selector with QuickSelectorsMask == QuickSelectorsMatch

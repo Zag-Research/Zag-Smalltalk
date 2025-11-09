@@ -33,7 +33,6 @@ const DispatchHandler = struct {
     const loadFactor = 70; // hashing load factor
     var dispatches = [_]*Dispatch{&Dispatch.empty} ** config.max_classes;
     inline fn lookupMethodForClass(ci: ClassIndex, signature: Signature) *const CompiledMethod {
-        trace("lookupMethodForClass({} {f})", .{ ci, signature });
         if (dispatches[@intFromEnum(ci)].lookupMethod(signature)) |method|
             return method;
         return loadMethodForClass(ci, signature);
@@ -53,15 +52,12 @@ const DispatchHandler = struct {
     fn addMethod(method: *const CompiledMethod) void {
         const index = method.signature.getClassIndex();
         //std.log.err("addMethod({b} {f})\n", .{ @as(u64, @bitCast(method.signature)), method.signature });
-        trace("[addMethod] signature: {f}", .{method.signature});
         if (dispatches[index].addIfAllocated(method)) return;
         while (true) {
-            trace("[addMethod] index: {}", .{index});
             if (dispatches[index].lock()) |dispatch| {
                 defer {
                     dispatch.state = if (dispatch != &Dispatch.empty) .dead else .clean;
                 }
-                trace("locked {} {}", .{ index, dispatch });
                 var numMethods: usize = 3;
                 while (true) {
                     numMethods = @max(numMethods, dispatch.nMethods + 1) * 100 / loadFactor;
@@ -71,13 +67,11 @@ const DispatchHandler = struct {
                         // for (newDispatch.methodsAllocatedSlice(), 0..) |*ptr,idx| {
                         //     trace("[{}]: {*}", .{idx, ptr.method});
                         // }
-                        trace("[addMethod] return", .{});
                         return;
                     }
                 }
             }
         }
-        trace("[addMethod] end", .{});
     }
     fn alloc(words: usize) *Dispatch {
         const nMethods = smallestPrimeAtLeast(words);

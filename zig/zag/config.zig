@@ -37,7 +37,7 @@ pub fn skipNotZag() !void {
     if (notZag) return error.SkipZigTest;
 }
 pub fn printConfig() void {
-    std.log.err(
+    std.log.info(
         \\Config:
         \\  compile_date   = {s}
         \\  git_version    = {s}
@@ -46,6 +46,7 @@ pub fn printConfig() void {
         \\  native_endian  = {}
         \\  stack_size     = {d}w
         \\  nursery_size   = {d}w
+        \\ {s}{s}
         \\
     , .{
         compile_date,
@@ -55,17 +56,13 @@ pub fn printConfig() void {
         native_endian,
         Process.process_stack_size,
         Process.process_nursery_size,
+        if (show_trace) "trace enabled\n" else "",
+        if (show_error_stack) "error stack enabled\n" else "",
     });
-    if (show_trace) {
-        std.log.err("  Trace enabled\n", .{});
-    }
-    if (show_error_stack) {
-        std.log.err("  Error stack enabled\n", .{});
-    }
 }
 comptime {
     @setEvalBranchQuota(100000);
 }
 test {
-    // printConfig();
+    printConfig();
 }

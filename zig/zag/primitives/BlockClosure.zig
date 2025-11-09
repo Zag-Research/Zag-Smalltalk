@@ -49,7 +49,6 @@ pub const ThunkReturnSmallInteger = struct {
         var exe = zag.execute.Execution.initTest("ThunkReturnSmallInteger", .{});
         try exe.resolve(&[_]Object{ name.asObject(), zModuleName.asObject(), unreachable });
     }
-    //pub var method = zag.execute.CompiledMethod.initInfalliblePrimitive(Sym.value, .ThunkReturnSmallInteger, primitive);
 };
 
 pub const threadedFns = struct {
@@ -373,7 +372,6 @@ pub const ThunkImmediate = struct {
         var exe = zag.execute.Execution.initTest("ThunkImmediate", .{});
         try exe.resolve(&[_]Object{ name.asObject(), zModuleName.asObject(), unreachable });
     }
-    //pub var method = zag.execute.CompiledMethod.initInfalliblePrimitive(Sym.value, .ThunkImmediate, primitive);
 };
 pub const inlines = struct {
     pub inline fn p201(self: Object, other: Object) !Object { // value

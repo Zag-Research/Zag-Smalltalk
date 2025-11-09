@@ -169,6 +169,7 @@ The name is escaping me....something like Micro Systems....
 
 ## Compiling
 - [Sea of Nodes](https://github.com/SeaOfNodes) [talk](https://www.youtube.com/watch?v=NxiKlnUtyio)
+- [Software optimization resources](https://agner.org/optimize/)
 
 ## Atomics and Locks
 - [Rust Atomics and Locks](https://marabos.nl/atomics/) most of which applies to Zig

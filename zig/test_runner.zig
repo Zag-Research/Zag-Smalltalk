@@ -27,8 +27,11 @@ pub fn main() !void {
     if (std.fs.cwd().realpath(".", &cwd_buffer)) |dir_name| {
         cwd = dir_name;
     } else |_| {}
+    var passed_count: usize = 0;
+    var skip_count: usize = 0;
     var fail_count: usize = 0;
     var leaks: usize = 0;
+    var buffer: [128]u8 = undefined;
     for (test_fn_list) |test_fn| {
         testing.allocator_instance = .{};
         testing.log_level = .warn;
@@ -40,11 +43,11 @@ pub fn main() !void {
         if (testing.allocator_instance.deinit() == .leak) {
             leaks += 1;
         }
-        var buffer: [128]u8 = undefined;
         const stderr = std.debug.lockStderrWriter(&buffer);
         defer std.debug.unlockStderrWriter();
 
         if (result) |_| {
+            passed_count += 1;
             if (elapsed > 100) {
                 stderr.print("{s}{s} passed - ({d}ms){s}\n", .{ test_name, green, elapsed, reset }) catch return;
             } else {
@@ -54,6 +57,7 @@ pub fn main() !void {
             error.SkipZigTest => {
                 stderr.print("{s}{s} skipped{s}\n", .{ test_name, yellow, reset }) catch return;
                 handleTraces(null);
+                skip_count += 1;
             },
             else => {
                 fail_count += 1;
@@ -63,6 +67,10 @@ pub fn main() !void {
         }
     }
 
+    const stderr = std.debug.lockStderrWriter(&buffer);
+    defer std.debug.unlockStderrWriter();
+    stderr.print("of {} tests, {} passed, {} skipped, {} failed, {} leaks\n",
+        .{ test_fn_list.len, passed_count, skip_count, fail_count, leaks }) catch return;
     if (leaks != 0 or fail_count != 0) {
         std.process.exit(1);
     }

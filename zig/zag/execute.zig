@@ -356,7 +356,7 @@ pub const Code = union(enum) {
         self: *const Code,
         writer: anytype,
     ) !void {
-        if (true) {
+        if (false) {
             try writer.print("({x})", .{@as(*const u64, @ptrCast(self)).*});
             //return;
         }
@@ -409,18 +409,17 @@ pub const CompiledMethod = struct {
         try writer.print("CompiledMethod{{.stackStructure={}, .signature={f}, .executeFn={x}}}", .{ self.stackStructure, self.signature, @intFromPtr(self.executeFn) });
     }
     pub fn dump(self: *const Self) void {
-        std.log.err("Header:           {}\n", .{self.header});
-        std.log.err("Stack Structure:  {}\n", .{self.stackStructure});
-        std.log.err("Signature:        {f}\n", .{self.signature});
-        std.log.err("Execute Function: {}\n", .{self.executeFn});
-        std.log.err("Jitted Function:  {?}\n", .{self.jitted});
+        std.log.info("Header:           {}", .{self.header});
+        std.log.info("Stack Structure:  {}", .{self.stackStructure});
+        std.log.info("Signature:        {f}", .{self.signature});
+        std.log.info("Execute Function: {}", .{self.executeFn});
+        std.log.info("Jitted Function:  {?}", .{self.jitted});
         const code: [*]const Code = @ptrCast(&self.code);
         const methodSize = self.header.length - codeOffsetInObjects;
-        std.log.err("methodSize:       {}\n", .{methodSize});
+        std.log.info("methodSize:       {}", .{methodSize});
         for (code[0..methodSize]) |*instruction| {
-            std.log.err("[{x:0>12}]: {f}\n", .{ @intFromPtr(instruction), instruction.* });
+            std.log.info("[{x:0>12}]: {f}", .{ @intFromPtr(instruction), instruction.* });
         }
-        std.log.err("methodSize:       {}\n", .{methodSize});
     }
     pub fn init(name: anytype, methodFn: *const fn (PC, SP, *Process, *Context, Extra) Result) Self {
         return Self{
@@ -433,20 +432,9 @@ pub const CompiledMethod = struct {
             .code = .{ Code.primOf(methodFn), undefined },
         };
     }
-    pub fn initInfalliblePrimitive(name: Object, class: ClassIndex, methodFn: *const fn (PC, SP, *Process, *Context, Extra) Result) Self {
-        return Self{
-            .header = HeapHeader.calc(ClassIndex.CompiledMethod, codeOffsetInObjects + codeSize, name.hash24(), Age.static, null, Object, false) catch unreachable,
-            .stackStructure = StackStructure{},
-            .signature = Signature.from(name, class),
-            .executeFn = methodFn,
-            .jitted = methodFn,
-            .code = .{ Code.primOf(methodFn), undefined }, //TODO: should be something like primitiveFailed
-        };
-    }
     pub fn execute(self: *const Self, sp: SP, process: *Process, context: *Context) Result {
         const newExtra = Extra.forMethod(self, sp);
         const pc = PC.init(&self.code[1]);
-        trace("executing: pc={f} {f} executeFn={*} ({?}) newExtra={f}", .{ pc, self.signature, self.executeFn, @import("threadedFn.zig").find(self.executeFn), newExtra });
         return self.executeFn(pc, sp, process, context, newExtra);
     }
     inline fn asHeapObjectPtr(self: *const Self) HeapObjectConstPtr {
@@ -457,9 +445,6 @@ pub const CompiledMethod = struct {
     }
     pub inline fn codePc(self: *const Self) PC {
         return PC.init(@ptrCast(&self.code[0]));
-    }
-    pub inline fn startPc(self: *const Self) PC {
-        return PC.init(@ptrCast(&self.code[1]));
     }
     pub fn asFakeObject(self: *const Self) Object {
         return @as(Object, @bitCast(@intFromPtr(self)));
@@ -530,9 +515,14 @@ fn CompileTimeMethod(comptime counts: usize) type {
         signature: Signature,
         stackStructure: StackStructure, // f1 - locals, f3 - selfOffset
         executeFn: *const fn (PC, SP, *Process, *Context, Extra) Result,
-        jitted: *const fn (PC, SP, *Process, *Context, Extra) Result,
+        jitted: ?*const fn (PC, SP, *Process, *Context, Extra) Result,
         code: [codes]Code,
-        offsets: [codes]bool align(8),
+        offsets: [codes]OffsetType align(8),
+        const OffsetType = enum(u2) {
+            none,
+            offset,
+            object,
+        };
         const codeOffsetInUnits = CompiledMethod.codeOffsetInObjects;
         const Self = @This();
         // comptime {
@@ -540,28 +530,45 @@ fn CompileTimeMethod(comptime counts: usize) type {
         //     if (checkEqual(@offsetOf(CompiledMethod, "code"), @offsetOf(Self, "code"))) |s|
         //         @compileError("CompiledMethod prefix not the same as CompileTimeMethod == " ++ s);
         // }
-        pub fn dump(self: *Self) void {
-            self.asCompiledMethodPtr().dump();
-            std.log.err("CompiledMethod dump\n", .{});
+        pub fn dump(self: *const Self) void {
+            std.log.info("Header:           {}", .{self.header});
+            std.log.info("Stack Structure:  {}", .{self.stackStructure});
+            std.log.info("Signature:        {f}", .{self.signature});
+            std.log.info("Execute Function: {}", .{self.executeFn});
+            std.log.info("Jitted Function:  {?}", .{self.jitted});
+            const code: [*]const Code = @ptrCast(&self.code);
+            const methodSize = self.header.length - codeOffsetInUnits;
+            std.log.info("methodSize:       {}", .{methodSize});
+            for (0..methodSize) |i| {
+                std.log.info("[{x:0>12}]: {f}{s}", .{ @intFromPtr(&code[i]), code[i], switch (self.offsets[i]) {
+                    .none => "",
+                    .offset => " - offset",
+                    .object => " - object",
+                } });
+            }
         }
         pub fn init(name: anytype, comptime locals: u11, function: ?*const fn (PC, SP, *Process, *Context, Extra) Result, class: ClassIndex, tup: anytype) Self {
             const header = comptime HeapHeader.calc(.CompiledMethod, codeOffsetInUnits + codes, 0, Age.static, null, Object, false) catch @compileError("method too big");
-            const f = function orelse &Code.noOp;
             var method = Self{
                 .header = header,
                 .signature = Signature.fromNameClass(name, class),
                 .stackStructure = StackStructure{ .locals = locals, .selfOffset = locals + name.numArgs() + 1 },
-                .executeFn = f,
-                .jitted = f,
+                .executeFn = &Code.panic,
+                .jitted = function,
                 .code = undefined,
-                .offsets = [_]bool{false} ** codes,
+                .offsets = [_]OffsetType{.none} ** codes,
             };
             const code = method.code[0..];
             comptime var n = 0;
+            comptime var needFunction = true;
             inline for (tup) |field| {
                 switch (@TypeOf(field)) {
                     *const fn (PC, SP, *Process, *Context, Extra) Result => {
                         //@compileLog(field);
+                        if (needFunction) {
+                            method.executeFn = field;
+                            needFunction = false;
+                        }
                         code[n] = Code.primOf(field);
                         n = n + 1;
                     },
@@ -571,7 +578,12 @@ fn CompileTimeMethod(comptime counts: usize) type {
                     },
                     threadedFn.Enum => {
                         //@compileLog(field);
-                        code[n] = Code.primOf(threadedFn.threadedFn(field));
+                        const func = threadedFn.threadedFn(field);
+                        if (needFunction) {
+                            method.executeFn = func;
+                            needFunction = false;
+                        }
+                        code[n] = Code.primOf(func);
                         n = n + 1;
                     },
                     Object => {
@@ -608,11 +620,13 @@ fn CompileTimeMethod(comptime counts: usize) type {
                     },
                     else => {
                         if (field[0] != ':') {
-                            code[n] = Code{ .offset = if (field[0] >= '0' and field[0] <= '9')
-                                comptime intOf(field[0..]) << 1
-                            else
-                                ((lookupLabel(tup, field) - n - 1) << 1) + 1 };
-                            method.offsets[n] = true;
+                            if (field[0] >= '0' and field[0] <= '9') {
+                                code[n] = Code{ .offset = comptime intOf(field[0..]) };
+                                method.offsets[n] = .object;
+                            } else {
+                                code[n] = Code{ .offset = lookupLabel(tup, field) - n - 1 };
+                                method.offsets[n] = .offset;
+                            }
                             n = n + 1;
                         }
                     },
@@ -628,19 +642,22 @@ fn CompileTimeMethod(comptime counts: usize) type {
             self.executeFn = self.code[0].prim();
         }
         pub fn resolve(self: *Self, resolution: ?[]const Object) !void {
-            for (&self.code, &self.offsets) |*c, *isOffset| {
-                if (isOffset.*) {
-                    isOffset.* = false;
-                    const i = c.offset;
-                    if (i & 1 != 0) {
-                        c.* = Code.codePtrOf(c, i >> 1);
-                    } else {
-                        const index: usize = @bitCast(i >> 1);
+            for (&self.code, &self.offsets) |*c, *offset| {
+                switch (offset.*) {
+                    .offset => {
+                        const offs = c.offset;
+                        c.* = Code.codePtrOf(c, offs);
+                        offset.* = .none;
+                    },
+                    .object => {
+                        const index: usize = @bitCast(c.offset);
                         if (resolution) |literals| {
                             if (index >= literals.len) return error.Unresolved;
                             c.* = Code.objectOf(literals[index]);
+                            offset.* = .none;
                         }
-                    }
+                    },
+                    .none => {},
                 }
             }
         }
@@ -671,12 +688,9 @@ test "CompileTimeMethod" {
     try expectEqual(8, r1.getCodeSize());
 }
 pub fn compileMethod(name: anytype, comptime locals: comptime_int, comptime class: ClassIndex, comptime tup: anytype) CompileTimeMethod(countNonLabels(tup)) {
-    return compileMethodWith(name, locals, class, null, tup);
-}
-fn compileMethodWith(name: anytype, comptime locals: comptime_int, comptime class: ClassIndex, comptime verifier: ?*const fn (PC, SP, *Process, *Context, Extra) Result, comptime tup: anytype) CompileTimeMethod(countNonLabels(tup)) {
     @setEvalBranchQuota(100000);
     const MethodType = CompileTimeMethod(countNonLabels(tup));
-    return MethodType.init(name, locals, verifier, class, tup);
+    return MethodType.init(name, locals, null, class, tup);
 }
 fn lookupLabel(tup: anytype, comptime field: []const u8) i56 {
     comptime var lp = 0;
@@ -986,6 +1000,7 @@ pub const Execution = struct {
             }
             pub fn execute(self: *Self, stackObjects: ?[]const Object) void {
                 self.init(stackObjects);
+                self.resolve(Object.empty) catch @panic("Failed to resolve");
                 _ = self.method.execute(self.getSp(), &self.process, self.getContext());
                 self.getSp().traceStack("return from execution");
             }
@@ -1006,24 +1021,43 @@ pub const Execution = struct {
             pub fn runTestWithValidator(self: *Self, validator: *const fn (*Self, []const Object) ValidateErrors!void, source: []const Object, expected: []const Object) !void {
                 return self.runWithValidator(validator, Object.empty, source, expected);
             }
-            fn runWithValidator(exe: *Self, validator: *const fn (*Self, []const Object) ValidateErrors!void, objects: []const Object, source: []const Object, expected: []const Object) !void {
-                exe.process.init();
-                try exe.resolve(objects);
-                exe.execute(source);
-                try validator(exe, expected);
+            fn runWithValidator(self: *Self, validator: *const fn (*Self, []const Object) ValidateErrors!void, objects: []const Object, source: []const Object, expected: []const Object) !void {
+                self.process.init();
+                try self.resolve(objects);
+                self.execute(source);
+                try validator(self, expected);
             }
-            fn validate(exe: *Self, expected: []const Object) ValidateErrors!void {
-                const result = exe.stack();
+            fn validate(self: *Self, expected: []const Object) ValidateErrors!void {
+                const result = self.stack();
                 if (result.len > 0 and result[0] == failed) return error.TestAborted;
-                trace(
-                    \\run:
-                    \\  expected: {any}
-                    \\  result: {any}
-                    \\
-                , .{ expected, result });
-                try std.testing.expectEqualSlices(Object, expected, result);
+                try expectEqualSlices(expected, result);
             }
         };
+    }
+    fn expectEqualSlices(expected: []const Object, result: []const Object) !void {
+        const min = @min(expected.len, result.len);
+        const index = blk: {
+            for (0..min) |i| {
+                if (!expected[i].equals(result[i])) break :blk i;
+            } else {
+                if (expected.len != result.len) break :blk min + 1;
+            }
+            return;
+        };
+        std.debug.print("first difference at index {d}\n", .{index});
+        std.debug.print("expected: {{", .{});
+        for (expected, 0..) |obj,i| {
+            if (i > 0) std.debug.print(", ", .{});
+            std.debug.print("{f}", .{obj});
+        }
+        std.debug.print("}}\n", .{});
+        std.debug.print("but found: {{", .{});
+        for (result, 0..) |obj,i| {
+            if (i > 0) std.debug.print(", ", .{});
+            std.debug.print("{f}", .{obj});
+        }
+        std.debug.print("}}\n", .{});
+        return error.TestExpectedEqual;
     }
     pub fn initTest(title: []const u8, tup: anytype) Executer(CompileTimeMethod(countNonLabels(tup))) {
         trace("ExecutionTest: {s}", .{title});
@@ -1031,7 +1065,8 @@ pub const Execution = struct {
     }
     fn init(comptime tup: anytype) Executer(CompileTimeMethod(countNonLabels(tup))) {
         const ExeType = Executer(CompileTimeMethod(countNonLabels(tup)));
-        return ExeType.new(compileMethod(Sym.yourself, 0, .testClass, tup));
+        const method = compileMethod(Sym.yourself, 0, .testClass, tup);
+        return ExeType.new(method);
     }
 
     pub const MainExecutor = struct {

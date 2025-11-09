@@ -141,9 +141,8 @@ const nProduction = enumAndFunctions[2];
 
 test "print threadedFns" {
     for (0..nProduction) |index| {
-        trace("{s} ", .{@tagName(@as(Enum, @enumFromInt(index)))});
+        std.log.info("0x{x:0>16} {s}", .{ @intFromPtr(functions[index]), @tagName(@as(Enum, @enumFromInt(index)))});
     }
-    trace("", .{});
 }
 
 pub fn initialize() void {}

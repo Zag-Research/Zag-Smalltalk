@@ -34,6 +34,7 @@ const tf = zag.threadedFn.Enum;
 const c = object.ClassIndex;
 const o0 = object.testObjects[0];
 const o1 = object.testObjects[1];
+const o2 = object.testObjects[2];
 pub fn init() void {}
 pub const module = struct {
     pub const moduleName = "zag";
@@ -45,34 +46,13 @@ pub const module = struct {
             //     return @call(tailCall, process.check(context.npc.f), .{ context.tpc, newSp, process, context, undefined });
             // } else |_| {}
             // return @call(tailCall, Extra.primitiveFailed, .{ pc, sp, process, context, extra });
-            _ = .{ pc, sp, process, context, extra, unreachable };
+            _ = .{ pc, sp, process, context, extra, @panic("Unknown primitive") };
         }
     };
 };
-pub const dropX = struct {
-    pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
-        sp.dumpStack("dropX");
-        const newSp = sp.drop();
-        return @call(tailCall, process.check(pc.prim()), .{ pc.next(), newSp, process, context, extra });
-    }
-    test "dropX" {
-        var exe = Execution.initTest("dropX", .{tf.dropX});
-        try exe.runTest(
-            &[_]Object{
-                exe.object(17),
-                exe.object(42),
-            },
-            &[_]Object{
-                exe.object(42),
-            },
-        );
-    }
-};
 pub const branch = struct {
     pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
-        std.log.err("\n***************Branching from {f}\n", .{pc});
         const target = pc.targetPC();
-        std.log.err("\n***************Branching to {f}\n", .{target});
         return @call(tailCall, process.branchCheck(target.prim()), .{ target.next(), sp, process.checkBump(), context, extra });
     }
     test "branch" {
@@ -142,7 +122,7 @@ pub const classCase = struct {
         var exe = Execution.initTest("classCase no match", .{
             tf.classCase,
             comptime classes(&.{ .True, .False }),
-            "true",
+            "true","false",
             tf.pushLiteral,
             o0,
             tf.branch,
@@ -150,6 +130,11 @@ pub const classCase = struct {
             ":true",
             tf.pushLiteral,
             o1,
+            tf.branch,
+            "end",
+            ":false",
+            tf.pushLiteral,
+            o2,
             ":end",
         });
         try exe.runTest(

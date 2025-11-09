@@ -85,7 +85,8 @@ const ContextOnStack = struct {
     inline fn contextDataPtr(self: *ContextOnStack) *ContextData {
         return @ptrCast(&self.selfOffset);
     }
-    inline fn endOfStack(self: *const ContextOnStack) SP {
+    fn endOfStack(self: *const ContextOnStack) SP {
+        std.log.info("Resolving offset {x}", .{self.spOffset});
         return @ptrFromInt(@intFromPtr(self) - self.spOffset);
     }
     inline fn alloc(self: *ContextOnStack, sp: SP, size: usize) struct { [*]Object, SP } {
@@ -188,7 +189,6 @@ pub const ContextData = struct {
     header: HeapHeader,
     contextData: [1]Object,
     fn initStatic(self: *ContextData, comptime locals: u11) void {
-        trace("ContextData.init {}", .{locals});
         self.header = HeapHeader.headerStatic(.ContextData, locals - 1, locals);
         @setRuntimeSafety(false);
         for (self.contextData[0..locals]) |*local| {
@@ -219,8 +219,8 @@ pub fn format(
     writer: anytype,
 ) !void {
     try writer.print("Context{{", .{});
-    //    try writer.print(".header: {}", .{self.header});
-    try writer.print(".method={f}", .{self.method});
+    try writer.print(".header: {}", .{self.header});
+    try writer.print(".method={*}", .{self.method});
     try writer.print(", .npc={x}", .{@intFromPtr(self.npc)});
     try writer.print(", .tpc={f}", .{self.tpc});
     try writer.print(", .trapContextNumber={}", .{self.trapContextNumber});

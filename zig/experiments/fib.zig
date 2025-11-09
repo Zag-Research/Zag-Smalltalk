@@ -400,7 +400,6 @@ const fibIntegerCnP = struct {
     fn init() void {
         exe = MainExecutor.new();
         fib.resolve(&[_]Object{ exe.object(1), exe.object(2) }) catch unreachable;
-        fib.initExecute();
         fib.executeFn = &cps1;
         zag.dispatch.addMethod(@ptrCast(&fib));
         if (zag.config.show_trace) {

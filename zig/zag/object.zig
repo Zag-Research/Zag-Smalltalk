@@ -47,7 +47,17 @@ pub const ClassIndex = enum(u16) {
     False,
     True,
     Character,
-    reserved = 31,
+    reserved_21,
+    reserved_22,
+    reserved_23,
+    reserved_24,
+    reserved_25,
+    reserved_26,
+    o4,
+    o3,
+    o2,
+    o1,
+    o0,
     UndefinedObject,
     Context,
     Float,
@@ -107,6 +117,17 @@ pub const ClassIndex = enum(u16) {
         False,
         True,
         Character,
+        reserved_21,
+        reserved_22,
+        reserved_23,
+        reserved_24,
+        reserved_25,
+        reserved_26,
+        o4,
+        o3,
+        o2,
+        o1,
+        o0,
         pub inline fn classIndex(cp: Compact) ClassIndex {
             return @enumFromInt(@intFromEnum(cp));
         }
@@ -142,8 +163,8 @@ pub const Object = switch (config.objectEncoding) {
 };
 pub const testObjects = blk: {
     var testArray: [5]Object = undefined;
-    for (&testArray, 1..) |*elem, i| {
-        elem.* = @bitCast(hash64(i) | 7);
+    for (&testArray, 0..) |*elem, i| {
+        elem.* = @bitCast(7777777777777777 << 8 | 1 | (@intFromEnum(ClassIndex.o0) - i) << 3);
     }
     break :blk testArray;
 };
@@ -278,6 +299,14 @@ pub const ObjectFunctions = struct {
         if (false) {
             try writer.print("Object({x})", .{@as(u64, @bitCast(self))});
             return;
+        }
+        if (zag.config.is_test) {
+            for (0..testObjects.len) |i| {
+                if (testObjects[i].equals(self)) {
+                    try writer.print("testObject[{}]", .{i});
+                    return;
+                }
+            }
         }
         if (self.signature()) |signature| {
             try writer.print("{f}", .{signature});
