@@ -20,13 +20,13 @@
   },
   {
     "label": "test sequential",
-    "command": "zig build test -Dsequential --summary all -freference-trace=20",
+    "command": "zig build test -Dsequential -DquitOnFirstFailure --summary all -freference-trace=20",
     "cwd": "$ZED_WORKTREE_ROOT/zig/zag"
     //"hide": "on_success",
   },
   {
     "label": "test with trace",
-    "command": "zig build test -Dtrace --summary all -freference-trace=20",
+    "command": "zig build test -Dtrace -DquitOnFirstFailure --summary all -freference-trace=20",
     "cwd": "$ZED_WORKTREE_ROOT/zig/zag"
     //"hide": "on_success",
   },
@@ -75,7 +75,7 @@
   },
   {
     "label": "time fib zag",
-    "command": "zig build -Doptimize=ReleaseFast && ./zig-out/bin/fib",
+    "command": "zig build -Doptimize=ReleaseFast -freference-trace=10 && ./zig-out/bin/fib",
     //"command": "zig build -Doptimize=ReleaseFast && taskpolicy -l5 -t5 time ./zig-out/bin/fib",
     "cwd": "$ZED_WORKTREE_ROOT/zig"
   },

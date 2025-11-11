@@ -119,6 +119,9 @@ pub fn build(b: *std.Build) void {
         enc_options.addOption(Encoding, "objectEncoding", enc);
         enc_options.addOption(u16, "maxClasses", max_classes);
         enc_options.addOption(bool, "trace", trace);
+        if (b.option(bool, "quitOnFirstFailure", "Stop after first error")) |quitOnFirstFailure| {
+            enc_options.addOption(bool, "quitOnFirstFailure", quitOnFirstFailure);
+        }
 
         const zag_enc = b.createModule(.{
             .root_source_file = b.path("zag/zag.zig"),

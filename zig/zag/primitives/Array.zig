@@ -9,7 +9,6 @@ const PC = execute.PC;
 const Context = zag.Context;
 const Extra = Context.Extra;
 const Result = execute.Result;
-const compileMethod = execute.compileMethod;
 const CompiledMethodPtr = execute.CompiledMethodPtr;
 const Process = zag.Process;
 const SP = Process.SP;

@@ -435,6 +435,7 @@ pub const CompiledMethod = struct {
     pub fn execute(self: *const Self, sp: SP, process: *Process, context: *Context) Result {
         const newExtra = Extra.forMethod(self, sp);
         const pc = PC.init(&self.code[1]);
+        self.dump();
         return self.executeFn(pc, sp, process, context, newExtra);
     }
     inline fn asHeapObjectPtr(self: *const Self) HeapObjectConstPtr {
@@ -738,13 +739,14 @@ const p = @import("threadedFn.zig").Enum;
 test "compiling method" {
     const expectEqual = std.testing.expectEqual;
     //@compileLog(&p.send);
-    var m = compileMethod(Sym.yourself, 0, .testClass, .{
+    const exe = Execution.init( .{
         ":abc", p.branch,
         "def",  "0True",
         o0,     ":def",
         "abc",  o1,
         null,
     });
+    var m = exe.method;
     //TODO    m.setLiterals(&[_]Object{Sym.value}, &[_]Object{Object.from(42)});
     const t = m.code[0..];
     try expectEqual(8, t.len);
@@ -954,21 +956,21 @@ pub const Execution = struct {
                     .method = method,
                 };
             }
-            pub fn initProcess(self: *Self) void {
+            pub fn initProcess(self: *Self) *Process {
                 if (!self.process_initted) {
                     self.process.init();
                     self.process_initted = true;
                 }
+                return &self.process;
             }
             pub fn init(self: *Self, stackObjects: ?[]const Object) void {
-                self.initProcess();
+                _ = self.initProcess();
                 if (stackObjects) |source| {
                     self.initStack(source);
                 }
             }
             fn initStack(self: *Self, source: []const Object) void {
-                self.initProcess();
-                const sp = self.process.endOfStack().safeReserve(source.len);
+                const sp = self.initProcess().endOfStack().safeReserve(source.len);
                 self.process.setSp(sp);
                 for (source, sp.slice(source.len)) |src, *stck|
                     stck.* = src;
@@ -976,35 +978,33 @@ pub const Execution = struct {
             pub fn resolve(self: *Self, objects: []const Object) !void {
                 try self.method.resolve(objects);
             }
-            pub fn stack(self: *const Self) []Object {
-                return self.process.getContext().stack(self.process.getSp());
+            pub fn stack(self: *Self) []Object {
+                return self.getProcess().getContext().stack(self.process.getSp());
             }
-            pub fn fullStack(self: *const Self) []Object {
+            pub fn fullStack(self: *Self) []Object {
                 return self.getSp().getStack();
             }
-            pub fn getHeap(self: *const Self) []HeapObject {
-                return self.process.getHeap();
+            pub fn getHeap(self: *Self) []HeapObject {
+                return self.getProcess().getHeap();
             }
-            pub fn getProcess(self: *const Self) *const Process {
-                return &self.process;
+            pub fn getProcess(self: *Self) *Process {
+                return self.initProcess();
             }
             pub fn getContext(self: *Self) *Context {
-                return self.process.getContext();
+                return self.getProcess().getContext();
             }
-            pub fn getSp(self: *const Self) SP {
-                return self.process.getSp();
+            pub fn getSp(self: *Self) SP {
+                return self.getProcess().getSp();
             }
             pub inline fn object(self: *Self, value: anytype) Object {
-                self.initProcess();
                 return Object.from(value, self.getSp(), self.getContext());
             }
             pub fn execute(self: *Self, stackObjects: ?[]const Object) void {
                 self.init(stackObjects);
-                self.resolve(Object.empty) catch @panic("Failed to resolve");
-                _ = self.method.execute(self.getSp(), &self.process, self.getContext());
+                _ = self.method.execute(self.getSp(), self.getProcess(), self.getContext());
                 self.getSp().traceStack("return from execution");
             }
-            pub fn matchStack(self: *const Self, expected: []const Object) !void {
+            pub fn matchStack(self: *Self, expected: []const Object) !void {
                 const result = self.stack();
                 try std.testing.expectEqualSlices(Object, expected, result);
             }
@@ -1012,18 +1012,18 @@ pub const Execution = struct {
                 return self.runTestWithObjects(Object.empty, source, expected);
             }
             pub fn runTestWithObjects(self: *Self, objects: []const Object, source: []const Object, expected: []const Object) !void {
-                try self.runWithValidator(&validate, objects, source, expected);
+                try self.resolve(objects);
+                try self.runWithValidator(&validate, source, expected);
             }
             pub const ValidateErrors = error{
                 TestAborted,
                 TestExpectedEqual,
             };
             pub fn runTestWithValidator(self: *Self, validator: *const fn (*Self, []const Object) ValidateErrors!void, source: []const Object, expected: []const Object) !void {
-                return self.runWithValidator(validator, Object.empty, source, expected);
+                return self.runWithValidator(validator, source, expected);
             }
-            fn runWithValidator(self: *Self, validator: *const fn (*Self, []const Object) ValidateErrors!void, objects: []const Object, source: []const Object, expected: []const Object) !void {
+            fn runWithValidator(self: *Self, validator: *const fn (*Self, []const Object) ValidateErrors!void, source: []const Object, expected: []const Object) !void {
                 self.process.init();
-                try self.resolve(objects);
                 self.execute(source);
                 try validator(self, expected);
             }
@@ -1033,31 +1033,6 @@ pub const Execution = struct {
                 try expectEqualSlices(expected, result);
             }
         };
-    }
-    fn expectEqualSlices(expected: []const Object, result: []const Object) !void {
-        const min = @min(expected.len, result.len);
-        const index = blk: {
-            for (0..min) |i| {
-                if (!expected[i].equals(result[i])) break :blk i;
-            } else {
-                if (expected.len != result.len) break :blk min + 1;
-            }
-            return;
-        };
-        std.debug.print("first difference at index {d}\n", .{index});
-        std.debug.print("expected: {{", .{});
-        for (expected, 0..) |obj,i| {
-            if (i > 0) std.debug.print(", ", .{});
-            std.debug.print("{f}", .{obj});
-        }
-        std.debug.print("}}\n", .{});
-        std.debug.print("but found: {{", .{});
-        for (result, 0..) |obj,i| {
-            if (i > 0) std.debug.print(", ", .{});
-            std.debug.print("{f}", .{obj});
-        }
-        std.debug.print("}}\n", .{});
-        return error.TestExpectedEqual;
     }
     pub fn initTest(title: []const u8, tup: anytype) Executer(CompileTimeMethod(countNonLabels(tup))) {
         trace("ExecutionTest: {s}", .{title});
@@ -1070,23 +1045,49 @@ pub const Execution = struct {
     }
 
     pub const MainExecutor = struct {
-        exe: Executer(*const CompiledMethod),
-        pub fn new() MainExecutor {
+        exe: Executer(*const CompiledMethod) align(Process.alignment),
+        pub fn new() align(Process.alignment) MainExecutor {
             return .{ .exe = Executer(*const CompiledMethod).new(undefined) };
         }
         pub inline fn object(self: *MainExecutor, value: anytype) Object {
             return self.exe.object(value);
         }
         pub fn sendTo(self: *MainExecutor, selector: Object, receiver: Object) !Object {
+            var exe = &self.exe;
             trace("Sending: {f} to {f}", .{ selector, receiver });
-            self.exe.init(Object.empty);
-            self.exe.getContext().setReturn(PC.exit());
-            trace("SendTo: context {*} {*} {f}", .{ self.exe.getContext(), self.exe.getContext().npc, self.exe.getContext().tpc });
+            exe.init(Object.empty);
+            exe.getContext().setReturn(PC.exit());
+            trace("SendTo: context {*} {*} {f}", .{ exe.getContext(), exe.getContext().npc, exe.getContext().tpc });
             const class = receiver.get_class();
             const signature = Signature.from(selector, class);
-            self.exe.method = class.lookupMethodForClass(signature);
-            self.exe.execute(&[_]Object{receiver});
-            return self.exe.fullStack()[0];
+            exe.method = class.lookupMethodForClass(signature);
+            exe.execute(&[_]Object{receiver});
+            return exe.fullStack()[0];
         }
     };
 };
+fn expectEqualSlices(expected: []const Object, result: []const Object) !void {
+    const min = @min(expected.len, result.len);
+    const index = blk: {
+        for (0..min) |i| {
+            if (!expected[i].equals(result[i])) break :blk i;
+        } else {
+            if (expected.len != result.len) break :blk min + 1;
+        }
+        return;
+    };
+    std.debug.print("first difference at index {d}\n", .{index});
+    std.debug.print("expected:  {{", .{});
+    for (expected, 0..) |obj,i| {
+        if (i > 0) std.debug.print(", ", .{});
+        std.debug.print("{f}", .{obj});
+    }
+    std.debug.print("}}\n", .{});
+    std.debug.print("but found: {{", .{});
+    for (result, 0..) |obj,i| {
+        if (i > 0) std.debug.print(", ", .{});
+        std.debug.print("{f}", .{obj});
+    }
+    std.debug.print("}}\n", .{});
+    return error.TestExpectedEqual;
+}

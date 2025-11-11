@@ -41,13 +41,14 @@ pub const alignment = @as(u64, @max(stack_mask_overflow * 2, flagMask + 1)) * 2;
 const alignment_mask = @as(u64, @bitCast(-@as(i64, alignment)));
 const stack_mask_overflow: usize = zag.utilities.largerPowerOf2(Process.stack_size * @sizeOf(Object));
 pub const stack_mask = stack_mask_overflow - @sizeOf(Object);
-const stack_mask_shift = @ctz(stack_mask_overflow);
+pub const stack_mask_shift = @ctz(stack_mask_overflow);
 pub const process_stack_size = Process.stack_size;
 pub const process_nursery_size = Process.nursery_size;
 const Process = struct {
     stack: [stack_size]Object align(alignment),
     h: Fields,
     staticContext: Context,
+    contextData: Context.ContextData,
     nursery0: [nursery_size]HeapObject,
     nursery1: [nursery_size]HeapObject,
     const Fields = struct {
@@ -63,7 +64,7 @@ const Process = struct {
         otherHeap: HeapObjectArray,
         singleStepping: bool,
     };
-    const processAvail = (process_total_size - @sizeOf(Fields) - @sizeOf(Context)) / @sizeOf(Object);
+    const processAvail = (process_total_size - @sizeOf(Fields) - @sizeOf(Context) - @sizeOf(Context.ContextData)) / @sizeOf(Object);
     const approx_nursery_size = (processAvail - processAvail / 9) / 2;
     const stack_size: usize = @min(zag.utilities.largerPowerOf2(processAvail - approx_nursery_size * 2), (1 << 16) / @sizeOf(Object) - 1) - 1;
     const nursery_size = (processAvail - stack_size) / 2;
@@ -171,14 +172,15 @@ pub fn init(origin: *align(alignment) Self) void {
     self.h.currHp = self.h.currHeap;
     self.h.otherHeap = HeapObject.fromObjectPtr(@ptrCast(&self.nursery1));
     self.h.context = &self.staticContext;
-    @as(*Context.Static, @ptrCast(&self.staticContext)).initStatic();
+    self.staticContext.initStatic(&self.contextData);
+    self.contextData.initStatic(1);
+    self.h.trapContextNumber = 0;
+    self.h.singleStepping = false;
     while (true) {
         self.h.next = allProcesses;
         self.h.id = if (allProcesses) |p| p.header().id + 1 else 1;
         if (@cmpxchgWeak(?*Self, &allProcesses, self.h.next, origin, SeqCst, SeqCst) == null) break;
     }
-    self.h.trapContextNumber = 0;
-    self.h.singleStepping = false;
 }
 pub fn deinit(self: *align(1) Self) void {
     self.ptr().* = undefined;
@@ -332,12 +334,12 @@ test "nursery allocation" {
     var ar = sp.alloc(initialContext, ClassIndex.Class, 4, null, void, false);
     _ = ar.initAll();
     const o1 = ar.allocated;
-    try ee(emptySize - 5 - 1, process.freeNursery());
+    try ee(emptySize - 5, process.freeNursery());
     ar = sp.alloc(initialContext, ClassIndex.Class, 5, null, void, false);
     _ = ar.initAll();
     ar = sp.alloc(initialContext, ClassIndex.Class, 6, null, void, false);
     const o2 = ar.initAll();
-    try ee(emptySize - 19 - 1, process.freeNursery());
+    try ee(emptySize - 19, process.freeNursery());
     try o1.instVarPut(0, o2.asObject());
     sp = sp.push(o1.asObject()).?;
     const news, const newContext, _ = sp.spillStack(initialContext, Extra.none);
@@ -450,7 +452,6 @@ const Stack = struct {
     }
     pub inline //
     fn getStack(self: SP) []Object {
-        //    return sp.slice((@intFromPtr(self.endOfStack()) - @intFromPtr(sp)) / @sizeOf(Object));
         return self.sliceTo(self.endOfStack());
     }
     pub inline fn dumpStack(self: SP, why: []const u8) void {

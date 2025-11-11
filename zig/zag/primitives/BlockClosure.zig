@@ -7,7 +7,6 @@ const trace = config.trace;
 const execute = zag.execute;
 const Code = execute.Code;
 const PC = execute.PC;
-const compileMethod = execute.compileMethod;
 const CompiledMethod = execute.CompiledMethod;
 const Result = execute.Result;
 const Execution = execute.Execution;
@@ -244,9 +243,10 @@ pub const threadedFns = struct {
             newSp.top = Object.fromAddress(closure.ptr);
             return @call(tailCall, process.check(pc.skip(2).prim()), .{ pc.skip(2).next(), newSp, process, newContext, newExtra });
         }
-        const testMethod = compileMethod(Sym.yourself, 0, 0, .BlockClosure, .{});
         test "pushClosure" {
             if (true) return error.NotImplemented;
+            const exe1 = Execution.init(.{});
+            const testMethod = exe1.method;
             var exe = Execution.initTest("pushClosure", .{
                 tf.pushLiteral,
                 Object.tests[0],

@@ -7,7 +7,6 @@ const Context = zag.Context;
 const Code = execute.Code;
 const PC = execute.PC;
 const SP = execute.SP;
-const compileMethod = execute.compileMethod;
 const CompiledMethod = execute.CompiledMethod;
 const Process = @import("../process.zig").Process;
 const object = @import("../zobject.zig");

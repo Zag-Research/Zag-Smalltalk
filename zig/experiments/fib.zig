@@ -480,7 +480,7 @@ const fibFloat = struct {
         return proof;
     }
 };
-const print = std.log.err;
+const print = std.debug.print;
 fn showDelta(infos: ?*Info, new: u64, target: []const u8) void {
     if (infos) |info| {
         if (std.mem.eql(u8, info.name, target)) {

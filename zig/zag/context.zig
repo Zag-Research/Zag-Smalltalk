@@ -37,57 +37,41 @@ tpc: PC, // threaded PC
 npc: *const fn (PC, SP, *Process, *Context, Extra) Result, // native PC - in Continuation Passing Style
 prevCtxt: ?*Context,
 contextData: *ContextData,
+contextDataHeader: HeapHeader,
 const contextSize = @sizeOf(Self) / @sizeOf(Object);
 pub const Static = ContextOnStack;
 const ContextOnStack = struct {
-    spOffset: u64,
-    trapContextNumber: u64,
+    spAndSelfOffset: u64,
+    prevCtxt: ?*Context,
     method: *const CompiledMethod,
+    trapContextNumber: u64,
     tpc: usize,
     npc: *const fn (PC, SP, *Process, *Context, Extra) Result,
-    prevCtxt: ?*Context,
     contextData: *ContextData,
-    selfOffset: u64,
+    contextDataHeader: HeapHeader,
     locals: Object,
     inline fn set(self: *ContextOnStack, method: *const CompiledMethod, context: *Context, selfOffset: u64, numLocals: u64) void {
-        self.spOffset = 0;
-        self.trapContextNumber = 0;
+        self.spAndSelfOffset = selfOffset - 1;
+        self.prevCtxt = context;
         self.method = method;
+        self.trapContextNumber = undefined;
         self.tpc = undefined;
         self.npc = undefined;
-        self.prevCtxt = context;
         self.contextData = undefined;
-        self.selfOffset = selfOffset - 1;
         const locals: [*]Object = @ptrCast(&self.locals);
         for (locals[0..numLocals]) |*l| {
             l.* = Nil();
         }
     }
-    pub fn initStatic(self: *ContextOnStack) void {
-        self.spOffset = @bitCast(HeapHeader.headerStatic(.Context, contextSize, contextSize - 1));
-        self.trapContextNumber = 0;
-        self.method = undefined;
-        self.tpc = undefined;
-        self.npc = undefined;
-        self.prevCtxt = null;
-        self.contextData = @ptrCast(&self.selfOffset);
-        self.selfOffset = undefined;
-        self.locals = undefined;
-        self.contextData.initStatic(1);
-    }
-    // pub fn new() ContextOnStack {
-    //     return undefined;
-    // }
     pub inline fn selfAddress(self: *const ContextOnStack) ?[*]Object {
         const locals: [*]Object = @ptrCast(@constCast(&self.locals));
-        return @ptrCast(&locals[self.selfOffset]);
+        return @ptrCast(&locals[self.spAndSelfOffset & Process.stack_mask]);
     }
     inline fn contextDataPtr(self: *ContextOnStack) *ContextData {
-        return @ptrCast(&self.selfOffset);
+        return @ptrCast(&self.spAndSelfOffset);
     }
     fn endOfStack(self: *const ContextOnStack) SP {
-        std.log.info("Resolving offset {x}", .{self.spOffset});
-        return @ptrFromInt(@intFromPtr(self) - self.spOffset);
+        return @ptrFromInt(@intFromPtr(self) - (self.spAndSelfOffset >> Process.stack_mask_shift));
     }
     inline fn alloc(self: *ContextOnStack, sp: SP, size: usize) struct { [*]Object, SP } {
         _ = .{ self, sp, size, unreachable };
@@ -188,7 +172,7 @@ pub const Extra = packed struct {
 pub const ContextData = struct {
     header: HeapHeader,
     contextData: [1]Object,
-    fn initStatic(self: *ContextData, comptime locals: u11) void {
+    pub fn initStatic(self: *ContextData, comptime locals: u11) void {
         self.header = HeapHeader.headerStatic(.ContextData, locals - 1, locals);
         @setRuntimeSafety(false);
         for (self.contextData[0..locals]) |*local| {
@@ -213,6 +197,15 @@ pub fn init() Self {
     result.prevCtxt = null;
     result.trapContextNumber = 0;
     return result;
+}
+pub fn initStatic(self: *Context, contextData: *ContextData) void {
+    self.header = HeapHeader.headerStatic(.Context, contextSize, contextSize - 1);
+    self.prevCtxt = null;
+    self.method = undefined;
+    self.trapContextNumber = 0;
+    self.tpc = undefined;
+    self.npc = undefined;
+    self.contextData = contextData;
 }
 pub fn format(
     self: *const Context,
@@ -282,7 +275,7 @@ pub fn moveToHeap(self: *const Context, sp: SP, process: *Process) *Context {
 }
 pub inline fn contextDataPtr(self: *const Context, sp: SP) *ContextData {
     if (self.ifOnStack(sp)) |ctxt| {
-        return @ptrCast(@constCast(&ctxt.selfOffset));
+        return @ptrCast(@constCast(&ctxt.contextDataHeader));
     }
     return self.contextData;
 }

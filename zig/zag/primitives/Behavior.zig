@@ -10,7 +10,6 @@ const Code = execute.Code;
 const PC = execute.PC;
 const Result = execute.Result;
 const SP = Process.SP;
-const compileMethod = execute.compileMethod;
 const CompiledMethodPtr = execute.CompiledMethodPtr;
 const Process = zag.Process;
 const object = zag.object;

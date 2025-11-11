@@ -1,6 +1,14 @@
 const std = @import("std");
 const testing = std.testing;
 const builtin = @import("builtin");
+const options = @import("options");
+
+fn option(comptime name: []const u8) ?bool {
+    if (@hasDecl(options, name)) {
+        return @field(options, name);
+    }
+    return null;
+}
 
 var test_name: []const u8 = "no test active";
 var cwd_buffer: [std.fs.max_path_bytes]u8 = undefined;
@@ -11,6 +19,8 @@ var yellow: []const u8 = "";
 var blue: []const u8 = "";
 var cyan: []const u8 = "";
 var reset: []const u8 = "";
+
+var quitOnFirstFailure: bool = option("quitOnFirstFailure") orelse false;
 
 pub fn main() !void {
     @disableInstrumentation();
@@ -32,7 +42,7 @@ pub fn main() !void {
     var fail_count: usize = 0;
     var leaks: usize = 0;
     var buffer: [128]u8 = undefined;
-    for (test_fn_list) |test_fn| {
+    tests: for (test_fn_list) |test_fn| {
         testing.allocator_instance = .{};
         testing.log_level = .warn;
         test_name = extractName(test_fn);
@@ -63,14 +73,13 @@ pub fn main() !void {
                 fail_count += 1;
                 stderr.print("{s}{s} failed - {s}{s}\n", .{ test_name, red, @errorName(err), reset }) catch return;
                 handleTraces(stderr);
+                if (quitOnFirstFailure) break :tests;
             },
         }
     }
 
-    const stderr = std.debug.lockStderrWriter(&buffer);
-    defer std.debug.unlockStderrWriter();
-    stderr.print("of {} tests, {} passed, {} skipped, {} failed, {} leaks\n",
-        .{ test_fn_list.len, passed_count, skip_count, fail_count, leaks }) catch return;
+    std.debug.print("of {} tests, {} passed, {} skipped, {} failed, {} leaks\n",
+        .{ test_fn_list.len, passed_count, skip_count, fail_count, leaks });
     if (leaks != 0 or fail_count != 0) {
         std.process.exit(1);
     }
