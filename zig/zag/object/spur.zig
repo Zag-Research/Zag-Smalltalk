@@ -7,6 +7,7 @@ const zag = @import("../zag.zig");
 const trace = zag.config.trace;
 const object = zag.object;
 const Process = zag.Process;
+const SP = Process.SP; 
 const testing = std.testing;
 const ClassIndex = object.ClassIndex;
 const heap = zag.heap;
@@ -257,18 +258,18 @@ pub const Object = packed union {
         return decode(@bitCast(self));
     }
 
-    fn memoryFloat(value: f64, maybeProcess: ?*Process) object.Object {
+    fn memoryFloat(value: f64, sp: SP, maybeProcess: ?*Process) object.Object {
         if (math.isNan(value)) return object.Object.fromAddress(&InMemory.nanMemObject);
         if (math.inf(f64) == value) return object.Object.fromAddress(&InMemory.pInfMemObject);
         if (math.inf(f64) == -value) return object.Object.fromAddress(&InMemory.nInfMemObject);
-        return InMemory.float(value, maybeProcess);
+        return InMemory.float(value, sp, maybeProcess);
     }
 
     pub fn fromAddress(value: anytype) Object {
         return @bitCast(@intFromPtr(value));
     }
     // Conversion from Zig types
-    pub inline fn from(value: anytype, maybeProcess: ?*zag.Process) Object {
+    pub inline fn from(value: anytype, sp: SP, maybeProcess: ?*zag.Process) Object {
         const T = @TypeOf(value);
         if (T == Object) return value;
         switch (@typeInfo(T)) {
@@ -277,10 +278,10 @@ pub const Object = packed union {
                 if (encode(value)) |encoded| {
                     return @bitCast(encoded);
                 } else |_| {
-                    return memoryFloat(value, maybeProcess);
+                    return memoryFloat(value, sp, maybeProcess);
                 }
             },
-            .comptime_float => return from(@as(f64, value), maybeProcess),
+            .comptime_float => return from(@as(f64, value), sp, maybeProcess),
             .bool => return if (value) Object.True() else Object.False(),
             .null => return Object.Nil(),
             .pointer => |ptr_info| {
