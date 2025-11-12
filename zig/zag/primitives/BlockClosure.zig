@@ -111,9 +111,7 @@ pub const threadedFns = struct {
         }
         test "asThunk int" {
             try config.skipNotZag();
-            var exe = Execution.initTest(
-                "asThunk int",
-                .{tf.asThunk});
+            var exe = Execution.initTest("asThunk int", .{tf.asThunk});
             try exe.runTestWithValidator(
                 @ptrCast(&validateInt),
                 &[_]Object{exe.object(2)},
@@ -130,9 +128,7 @@ pub const threadedFns = struct {
         test "asThunk ptr" {
             try config.skipNotZag();
             const obj = Object.fromAddress(&ThunkReturnSmallInteger.primitive);
-            var exe = Execution.initTest(
-                "asThunk ptr",
-                .{tf.asThunk});
+            var exe = Execution.initTest("asThunk ptr", .{tf.asThunk});
             try exe.runTestWithValidator(
                 @ptrCast(&validatePtr),
                 &[_]Object{obj},
@@ -149,9 +145,7 @@ pub const threadedFns = struct {
 
         test "asThunk True" {
             try config.skipNotZag();
-            var exe = Execution.initTest(
-                "asThunk True",
-                .{tf.asThunk});
+            var exe = Execution.initTest("asThunk True", .{tf.asThunk});
             try exe.runTestWithValidator(
                 @ptrCast(&validateTrue),
                 &[_]Object{True()},
@@ -167,9 +161,7 @@ pub const threadedFns = struct {
 
         test "asThunk float" {
             try config.skipNotZag();
-            var exe = Execution.initTest(
-                "asThunk float",
-                .{tf.asThunk});
+            var exe = Execution.initTest("asThunk float", .{tf.asThunk});
             try exe.runTestWithValidator(
                 @ptrCast(&validateFloat),
                 &[_]Object{exe.object(-32767.75)},
@@ -185,9 +177,7 @@ pub const threadedFns = struct {
 
         test "asThunk doesn't fit" {
             try config.skipNotZag();
-            var exe = Execution.initTest(
-                "asThunk doesn't fit",
-                .{tf.asThunk});
+            var exe = Execution.initTest("asThunk doesn't fit", .{tf.asThunk});
             const obj = exe.object(1.0 / 5.0);
             try exe.runTestWithValidator(
                 @ptrCast(&validateNone),
@@ -362,7 +352,7 @@ pub const threadedFns = struct {
 pub const ThunkImmediate = struct {
     pub fn primitive(_: PC, sp: SP, process: *Process, context: *Context, _: Extra) Result {
         const result = sp.top.extraValue();
-        const newSp, const callerContext = context.pop(process, sp);
+        const newSp, const callerContext = context.pop(sp);
         newSp.top = result;
         return @call(tailCall, process.check(callerContext.getNPc()), .{ callerContext.getTPc(), newSp, process, callerContext, undefined });
     }

@@ -351,10 +351,11 @@ pub const threadedFunctions = struct {
                 trace("returnSelf: {*}->{*} {f}", .{ sp, newSp, extra });
                 return @call(tailCall, process.check(context.npc), .{ context.tpc, newSp, process, context, Extra.fromContextData(context.contextDataPtr(sp)) });
             }
-            const newSp, const callerContext = context.pop(process, sp);
             sp.traceStack("returnSelf after pop");
+            const newSp, const callerContext = context.pop(sp);
+            sp.traceStack("returnSelf sp after pop");
             trace("returnSelf: {*}->{*}", .{ sp, newSp });
-            sp.traceStack("returnSelf after pop");
+            newSp.traceStack("returnSelf newSp after pop");
             return @call(tailCall, process.branchCheck(callerContext.getNPc()), .{ callerContext.getTPc(), newSp, process, callerContext, Extra.fromContextData(callerContext.contextData) });
         }
         test "returnSelf" {
@@ -385,7 +386,7 @@ pub const threadedFunctions = struct {
                 newSp.top = top;
                 return @call(tailCall, process.check(context.npc), .{ context.tpc, newSp, process, context, Extra.fromContextData(context.contextDataPtr(sp)) });
             }
-            const newSp, const callerContext = context.pop(process, sp);
+            const newSp, const callerContext = context.pop(sp);
             trace("returnTop: {f} {*} {*} {*} {f}", .{ top, newSp, callerContext, callerContext.npc, callerContext.tpc });
             newSp.top = top;
             return @call(tailCall, process.branchCheck(callerContext.npc), .{ callerContext.tpc, newSp, process, callerContext, Extra.fromContextData(callerContext.contextDataPtr(sp)) });

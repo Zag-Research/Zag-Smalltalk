@@ -408,15 +408,19 @@ pub const CompiledMethod = struct {
     ) !void {
         try writer.print("CompiledMethod{{.stackStructure={}, .signature={f}, .executeFn={x}}}", .{ self.stackStructure, self.signature, @intFromPtr(self.executeFn) });
     }
-    pub fn dump(self: *const Self) void {
+    pub fn dumpHeader(self: *const Self) u32 {
         std.log.info("Header:           {}", .{self.header});
         std.log.info("Stack Structure:  {}", .{self.stackStructure});
         std.log.info("Signature:        {f}", .{self.signature});
         std.log.info("Execute Function: {}", .{self.executeFn});
         std.log.info("Jitted Function:  {?}", .{self.jitted});
-        const code: [*]const Code = @ptrCast(&self.code);
         const methodSize = self.header.length - codeOffsetInObjects;
         std.log.info("methodSize:       {}", .{methodSize});
+        return methodSize;
+    }
+    pub fn dump(self: *const Self) void {
+        const methodSize = self.dumpHeader();
+        const code: [*]const Code = @ptrCast(&self.code);
         for (code[0..methodSize]) |*instruction| {
             std.log.info("[{x:0>12}]: {f}", .{ @intFromPtr(instruction), instruction.* });
         }
@@ -435,7 +439,6 @@ pub const CompiledMethod = struct {
     pub fn execute(self: *const Self, sp: SP, process: *Process, context: *Context) Result {
         const newExtra = Extra.forMethod(self, sp);
         const pc = PC.init(&self.code[1]);
-        self.dump();
         return self.executeFn(pc, sp, process, context, newExtra);
     }
     inline fn asHeapObjectPtr(self: *const Self) HeapObjectConstPtr {
@@ -532,14 +535,8 @@ fn CompileTimeMethod(comptime counts: usize) type {
         //         @compileError("CompiledMethod prefix not the same as CompileTimeMethod == " ++ s);
         // }
         pub fn dump(self: *const Self) void {
-            std.log.info("Header:           {}", .{self.header});
-            std.log.info("Stack Structure:  {}", .{self.stackStructure});
-            std.log.info("Signature:        {f}", .{self.signature});
-            std.log.info("Execute Function: {}", .{self.executeFn});
-            std.log.info("Jitted Function:  {?}", .{self.jitted});
+            const methodSize = @as(*const CompiledMethod, @ptrCast(self)).dumpHeader();
             const code: [*]const Code = @ptrCast(&self.code);
-            const methodSize = self.header.length - codeOffsetInUnits;
-            std.log.info("methodSize:       {}", .{methodSize});
             for (0..methodSize) |i| {
                 std.log.info("[{x:0>12}]: {f}{s}", .{ @intFromPtr(&code[i]), code[i], switch (self.offsets[i]) {
                     .none => "",

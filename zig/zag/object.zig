@@ -157,6 +157,7 @@ pub const Object = switch (config.objectEncoding) {
     .nan => @import("object/nan.zig").Object,
     .spur => @import("object/spur.zig").Object,
     .taggedPtr => @import("object/taggedPtr.zig").Object,
+    .taggedInt => @import("object/taggedInt.zig").Object,
     .cachedPtr, .ptr => @import("object/ptr.zig").Object,
     .onlyInt => @import("object/onlyInt.zig").Object,
     .onlyFloat => @import("object/onlyFloat.zig").Object,
@@ -308,7 +309,9 @@ pub const ObjectFunctions = struct {
                 }
             }
         }
-        if (self.signature()) |signature| {
+        if (self.invalidObject()) |invalid| {
+            try writer.print("{{?0x{x:0>16}}}", .{invalid});
+        } else if (self.signature()) |signature| {
             try writer.print("{f}", .{signature});
         } else if (self.nativeI()) |i| {
             try writer.print("{d}", .{i});

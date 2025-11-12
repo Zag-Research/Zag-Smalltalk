@@ -77,15 +77,6 @@ pub const Object = packed struct(u64) {
     pub inline fn extraValue(self: object.Object) object.Object {
         return @bitCast(self.rawU() >> 8);
     }
-    pub inline fn tagMethod(o: object.Object) ?object.Object {
-        return @bitCast(@as(u64, @bitCast(o)) | 1);
-    }
-    pub inline fn tagMethodValue(self: Self) object.Object {
-        return @bitCast(@as(u64, @bitCast(self)) >> 1 << 1);
-    }
-    pub inline fn isTaggedMethod(self: object.Object) bool {
-        return (@as(u64, @bitCast(self)) & 1) != 0;
-    }
     pub inline fn extraI(self: object.Object) i8 {
         _ = .{ self, unreachable };
     }

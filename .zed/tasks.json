@@ -43,6 +43,12 @@
     //"hide": "on_success",
   },
   {
+    "label": "test taggedInt encoding",
+    "command": "zig build test -Dencoding=taggedInt -Dtrace --summary all -freference-trace=5",
+    "cwd": "$ZED_WORKTREE_ROOT/zig/zag"
+    //"hide": "on_success",
+  },
+  {
     "label": "test-llvm",
     "command": "zig build test --summary all -freference-trace=20 -Dllvm",
     "cwd": "$ZED_WORKTREE_ROOT/zig",
@@ -114,6 +120,11 @@
   {
     "label": "time fib zagAlt",
     "command": "zig build -Dencoding=zagAlt -Doptimize=ReleaseFast && ./zig-out/bin/fib",
+    "cwd": "$ZED_WORKTREE_ROOT/zig"
+  },
+  {
+    "label": "time fib taggedInt",
+    "command": "zig build -Dencoding=taggedInt -Doptimize=ReleaseFast && ./zig-out/bin/fib",
     "cwd": "$ZED_WORKTREE_ROOT/zig"
   },
   {

@@ -1,3 +1,4 @@
+//! This module implements Object encoding for Zag encoding
 const std = @import("std");
 const builtin = @import("builtin");
 const mem = std.mem;
@@ -150,6 +151,10 @@ pub const Object = packed struct(u64) {
     inline fn rawI(self: object.Object) i64 {
         return @bitCast(self);
     }
+    pub inline fn invalidObject(_: object.Object) ?u64 {
+        // there are no invalid objects in this encoding
+        return null;
+    }
     inline fn of(comptime v: u64) object.Object {
         return @bitCast(v);
     }
@@ -171,15 +176,6 @@ pub const Object = packed struct(u64) {
     }
     inline fn isThunkImmediate(self: object.Object) bool {
         return self.isImmediateClass(.ThunkImmediate);
-    }
-    pub inline fn tagMethod(o: object.Object) ?object.Object {
-        return @bitCast(@as(u64, @bitCast(o)) | 1);
-    }
-    pub inline fn tagMethodValue(self: Self) object.Object {
-        return @bitCast(@as(u64, @bitCast(self)) >> 1 << 1);
-    }
-    pub inline fn isTaggedMethod(self: object.Object) bool {
-        return (@as(u64, @bitCast(self)) & 1) != 0;
     }
     pub inline fn extraI(self: object.Object) i8 {
         return @bitCast(@as(u8, @truncate(self.hash & extraMask)));

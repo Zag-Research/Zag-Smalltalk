@@ -48,7 +48,6 @@ const Process = struct {
     stack: [stack_size]Object align(alignment),
     h: Fields,
     staticContext: Context,
-    contextData: Context.ContextData,
     nursery0: [nursery_size]HeapObject,
     nursery1: [nursery_size]HeapObject,
     const Fields = struct {
@@ -64,7 +63,7 @@ const Process = struct {
         otherHeap: HeapObjectArray,
         singleStepping: bool,
     };
-    const processAvail = (process_total_size - @sizeOf(Fields) - @sizeOf(Context) - @sizeOf(Context.ContextData)) / @sizeOf(Object);
+    const processAvail = (process_total_size - @sizeOf(Fields) - @sizeOf(Context)) / @sizeOf(Object);
     const approx_nursery_size = (processAvail - processAvail / 9) / 2;
     const stack_size: usize = @min(zag.utilities.largerPowerOf2(processAvail - approx_nursery_size * 2), (1 << 16) / @sizeOf(Object) - 1) - 1;
     const nursery_size = (processAvail - stack_size) / 2;
@@ -104,7 +103,7 @@ const Process = struct {
                     hp = pointer.copyTo(hp, &sp.top);
                 sp = sp.drop();
             }
-            sp = unreachable; //context.callerStack();
+            sp = @panic("Stack overflow"); //context.callerStack();
             context = context.previous();
         }
         // find references from the residual stack
@@ -172,8 +171,7 @@ pub fn init(origin: *align(alignment) Self) void {
     self.h.currHp = self.h.currHeap;
     self.h.otherHeap = HeapObject.fromObjectPtr(@ptrCast(&self.nursery1));
     self.h.context = &self.staticContext;
-    self.staticContext.initStatic(&self.contextData);
-    self.contextData.initStatic(1);
+    self.staticContext.initStatic();
     self.h.trapContextNumber = 0;
     self.h.singleStepping = false;
     while (true) {
@@ -455,14 +453,14 @@ const Stack = struct {
         return self.sliceTo(self.endOfStack());
     }
     pub inline fn dumpStack(self: SP, why: []const u8) void {
-        std.log.err("dumpStack ({s})\n", .{why});
+        std.log.err("dumpStack ({s})", .{why});
         for (self.getStack()) |*obj|
-            std.log.err("[{x:0>10}]: {x:0>16}\n", .{ @intFromPtr(obj), @as(u64, @bitCast(obj.*)) });
+            std.debug.print("[{x:0>10}]: {f}\n", .{ @intFromPtr(obj), obj.* });
     }
     pub inline fn traceStack(self: SP, why: []const u8) void {
         trace("traceStack ({s})", .{why});
         for (self.getStack()) |*obj|
-            trace("[{x:0>10}]: {x:0>16}", .{ @intFromPtr(obj), @as(u64, @bitCast(obj.*)) });
+            trace("[{x:0>10}]: {f}", .{ @intFromPtr(obj), obj.* });
     }
     pub inline fn theProcess(self: SP) *Process {
         return @ptrFromInt(@intFromPtr(self) & alignment_mask);

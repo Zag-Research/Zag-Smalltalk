@@ -7,6 +7,7 @@ pub const Encoding = enum {
     taggedPtr,
     cachedPtr,
     ptr,
+    taggedInt,
     onlyInt,
     onlyFloat,
     pub fn fromName(key: []const u8) !Encoding {
@@ -28,6 +29,7 @@ pub const Encoding = enum {
             .spur => @import("spur.zig"),
             .taggedPtr => @import("taggedPtr.zig"),
             .cachedPtr, .ptr => @import("ptr.zig"),
+            .taggedInt => @import("taggedInt.zig"),
             .onlyInt => @import("onlyInt.zig"),
             .onlyFloat => @import("onlyFloat.zig"),
         };
@@ -40,6 +42,7 @@ test "fromName" {
     try expect(try match("nan") == .nan);
     try expect(try match("spur") == .spur);
     try expect(try match("taggedPtr") == .taggedPtr);
+    try expect(try match("taggedInt") == .taggedInt);
     try expect(try match("cachedPtr") == .cachedPtr);
     try expect(try match("ptr") == .ptr);
     try expect(match("fubar") == error.InvalidKey);

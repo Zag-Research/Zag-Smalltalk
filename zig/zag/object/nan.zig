@@ -1,3 +1,4 @@
+//! This module implements Object encoding with NaNs.
 const std = @import("std");
 const builtin = @import("builtin");
 const mem = std.mem;
@@ -80,6 +81,10 @@ pub const Object = packed struct(u64) {
     fn rawI(self: Object) i64 {
         return @bitCast(self);
     }
+    pub inline fn invalidObject(_: object.Object) ?u64 {
+        // there are no invalid objects in this implementation
+        return null;
+    }
     pub inline fn asObject(self: Object) Object {
         return self;
     }
@@ -88,15 +93,6 @@ pub const Object = packed struct(u64) {
     }
     fn enumBits(T: type) usize {
         return @typeInfo(@typeInfo(T).@"enum".tag_type).int.bits;
-    }
-    pub inline fn tagMethod(o: object.Object) ?object.Object {
-        return @bitCast(@as(u64, @bitCast(o)) | 1);
-    }
-    pub inline fn tagMethodValue(self: object.Object) object.Object {
-        return @bitCast(@as(u64, @bitCast(self)) >> 1 << 1);
-    }
-    pub inline fn isTaggedMethod(self: object.Object) bool {
-        return (@as(u64, @bitCast(self)) & 1) != 0;
     }
     pub inline fn extraI(self: object.Object) i3 {
         return @bitCast(@as(u3, @truncate(self.rawU())));

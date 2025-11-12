@@ -1,3 +1,4 @@
+//! This module implements Object encoding with everything a pointer to an in-memory object.
 const std = @import("std");
 const builtin = @import("builtin");
 const mem = std.mem;
@@ -98,15 +99,6 @@ pub const Object = packed struct(u64) {
     pub inline fn isPICX(self: object.Object) bool {
         return self.isImmediateClass(.PICPointer);
     }
-    pub inline fn tagMethod(o: object.Object) ?object.Object {
-        return @bitCast(@as(u64, @bitCast(o)) | 1);
-    }
-    pub inline fn tagMethodValue(self: Self) object.Object {
-        return @bitCast(@as(u64, @bitCast(self)) >> 1 << 1);
-    }
-    pub inline fn isTaggedMethod(self: object.Object) bool {
-        return (@as(u64, @bitCast(self)) & 1) != 0;
-    }
     pub inline fn extraI(self: object.Object) i8 {
         _ = .{ self, unreachable };
     }
@@ -118,6 +110,12 @@ pub const Object = packed struct(u64) {
     }
     inline fn rawI(self: object.Object) i64 {
         return self.ref.data.int;
+    }
+    pub inline fn invalidObject(self: object.Object) ?u64 {
+        const value: u64 = @bitCast(self);
+        if (value == 0) return value;
+        if (value & 7 != 0) return value;
+        return null;
     }
     inline fn of(comptime v: u64) object.Object {
         return @bitCast(v);

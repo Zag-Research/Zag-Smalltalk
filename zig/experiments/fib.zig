@@ -104,7 +104,7 @@ const fibInteger = struct {
         fib.initExecute();
         zag.dispatch.addMethod(@ptrCast(&fib));
         if (zag.config.show_trace) {
-            std.log.err("\n", .{});
+            std.debug.print("\n", .{});
             fib.dump();
         } else {
             const threaded = runIt({}, 0);
@@ -161,7 +161,7 @@ const fibInteger0 = struct {
         fib.initExecute();
         zag.dispatch.addMethod(@ptrCast(&fib));
         if (zag.config.show_trace) {
-            std.log.err("\n", .{});
+            std.debug.print("\n", .{});
             fib.dump();
         } else {
             const threaded = runIt({}, 0);
@@ -220,7 +220,7 @@ const fibIntegerBr = struct {
         fib.initExecute();
         zag.dispatch.addMethod(@ptrCast(&fib));
         if (zag.config.show_trace) {
-            std.log.err("\n", .{});
+            std.debug.print("\n", .{});
             fib.dump();
         } else {
             const threaded = runIt({}, 0);
@@ -351,7 +351,7 @@ const fibIntegerCnP = struct {
                         const newSp: SP = @ptrCast(address);
                         return @call(tailCall, process.check(context.npc), .{ context.tpc, newSp, process, context, Extra.fromContextData(context.contextDataPtr(sp)) });
                     }
-                    const newSp, const callerContext = context.pop(process, sp);
+                    const newSp, const callerContext = context.pop(sp);
                     return @call(tailCall, process.branchCheck(callerContext.getNPc()), .{ callerContext.getTPc(), newSp, process, callerContext, Extra.fromContextData(callerContext.contextData) });
                 } // end of returnSelf
             },
@@ -570,6 +570,6 @@ pub fn main() !void {
     try timing(if (default) @constCast(do_all[0..]) else args[1..], default);
 }
 const testRun = zag.config.testRun;
-const fibN = if (testRun) 5 else 15;
+const fibN = if (testRun) 15 else 15;
 const nRuns = if (testRun) 1 else 5;
 const warmups = if (testRun) 0 else null;
