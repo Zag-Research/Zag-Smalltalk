@@ -26,7 +26,7 @@ const show_error_stack = debugging;
 pub const show_trace = debugging or options.trace;
 
 pub const immediateIntegers = switch (objectEncoding) {
-    .zag, .nan, .spur, .zagAlt, .onlyInt => true,
+    .zag, .nan, .spur, .zagAlt, .onlyInt, .taggedInt => true,
     else => false,
 };
 pub const immediateSymbols = switch (objectEncoding) {
