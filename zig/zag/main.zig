@@ -32,7 +32,7 @@ fn format_timestamp(seconds: u64, out_buffer: []u8) void {
         day_seconds.getHoursIntoDay(),
         day_seconds.getMinutesIntoHour(),
         day_seconds.getSecondsIntoMinute(),
-    }) catch unreachable;
+    }) catch @panic("unreachable");
 }
 const unix_timestamp: u64 = @intCast(std.time.timestamp());
 const timestamp: []const u8 = blk: {

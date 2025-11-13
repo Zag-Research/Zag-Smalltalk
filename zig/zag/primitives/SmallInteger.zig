@@ -134,7 +134,7 @@ pub const @"+" = struct {
         const receiver = sp.next;
         if (!receiver.isInt()) {
             trace("SmallInteger>>#inlinePrimitive: + {f}", .{receiver});
-            if (true) unreachable;
+            if (true) @panic("unreachable");
             return @call(tailCall, PC.inlinePrimitiveFailed, .{ pc, sp, process, context, extra });
         }
         const newSp = sp.dropPut(with(receiver, sp.top, sp, context) catch
@@ -187,7 +187,7 @@ pub const @"<=" = struct {
         const receiver = sp.next;
         if (!receiver.isInt()) {
             trace("SmallInteger>>#inlinePrimitive: <= {f}", .{receiver});
-            if (true) unreachable;
+            if (true) @panic("unreachable");
             return @call(tailCall, PC.inlinePrimitiveFailed, .{ pc, sp, process, context, extra });
         }
         const newSp = sp.dropPut(Object.from(with(receiver, sp.top) catch

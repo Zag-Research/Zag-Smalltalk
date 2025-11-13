@@ -229,15 +229,15 @@ pub const SymbolTable = struct {
             if (!lu.isNil()) return lu;
             const result = internDirect(self, trp, string);
             if (!result.isNil()) return result;
-            unreachable; // out of space
+            @panic("unreachable"); // out of space
         }
-        unreachable;
+        @panic("unreachable");
     }
     fn internDirect(self: *Self, trp: *SymbolTreap, string: Object) Object {
         const result = lookupDirect(trp, string);
         if (!result.isNil()) return result;
         const str = string.promoteToUnmovable() catch return Nil();
-        const index = trp.insert(str) catch unreachable;
+        const index = trp.insert(str) catch @panic("unreachable");
         if (config.immediateSymbols)
             return SymbolsEnum.symbol_of(@truncate(index), numArgs(string));
         const obj: *PointedObject = @ptrCast(self.allocator.alloc(PointedObject, 1) catch @panic("can't alloc"));

@@ -40,9 +40,9 @@ const heap_allocation_size = 128 * 1024;
 const heapStartAddress = 0x10000000000;
 pub const HeapAllocationPtr = *align(heap_allocation_size) HeapAllocation;
 comptime {
-    std.testing.expectEqual(13, nFreeLists) catch unreachable;
-    std.testing.expectEqual(0x4000, HeapAllocation.size) catch unreachable;
-    std.testing.expectEqual(heap_allocation_size, HeapAllocation.size * 8) catch unreachable;
+    std.testing.expectEqual(13, nFreeLists) catch @panic("unreachable");
+    std.testing.expectEqual(0x4000, HeapAllocation.size) catch @panic("unreachable");
+    std.testing.expectEqual(heap_allocation_size, HeapAllocation.size * 8) catch @panic("unreachable");
     std.debug.assert(HeapAllocation.headerSize >= @sizeOf(HeapAllocation.HeapAllocationHeader) / @sizeOf(HeapObject));
 }
 pub const HeapAllocation = extern union {
@@ -109,7 +109,7 @@ pub const HeapAllocation = extern union {
         var temp = self.header.nextHeap;
         if (temp == null) temp = heapAllocations;
         // ToDo: update number of users of self and temp
-        return temp orelse unreachable;
+        return temp orelse @panic("unreachable");
     }
     fn putInFreeLists(self: SelfPtr, from: usize, to: usize) void {
         var start = from;
@@ -166,7 +166,7 @@ pub const HeapAllocation = extern union {
                     .allocated = ptr,
                     .info = aI,
                 };
-            unreachable; // add a new HeapAllocation
+            @panic("unreachable"); // add a new HeapAllocation
         }
     }
     fn allocBlock(self: SelfPtr, aI: AllocationInfo, classIndex: ClassIndex) ?HeapObjectPtr {
@@ -195,7 +195,7 @@ pub const HeapAllocation = extern union {
         while (end > 0) {
             const head = ptr[end - 1];
             _ = head;
-            unreachable;
+            @panic("unreachable");
         }
     }
 };
@@ -356,19 +356,19 @@ fn allocForAllocator(ctx: *anyopaque, len: usize, ptr_align: mem.Alignment, ret_
     _ = .{ ptr_align, ret_addr, ctx, len };
     const obj = rawAlloc(1, (len + @sizeOf(Object) - 1) / @sizeOf(Object), &heapAllocations, StructObject) catch return null;
     // ToDo: add obj to the allocatorKnown list for its page
-    const array = obj.arrayAsSlice(u8) catch unreachable;
+    const array = obj.arrayAsSlice(u8) catch @panic("unreachable");
     for (array) |*ptr| ptr.* = undefined;
     return array.ptr;
 }
 fn freeForAllocator(ctx: *anyopaque, buf: []u8, buf_align: mem.Alignment, ret_addr: usize) void {
     // const self = @ptrCast(*Self, @alignCast(ctx));
     _ = .{ buf, buf_align, ret_addr, ctx };
-    // unreachable;
+    // @panic("unreachable");
 }
 fn rawAlloc(instVars: u11, arraySize: usize, hint: *?HeapAllocationPtr, comptime T: anytype) AllocErrors!HeapObjectPtr {
     if (heapAllocations == null) _ = newHeapAllocation();
     const startingAllocation = hint.*;
-    var workingAllocation = startingAllocation orelse unreachable;
+    var workingAllocation = startingAllocation orelse @panic("unreachable");
 
     // ToDo        if (index==0) return GlobalArena.allocIndirect(self,sp,hp,context,heapSize,arraySize);
     while (true) {
@@ -380,7 +380,7 @@ fn rawAlloc(instVars: u11, arraySize: usize, hint: *?HeapAllocationPtr, comptime
         } else |err| {
             _ = err catch {};
             workingAllocation = workingAllocation.cycleNext();
-            if (workingAllocation == startingAllocation) unreachable;
+            if (workingAllocation == startingAllocation) @panic("unreachable");
         }
     }
 }
@@ -404,7 +404,7 @@ fn collect() AllocErrors!void {
 pub fn promote(obj: Object) !Object {
     if (!obj.isMemoryAllocated()) return obj;
     if (obj.header().age == Age.static) return obj;
-    unreachable;
+    @panic("unreachable");
     //       @memcpy(@ptrCast([*]u8,result),@ptrCast([*]const u8,ptr),totalSize*8);
     //       return result.asObject();
 }

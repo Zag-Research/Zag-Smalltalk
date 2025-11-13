@@ -238,7 +238,7 @@ pub fn Treap(comptime Key: type, comptime Index: type, comptime Value: type) typ
                     }
                 },
             }
-            unreachable;
+            @panic("unreachable");
         }
         fn delete(self: *Self, pos: Index) void {
             const node = &self.table[pos];

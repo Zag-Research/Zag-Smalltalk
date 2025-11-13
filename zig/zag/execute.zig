@@ -485,7 +485,7 @@ fn countNonLabels(comptime tup: anytype) usize {
                             c += 1;
                         } else {
                             @compileLog(field);
-                            unreachable;
+                            @panic("unreachable");
                         }
                     },
                 }
@@ -780,7 +780,7 @@ fn CompileTimeObject(comptime counts: usize) type {
                     @TypeOf(null) => Nil(),
                     comptime_int => blk: {
                         hash = field;
-                        break :blk if (raw) Object.rawFromU(@bitCast(@as(i64, field))) else unreachable;
+                        break :blk if (raw) Object.rawFromU(@bitCast(@as(i64, field))) else @panic("unreachable");
                     },
                     comptime_float => if (raw) Object.rawFromU(@bitCast(@as(f64, field))) else unreachable,
                     ClassIndex => blk: {
@@ -788,7 +788,7 @@ fn CompileTimeObject(comptime counts: usize) type {
                             objects[last] = @as(HeapHeader, @bitCast(objects[last]))
                                 .withLength(n - last - 1)
                                 .withHash(@bitCast(hash)).o();
-                        const header = HeapHeader.calc(field, 0, 0, Age.static, null, Object, false) catch unreachable;
+                        const header = HeapHeader.calc(field, 0, 0, Age.static, null, Object, false) catch @panic("unreachable");
                         hash = 0;
                         obj.offsets[n] = true;
                         last = n;

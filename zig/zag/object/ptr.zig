@@ -93,6 +93,10 @@ pub const Object = packed struct(u64) {
         if (self.isImmediateClass(.Symbol)) return self.ref.header.hash;
         return null;
     }
+    pub inline fn heapObject(self: object.Object) ?*InMemory.PointedObject {
+        if (self.rawU() & 0x7 == 0 and !self.isMemoryAllocated()) return @constCast(self.ref);
+        return null;
+    }
     pub inline fn extraValue(self: object.Object) object.Object {
         return @bitCast(self.rawU() >> 8);
     }
@@ -148,14 +152,14 @@ pub const Object = packed struct(u64) {
     // pub inline fn oImm(c: ClassIndex.Compact, h: u56) Self {
     //     return Self{ .tag = .immediates, .class = c, .hash = h };
     // }
-    pub inline fn hasPointer(_: Object) bool {
-        return true;
+    pub inline fn hasPointer(self: Object) bool {
+        return self.isMemoryAllocated();
     }
     pub inline fn highPointer(self: Object, T: type) ?T {
         return @ptrCast(self.ref.data.objects);
     }
     pub inline fn pointer(self: Object, T: type) ?T {
-        return @ptrCast(self.ref.data.objects);
+        return @constCast(@ptrCast(self.ref));
     }
     pub inline fn toBoolNoCheck(self: Object) bool {
         return self == Object.True();
@@ -211,8 +215,7 @@ pub const Object = packed struct(u64) {
                 switch (ptr_info.size) {
                     .one, .many => {
                         //@compileLog("from: ",value);
-                        @setRuntimeSafety(false);
-                        return Object{ .ref = @ptrCast(@alignCast(@constCast(value))) };
+                        return fromPtr(value);
                     },
                     else => {},
                 }
@@ -220,6 +223,9 @@ pub const Object = packed struct(u64) {
             else => {},
         }
         @compileError("Can't convert \"" ++ @typeName(T) ++ "\"");
+    }
+    pub fn fromPtr(ptr: anytype) Object {
+        return @bitCast(@intFromPtr(ptr));
     }
     pub fn toWithCheck(self: Object, comptime T: type, comptime check: bool) T {
         switch (T) {
@@ -268,7 +274,7 @@ pub const Object = packed struct(u64) {
         return self.ref.header.classIndex;
     }
     pub inline fn isMemoryAllocated(self: Object) bool {
-        return if (self.isHeap()) self != Object.Nil() else @intFromEnum(self.class) <= @intFromEnum(ClassIndex.Compact.ThunkHeap);
+        return self != Object.Nil();
     }
     pub const Scanner = struct {
         ptr: *anyopaque,

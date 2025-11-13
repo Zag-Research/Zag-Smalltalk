@@ -116,7 +116,7 @@ const ClassTable = struct {
         self.* = undefined;
     }
     fn nextFree(self: *Self) ClassIndex {
-        return self.theTreap(1).nextFree() catch unreachable;
+        return self.theTreap(1).nextFree() catch @panic("unreachable");
     }
     fn lookup(self: *Self, sym: Object) ClassIndex {
         return self.theTreap(0).lookup(sym.hash32());
@@ -126,11 +126,11 @@ const ClassTable = struct {
         while (true) {
             const lu = self.lookup(sym);
             if (lu > 0) return lu;
-            const result = trp.insert(sym.hash32()) catch unreachable;
+            const result = trp.insert(sym.hash32()) catch @panic("unreachable");
             if (result > 0) return result;
-            unreachable; // out of space
+            @panic("unreachable"); // out of space
         }
-        unreachable;
+        @panic("unreachable");
     }
     pub inline fn getClassIndex(self: *Self, className: Object) ClassIndex {
         return self.intern(className);

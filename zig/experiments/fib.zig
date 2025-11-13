@@ -549,13 +549,13 @@ pub fn timing(args: []const []const u8, default: bool) !void {
 }
 pub fn main() !void {
     const do_all = [_][]const u8{
-        "Config",            "Header",
-        "Native",            "NativeF",
+        "Config", "Header",
+        "Native", "NativeF",
         //"Integer",
         "IntegerBr?Integer",
         //"Integer0?Integer",
         //"IntegerCnP",
-        "Float",
+        //"Float",
     };
     // var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     // const allocator = gpa.allocator();
@@ -570,6 +570,6 @@ pub fn main() !void {
     try timing(if (default) @constCast(do_all[0..]) else args[1..], default);
 }
 const testRun = zag.config.testRun;
-const fibN = if (testRun) 15 else 15;
+const fibN = if (testRun) 17 else 35;
 const nRuns = if (testRun) 1 else 5;
 const warmups = if (testRun) 0 else null;

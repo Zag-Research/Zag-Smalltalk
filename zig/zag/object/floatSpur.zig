@@ -212,7 +212,7 @@ pub fn main() void {
     }
 
     // Benchmark encode_spec
-    var timer = std.time.Timer.start() catch unreachable;
+    var timer = std.time.Timer.start() catch @panic("unreachable");
 
     _ = timer.lap();
     for (0..iterations / valid_values.len) |_| {

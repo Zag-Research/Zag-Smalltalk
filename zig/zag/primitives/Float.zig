@@ -103,7 +103,7 @@ pub const @"+" = struct {
         const receiver = sp.next;
         if (!receiver.isFloat()) {
             trace("Float>>#inlinePrimitive: + {f}", .{receiver});
-            if (true) unreachable;
+            if (true) @panic("unreachable");
             return @call(tailCall, PC.inlinePrimitiveFailed, .{ pc, sp, process, context, extra });
         }
         const newSp = sp.dropPut(with(receiver, sp.top, sp, context) catch
@@ -151,7 +151,7 @@ pub const @"<=" = struct {
         const receiver = sp.next;
         if (!receiver.isFloat()) {
             trace("Float>>#inlinePrimitive: <= {f}", .{receiver});
-            if (true) unreachable;
+            if (true) @panic("unreachable");
             return @call(tailCall, PC.inlinePrimitiveFailed, .{ pc, sp, process, context, extra });
         }
         const newSp = sp.dropPut(Object.from(inlines.@"<="(receiver, sp.top) catch

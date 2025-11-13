@@ -64,7 +64,7 @@ const Process = struct {
         singleStepping: bool,
     };
     const processAvail = (process_total_size - @sizeOf(Fields) - @sizeOf(Context)) / @sizeOf(Object);
-    const approx_nursery_size = (processAvail - processAvail / 9) / 2;
+    const approx_nursery_size = (processAvail - processAvail / 4) / 2;
     const stack_size: usize = @min(zag.utilities.largerPowerOf2(processAvail - approx_nursery_size * 2), (1 << 16) / @sizeOf(Object) - 1) - 1;
     const nursery_size = (processAvail - stack_size) / 2;
     comptime {
@@ -84,17 +84,18 @@ const Process = struct {
             total += ageSizes[age];
             if (total >= need) {
                 self.collectNurseryPass(sp, context, ageSizes, age);
+                sp.dumpStack("after collection");
+                if (true) @panic("collected");
                 return;
             }
         }
-        unreachable;
+        @panic("Insufficient nursery space");
     }
     fn collectNurseryPass(self: *Process, originalSp: SP, contextMutable: *Context, sizes: [Process.lastNurseryAge]usize, promoteAge: usize) void {
         _ = .{ sizes, promoteAge };
         var scan = self.h.otherHeap;
         var hp = scan;
         var context = contextMutable;
-        const endStack = originalSp.endOfStack();
         var sp = originalSp;
         // find references from the stacked contexts
         while (context.endOfStack(sp)) |endSP| {
@@ -103,31 +104,23 @@ const Process = struct {
                     hp = pointer.copyTo(hp, &sp.top);
                 sp = sp.drop();
             }
-            sp = @panic("Stack overflow"); //context.callerStack();
+            sp = context.callerStack(sp) orelse break;
             context = context.previous();
         }
-        // find references from the residual stack
-        while (sp.lessThan(endStack)) {
-            if (sp.top.asMemoryObject()) |pointer|
-                hp = pointer.copyTo(hp, &sp.top);
-            sp = sp.drop();
-        }
-        // find self referencesy
-        var count: usize = 10;
+        // find self references
         while (@intFromPtr(hp) > @intFromPtr(scan)) {
             if (scan[0].iterator()) |iter| {
                 var it = iter;
                 while (it.next()) |objPtr| {
                     if (objPtr.asMemoryObject()) |pointer| {
                         if (pointer.isForwarded()) {
-                            unreachable;
+                            @panic("Forwarded object found in nursery");
                         } else if (pointer.isNursery())
                             hp = pointer.copyTo(hp, objPtr);
                     }
                 }
             }
             scan = scan[0].skipForward();
-            count = count - 1;
         }
         // swap heaps
         const head = &self.h;
@@ -155,7 +148,7 @@ comptime {
 }
 var allProcesses: ?*Self = null;
 inline fn ptr(self: *align(1) const Self) *Process {
-    return @ptrFromInt(@intFromPtr(self) & nonFlags);
+    return @ptrFromInt(@intFromPtr(self) & alignment_mask);
 }
 inline fn header(self: *align(1) const Self) *Process.Fields {
     return &self.ptr().h;
@@ -504,7 +497,7 @@ const Stack = struct {
     pub fn spillStack(sp: SP, context: *Context, extra: Extra) struct { SP, *Context, Extra } {
         if (!context.isOnStack(sp)) return .{ sp, context, extra };
         // if the Context is on the stack, the Context, Extra and SP will move
-        @panic("unimplemented");
+        @panic("spillStack unimplemented");
     }
 };
 

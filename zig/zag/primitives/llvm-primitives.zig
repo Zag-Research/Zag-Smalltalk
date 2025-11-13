@@ -162,7 +162,7 @@ pub const makeJITPrimitiveGenerator = if (config.notZag) struct {} else struct {
     pub fn primitive(_: PC, sp: SP, process: *Process, context: *Context, _: Extra) Result {
         // TODO: Ensure the LLVM-C API calls don't fail - implement call to Extra.primitiveFailed if so (?)
         // The fields of the generator must be not be null
-        const memory = allocator.alloc(JITPrimitiveGenerator, 1) catch unreachable;
+        const memory = allocator.alloc(JITPrimitiveGenerator, 1) catch @panic("unreachable");
         const primitiveGenerator: JITPrimitiveGeneratorRef = @ptrCast(memory);
         primitiveGenerator.context = llvm.core.LLVMContextCreate();
         primitiveGenerator.module = llvm.core.LLVMModuleCreateWithNameInContext("jit_module", primitiveGenerator.context);

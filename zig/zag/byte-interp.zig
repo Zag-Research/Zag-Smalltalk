@@ -87,7 +87,7 @@ pub const ByteCode = enum(i8) {
         var sp = _sp;
         var context = _context;
         var method: *execute.CompiledMethod = @ptrFromInt(_method.u());
-        var references = (&method.header).realHeapObject().arrayAsSlice(Object) catch unreachable;
+        var references = (&method.header).realHeapObject().arrayAsSlice(Object) catch @panic("unreachable");
         const inlines = @import("primitives.zig").inlines;
         interp: while (true) {
             const code = pc[0];
@@ -156,7 +156,7 @@ pub const ByteCode = enum(i8) {
                     },
                     .pushContext => {
                         method = @as(CompiledMethodPtr, @ptrFromInt(@intFromPtr(pc - pc[0].u()) - @sizeOf(Code) - CompiledMethod.codeOffset));
-                        references = (&method.header).realHeapObject().arrayAsSlice(Object) catch unreachable;
+                        references = (&method.header).realHeapObject().arrayAsSlice(Object) catch @panic("unreachable");
                         const stackStructure = method.stackStructure;
                         trace(" {}", .{stackStructure});
                         const locals = stackStructure.low16() & 255;
@@ -304,7 +304,7 @@ pub fn CompileTimeByteCodeMethod(comptime counts: execute.CountSizes) type {
                     return index;
                 }
             }
-            unreachable;
+            @panic("unreachable");
         }
         pub fn setLiterals(self: *Self, replacements: []const Object, refs: []const Object, _: ?*Self) *CompiledMethod {
             for (replacements, 0..) |replacement, index| {

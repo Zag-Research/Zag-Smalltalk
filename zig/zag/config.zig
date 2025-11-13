@@ -18,11 +18,12 @@ pub const max_classes = options.maxClasses;
 pub const singleSteppable = true;//options.singleSteppable;
 // must be more than HeapObject.maxLength*8 so externally allocated
 pub const process_total_size: usize = //if (is_test or testRun) 2048 else
-            64 * 1024;
+            //64 * 1024;
+            16384;
 
 pub const debugging = false;
 pub const logThreadExecution = debugging;
-const show_error_stack = debugging;
+const show_error_stack = true;//debugging;
 pub const show_trace = debugging or options.trace;
 
 pub const immediateIntegers = switch (objectEncoding) {

@@ -291,7 +291,7 @@ pub const Object = packed struct(u64) {
         return cast(@as(u48, @truncate(@intFromPtr(value))) + Start_of_Heap_Objects);
     }
     pub inline fn from(value: anytype, _: anytype, _: anytype) object.Object {
-    //     return fromWithError(value) catch unreachable;
+    //     return fromWithError(value) catch @panic("unreachable");
     // }
     // pub inline fn fromWithError(value: anytype) !object.Object {
         const T = @TypeOf(value);

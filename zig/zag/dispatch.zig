@@ -337,7 +337,7 @@ fn doDispatch(tE: *Execution, dispatch: *Dispatch, extra: Extra) []Object {
 //     try std.testing.expectEqual(dispatch.add(@ptrCast(&code2)), error.Conflict);
 // }
 pub fn inlinePrimitiveFailed(pc: PC, sp: SP, process: *Process, context: *Context, _: Extra) Result {
-    trace("Inline primitive failed, sp: {}", .{sp});
+    trace("Inline primitive failed, sp: {f}", .{sp.top});
     _ = pc.prev().prim();
     _ = .{ pc, sp, process, context, unreachable };
 }
@@ -411,7 +411,7 @@ pub const threadedFunctions = struct {
     };
     pub const returnTopNonLocal = struct {
         pub fn threadedFn(_: PC, _: SP, _: *Process, _: *Context, _: Extra) Result {
-            unreachable;
+            @panic("unreachable");
         }
     };
     inline fn getMethod(pc: PC, selector: Signature, receiver: Object) *const CompiledMethod {
@@ -468,7 +468,7 @@ pub const threadedFunctions = struct {
             const method = getMethod(pc, signature, sp.at(signature.numArgs()));
             const newPc = method.codePc();
             _ = extra; // have to move parameters to self position
-            if (true) unreachable;
+            if (true) @panic("unreachable");
             // return @call(tailCall, newPc.prim(), .{ newPc.next(), sp, process, context, Extra.forMethod(method) });
             // const method = tailGetMethod(pc, sp);
             // const newPc = method.codePc();

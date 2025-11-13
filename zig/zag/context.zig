@@ -78,6 +78,9 @@ const ContextOnStack = struct {
     fn reify(self: *ContextOnStack) void {
         _ = .{ self, unreachable };
     }
+    inline fn callerStack(self: *const ContextOnStack) SP {
+        return @constCast(@ptrCast(&self.locals));
+    }
 };
 const sizeOnStack = @sizeOf(ContextOnStack) / @sizeOf(Object) - 1;
 fn ifOnStack(context: *const Context, sp: SP) ?*const ContextOnStack {
@@ -302,6 +305,11 @@ pub inline fn setNPc(self: *Context, npc: *const fn (PC, SP, *Process, *Context,
 pub inline fn setTPc(self: *Context, tpc: PC) void {
     self.tpc = tpc;
 }
+pub inline fn callerStack(self: *const Context, sp: SP) ?SP {
+    if (self.ifOnStack(sp)) |contextOnStack|
+        return contextOnStack.callerStack();
+    return null;
+}
 pub inline fn getSelf(self: *const Context) Object {
     const wordsToDiscard = self.header.hash16();
     return self.asObjectPtr()[wordsToDiscard];
@@ -431,7 +439,7 @@ pub const threadedFunctions = struct {
             if (extra.noContext())
                 return @call(tailCall, pushContext.threadedFn, .{ pc.prev(), sp, process, context, extra });
             const value = Object.fromAddress(context);
-            if (true) unreachable;
+            if (true) @panic("unreachable");
             if (sp.push(value)) |newSp| {
                 return @call(tailCall, process.check(pc.prim()), .{ pc.next(), newSp, process, context, extra });
             } else {

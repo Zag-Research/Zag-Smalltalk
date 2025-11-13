@@ -391,7 +391,7 @@ pub const store = struct {
 pub const callLabel = if (zag.config.is_test) struct {
     pub const hidden = true;
     pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, _: Extra) Result {
-        if (true) unreachable;
+        if (true) @panic("unreachable");
         const target = pc.targetPC();
         // skip the structure word
         context.setReturn(pc.next().next());

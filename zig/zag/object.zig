@@ -145,10 +145,10 @@ pub const ClassIndex = enum(u16) {
 };
 comptime {
     std.debug.assert(@intFromEnum(ClassIndex.replace0) == 0xffff);
-    std.testing.expectEqual(@intFromEnum(ClassIndex.ThunkReturnLocal), 1) catch unreachable;
+    std.testing.expectEqual(@intFromEnum(ClassIndex.ThunkReturnLocal), 1) catch @panic("unreachable");
     //    std.debug.assert(std.meta.hasUniqueRepresentation(Object));
     for (@typeInfo(ClassIndex.Compact).@"enum".fields, @typeInfo(ClassIndex).@"enum".fields[0..@typeInfo(ClassIndex.Compact).@"enum".fields.len]) |ci, cci| {
-        std.testing.expectEqual(ci, cci) catch unreachable;
+        std.testing.expectEqual(ci, cci) catch @panic("unreachable");
     }
 }
 pub const Object = switch (config.objectEncoding) {
@@ -203,7 +203,7 @@ pub const ObjectFunctions = struct {
         return !self.isMemoryAllocated() or self.to(HeapObjectPtr).isUnmoving();
     }
     pub inline fn hash(self: Object) Object {
-        return self.from(self.hash32()) catch unreachable;
+        return self.from(self.hash32()) catch @panic("unreachable");
     }
     pub inline fn toBool(self: Object) !bool {
         if (self.isBool()) return self.toBoolNoCheck();
@@ -270,7 +270,7 @@ pub const ObjectFunctions = struct {
         const ord = std.math.Order;
         if (self.equals(other)) return ord.eq;
         if (!self.isHeapObject() or !other.isHeapObject()) {
-            //unreachable;
+            //@panic("unreachable");
             // const u64s = self.rawU();
             // const u64o = other.rawU();
             // return std.math.order(u64s, u64o);
@@ -325,6 +325,8 @@ pub const ObjectFunctions = struct {
             try writer.print("{}", .{float});
         } else if (self.equals(Nil())) {
             try writer.print("nil", .{});
+        } else if (self.heapObject()) |obj| {
+            try writer.print("{any}", .{obj});
         } else {
             try writer.print("{{?0x{x:0>16}}}", .{@as(u64, @bitCast(self))});
         }

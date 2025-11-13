@@ -195,6 +195,7 @@ pub inline fn int(i: i64, sp: SP, context: *Context) Object {
         return Object.from(&SmallIntegerCache.objects[(@as(usize, @bitCast(i - SICacheMin))) << 1], null);
     const allocResult = sp.alloc(context, .SmallInteger, 1, null, Object, false);
     allocResult.allocated.array(i64)[1] = i;
+    allocResult.allocated.header.hash = @truncate(@as(u64,@bitCast(i)));
     return allocResult.allocated.asObject();
 }
 test "inMemory int()" {

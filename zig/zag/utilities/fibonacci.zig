@@ -33,7 +33,7 @@ fn findFib1(target: u64) usize {
     for (fibonacci_u64[0..], 0..) |value, index| {
         if (value >= target) return index;
     }
-    unreachable;
+    @panic("unreachable");
 }
 inline fn search(comptime low: usize, comptime high: usize, t_16: u16) u16 {
     if (low < high) {
@@ -53,7 +53,7 @@ fn findFib2(target: u64) usize {
     for (fibonacci_u64[start..], 0..) |value, index| {
         if (value >= target) return index + start;
     }
-    unreachable;
+    @panic("unreachable");
 }
 const fib_index = [_]u8{ 0, 0, 1, 2, 3, 3, 4, 4, 4, 5, 5, 5, 5, 5, 6, 6, 6, 6, 6, 6, 6, 6, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7 };
 fn findFib6(target: u64) usize {
