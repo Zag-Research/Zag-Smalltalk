@@ -67,7 +67,7 @@ pub const Format = enum(u7) {
     pub inline fn instVars(self: Self, header: HeapHeader, obj: *const HeapObject) HeapOperationError![]Object {
         return self.operations().instVars(self, header, @constCast(obj));
     }
-    pub inline //
+    pub // inline
     fn array(self: Self, header: HeapHeader, obj: *const HeapObject, elementSize: usize) HeapOperationError![]Object {
         return self.operations().array(self, header, @constCast(obj), elementSize);
     }
@@ -651,7 +651,7 @@ pub const HeapHeader = packed struct(u64) {
     pub inline fn isForwarded(self: HeapHeader) bool {
         return self.forwarded;
     }
-    pub inline fn ifForwarded(self: HeapHeader) ?HeapObjectConstPtr {
+    pub inline fn ifForwarded(self: HeapHeader) ?HeapObjectPtr {
         if (self.isForwarded())
             return @ptrFromInt(@as(u64, @bitCast(self)) & 0xffff_ffff_ffff);
         return null;
@@ -680,8 +680,8 @@ pub const HeapHeader = packed struct(u64) {
     pub inline fn staticHeaderWithClassAllocHash(classIndex: ClassIndex, ai: AllocationInfo, hash: u24) HeapHeader {
         return ai.heapHeader(classIndex, .static, hash);
     }
-    pub inline fn staticHeaderWithClassLengthHash(classIndex: ClassIndex, length: u12, hash: u24) HeapHeader {
-        return .{ .classIndex = classIndex, .hash = hash, .format = .special, .age = .static, .length = length };
+    pub inline fn staticHeaderWithClassStructHash(classIndex: ClassIndex, T: type, hash: u24) HeapHeader {
+        return .{ .classIndex = classIndex, .hash = hash, .format = .special, .age = .static, .length = @sizeOf(T) / @sizeOf(Object) - 1 };
     }
     inline fn init(length: u12, format: Format, classIndex: ClassIndex, hash: u24, age: Age) HeapHeader {
         return .{
@@ -764,7 +764,7 @@ pub const HeapObjectPtr = *align(@alignOf(u64)) HeapObject;
 pub const HeapObjectConstPtr = *align(@alignOf(u64)) const HeapObject;
 pub const HeapObject = packed struct {
     header: HeapHeader,
-    pub inline //
+    pub // inline
     fn alignProperBoundary(self: HeapObjectArray) HeapObjectArray {
         if (@intFromPtr(self) & 8 == 0)
             return self;
@@ -796,7 +796,7 @@ pub const HeapObject = packed struct {
     pub inline fn isIndexable(self: HeapObjectConstPtr) bool {
         return self.header.isIndexable();
     }
-    pub inline //
+    pub // inline
     fn isUnmoving(self: HeapObjectConstPtr) bool {
         return self.header.isUnmoving();
     }
@@ -815,15 +815,14 @@ pub const HeapObject = packed struct {
     pub fn copyTo(self: HeapObjectPtr, hp: [*]HeapObject, reference: *Object) [*]HeapObject {
         const head = self.header;
         if (head.ifForwarded()) |ptr| { // already forwarded
-            reference.* = Object.fromPtr(ptr);
+            reference.* = Object.fromAddress(ptr);
             return hp;
         }
         const len = head.length + 1;
         const newHp = hp + len;
         @memcpy(hp[0..len], @as([*]HeapObject, @ptrCast(self.start())));
         self.forwardTo(hp);
-        // ToDo: adjust header if necessary
-        reference.* = Object.fromPtr(hp);
+        reference.* = Object.fromAddress(hp);
         return newHp;
     }
     pub inline fn prev(self: HeapObjectPtr) Object {
@@ -856,7 +855,7 @@ pub const HeapObject = packed struct {
         const self = maybeForwarded.forwarded();
         return self.start[1..self.length];
     }
-    pub inline //
+    pub // inline
     fn arrayAsSlice(self: HeapObjectConstPtr, comptime T: type) ![]T {
         const head = self.header;
         const arry = if (head.ifForwarded()) |realSelf|
@@ -925,7 +924,7 @@ pub const HeapObject = packed struct {
     pub inline fn isRaw(self: HeapObjectConstPtr) bool {
         return self.format.isRaw();
     }
-    pub inline //
+    pub // inline
     fn asObject(self: HeapObjectConstPtr) Object {
         return Object.fromAddress(self);
     }

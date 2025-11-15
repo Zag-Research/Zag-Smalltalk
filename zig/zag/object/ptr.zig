@@ -67,7 +67,7 @@ pub const Object = packed struct(u64) {
     pub inline fn symbol40(self: object.Object) u40 {
         return @truncate(self.ref.data.unsigned);
     }
-    pub inline //
+    pub // inline
     fn nativeI(self: object.Object) ?i64 {
         if (self.isInt()) return self.rawI();
         return null;
@@ -108,7 +108,7 @@ pub const Object = packed struct(u64) {
     }
     pub const testU = rawU;
     pub const testI = rawI;
-    pub inline //
+    pub // inline
     fn rawU(self: object.Object) u64 {
         return self.ref.data.unsigned;
     }
@@ -139,7 +139,7 @@ pub const Object = packed struct(u64) {
     pub inline fn isMemoryDouble(self: object.Object) bool {
         return self.isMemoryAllocated() and self.to(HeapObjectPtr).*.getClass() == .Float;
     }
-    pub inline //
+    pub // inline
     fn isInt(self: Object) bool {
         return self.ref.header.classIndex == .SmallInteger;
     }
@@ -199,8 +199,26 @@ pub const Object = packed struct(u64) {
     pub inline fn hash32(self: Object) u32 {
         return @truncate(self.ref.data.unsigned);
     }
-    pub fn fromAddress(value: anytype) Object {
+    pub // inline
+    fn fromAddress(value: anytype) Object {
         return @bitCast(@intFromPtr(value));
+    }
+    pub const ObjectStorage = InMemory.PointedObject;
+    pub fn initObjectStorage(comptime value: anytype, ptr: *InMemory.PointedObject) object.Object {
+        const T = @TypeOf(value);
+        switch (@typeInfo(T)) {
+            .int, .comptime_int => {
+                ptr.setHeader(.SmallInteger, @truncate(value));
+                ptr.data.int = value;
+            },
+            .comptime_float => {
+                ptr.setHeader(.Float, @truncate(42));
+                ptr.data.float = value;
+            },
+            .bool => return if (value) object.Object.True() else object.Object.False(),
+            else => @panic("Unsupported type for compile-time object creation"),
+        }
+        return fromAddress(ptr);
     }
     pub inline fn from(value: anytype, sp: SP, context: *Context) Object {
         const T = @TypeOf(value);
@@ -215,7 +233,7 @@ pub const Object = packed struct(u64) {
                 switch (ptr_info.size) {
                     .one, .many => {
                         //@compileLog("from: ",value);
-                        return fromPtr(value);
+                        return fromAddress(value);
                     },
                     else => {},
                 }
@@ -223,9 +241,6 @@ pub const Object = packed struct(u64) {
             else => {},
         }
         @compileError("Can't convert \"" ++ @typeName(T) ++ "\"");
-    }
-    pub fn fromPtr(ptr: anytype) Object {
-        return @bitCast(@intFromPtr(ptr));
     }
     pub fn toWithCheck(self: Object, comptime T: type, comptime check: bool) T {
         switch (T) {
@@ -269,7 +284,7 @@ pub const Object = packed struct(u64) {
         }
         @panic("Trying to convert Object to " ++ @typeName(T));
     }
-    pub inline //
+    pub // inline
     fn which_class(self: Object) ClassIndex {
         return self.ref.header.classIndex;
     }

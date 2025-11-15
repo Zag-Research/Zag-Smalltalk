@@ -155,11 +155,6 @@ pub const Extra = packed struct {
         trace("primitiveFailed: {f} {f}", .{ extra, pc });
         return @call(tailCall, process.check(pc.prev().prim()), .{ pc, sp, process, context, extra.encoded() });
     }
-    pub fn inlinePrimitiveFailed(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
-        trace("inlinePrimitiveFailed: {f} {f}", .{ extra, pc });
-        _ = .{ sp, process, context, std.debug.panic("inlinePrimitiveFailed: {f} {f}\n", .{ extra, pc }) };
-        //return @call(tailCall, process.check(pc.prev().prim()), .{ pc, sp, process, context, extra.encoded() });
-    }
     pub fn format(
         self: Extra,
         writer: anytype,
@@ -292,7 +287,7 @@ pub inline fn setReturnBoth(self: *Context, npc: *const fn (PC, SP, *Process, *C
     self.npc = npc;
     self.tpc = tpc;
 }
-pub inline //
+pub // inline
 fn setReturn(self: *Context, tpc: PC) void {
     self.setReturnBoth(tpc.asThreadedFn(), tpc.next());
 }

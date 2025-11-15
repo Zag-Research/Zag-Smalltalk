@@ -169,6 +169,19 @@ pub const testObjects = blk: {
     }
     break :blk testArray;
 };
+const ints = blk: {
+    var osArray: [4]Object.ObjectStorage = undefined;
+    var objs: [4]Object = undefined;
+    for (0..4) |i| {
+        objs[i] = Object.initObjectStorage(i, &osArray[i]);
+    }
+    break :blk .{ objs, osArray };
+    };
+pub const zero = ints[0][0];
+pub const one = ints[0][1];
+pub const two = ints[0][2];
+pub const three = ints[0][3];
+
 pub const ObjectFunctions = struct {
     pub const empty = &[0]Object{};
     pub const Sentinel = Object.from(@as(*Object, @ptrFromInt(8)), null);
@@ -181,39 +194,48 @@ pub const ObjectFunctions = struct {
     pub inline fn numArgs(self: Object) u4 {
         return symbol.symbolArity(self);
     }
-    pub inline //
+    pub // inline
     fn setField(self: Object, field: usize, value: Object) void {
         if (self.asObjectArray()) |ptr| ptr[field] = value;
     }
-    pub inline fn getField(self: Object, field: usize) Object {
+    pub // inline
+    fn getField(self: Object, field: usize) Object {
         if (self.asObjectArray()) |ptr|
             return ptr[field];
         return Nil();
     }
-    pub inline fn isNil(self: Object) bool {
+    pub // inline
+    fn isNil(self: Object) bool {
         return self == Object.Nil();
     }
-    pub inline fn isBool(self: Object) bool {
+    pub // inline
+    fn isBool(self: Object) bool {
         return self == Object.False() or self == Object.True();
     }
-    pub inline fn isString(self: Object) bool {
+    pub // inline
+    fn isString(self: Object) bool {
         return self.which_class() == .String;
     }
-    pub inline fn isUnmoving(self: Object) bool {
+    pub // inline
+    fn isUnmoving(self: Object) bool {
         return !self.isMemoryAllocated() or self.to(HeapObjectPtr).isUnmoving();
     }
-    pub inline fn hash(self: Object) Object {
+    pub // inline
+    fn hash(self: Object) Object {
         return self.from(self.hash32()) catch @panic("unreachable");
     }
-    pub inline fn toBool(self: Object) !bool {
+    pub // inline
+    fn toBool(self: Object) !bool {
         if (self.isBool()) return self.toBoolNoCheck();
         return error.wrongType;
     }
-    pub inline fn toNat(self: Object) !u64 {
+    pub // inline
+    fn toNat(self: Object) !u64 {
         if (self.isNat()) return self.toNatNoCheck();
         return error.wrongType;
     }
-    pub inline fn toDouble(self: Object) !f64 {
+    pub // inline
+    fn toDouble(self: Object) !f64 {
         if (self.isDouble()) return self.toDoubleNoCheck();
         return error.wrongType;
     }
@@ -339,12 +361,6 @@ pub const PackedObject = packed struct {
     f2: u14 = 0,
     f3: u14 = 0,
     f4: std.meta.Int(.unsigned, 64 - 42 - @bitSizeOf(Object.PackedTagType)) = 0,
-    pub inline fn from3(f1: u14, f2: u14, f3: u14) PackedObject {
-        return .{ .tag = Object.from(0).tagbits(), .f1 = f1, .f2 = f2, .f3 = f3 };
-    }
-    pub inline fn from(fs: []u14) PackedObject {
-        return .{ .tag = Object.from(0).tagbits(), .f1 = fs[0], .f2 = fs[1], .f3 = fs[2], .f4 = fs[3] };
-    }
     pub fn asU64(self: PackedObject) u64 {
         return @as(u64, @bitCast(self)) >> @bitSizeOf(Object.PackedTagType);
     }

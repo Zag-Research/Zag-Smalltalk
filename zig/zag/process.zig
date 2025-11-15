@@ -252,7 +252,7 @@ const Debugger = struct {
                 else => {},
             }
             std.log.err("\n", .{});
-        } else if (@import("primitives.zig").findPrimitiveAtPtr(primitive)) |modPrim| {
+        } else if (zag.primitives.findPrimitiveAtPtr(primitive)) |modPrim| {
             std.log.err("{s}:{s}", .{ modPrim.module, modPrim.name });
             if (modPrim.number > 0) {
                 std.log.err("({d})", .{modPrim.number});
@@ -430,7 +430,7 @@ const Stack = struct {
     pub inline fn slice(self: SP, n: usize) []Object {
         return self.array()[0..n];
     }
-    pub inline //
+    pub // inline
     fn sliceTo(self: SP, a_ptr: anytype) []Object {
         const i_ptr = @intFromPtr(a_ptr);
         return self.slice(((i_ptr - @intFromPtr(self))) / @sizeOf(Object));
@@ -441,7 +441,7 @@ const Stack = struct {
     pub inline fn atPut(self: SP, n: usize, o: Object) void {
         self.array()[n] = o;
     }
-    pub inline //
+    pub // inline
     fn getStack(self: SP) []Object {
         return self.sliceTo(self.endOfStack());
     }
@@ -498,6 +498,12 @@ const Stack = struct {
         if (!context.isOnStack(sp)) return .{ sp, context, extra };
         // if the Context is on the stack, the Context, Extra and SP will move
         @panic("spillStack unimplemented");
+    }
+    pub fn format(
+        self: *const @This(),
+        writer: anytype,
+    ) !void {
+        try writer.print("stack: .top = {f} .next = {f}", .{ self.top, self.next });
     }
 };
 

@@ -172,7 +172,7 @@ const testModule = if (config.is_test) struct {
         }
         pub fn inlinePrimitive(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
             if (sp.next.get_class() != sp.top.get_class()) {
-                return @call(tailCall, Extra.inlinePrimitiveFailed, .{ pc, sp, process, context, extra });
+                return @call(tailCall, inlinePrimitiveFailed, .{ pc, sp, process, context, extra });
             } else {
                 const newSp = sp.dropPut(Object.from(sp.next == sp.top, sp, context));
                 return @call(tailCall, process.check(pc.prim2()), .{ pc.next2(), newSp, process, context, extra });
@@ -182,6 +182,11 @@ const testModule = if (config.is_test) struct {
 } else struct {
     const moduleName = "test module";
 };
+pub fn inlinePrimitiveFailed(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
+    trace("inlinePrimitiveFailed: {f} {f}", .{ extra, pc });
+    _ = .{ sp, process, context, std.debug.panic("inlinePrimitiveFailed: {f} {f}\n", .{ extra, pc }) };
+    //return @call(tailCall, process.check(pc.prev().prim()), .{ pc, sp, process, context, extra.encoded() });
+}
 
 fn noPrim(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
     return @call(tailCall, process.check(pc.prev().prim()), .{ pc, sp, process, context, extra.encoded() });
