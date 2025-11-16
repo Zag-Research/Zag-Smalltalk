@@ -63,10 +63,10 @@ pub const Signature = packed struct {
     pub fn from(selector: Object, class: ClassIndex) Signature {
         return .{ .int = @bitCast(Create{ .selector = selector.hash32(), .class = class }) };
     }
-    pub fn fromHashPrimitive(selector: u32, primitiveNumber: u16) Signature {
+    pub fn fromHashPrimitive(selector: u32, primitiveNumber: u8) Signature {
         return .{ .int = @bitCast(Create{ .selector = selector, .prim = primitiveNumber }) };
     }
-    pub fn fromPrimitive(primitiveNumber: u16) Signature {
+    pub fn fromPrimitive(primitiveNumber: u8) Signature {
         return .{ .int = @bitCast(Create{ .selector = 0, .prim = primitiveNumber }) };
     }
     pub fn fromNameClass(name: anytype, class: ClassIndex) Signature {
@@ -415,20 +415,20 @@ pub const CompiledMethod = struct {
         try writer.print("CompiledMethod{{.stackStructure={}, .signature={f}, .executeFn={x}}}", .{ self.stackStructure, self.signature, @intFromPtr(self.executeFn) });
     }
     pub fn dumpHeader(self: *const Self) u32 {
-        std.log.info("Header:           {}", .{self.header});
-        std.log.info("Stack Structure:  {}", .{self.stackStructure});
-        std.log.info("Signature:        {f}", .{self.signature});
-        std.log.info("Execute Function: {}", .{self.executeFn});
-        std.log.info("Jitted Function:  {?}", .{self.jitted});
+        std.debug.print("Header:           {f}\n", .{self.header});
+        std.debug.print("Stack Structure:  {}\n", .{self.stackStructure});
+        std.debug.print("Signature:        {f}\n", .{self.signature});
+        std.debug.print("Execute Function: {}\n", .{self.executeFn});
+        std.debug.print("Jitted Function:  {?}\n", .{self.jitted});
         const methodSize = self.header.length - codeOffsetInObjects;
-        std.log.info("methodSize:       {}", .{methodSize});
+        std.debug.print("methodSize:       {}\n", .{methodSize});
         return methodSize;
     }
     pub fn dump(self: *const Self) void {
         const methodSize = self.dumpHeader();
         const code: [*]const Code = @ptrCast(&self.code);
         for (code[0..methodSize]) |*instruction| {
-            std.log.info("[{x:0>12}]: {f}", .{ @intFromPtr(instruction), instruction.* });
+            std.debug.print("[{x:0>12}]: {f}\n", .{ @intFromPtr(instruction), instruction.* });
         }
     }
     pub fn init(name: anytype, methodFn: *const fn (PC, SP, *Process, *Context, Extra) Result) Self {
@@ -544,7 +544,7 @@ fn CompileTimeMethod(comptime counts: usize) type {
             const methodSize = @as(*const CompiledMethod, @ptrCast(self)).dumpHeader();
             const code: [*]const Code = @ptrCast(&self.code);
             for (0..methodSize) |i| {
-                std.log.info("[{x:0>12}]: {f}{s}", .{ @intFromPtr(&code[i]), code[i], switch (self.offsets[i]) {
+                std.debug.print("[{x:0>12}]: {f}{s}\n", .{ @intFromPtr(&code[i]), code[i], switch (self.offsets[i]) {
                     .none => "",
                     .offset => " - offset",
                     .object => " - object",
@@ -825,7 +825,7 @@ fn CompileTimeObject(comptime counts: usize) type {
                     isOffset.* = false;
                     var header: *HeapHeader = @ptrCast(o);
                     if (header.length < 1024 and
-                        header.format == .notIndexable and
+                        header.objectFormat == .notIndexable and
                         header.age == .static)
                     {
                         if (@intFromEnum(header.classIndex) >= @intFromEnum(ClassIndex.ReplacementIndices)) {
@@ -837,7 +837,7 @@ fn CompileTimeObject(comptime counts: usize) type {
                         const ob: u64 = @bitCast(o.*);
                         o.* = if (ob & 1 != 0) Object.fromAddress(&self.objects[ob >> 1]) else replacements[ob >> 1];
                         if (o.isMemoryAllocated()) {
-                            if (lastHeader) |h| h.format = .notIndexableWithPointers;
+                            if (lastHeader) |h| h.objectFormat = .notIndexableWithPointers;
                         }
                     }
                 }
@@ -912,7 +912,7 @@ test "compileObject" {
     try expectEqual(h3.header.classIndex, c.Dispatch);
     try expectEqual(h3.header.length, 3);
     try expectEqual(h3.header.age, .static);
-    try expectEqual(h3.header.format, .notIndexableWithPointers);
+    try expectEqual(h3.header.objectFormat, .notIndexableWithPointers);
 }
 pub fn compileRaw(comptime tup: anytype) CompileTimeObject(countNonLabels(tup)) {
     @setEvalBranchQuota(100000);

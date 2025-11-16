@@ -274,8 +274,8 @@ pub const Object = packed struct(u64) {
     pub fn fromAddress(value: anytype) Object {
         return @bitCast(@intFromPtr(value));
     }
-    pub const ObjectStorage = void;
-    pub fn initObjectStorage(comptime value: anytype, _: anytype) object.Object {
+    pub const StaticObject = void;
+    pub fn initStaticObject(comptime value: anytype, _: anytype) object.Object {
         const T = @TypeOf(value);
         switch (@typeInfo(T)) {
             .int, .comptime_int => return oImm(.SmallInteger, @as(u56, @bitCast(@as(i56, value)))),

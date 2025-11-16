@@ -162,6 +162,12 @@ pub const PointedObject = packed struct {
     const staticCacheSize = 0;
     var staticCacheUsed: usize = 0;
     var staticCache = [_]PointedObject{.{ .header = .{}, .data = undefined }} ** staticCacheSize;
+    pub fn format(
+        self: PointedObject,
+        writer: anytype,
+    ) !void {
+        try writer.print("PointedObject{{ {f}, 0x{x}}}", .{ self.header, @as(u64,@bitCast(self.data)) });
+    }
     fn cached(self: PointedObject) ?*PointedObject {
         for (staticCache[0..]) |*p| {
             if (p.header.classIndex == self.header.classIndex and
@@ -181,7 +187,7 @@ pub const PointedObject = packed struct {
         self.header = .{
             .classIndex = classIndex,
             .hash = hash,
-            .format = .notIndexable,
+            .objectFormat = .notIndexable,
             .age = .static,
             .length = 1,
         };
@@ -227,7 +233,7 @@ pub const MemoryFloat = struct {
     pub inline fn init(self: *MemoryFloat, v: f64, age: Age) void {
         const u: u64 = @bitCast(v);
         const hash: u24 = @truncate(u ^ (u >> 40));
-        self.header = .{ .classIndex = .Float, .hash = hash, .format = .notIndexable, .age = age, .length = 1 };
+        self.header = .{ .classIndex = .Float, .hash = hash, .objectFormat = .notIndexable, .age = age, .length = 1 };
         self.value = v;
     }
 };

@@ -94,7 +94,7 @@ pub const Object = packed struct(u64) {
         return null;
     }
     pub inline fn heapObject(self: object.Object) ?*InMemory.PointedObject {
-        if (self.rawU() & 0x7 == 0 and !self.isMemoryAllocated()) return @constCast(self.ref);
+        if (self.isMemoryAllocated()) return @constCast(self.ref);
         return null;
     }
     pub inline fn extraValue(self: object.Object) object.Object {
@@ -203,8 +203,8 @@ pub const Object = packed struct(u64) {
     fn fromAddress(value: anytype) Object {
         return @bitCast(@intFromPtr(value));
     }
-    pub const ObjectStorage = InMemory.PointedObject;
-    pub fn initObjectStorage(comptime value: anytype, ptr: *InMemory.PointedObject) object.Object {
+    pub const StaticObject = InMemory.PointedObject;
+    pub fn initStaticObject(value: anytype, ptr: *InMemory.PointedObject) object.Object {
         const T = @TypeOf(value);
         switch (@typeInfo(T)) {
             .int, .comptime_int => {
@@ -289,7 +289,7 @@ pub const Object = packed struct(u64) {
         return self.ref.header.classIndex;
     }
     pub inline fn isMemoryAllocated(self: Object) bool {
-        return self != Object.Nil();
+        return @intFromPtr(self.ref) & 0x7 == 0 and self != Object.Nil();
     }
     pub const Scanner = struct {
         ptr: *anyopaque,

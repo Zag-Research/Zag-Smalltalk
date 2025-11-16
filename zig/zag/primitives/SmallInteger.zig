@@ -151,8 +151,6 @@ pub const @"-" = struct {
             const result, const overflow = @subWithOverflow(self.taggedI_noCheck(), untagged);
             if (overflow == 0) return Object.fromTaggedI(result, sp, context);
         }
-
-        std.log.err("SmallInteger>>#inlinePrimitive: - {f}", .{ sp });
         return error.primitiveError;
     }
     pub fn primitive(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result { // SmallInteger>>#-
@@ -164,11 +162,13 @@ pub const @"-" = struct {
         sp.traceStack("-");
         const receiver = sp.next;
         if (!receiver.isInt()) {
-            std.log.err("SmallInteger>>#inlinePrimitive: - {f} {f}", .{receiver, sp});
+            std.log.err("SmallInteger>>#inlinePrimitive: -y {f}", .{sp});
             return @call(tailCall, primitives.inlinePrimitiveFailed, .{ pc, sp, process, context, extra });
         }
-        const newSp = sp.dropPut(with(receiver, sp.top, sp, context) catch
-            return @call(tailCall, primitives.inlinePrimitiveFailed, .{ pc, sp, process, context, extra }));
+        const newSp = sp.dropPut(with(receiver, sp.top, sp, context) catch {
+            std.log.err("SmallInteger>>#inlinePrimitive: -x {f}", .{sp});
+            return @call(tailCall, primitives.inlinePrimitiveFailed, .{ pc, sp, process, context, extra });
+        });
         return @call(tailCall, process.check(pc.prim2()), .{ pc.next2(), newSp, process, context, extra });
     }
 };

@@ -61,3 +61,9 @@
 - tail-sends may not reuse the `Context` if it's not on the stack (because it might have been captured by, e.g. `call/cc`)
 - For the large-data allocation, an auto-treap could used to do the mark/sweep for these values rather than a linked list. This would allow multiple references into an object, but to be useful this would have to encode indirection elsewhere than the size field. It also has the potential to lead to large chunks of memory being held onto even though only a tiny part of it is being accessed. But 
 - other...
+
+## Other links on Optimization
+- [Make your programs run faster by better using the data cache](https://johnnysswlab.com/make-your-programs-run-faster-by-better-using-the-data-cache/)
+- [Make your programs run faster: avoid function calls](https://johnnysswlab.com/make-your-programs-run-faster-avoid-function-calls/)
+- [How branches influence the performance of your code and what can you do about it?](https://johnnysswlab.com/how-branches-influence-the-performance-of-your-code-and-what-can-you-do-about-it/)
+- 

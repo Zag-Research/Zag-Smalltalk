@@ -169,18 +169,18 @@ pub const testObjects = blk: {
     }
     break :blk testArray;
 };
-const ints = blk: {
-    var osArray: [4]Object.ObjectStorage = undefined;
-    var objs: [4]Object = undefined;
-    for (0..4) |i| {
-        objs[i] = Object.initObjectStorage(i, &osArray[i]);
-    }
-    break :blk .{ objs, osArray };
-    };
-pub const zero = ints[0][0];
-pub const one = ints[0][1];
-pub const two = ints[0][2];
-pub const three = ints[0][3];
+// const ints = blk: {
+//     var osArray: [4]Object.StaticObject = undefined;
+//     var objs: [4]Object = undefined;
+//     for (0..4) |i| {
+//         objs[i] = Object.initStaticObject(i, &osArray[i]);
+//     }
+//     break :blk .{ objs, osArray };
+//     };
+// pub const zero = ints[0][0];
+// pub const one = ints[0][1];
+// pub const two = ints[0][2];
+// pub const three = ints[0][3];
 
 pub const ObjectFunctions = struct {
     pub const empty = &[0]Object{};
@@ -320,7 +320,7 @@ pub const ObjectFunctions = struct {
         writer: anytype,
     ) !void {
         if (false) {
-            try writer.print("Object({x})", .{@as(u64, @bitCast(self))});
+            try writer.print("({x})", .{@as(u64, @bitCast(self))});
             return;
         }
         if (zag.config.is_test) {
@@ -336,7 +336,7 @@ pub const ObjectFunctions = struct {
         } else if (self.signature()) |signature| {
             try writer.print("{f}", .{signature});
         } else if (self.nativeI()) |i| {
-            try writer.print("{d}", .{i});
+            try writer.print("{d} {x}", .{i, @as(u64, @bitCast(self))});
         } else if (self.symbolHash()) |_| {
             try writer.print("#{s}", .{symbol.asString(self).arrayAsSlice(u8) catch "???"});
         } else if (self.equals(False())) {
@@ -348,7 +348,7 @@ pub const ObjectFunctions = struct {
         } else if (self.equals(Nil())) {
             try writer.print("nil", .{});
         } else if (self.heapObject()) |obj| {
-            try writer.print("{any}", .{obj});
+            try writer.print("{f}@{x}", .{obj, @as(u64, @bitCast(self))});
         } else {
             try writer.print("{{?0x{x:0>16}}}", .{@as(u64, @bitCast(self))});
         }

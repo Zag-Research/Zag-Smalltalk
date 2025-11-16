@@ -216,9 +216,14 @@ const fibIntegerBr = struct {
             tf.returnTop,
         });
     var exe: MainExecutor = undefined;
+    var one_: Object.StaticObject = undefined;
+    var two_: Object.StaticObject = undefined;
     fn init() void {
         exe = MainExecutor.new();
-        fib.resolve(&[_]Object{ object.one, object.two }) catch unreachable;
+        const one = Object.initStaticObject(1, &one_);
+        const two = Object.initStaticObject(2, &two_);
+        fib.resolve(&[_]Object{ one, two }) catch @panic("Failed to resolve");
+        std.debug.print("\none = {f}/{x}/{f},\ntwo = {f}/{x}/{f}\n", .{one, @intFromPtr(&one_), one_, two, @intFromPtr(&two_), two_});
         fib.initExecute();
         zag.dispatch.addMethod(@ptrCast(&fib));
         if (zag.config.show_trace) {
@@ -572,6 +577,6 @@ pub fn main() !void {
     try timing(if (default) @constCast(do_all[0..]) else args[1..], default);
 }
 const testRun = zag.config.testRun;
-const fibN = if (testRun) 13 else 35;
+const fibN = 10; // FIX if (testRun) 5 else 35;
 const nRuns = if (testRun) 1 else 5;
 const warmups = if (testRun) 0 else null;
