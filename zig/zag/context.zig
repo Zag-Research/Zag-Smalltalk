@@ -1,4 +1,5 @@
 const std = @import("std");
+const assert = std.debug.assert;
 const zag = @import("zag.zig");
 const config = zag.config;
 const tailCall = config.tailCall;
@@ -93,8 +94,10 @@ pub const Extra = packed struct {
     addr: u48,
     stack_offset: u16 = 0,
     const stack_mask = Process.stack_mask;
-    const stack_size_type = zag.utilities.largeEnoughType(stack_mask);
     const is_encoded: u16 = 0x8000;
+    comptime {
+        assert(stack_mask < is_encoded);
+    }
     pub const none: Extra = .{ .addr = 0, .stack_offset = 0 };
     // Three states:
     //  - method is not encoded - is_encoded will not be set and low bits not zero
@@ -102,8 +105,7 @@ pub const Extra = packed struct {
     //  - contextData - low bits zero
     pub fn forMethod(method: *const CompiledMethod, sp: SP) Extra {
         // guaranteed that the low bits of sp are not zero by design in Process
-        const stackOffset: stack_size_type = @truncate(@intFromPtr(sp));
-        return .{ .addr = @truncate(@intFromPtr(method)), .stack_offset = stackOffset };
+        return .{ .addr = @truncate(@intFromPtr(method)), .stack_offset = @truncate(@intFromPtr(sp)) };
     }
     pub fn fromContextData(contextData: *const ContextData) Extra {
         _ = @as(*const ContextData, @ptrFromInt(@intFromPtr(contextData)));

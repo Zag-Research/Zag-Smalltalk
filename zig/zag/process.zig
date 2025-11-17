@@ -67,7 +67,8 @@ const Process = struct {
     };
     const processAvail = (process_total_size - @sizeOf(Fields) - @sizeOf(Context)) / @sizeOf(Object);
     const approx_nursery_size = (processAvail - processAvail / 9) / 2;
-    const stack_size: usize = @min(zag.utilities.largerPowerOf2(processAvail - approx_nursery_size * 2), (1 << 16) / @sizeOf(Object) - 1) - 1;
+    const approx_stack_size = processAvail - approx_nursery_size * 2;
+    const stack_size: usize = zag.utilities.largerPowerOf2(approx_stack_size) - 1;
     const nursery_size = (processAvail - stack_size) / 2;
     const fill_size = processAvail - stack_size - nursery_size * 2;
     comptime {
@@ -83,16 +84,15 @@ const Process = struct {
         // @compileLog("stack_mask_overflow:", stack_mask_overflow);
         assert(stack_size <= nursery_size);
     }
-    const lastNurseryAge = Age.lastNurseryAge;
     const maxNurseryObjectSize = @min(HeapHeader.maxLength, nursery_size / 4);
-    const maxStackObjectSize = @min(HeapHeader.maxLength, stack_size / 4);
+
     fn collectNursery(self: *Process, sp: SP, context: *Context, need: usize) void {
         assert(need <= Process.nursery_size);
-        const ageSizes = [_]usize{0} ** Process.lastNurseryAge;
-        self.collectNurseryPass(sp, context, ageSizes, Process.lastNurseryAge + 1);
+        const ageSizes = [_]usize{0} ** Age.lastNurseryAge;
+        self.collectNurseryPass(sp, context, ageSizes, Age.lastNurseryAge + 1);
         if (self.freeNursery() >= need) return;
         var total: usize = 0;
-        var age = Process.lastNurseryAge;
+        var age = Age.lastNurseryAge;
         while (age >= 0) : (age -= 1) {
             total += ageSizes[age];
             if (total >= need) {
@@ -102,11 +102,14 @@ const Process = struct {
         }
         @panic("Insufficient nursery space");
     }
-    fn collectNurseryPass(self: *Process, originalSp: SP, contextMutable: *Context, sizes: [Process.lastNurseryAge]usize, promoteAge: usize) void {
+    fn collectNurseryPass(self: *Process, originalSp: SP, originalContext: *Context, sizes: [Age.lastNurseryAge]usize, promoteAge: usize) void {
+        const hp = self.collectStack(originalSp, originalContext, sizes, promoteAge);
+        self.finishCollection(hp, sizes, promoteAge);
+    }
+    fn collectStack(self: *Process, originalSp: SP, originalContext: *Context, sizes: [Age.lastNurseryAge]usize, promoteAge: usize) HeapObjectArray {
         _ = .{ sizes, promoteAge };
-        var scan = self.h.otherHeap;
-        var hp = scan;
-        var context = contextMutable;
+        var hp = self.h.otherHeap;
+        var context = originalContext;
         var sp = originalSp;
         // find references from the stacked contexts
         while (true) {
@@ -124,7 +127,12 @@ const Process = struct {
             sp = context.callerStack(sp) orelse break;
             context = context.previous();
         }
-        // find self references
+        return hp;
+    }
+    fn finishCollection(self: *Process, startingHp: HeapObjectArray, sizes: [Age.lastNurseryAge]usize, promoteAge: usize) void {
+        _ = .{ sizes, promoteAge };
+        var hp = startingHp;
+        var scan = self.h.otherHeap;
         while (@intFromPtr(scan) < @intFromPtr(hp)) {
             if (scan[0].iterator()) |iter| {
                 var it = iter;
