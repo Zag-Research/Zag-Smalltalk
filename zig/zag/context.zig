@@ -231,14 +231,11 @@ pub inline fn pop(self: *Context, sp: SP) struct { SP, *Context } {
 }
 pub fn push(self: *Context, sp: SP, process: *Process, method: *const CompiledMethod, extra: Extra) struct { SP, *ContextOnStack } {
     const locals = method.stackStructure.locals;
-    std.debug.print("pushContext: locals={} sizeOnStack={} {*}", .{ locals, sizeOnStack, sp });
     if (sp.reserve(locals + sizeOnStack)) |newSp| {
-        std.debug.print(" {*}\n", .{ newSp });
         const selfOffset = method.stackStructure.selfOffset;
         const selfAddress = extra.selfAddress(sp).?;
         const sizeToMove = selfOffset - locals;
         const contextAddr = selfAddress - selfOffset - (sizeOnStack - 1);
-        std.debug.print("context push: selfAddress={*} contextAddr={*} newSp={*} sp={*} sizeToMove={} stackStructure={} selfOffset={}\n", .{ selfAddress, contextAddr, newSp, sp, sizeToMove, method.stackStructure, selfOffset });
         std.debug.assert(contextAddr == newSp.array() + sizeToMove);
         for (newSp.array()[0..sizeToMove], sp.array()[0..sizeToMove]) |*target, *source| {
             target.* = source.*;

@@ -45,7 +45,7 @@ pub const Object = packed struct(u64) {
     }
     pub const taggedI = untaggedI;
     pub const taggedI_noCheck = untaggedI_noCheck;
-    pub inline fn fromTaggedI(i: i64, _: *Process) object.Object {
+    pub inline fn fromTaggedI(i: i64, _: anytype, _: anytype) object.Object {
         return @bitCast(i);
     }
     pub const fromUntaggedI = fromTaggedI;
@@ -74,6 +74,9 @@ pub const Object = packed struct(u64) {
     pub inline fn symbolHash(self: object.Object) ?u24 {
         return @truncate(self.hash32());
     }
+    pub inline fn heapObject(_: object.Object) ?*InMemory.PointedObject {
+        return null;
+    }
     pub inline fn extraValue(self: object.Object) object.Object {
         return @bitCast(self.rawU() >> 8);
     }
@@ -88,6 +91,10 @@ pub const Object = packed struct(u64) {
     }
     inline fn rawI(self: object.Object) i64 {
         return @bitCast(self);
+    }
+    pub inline fn invalidObject(_: object.Object) ?u64 {
+        // there are no invalid objects in this encoding
+        return null;
     }
     inline fn of(comptime v: u64) object.Object {
         return @bitCast(v);
@@ -173,7 +180,15 @@ pub const Object = packed struct(u64) {
     fn fromAddress(value: anytype) Object {
         return @bitCast(@intFromPtr(value));
     }
-    pub inline fn from(value: anytype, _: *Process) Object {
+    pub const StaticObject = void;
+    pub fn initStaticObject(comptime value: anytype, _: anytype) object.Object {
+        switch (@typeInfo(@TypeOf(value))) {
+            .int, .comptime_int => return @bitCast(@as(i64,value)),
+            .bool => return if (value) object.Object.True() else object.Object.False(),
+            else => @panic("Unsupported type for compile-time object creation"),
+        }
+    }
+    pub inline fn from(value: anytype, _: anytype, _: anytype) Object {
         const T = @TypeOf(value);
         if (T == Object) return value;
         switch (@typeInfo(T)) {

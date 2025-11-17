@@ -353,11 +353,6 @@ pub const pushLiteral = struct {
         sp.traceStack("pushLiteral");
         const value = pc.object();
         if (sp.push(value)) |newSp| {
-            if (!value.isInt()) {
-                if (extra.getMethod()) |method| {
-                    method.dump();
-                }
-            }
             return @call(tailCall, process.check(pc.prim2()), .{ pc.next2(), newSp, process, context, extra });
         } else {
             const newSp, const newContext, const newExtra = sp.spillStackAndPush(value, context, extra);

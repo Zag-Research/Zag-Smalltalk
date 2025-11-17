@@ -834,7 +834,6 @@ pub const HeapObject = packed struct {
     pub fn copyTo(self: HeapObjectPtr, hp: [*]HeapObject, reference: *Object) [*]HeapObject {
         const head = self.header;
         if (head.ifForwarded()) |ptr| { // already forwarded
-            std.debug.print("Already forwarded: {*}: {*} = {*}\n", .{self, reference, ptr});
             reference.* = Object.fromAddress(ptr);
             return hp;
         }
@@ -842,7 +841,6 @@ pub const HeapObject = packed struct {
         const newHp = hp + len;
         @memcpy(hp[0..len], @as([*]HeapObject, @ptrCast(self)));
         self.forwardTo(hp);
-        std.debug.print("Newly copied:        {*}: {*} = {*}\n", .{self, reference, hp});
         reference.* = Object.fromAddress(hp);
         return newHp;
     }

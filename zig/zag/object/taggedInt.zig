@@ -244,6 +244,22 @@ pub const Object = packed union {
     pub fn fromAddress(value: anytype) Object {
         return @bitCast(@intFromPtr(value));
     }
+    pub const StaticObject = InMemory.PointedObject;
+    pub fn initStaticObject(value: anytype, ptr: *InMemory.PointedObject) object.Object {
+        const T = @TypeOf(value);
+        switch (@typeInfo(T)) {
+            .int, .comptime_int => return .{
+                .immediate = .{
+                    .tag = .smallInteger,
+                    .hash = value,
+                },
+            },
+            .comptime_float => return ptr.set(.Float, value),
+            .bool => return if (value) object.Object.True() else object.Object.False(),
+            else => @panic("Unsupported type for compile-time object creation"),
+        }
+        return fromAddress(ptr);
+    }
     // Conversion from Zig types
     pub inline fn from(value: anytype, sp: SP, context: *Context) Object {
         const T = @TypeOf(value);
@@ -288,7 +304,26 @@ pub const Object = packed union {
             bool => {
                 if (!check or self.isBool()) return self.toBoolNoCheck();
             },
-            else => {},
+            else => {
+                switch (@typeInfo(T)) {
+                    .pointer => |ptrInfo| {
+                        switch (@typeInfo(ptrInfo.child)) {
+                            .@"fn" => {},
+                            .@"struct" => {
+                                if (!check or (self.isMemoryAllocated() and (!@hasDecl(ptrInfo.child, "ClassIndex") or self.to(HeapObjectConstPtr).classIndex == ptrInfo.child.ClassIndex))) {
+                                    if (@hasField(ptrInfo.child, "header") or (@hasDecl(ptrInfo.child, "includesHeader") and ptrInfo.child.includesHeader)) {
+                                        return @as(T, @ptrFromInt(@as(usize, @bitCast(self))));
+                                    } else {
+                                        return @as(T, @ptrFromInt(@sizeOf(HeapHeader) + (@as(usize, @bitCast(self)))));
+                                    }
+                                }
+                            },
+                            else => {},
+                        }
+                    },
+                    else => {},
+                }
+            },
         }
         @panic("Trying to convert Object to " ++ @typeName(T));
     }
@@ -328,6 +363,10 @@ pub const Object = packed union {
         // For spur encoding, we can't easily embed primitives in objects
         // However, this is only done for signature objects, which already aren't quite valid
         return @bitCast(self.rawU() | prim << 40);
+    }
+    pub inline fn heapObject(self: object.Object) ?*InMemory.PointedObject {
+        if (self.isHeap()) return self.ref;
+        return null;
     }
 
     pub inline fn extraValue(self: Object) Object {

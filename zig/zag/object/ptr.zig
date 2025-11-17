@@ -94,8 +94,7 @@ pub const Object = packed struct(u64) {
         return null;
     }
     pub inline fn heapObject(self: object.Object) ?*InMemory.PointedObject {
-        if (self.isMemoryAllocated()) return @constCast(self.ref);
-        return null;
+        return self.pointer(*InMemory.PointedObject);
     }
     pub inline fn extraValue(self: object.Object) object.Object {
         return @bitCast(self.rawU() >> 8);
@@ -159,7 +158,8 @@ pub const Object = packed struct(u64) {
         return @ptrCast(self.ref.data.objects);
     }
     pub inline fn pointer(self: Object, T: type) ?T {
-        return @constCast(@ptrCast(self.ref));
+        if (self.isMemoryAllocated()) return @constCast(@ptrCast(self.ref));
+        return null;
     }
     pub inline fn toBoolNoCheck(self: Object) bool {
         return self == Object.True();
@@ -207,18 +207,11 @@ pub const Object = packed struct(u64) {
     pub fn initStaticObject(value: anytype, ptr: *InMemory.PointedObject) object.Object {
         const T = @TypeOf(value);
         switch (@typeInfo(T)) {
-            .int, .comptime_int => {
-                ptr.setHeader(.SmallInteger, @truncate(value));
-                ptr.data.int = value;
-            },
-            .comptime_float => {
-                ptr.setHeader(.Float, @truncate(42));
-                ptr.data.float = value;
-            },
+            .int, .comptime_int => return fromAddress(ptr.set(.SmallInteger, value)),
+            .comptime_float => return fromAddress(ptr.set(.Float, value)),
             .bool => return if (value) object.Object.True() else object.Object.False(),
             else => @panic("Unsupported type for compile-time object creation"),
         }
-        return fromAddress(ptr);
     }
     pub inline fn from(value: anytype, sp: SP, context: *Context) Object {
         const T = @TypeOf(value);
@@ -255,9 +248,6 @@ pub const Object = packed struct(u64) {
             },
             bool => {
                 if (!check or self.isBool()) return self.toBoolNoCheck();
-            },
-            object.PackedObject => {
-                if (!check or self.isInt()) return @as(T, @bitCast(self));
             },
 
             //u8  => {return @intCast(u8, self.hash & 0xff);},

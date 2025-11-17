@@ -192,6 +192,29 @@ pub const PointedObject = packed struct {
             .length = 1,
         };
     }
+    pub fn set(self: *PointedObject, classIndex: object.ClassIndex, value: anytype) *PointedObject {
+        const hash = @as(u64, @bitCast(
+            switch (@typeInfo(@TypeOf(value))) {
+                .comptime_int => @as(i64, value),
+                .comptime_float => @as(f64, value),
+                else => value,
+            }));
+        self.header = .{
+            .classIndex = classIndex,
+            .hash = @truncate(hash | hash >> 24 | hash >> 48),
+            .objectFormat = .notIndexable,
+            .age = .static,
+            .length = 1,
+        };
+        switch (@typeInfo(@TypeOf(value))) {
+            .int, .comptime_int => self.data.int = value,
+            .float, .comptime_float => self.data.float = value,
+            .bool => self.data.bool = value,
+            .null => self.data.null = value,
+            else => @panic("Unsupported type for static set"),
+        }
+        return self;
+    }
 };
 pub const PointedObjectRef = packed struct {
     ref: *PointedObject,

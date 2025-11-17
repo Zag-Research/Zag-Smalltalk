@@ -183,8 +183,7 @@ const testModule = if (config.is_test) struct {
     const moduleName = "test module";
 };
 pub fn inlinePrimitiveFailed(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
-    trace("inlinePrimitiveFailed: {f} {f}", .{ extra, pc });
-    _ = .{ sp, process, context, std.debug.panic("inlinePrimitiveFailed: {f} {f}\n", .{ extra, pc }) };
+    _ = .{ sp, process, context, std.debug.panic("inlinePrimitiveFailed: {f} {f} {f}\n", .{ extra, pc, sp }) };
     //return @call(tailCall, process.check(pc.prev().prim()), .{ pc, sp, process, context, extra.encoded() });
 }
 

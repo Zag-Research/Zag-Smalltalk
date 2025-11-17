@@ -7,7 +7,7 @@ const zag = @import("../zag.zig");
 const trace = zag.config.trace;
 const object = zag.object;
 const Process = zag.Process;
-const SP = Process.SP; 
+const SP = Process.SP;
 const testing = std.testing;
 const ClassIndex = object.ClassIndex;
 const heap = zag.heap;
@@ -91,11 +91,11 @@ pub const Object = packed union {
         return @bitCast(self);
     }
 
-    pub inline fn fromTaggedI(i: i64, _: anytype) Object {
+    pub inline fn fromTaggedI(i: i64, _: anytype, _: anytype) Object {
         return @bitCast(i);
     }
 
-    pub inline fn fromUntaggedI(i: i64, _: anytype) Object {
+    pub inline fn fromUntaggedI(i: i64, _: anytype, _: anytype) Object {
         return @bitCast(@as(u64, @bitCast(i)) | SmallIntegerTag);
     }
 
@@ -214,8 +214,8 @@ pub const Object = packed union {
     }
 
     // Add fromNativeF for compatibility
-    pub inline fn fromNativeF(t: f64, maybeProcess: ?*Process) object.Object {
-        return from(t, maybeProcess);
+    pub inline fn fromNativeF(t: f64, sp: SP, context: *zag.Context) object.Object {
+        return from(t, sp, context);
     }
 
 
@@ -258,30 +258,42 @@ pub const Object = packed union {
         return decode(@bitCast(self));
     }
 
-    fn memoryFloat(value: f64, sp: SP, maybeProcess: ?*Process) object.Object {
+    fn memoryFloat(value: f64, sp: SP, context: *zag.Context) object.Object {
         if (math.isNan(value)) return object.Object.fromAddress(&InMemory.nanMemObject);
         if (math.inf(f64) == value) return object.Object.fromAddress(&InMemory.pInfMemObject);
         if (math.inf(f64) == -value) return object.Object.fromAddress(&InMemory.nInfMemObject);
-        return InMemory.float(value, sp, maybeProcess);
+        return InMemory.float(value, sp, context);
     }
 
     pub fn fromAddress(value: anytype) Object {
         return @bitCast(@intFromPtr(value));
     }
-    // Conversion from Zig types
-    pub inline fn from(value: anytype, sp: SP, maybeProcess: ?*zag.Process) Object {
+    pub const StaticObject = InMemory.PointedObject;
+    pub fn initStaticObject(value: anytype, ptr: *InMemory.PointedObject) object.Object {
         const T = @TypeOf(value);
-        if (T == Object) return value;
         switch (@typeInfo(T)) {
             .int, .comptime_int => return Self.fromSmallInteger(value),
             .float => {
                 if (encode(value)) |encoded| {
                     return @bitCast(encoded);
-                } else |_| {
-                    return memoryFloat(value, sp, maybeProcess);
-                }
+                } else |_| return ptr.set(.Float, value);
             },
-            .comptime_float => return from(@as(f64, value), sp, maybeProcess),
+            .comptime_float => return initStaticObject(@as(f64, value), ptr),
+            .bool => return if (value) object.Object.True() else object.Object.False(),
+            else => @panic("Unsupported type for compile-time object creation"),
+        }
+        return fromAddress(ptr);
+    }
+    // Conversion from Zig types
+    pub inline fn from(value: anytype, sp: SP, context: *zag.Context) Object {
+        const T = @TypeOf(value);
+        if (T == Object) return value;
+        switch (@typeInfo(T)) {
+            .int, .comptime_int => return Self.fromSmallInteger(value),
+            .float => return @bitCast(encode(value) catch {
+                return memoryFloat(value, sp, context);
+            }),
+            .comptime_float => return from(@as(f64, value), sp, context),
             .bool => return if (value) Object.True() else Object.False(),
             .null => return Object.Nil(),
             .pointer => |ptr_info| {
@@ -319,7 +331,28 @@ pub const Object = packed union {
             bool => {
                 if (!check or self.isBool()) return self.toBoolNoCheck();
             },
-            else => {},
+
+            //u8  => {return @intCast(u8, self.hash & 0xff);},
+            else => {
+                switch (@typeInfo(T)) {
+                    .pointer => |ptrInfo| {
+                        switch (@typeInfo(ptrInfo.child)) {
+                            .@"fn" => {},
+                            .@"struct" => {
+                                if (!check or (self.isMemoryAllocated() and (!@hasDecl(ptrInfo.child, "ClassIndex") or self.to(HeapObjectConstPtr).classIndex == ptrInfo.child.ClassIndex))) {
+                                    if (@hasField(ptrInfo.child, "header") or (@hasDecl(ptrInfo.child, "includesHeader") and ptrInfo.child.includesHeader)) {
+                                        return @as(T, @ptrFromInt(@as(usize, @bitCast(self))));
+                                    } else {
+                                        return @as(T, @ptrFromInt(@sizeOf(HeapHeader) + (@as(usize, @bitCast(self)))));
+                                    }
+                                }
+                            },
+                            else => {},
+                        }
+                    },
+                    else => {},
+                }
+            },
         }
         @panic("Trying to convert Object to " ++ @typeName(T));
     }
@@ -367,13 +400,13 @@ pub const Object = packed union {
         // However, this is only done for signature objects, which already aren't quite valid
         return @bitCast(self.rawU() | prim << 40);
     }
-
-    pub inline fn extraValue(self: Object) Object {
+    pub inline fn heapObject(self: object.Object) ?*InMemory.PointedObject {
+        if (self.isHeap() and !self.equals(Nil())) return @ptrFromInt(self.rawU());
+        return null;
+    }
+    pub inline fn extraValue(_: Object) Object {
         // For spur encoding, extract value from immediate objects
-        if (self.isImmediate()) {
-            return Object.from(@as(i64, @intCast(self.immediate.hash)), null);
-        }
-        return self;
+        @panic("Not implemented");
     }
 
     const OF = object.ObjectFunctions;

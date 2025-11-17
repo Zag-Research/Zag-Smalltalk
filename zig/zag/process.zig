@@ -35,7 +35,7 @@ const Result = execute.Result;
 
 /// this is really a Process object with the low bits encoding additional information
 const Self = @This();
-const process_total_size = 2048; // FIX config.process_total_size;
+const process_total_size = config.process_total_size;
 m: [process_total_size]u8 align(1), // alignment explicitly stated to emphasize the difference from Process
 pub const alignment = @as(u64, @max(stack_mask_overflow, flagMask + 1)) * 2;
 const alignment_mask = @as(u64, @bitCast(-@as(i64, alignment)));
@@ -66,9 +66,9 @@ const Process = struct {
         foo: [3]u64,
     };
     const processAvail = (process_total_size - @sizeOf(Fields) - @sizeOf(Context)) / @sizeOf(Object);
-    const approx_nursery_size = (processAvail - processAvail / 4) / 2; // FIX 9) / 2;
-    const stack_size: usize = 127; // FIX @min(zag.utilities.largerPowerOf2(processAvail - approx_nursery_size * 2), (1 << 16) / @sizeOf(Object) - 1) - 1;
-    const nursery_size = 32; // FIX (processAvail - stack_size) / 2;
+    const approx_nursery_size = (processAvail - processAvail / 9) / 2;
+    const stack_size: usize = @min(zag.utilities.largerPowerOf2(processAvail - approx_nursery_size * 2), (1 << 16) / @sizeOf(Object) - 1) - 1;
+    const nursery_size = (processAvail - stack_size) / 2;
     const fill_size = processAvail - stack_size - nursery_size * 2;
     comptime {
         // @compileLog("Process size: ", @sizeOf(Process));
@@ -81,7 +81,7 @@ const Process = struct {
         // @compileLog("nursery_size:", nursery_size);
         // @compileLog("alignment:", alignment);
         // @compileLog("stack_mask_overflow:", stack_mask_overflow);
-        // FIX assert(stack_size <= nursery_size);
+        assert(stack_size <= nursery_size);
     }
     const lastNurseryAge = Age.lastNurseryAge;
     const maxNurseryObjectSize = @min(HeapHeader.maxLength, nursery_size / 4);
@@ -89,7 +89,6 @@ const Process = struct {
     fn collectNursery(self: *Process, sp: SP, context: *Context, need: usize) void {
         assert(need <= Process.nursery_size);
         const ageSizes = [_]usize{0} ** Process.lastNurseryAge;
-        std.debug.print("Nursery collection started {*} {*} {*}\n", .{ sp, &self.nursery0, &self.nursery1 });
         self.collectNurseryPass(sp, context, ageSizes, Process.lastNurseryAge + 1);
         if (self.freeNursery() >= need) return;
         var total: usize = 0;
@@ -105,9 +104,6 @@ const Process = struct {
     }
     fn collectNurseryPass(self: *Process, originalSp: SP, contextMutable: *Context, sizes: [Process.lastNurseryAge]usize, promoteAge: usize) void {
         _ = .{ sizes, promoteAge };
-        std.debug.print("currHeap: {*} currHp: {*} otherHeap: {*}\n", .{self.h.currHeap, self.h.currHp, self.h.otherHeap});
-        originalSp.dumpStack("before collection");
-        self.dumpHeap();
         var scan = self.h.otherHeap;
         var hp = scan;
         var context = contextMutable;
@@ -115,17 +111,12 @@ const Process = struct {
         // find references from the stacked contexts
         while (true) {
             const endSP = context.endOfStack(sp) orelse sp.endOfStack();
-            std.debug.print("context: {*} endSP: {*} \n", .{context, endSP});
             while (sp.lessThan(endSP)) {
-                std.debug.print("sp: {*} {f}\n", .{sp, sp.top});
                 if (sp.top.asMemoryObject()) |pointer| {
                     if (pointer.isForwarded()) {
-                        std.debug.print("Forwarded object found on stack: {f}\n", .{pointer.header});
                         hp = pointer.copyTo(hp, &sp.top);
                     } else if (pointer.isLocal()) {
                         hp = pointer.copyTo(hp, &sp.top);
-                    } else {
-                        std.debug.print("Non-nursery object found on stack: {f}\n", .{pointer.header});
                     }
                 }
                 sp = sp.drop();
@@ -158,9 +149,6 @@ const Process = struct {
         for (head.otherHeap[0..Process.nursery_size]) |*obj| {
             obj.* = undefined;
         }
-        std.debug.print("currHeap: {*} currHp: {*} otherHeap: {*}\n", .{self.h.currHeap, self.h.currHp, self.h.otherHeap});
-        originalSp.dumpStack("after collection");
-        self.dumpHeap();
     }
     inline fn freeNursery(self: *Process) usize {
         return (@intFromPtr(self.h.currEnd) - @intFromPtr(self.h.currHp)) / 8;

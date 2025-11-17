@@ -132,6 +132,10 @@ pub const Object = packed struct(u64) {
         if (self.isImmediateClass(.Symbol)) return @truncate(self.hash);
         return null;
     }
+    pub inline fn heapObject(self: object.Object) ?*InMemory.PointedObject {
+        if (self.rawU() & 0x7 == 0 and !self.equals(Nil())) return @ptrFromInt(self.rawU());
+        return null;
+    }
     pub inline fn extraValue(self: object.Object) object.Object {
         return @bitCast(self.nativeI_noCheck() >> 8);
     }
@@ -260,6 +264,19 @@ pub const Object = packed struct(u64) {
 
     pub fn fromAddress(value: anytype) Object {
         return @bitCast(@intFromPtr(value));
+    }
+    pub const StaticObject = void;
+    pub fn initStaticObject(comptime value: anytype, ptr: anytype) object.Object {
+        switch (@typeInfo(@TypeOf(value))) {
+            .int, .comptime_int => return fromUntaggedI(value << tagBits, {}, {}),
+            .comptime_float => {
+                if (encode(value)) |encoded| {
+                    return @bitCast(encoded);
+                } else |_| return fromAddress(ptr.set(.Float, value));
+            },
+            .bool => return if (value) object.Object.True() else object.Object.False(),
+            else => @panic("Unsupported type for compile-time object creation"),
+        }
     }
     pub inline fn from(value: anytype, sp: SP, context: *Context) object.Object {
         const T = @TypeOf(value);

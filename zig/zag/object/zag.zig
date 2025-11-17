@@ -138,7 +138,7 @@ pub const Object = packed struct(u64) {
         return null;
     }
     pub inline fn heapObject(self: object.Object) ?*InMemory.PointedObject {
-        if (self.rawU() & 0x7 == 0 and !self.equals(Nil())) return @ptrFromInt(self.rawU());
+        if (self.isHeap() and !self.equals(Nil())) return @ptrFromInt(self.rawU());
         return null;
     }
     pub inline fn extraValue(self: object.Object) object.Object {
@@ -275,11 +275,14 @@ pub const Object = packed struct(u64) {
         return @bitCast(@intFromPtr(value));
     }
     pub const StaticObject = void;
-    pub fn initStaticObject(comptime value: anytype, _: anytype) object.Object {
-        const T = @TypeOf(value);
-        switch (@typeInfo(T)) {
+    pub fn initStaticObject(comptime value: anytype, ptr: anytype) object.Object {
+        switch (@typeInfo(@TypeOf(value))) {
             .int, .comptime_int => return oImm(.SmallInteger, @as(u56, @bitCast(@as(i56, value)))),
-            .comptime_float => return @bitCast(encode(value) catch @panic("Failed to encode comptime float")),
+            .comptime_float => {
+                if (encode(value)) |encoded| {
+                    return @bitCast(encoded);
+                } else |_| return fromAddress(ptr.set(.Float, value));
+            },
             .bool => return if (value) object.Object.True() else object.Object.False(),
             else => @panic("Unsupported type for compile-time object creation"),
         }
@@ -297,9 +300,7 @@ pub const Object = packed struct(u64) {
             .null => return object.Object.Nil(),
             .pointer => |ptr_info| {
                 switch (ptr_info.size) {
-                    .one, .many => {
-                        return fromAddress(value);
-                    },
+                    .one, .many => return fromAddress(value),
                     else => {},
                 }
             },
