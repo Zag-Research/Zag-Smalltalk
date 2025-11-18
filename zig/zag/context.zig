@@ -1,4 +1,5 @@
 const std = @import("std");
+const assert = std.debug.assert;
 const zag = @import("zag.zig");
 const config = zag.config;
 const tailCall = config.tailCall;
@@ -37,8 +38,8 @@ trapContextNumber: u64,
 tpc: PC, // threaded PC
 npc: *const fn (PC, SP, *Process, *Context, Extra) Result, // native PC - in Continuation Passing Style
 contextData: *ContextData,
-//contextDataHeader: HeapHeader,
 const contextSize = @sizeOf(Self) / @sizeOf(Object);
+const sizeOnStack = @sizeOf(ContextOnStack) / @sizeOf(Object) - 1;
 const ContextOnStack = struct {
     spAndSelfOffset: u64,
     prevCtxt: ?*Context,
@@ -57,6 +58,7 @@ const ContextOnStack = struct {
         self.tpc = undefined;
         self.npc = undefined;
         self.contextData = undefined;
+        self.contextDataHeader = undefined;
         const locals: [*]Object = @ptrCast(&self.locals);
         for (locals[0..numLocals]) |*l| {
             l.* = Nil();
@@ -67,7 +69,7 @@ const ContextOnStack = struct {
         return @ptrCast(&locals[self.spAndSelfOffset & Process.stack_mask]);
     }
     inline fn contextDataPtr(self: *ContextOnStack) *ContextData {
-        return @ptrCast(&self.spAndSelfOffset);
+        return @ptrCast(&self.contextDataHeader);
     }
     fn endOfStack(self: *const ContextOnStack) SP {
         return @ptrFromInt(@intFromPtr(self) - (self.spAndSelfOffset >> Process.stack_mask_shift));
@@ -78,8 +80,10 @@ const ContextOnStack = struct {
     fn reify(self: *ContextOnStack) void {
         _ = .{ self, unreachable };
     }
+    inline fn callerStack(self: *const ContextOnStack) SP {
+        return @constCast(@ptrCast(&self.locals));
+    }
 };
-const sizeOnStack = @sizeOf(ContextOnStack) / @sizeOf(Object) - 1;
 fn ifOnStack(context: *const Context, sp: SP) ?*const ContextOnStack {
     if (sp.contains(context)) {
         return @ptrCast(context);
@@ -90,8 +94,10 @@ pub const Extra = packed struct {
     addr: u48,
     stack_offset: u16 = 0,
     const stack_mask = Process.stack_mask;
-    const stack_size_type = zag.utilities.largeEnoughType(stack_mask);
     const is_encoded: u16 = 0x8000;
+    comptime {
+        assert(stack_mask < is_encoded);
+    }
     pub const none: Extra = .{ .addr = 0, .stack_offset = 0 };
     // Three states:
     //  - method is not encoded - is_encoded will not be set and low bits not zero
@@ -99,8 +105,7 @@ pub const Extra = packed struct {
     //  - contextData - low bits zero
     pub fn forMethod(method: *const CompiledMethod, sp: SP) Extra {
         // guaranteed that the low bits of sp are not zero by design in Process
-        const stackOffset: stack_size_type = @truncate(@intFromPtr(sp));
-        return .{ .addr = @truncate(@intFromPtr(method)), .stack_offset = stackOffset };
+        return .{ .addr = @truncate(@intFromPtr(method)), .stack_offset = @truncate(@intFromPtr(sp)) };
     }
     pub fn fromContextData(contextData: *const ContextData) Extra {
         _ = @as(*const ContextData, @ptrFromInt(@intFromPtr(contextData)));
@@ -152,11 +157,6 @@ pub const Extra = packed struct {
         trace("primitiveFailed: {f} {f}", .{ extra, pc });
         return @call(tailCall, process.check(pc.prev().prim()), .{ pc, sp, process, context, extra.encoded() });
     }
-    pub fn inlinePrimitiveFailed(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
-        trace("inlinePrimitiveFailed: {f} {f}", .{ extra, pc });
-        _ = .{ sp, process, context, std.debug.panic("inlinePrimitiveFailed: {f} {f}\n", .{ extra, pc }) };
-        //return @call(tailCall, process.check(pc.prev().prim()), .{ pc, sp, process, context, extra.encoded() });
-    }
     pub fn format(
         self: Extra,
         writer: anytype,
@@ -183,7 +183,7 @@ var theStaticContextData = ContextData{
     .contextData = undefined,
 };
 pub fn initStatic(self: *Context) void {
-    self.header = HeapHeader.headerStatic(.Context, @truncate(@intFromPtr(self)), contextSize - 1);
+    self.header = HeapHeader.headerStatic(.Context, @truncate(@intFromPtr(self)), contextSize);
     const end = &execute.endMethod;
     const pc = PC.init(&end.code[0]);
     self.method = @constCast(end);
@@ -199,13 +199,19 @@ pub fn format(
 ) !void {
     try writer.print("Context{{", .{});
     try writer.print(".header: {}", .{self.header});
-    try writer.print(".method={*}", .{self.method});
+    try writer.print(", .method={*}", .{self.method});
     try writer.print(", .npc={x}", .{@intFromPtr(self.npc)});
     try writer.print(", .tpc={f}", .{self.tpc});
     try writer.print(", .trapContextNumber={}", .{self.trapContextNumber});
     if (self.prevCtxt) |ctxt|
-        try writer.print(" prev: 0x{x}", .{@intFromPtr(ctxt)});
+        try writer.print(", prev: 0x{x}", .{@intFromPtr(ctxt)});
     try writer.print("}}", .{});
+}
+pub fn getCurrentMethod(self: *Context, extra: Extra) *const CompiledMethod {
+    if (extra.getMethod()) |method| {
+        return method;
+    }
+    return self.method;
 }
 inline fn headerOf(self: *const Context) *HeapHeader {
     return @as(HeapObjectPtr, @ptrCast(@constCast(self))).headerPtr();
@@ -232,7 +238,6 @@ pub fn push(self: *Context, sp: SP, process: *Process, method: *const CompiledMe
         const selfAddress = extra.selfAddress(sp).?;
         const sizeToMove = selfOffset - locals;
         const contextAddr = selfAddress - selfOffset - (sizeOnStack - 1);
-        trace("context push: selfAddress={*} contextAddr={*} newSp={*} sp={*} sizeToMove={} stackStructure={} selfOffset={}", .{ selfAddress, contextAddr, newSp, sp, sizeToMove, method.stackStructure, selfOffset });
         std.debug.assert(contextAddr == newSp.array() + sizeToMove);
         for (newSp.array()[0..sizeToMove], sp.array()[0..sizeToMove]) |*target, *source| {
             target.* = source.*;
@@ -289,7 +294,7 @@ pub inline fn setReturnBoth(self: *Context, npc: *const fn (PC, SP, *Process, *C
     self.npc = npc;
     self.tpc = tpc;
 }
-pub inline //
+pub // inline
 fn setReturn(self: *Context, tpc: PC) void {
     self.setReturnBoth(tpc.asThreadedFn(), tpc.next());
 }
@@ -301,6 +306,11 @@ pub inline fn setNPc(self: *Context, npc: *const fn (PC, SP, *Process, *Context,
 }
 pub inline fn setTPc(self: *Context, tpc: PC) void {
     self.tpc = tpc;
+}
+pub inline fn callerStack(self: *const Context, sp: SP) ?SP {
+    if (self.ifOnStack(sp)) |contextOnStack|
+        return contextOnStack.callerStack();
+    return null;
 }
 pub inline fn getSelf(self: *const Context) Object {
     const wordsToDiscard = self.header.hash16();
@@ -431,7 +441,7 @@ pub const threadedFunctions = struct {
             if (extra.noContext())
                 return @call(tailCall, pushContext.threadedFn, .{ pc.prev(), sp, process, context, extra });
             const value = Object.fromAddress(context);
-            if (true) unreachable;
+            if (true) @panic("unreachable");
             if (sp.push(value)) |newSp| {
                 return @call(tailCall, process.check(pc.prim()), .{ pc.next(), newSp, process, context, extra });
             } else {

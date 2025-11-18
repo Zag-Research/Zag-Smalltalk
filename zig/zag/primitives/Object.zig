@@ -89,7 +89,7 @@ pub const @"perform:" = struct { // perform: perform:with: perform:with:with: pe
         const numArgs = selector.numArgs();
         if (selector.isSymbol() and numArgs == arity) {
             //     const newPc = lookupAddress(selector);//, sp.next.get_class());
-            unreachable;
+            @panic("unreachable");
         }
         return @call(tailCall, Extra.primitiveFailed, .{ pc, sp, process, context, extra });
     }

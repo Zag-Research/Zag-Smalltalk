@@ -101,7 +101,7 @@ const SymbolsEnum = enum(u32) {
     };
     fn initSymbol(sym: *PointedObject, symbol: SymbolsEnum) void {
         const s_hash = symbol.symbolHash().?;
-        sym.header = HeapHeader{ .classIndex = .Symbol, .hash = s_hash, .format = .notIndexable, .age = .static, .length = 1 };
+        sym.header = HeapHeader{ .classIndex = .Symbol, .hash = s_hash, .objectFormat = .notIndexable, .age = .static, .length = 1 };
         sym.data.unsigned = s_hash | @as(u64, symbol.numArgs()) << 24;
     }
     pub inline fn numArgs(self: SymbolsEnum) u4 {
@@ -121,10 +121,10 @@ const SymbolsEnum = enum(u32) {
         const O = packed struct { sym: *const PointedObject };
         return @bitCast(O{ .sym = &staticSymbols[index - 1] });
     }
-    pub fn withPrimitive(sym: SymbolsEnum, primitive: u16) Object {
+    pub fn withPrimitive(sym: SymbolsEnum, primitive: u8) Object {
         return sym.signature(primitive).asObject();
     }
-    fn signature(sym: SymbolsEnum, primitive: u16) Signature {
+    fn signature(sym: SymbolsEnum, primitive: u8) Signature {
         const int = @intFromEnum(sym);
         return Signature.fromHashPrimitive(hash_of(@truncate(int), @truncate(int >> 24)), primitive);
     }
@@ -229,15 +229,15 @@ pub const SymbolTable = struct {
             if (!lu.isNil()) return lu;
             const result = internDirect(self, trp, string);
             if (!result.isNil()) return result;
-            unreachable; // out of space
+            @panic("unreachable"); // out of space
         }
-        unreachable;
+        @panic("unreachable");
     }
     fn internDirect(self: *Self, trp: *SymbolTreap, string: Object) Object {
         const result = lookupDirect(trp, string);
         if (!result.isNil()) return result;
         const str = string.promoteToUnmovable() catch return Nil();
-        const index = trp.insert(str) catch unreachable;
+        const index = trp.insert(str) catch @panic("unreachable");
         if (config.immediateSymbols)
             return SymbolsEnum.symbol_of(@truncate(index), numArgs(string));
         const obj: *PointedObject = @ptrCast(self.allocator.alloc(PointedObject, 1) catch @panic("can't alloc"));

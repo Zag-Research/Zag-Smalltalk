@@ -149,10 +149,10 @@ const ModulePrimitive = struct {
 const testModule = if (config.is_test) struct {
     const moduleName = "test module";
     const moduleString = stringOf(moduleName).init().obj();
-    const zName = stringOf("primitive998").init().obj();
+    const zName = stringOf("primitive255").init().obj();
     const primitiveNotDefined = stringOf("primitiveNotDefined").init().obj();
-    pub const primitive998 = struct {
-        pub const number = 998;
+    pub const primitive255 = struct {
+        pub const number = 255;
         pub fn primitive(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
             if (sp.next.get_class() != sp.top.get_class()) {
                 return @call(tailCall, Extra.primitiveFailed, .{ pc, sp, process, context, extra });
@@ -172,7 +172,7 @@ const testModule = if (config.is_test) struct {
         }
         pub fn inlinePrimitive(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
             if (sp.next.get_class() != sp.top.get_class()) {
-                return @call(tailCall, Extra.inlinePrimitiveFailed, .{ pc, sp, process, context, extra });
+                return @call(tailCall, inlinePrimitiveFailed, .{ pc, sp, process, context, extra });
             } else {
                 const newSp = sp.dropPut(Object.from(sp.next == sp.top, sp, context));
                 return @call(tailCall, process.check(pc.prim2()), .{ pc.next2(), newSp, process, context, extra });
@@ -182,6 +182,10 @@ const testModule = if (config.is_test) struct {
 } else struct {
     const moduleName = "test module";
 };
+pub fn inlinePrimitiveFailed(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
+    _ = .{ sp, process, context, std.debug.panic("inlinePrimitiveFailed: {f} {f} {f}\n", .{ extra, pc, sp }) };
+    //return @call(tailCall, process.check(pc.prev().prim()), .{ pc, sp, process, context, extra.encoded() });
+}
 
 fn noPrim(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
     return @call(tailCall, process.check(pc.prev().prim()), .{ pc, sp, process, context, extra.encoded() });
@@ -217,7 +221,7 @@ pub const threadedFunctions = struct {
         test "primitive found" {
             var exe = Execution.initTest("primitive: found", .{
                 tf.primitive,
-                comptime fromPrimitive(998),
+                comptime fromPrimitive(255),
                 tf.pushLiteral,
                 o0,
             });
@@ -234,7 +238,7 @@ pub const threadedFunctions = struct {
         test "primitive with error" {
             var exe = Execution.initTest("primitive: with error", .{
                 tf.primitive,
-                comptime fromPrimitive(998),
+                comptime fromPrimitive(255),
                 tf.pushLiteral,
                 o0,
             });
@@ -253,7 +257,7 @@ pub const threadedFunctions = struct {
         test "primitive not found" {
             var exe = Execution.initTest("primitive: not found", .{
                 tf.primitive,
-                comptime fromPrimitive(999),
+                comptime fromPrimitive(255),
                 tf.pushLiteral,
                 o0,
             });
@@ -294,7 +298,7 @@ pub const threadedFunctions = struct {
         test "primitive:error: found" {
             var exe = Execution.initTest("primitive:error: found", .{
                 tf.primitiveError,
-                comptime fromPrimitive(998),
+                comptime fromPrimitive(255),
                 tf.pushLiteral,
                 o0,
             });
@@ -311,7 +315,7 @@ pub const threadedFunctions = struct {
         test "primitive:error: with error" {
             var exe = Execution.initTest("primitive:error: with error", .{
                 tf.primitiveError,
-                comptime fromPrimitive(998),
+                comptime fromPrimitive(255),
                 tf.pushLiteral,
                 o0,
             });
@@ -331,7 +335,7 @@ pub const threadedFunctions = struct {
         test "primitive:error: not found" {
             var exe = Execution.initTest("primitive:error: not found", .{
                 tf.primitiveError,
-                comptime fromPrimitive(999),
+                comptime fromPrimitive(255),
                 tf.pushLiteral,
                 o0,
             });
@@ -373,7 +377,7 @@ pub const threadedFunctions = struct {
             method.jitted = noPrim;
             return @call(tailCall, noPrim, .{ pc, sp, process, context, extra });
         }
-        const primitive998 = testModule.zName;
+        const primitive255 = testModule.zName;
         const primitiveNotDefined = testModule.primitiveNotDefined;
         test "primitive:module: found" {
             var exe = Execution.initTest("primitive:module: found", .{
@@ -383,7 +387,7 @@ pub const threadedFunctions = struct {
                 tf.pushLiteral,
                 o0,
             });
-            try exe.resolve(&[_]Object{ primitive998.asObject(), testModule.moduleString.asObject() });
+            try exe.resolve(&[_]Object{ primitive255.asObject(), testModule.moduleString.asObject() });
             exe.execute(&[_]Object{
                 exe.object(42),
                 exe.object(17),
@@ -400,7 +404,7 @@ pub const threadedFunctions = struct {
                 tf.pushLiteral,
                 o0,
             });
-            try exe.resolve(&[_]Object{ primitive998.asObject(), testModule.moduleString.asObject() });
+            try exe.resolve(&[_]Object{ primitive255.asObject(), testModule.moduleString.asObject() });
             exe.execute(&[_]Object{
                 True(),
                 exe.object(17),
@@ -455,7 +459,7 @@ pub const threadedFunctions = struct {
             method.jitted = noPrimWithError;
             return @call(tailCall, noPrimWithError, .{ pc, sp, process, context, extra });
         }
-        const primitive998 = testModule.zName;
+        const primitive255 = testModule.zName;
         const primitiveNotDefined = testModule.primitiveNotDefined;
         test "primitive:module:error: found" {
             var exe = Execution.initTest("primitive:module:error: found", .{
@@ -465,7 +469,7 @@ pub const threadedFunctions = struct {
                 tf.pushLiteral,
                 o0,
             });
-            try exe.resolve(&[_]Object{ primitive998.asObject(), testModule.moduleString.asObject() });
+            try exe.resolve(&[_]Object{ primitive255.asObject(), testModule.moduleString.asObject() });
             exe.execute(&[_]Object{
                 exe.object(42),
                 exe.object(17),
@@ -482,7 +486,7 @@ pub const threadedFunctions = struct {
                 tf.pushLiteral,
                 o0,
             });
-            try exe.resolve(&[_]Object{ primitive998.asObject(), testModule.moduleString.asObject() });
+            try exe.resolve(&[_]Object{ primitive255.asObject(), testModule.moduleString.asObject() });
             exe.execute(&[_]Object{
                 True(),
                 exe.object(17),
@@ -542,7 +546,7 @@ pub const threadedFunctions = struct {
                 tf.pushLiteral,
                 o0,
             });
-            try exe.resolve(&[_]Object{Sym.value.withPrimitive(998)});
+            try exe.resolve(&[_]Object{Sym.value.withPrimitive(255)});
             exe.execute(&[_]Object{
                 exe.object(42),
                 exe.object(17),
@@ -557,7 +561,7 @@ pub const threadedFunctions = struct {
             if (true) return error.SkipZigTest;
             var exe = Execution.initTest("inlinePrimitive: not found", .{
                 tf.inlinePrimitive,
-                fromPrimitive(999),
+                fromPrimitive(255),
             });
             try exe.runTest(
                 &[_]Object{
@@ -592,7 +596,7 @@ pub const threadedFunctions = struct {
                 tf.pushLiteral,
                 o0,
             });
-            try exe.resolve(&[_]Object{Sym.value.withPrimitive(998)});
+            try exe.resolve(&[_]Object{Sym.value.withPrimitive(255)});
             exe.execute(&[_]Object{
                 exe.object(42),
                 exe.object(17),
@@ -607,7 +611,7 @@ pub const threadedFunctions = struct {
             if (true) return error.SkipZigTest;
             var exe = Execution.initTest("inlinePrimitiveModule: not found", .{
                 tf.inlinePrimitiveModule,
-                fromPrimitive(999),
+                fromPrimitive(255),
             });
             try exe.runTest(
                 &[_]Object{

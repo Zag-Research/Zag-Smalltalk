@@ -67,7 +67,7 @@ pub const Object = packed struct(u64) {
     pub inline fn symbol40(self: object.Object) u40 {
         return @truncate(self.ref.data.unsigned);
     }
-    pub inline //
+    pub // inline
     fn nativeI(self: object.Object) ?i64 {
         if (self.isInt()) return self.rawI();
         return null;
@@ -93,6 +93,9 @@ pub const Object = packed struct(u64) {
         if (self.isImmediateClass(.Symbol)) return self.ref.header.hash;
         return null;
     }
+    pub inline fn heapObject(self: object.Object) ?*InMemory.PointedObject {
+        return self.pointer(*InMemory.PointedObject);
+    }
     pub inline fn extraValue(self: object.Object) object.Object {
         return @bitCast(self.rawU() >> 8);
     }
@@ -104,7 +107,7 @@ pub const Object = packed struct(u64) {
     }
     pub const testU = rawU;
     pub const testI = rawI;
-    pub inline //
+    pub // inline
     fn rawU(self: object.Object) u64 {
         return self.ref.data.unsigned;
     }
@@ -135,7 +138,7 @@ pub const Object = packed struct(u64) {
     pub inline fn isMemoryDouble(self: object.Object) bool {
         return self.isMemoryAllocated() and self.to(HeapObjectPtr).*.getClass() == .Float;
     }
-    pub inline //
+    pub // inline
     fn isInt(self: Object) bool {
         return self.ref.header.classIndex == .SmallInteger;
     }
@@ -148,14 +151,15 @@ pub const Object = packed struct(u64) {
     // pub inline fn oImm(c: ClassIndex.Compact, h: u56) Self {
     //     return Self{ .tag = .immediates, .class = c, .hash = h };
     // }
-    pub inline fn hasPointer(_: Object) bool {
-        return true;
+    pub inline fn hasPointer(self: Object) bool {
+        return self.isMemoryAllocated();
     }
     pub inline fn highPointer(self: Object, T: type) ?T {
         return @ptrCast(self.ref.data.objects);
     }
     pub inline fn pointer(self: Object, T: type) ?T {
-        return @ptrCast(self.ref.data.objects);
+        if (self.isMemoryAllocated()) return @constCast(@ptrCast(self.ref));
+        return null;
     }
     pub inline fn toBoolNoCheck(self: Object) bool {
         return self == Object.True();
@@ -195,8 +199,19 @@ pub const Object = packed struct(u64) {
     pub inline fn hash32(self: Object) u32 {
         return @truncate(self.ref.data.unsigned);
     }
-    pub fn fromAddress(value: anytype) Object {
+    pub // inline
+    fn fromAddress(value: anytype) Object {
         return @bitCast(@intFromPtr(value));
+    }
+    pub const StaticObject = InMemory.PointedObject;
+    pub fn initStaticObject(value: anytype, ptr: *InMemory.PointedObject) object.Object {
+        const T = @TypeOf(value);
+        switch (@typeInfo(T)) {
+            .int, .comptime_int => return fromAddress(ptr.set(.SmallInteger, value)),
+            .comptime_float => return fromAddress(ptr.set(.Float, value)),
+            .bool => return if (value) object.Object.True() else object.Object.False(),
+            else => @panic("Unsupported type for compile-time object creation"),
+        }
     }
     pub inline fn from(value: anytype, sp: SP, context: *Context) Object {
         const T = @TypeOf(value);
@@ -211,8 +226,7 @@ pub const Object = packed struct(u64) {
                 switch (ptr_info.size) {
                     .one, .many => {
                         //@compileLog("from: ",value);
-                        @setRuntimeSafety(false);
-                        return Object{ .ref = @ptrCast(@alignCast(@constCast(value))) };
+                        return fromAddress(value);
                     },
                     else => {},
                 }
@@ -234,9 +248,6 @@ pub const Object = packed struct(u64) {
             },
             bool => {
                 if (!check or self.isBool()) return self.toBoolNoCheck();
-            },
-            object.PackedObject => {
-                if (!check or self.isInt()) return @as(T, @bitCast(self));
             },
 
             //u8  => {return @intCast(u8, self.hash & 0xff);},
@@ -263,12 +274,12 @@ pub const Object = packed struct(u64) {
         }
         @panic("Trying to convert Object to " ++ @typeName(T));
     }
-    pub inline //
+    pub // inline
     fn which_class(self: Object) ClassIndex {
         return self.ref.header.classIndex;
     }
     pub inline fn isMemoryAllocated(self: Object) bool {
-        return if (self.isHeap()) self != Object.Nil() else @intFromEnum(self.class) <= @intFromEnum(ClassIndex.Compact.ThunkHeap);
+        return @intFromPtr(self.ref) & 0x7 == 0 and self != Object.Nil();
     }
     pub const Scanner = struct {
         ptr: *anyopaque,

@@ -142,7 +142,7 @@ var best = stats_u32.init(0);
 pub fn main() void {
     var prng = std.rand.DefaultPrng.init(blk: {
         var seed: u64 = undefined;
-        std.os.getrandom(std.mem.asBytes(&seed)) catch unreachable;
+        std.os.getrandom(std.mem.asBytes(&seed)) catch @panic("unreachable");
         break :blk seed;
     });
     const rand = prng.random();
@@ -155,7 +155,7 @@ pub fn main() void {
         const k = (@as(u32, 1) << b) - 1;
         const memory = memory_[0 .. k * 16];
         const depths = depths_[0..k];
-        stdout.print("Searching for optimal primes for treap of size {} optimal height {}\n", .{ k, b }) catch unreachable;
+        stdout.print("Searching for optimal primes for treap of size {} optimal height {}\n", .{ k, b }) catch @panic("unreachable");
         const primes = [_]u32{
             0xa1fdc7a3,
             // 0x9e480773,
@@ -185,7 +185,7 @@ pub fn main() void {
             const j = largestPrimeLessThan(rand.int(u32) | 0x80000000);
             tryTreap(false, @intCast(j), memory, depths);
         }
-        // stdout.print("*",.{}) catch unreachable;
+        // stdout.print("*",.{}) catch @panic("unreachable");
         // const max = 0x100000000;
         // i = max;
         // while (i > max/2)
@@ -200,7 +200,7 @@ fn tryTreap(printAnyway: bool, i: u32, memory: []Treap_u64.Element, depths: []u3
     var trp = Treap_u64.init(memory, compareU64, 0);
     var index: u64 = 1;
     while (index < depths.len) : (index += 1) {
-        _ = trp.insert(index) catch unreachable;
+        _ = trp.insert(index) catch @panic("unreachable");
     }
     trp.depths(depths);
     var current = stats_u32.init(i);
@@ -210,8 +210,8 @@ fn tryTreap(printAnyway: bool, i: u32, memory: []Treap_u64.Element, depths: []u3
     var print = printAnyway;
     if (best.noData() or best.max() > current.max() or (best.max() == current.max() and best.mean() > current.mean())) {
         best = current;
-        stdout.print("new best", .{}) catch unreachable;
+        stdout.print("new best", .{}) catch @panic("unreachable");
         print = true;
-    } else if (print) stdout.print("current", .{}) catch unreachable;
-    if (print) stdout.print(" is {} 0x{x:0>8} with max={d:2.0} mean={d:5.2} stdev={d:5.2}\n", .{ i, i, current.max(), current.mean(), current.stddev() }) catch unreachable;
+    } else if (print) stdout.print("current", .{}) catch @panic("unreachable");
+    if (print) stdout.print(" is {} 0x{x:0>8} with max={d:2.0} mean={d:5.2} stdev={d:5.2}\n", .{ i, i, current.max(), current.mean(), current.stddev() }) catch @panic("unreachable");
 }

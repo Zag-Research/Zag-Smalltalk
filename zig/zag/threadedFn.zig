@@ -40,10 +40,10 @@ const symbol = zag.symbol;
 
 const structures = .{
     @import("controlWords.zig"),
-    @import("dispatch.zig").threadedFunctions,
-    @import("primitives.zig").threadedFunctions,
-    @import("context.zig").threadedFunctions,
-    @import("process.zig").threadedFunctions,
+    zag.dispatch.threadedFunctions,
+    zag.primitives.threadedFunctions,
+    zag.Context.threadedFunctions,
+    zag.Process.threadedFunctions,
     if (is_test) struct {
         // these are just for testing to  verify that we can filter them out
         // pub const T = u32; // don't know how to filter these out
@@ -51,7 +51,7 @@ const structures = .{
         const ignoreInt: usize = 42;
         fn ignore() void {}
     } else struct {},
-} ++ @import("primitives.zig").primitiveThreadedFunctions;
+} ++ primitives.primitiveThreadedFunctions;
 //comptime {@compileLog(structures[6].asThunk);}
 fn declsCount() usize {
     comptime var count = 0;

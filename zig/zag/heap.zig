@@ -48,16 +48,10 @@ pub const Format = enum(u7) {
         assert(asU7(.indexedWeakWithPointers) == 127);
     }
     const Self = @This();
-    const ImmutableSizeZero = asU7(.immutableSizeZero);
-    const MutableOffset = NotObject;
     const NumberOfBytes = 109;
-    const NotObject = asU7(.notObject);
-    const NotIndexable = asU7(.notIndexable);
     const LastPointerFree = asU7(.free);
-    const DirectIndexed = asU7(.directIndexed);
-    const Indexed = asU7(.indexed);
-    const External = asU7(.external);
-    const Special = asU7(.special);
+//    const Indexed = asU7(.indexed);
+//    const External = asU7(.external);
     const FirstWeak = asU7(.externalWeakWithPointers);
     const LastWeak = asU7(.indexedWeakWithPointers);
     const Last = 128;
@@ -66,17 +60,14 @@ pub const Format = enum(u7) {
     //     assert(asU7(.notIndexableWithPointers) == 0x76);
     //     assert(asU7(.indexedWeakWithPointers) == 0x7f);
     // }
-    pub inline fn asU7(self: Self) u7 {
-        return @truncate(@intFromEnum(self));
-    }
     const operationsArray = HeapOperations.init();
     pub fn operations(self: Self) *const HeapOperations {
-        return &operationsArray[self.asU7()];
+        return &operationsArray[asU7(self)];
     }
     pub inline fn instVars(self: Self, header: HeapHeader, obj: *const HeapObject) HeapOperationError![]Object {
         return self.operations().instVars(self, header, @constCast(obj));
     }
-    pub inline //
+    pub // inline
     fn array(self: Self, header: HeapHeader, obj: *const HeapObject, elementSize: usize) HeapOperationError![]Object {
         return self.operations().array(self, header, @constCast(obj), elementSize);
     }
@@ -117,7 +108,7 @@ pub const Format = enum(u7) {
         return @intFromEnum(self) >= FirstWeak;
     }
     pub inline fn potentiallyHasInstVars(_: Self) bool {
-        unreachable;
+        @panic("unreachable");
     }
     pub inline fn hasIndexPointers(self: Self) bool {
         return self.hasPointers() and self.isIndexable();
@@ -127,10 +118,10 @@ pub const Format = enum(u7) {
     }
     pub inline fn inHeapSize(self: Self, header: HeapHeader, obj: *const HeapObject) usize {
         const len = header.length;
-        if (true) unreachable;
+        if (true) @panic("unreachable");
         if (self.isIndexable() and self.hasInstVars()) {
             const oa = @as([*]u64, @ptrFromInt(@intFromPtr(obj))) + len;
-            return len + 3 + if (oa[2] != @intFromPtr(oa + 3)) 0 else unreachable; //form.wordSize(oa[1]);
+            return len + 3 + if (oa[2] != @intFromPtr(oa + 3)) 0 else @panic("unreachable"); //form.wordSize(oa[1]);
         }
         return len + 1;
     }
@@ -150,6 +141,9 @@ pub const Format = enum(u7) {
         }
     }
 };
+pub inline fn asU7(self: Format) u7 {
+    return @truncate(@intFromEnum(self));
+}
 test "isWeak formats" {
     for (0..Format.Last) |n| {
         const e: Format = @enumFromInt(n);
@@ -201,20 +195,23 @@ const HeapOperations = struct {
     iterator: ?*const fn (HeapHeader, *const HeapObject) ?HeapObjectPtrIterator = null,
     instVarWithPtr: Format = .free,
     inline fn set(ops: *[128]HeapOperations, format: Format, tuple: HeapOperations) void {
-        const idx = @intFromEnum(format);
-        const withPtr = if (idx >= @intFromEnum(Format.notIndexable) and idx < @intFromEnum(Format.free)) idx + 8 else idx;
+        const idx = asU7(format);
         ops[idx].array = tuple.array;
         ops[idx].instVars = tuple.instVars;
         ops[idx].size = tuple.size;
         ops[idx].iterator = tuple.iterator;
-        ops[idx].instVarWithPtr = @enumFromInt(withPtr);
-        if (withPtr != idx)
-            ops[withPtr] = ops[idx];
+        if (idx >= asU7(.notIndexable) and idx < asU7(.free)) {
+            ops[idx].instVarWithPtr = @enumFromInt(idx + 8);
+            ops[idx + 8] = ops[idx]; // must precede setting iterator
+            ops[idx].iterator = HeapObjectPtrIterator.iteratorNone;
+        } else {
+            ops[idx].instVarWithPtr = format;
+        }
     }
     fn init() [128]HeapOperations {
         var ops = [_]HeapOperations{undefined} ** 128;
         for (ops[0..], 0..) |*op, n| {
-            op.* = if (n < Format.NotIndexable) .{
+            op.* = if (n < asU7(.notIndexable)) .{
                 .array = byteArray,
                 .size = byteSize,
                 .instVarWithPtr = @enumFromInt(n),
@@ -255,11 +252,11 @@ const HeapOperations = struct {
         return header.length;
     }
     fn byteArray(format: Format, _: HeapHeader, obj: *const HeapObject, elementSize: usize) HeapOperationError![]Object {
-        if (format.asU7() > 0 and elementSize != 1) return error.wrongElementSize;
-        return obj.asObjectArray()[0..format.asU7()];
+        if (asU7(format) > 0 and elementSize != 1) return error.wrongElementSize;
+        return obj.asObjectArray()[0..asU7(format)];
     }
     fn byteSize(format: Format, _: HeapHeader, _: *const HeapObject) HeapOperationError!usize {
-        return format.asU7();
+        return asU7(format);
     }
     fn notArray(_: Format, _: HeapHeader, _: *const HeapObject, _: usize) HeapOperationError![]Object {
         return error.notIndexable;
@@ -295,6 +292,9 @@ pub const HeapObjectPtrIterator = struct {
     var specials = [_]*const fn (*Self) ?*Object{&notSpecial} ** (ClassIndex.LastSpecial + 1);
     fn notSpecial(_: *Self) ?*Object {
         @panic("special with no special function");
+    }
+    pub fn iteratorNone(_: HeapHeader, _: HeapObjectConstPtr) ?HeapObjectPtrIterator {
+        return null;
     }
     pub fn iteratorAll(head: HeapHeader, self: HeapObjectConstPtr) ?HeapObjectPtrIterator {
         const oa = self.start() + 1;
@@ -339,7 +339,7 @@ pub const HeapObjectPtrIterator = struct {
 //     });
 //     o1b.setLiterals(&[_]Object{Nil}, &[_]ClassIndex{});
 //     const ho1b = o1b.asHeapObjectPtr();
-//     try testing.expectEqual(ho1b.format, .notIndexable);
+//     try testing.expectEqual(ho1b.objectFormat, .notIndexable);
 //     try testing.expectEqual(ho1b.makeIterator(), null);
 //     var o2 = compileObject(.{
 //         "def",
@@ -359,7 +359,7 @@ pub const HeapObjectPtrIterator = struct {
 //     o2.setLiterals(&[_]Object{ Nil, True }, &[_]ClassIndex{@enumFromInt(0xdead)});
 //     const ho2 = o2.asHeapObjectPtr();
 //     try testing.expectEqual(ho2.classIndex, .Class);
-//     try testing.expectEqual(ho2.format, .notIndexableWithPointers);
+//     try testing.expectEqual(ho2.objectFormat, .notIndexableWithPointers);
 //     var i = ho2.makeIterator() orelse return error.NoIterator;
 //     try testing.expectEqual(i.next(), &o2.asObjectArray()[4]);
 //     try testing.expectEqual(i.next(), &o2.asObjectArray()[7]);
@@ -450,7 +450,7 @@ pub const AllocationInfo = struct {
         return .{
             .classIndex = classIndex,
             .hash = hash,
-            .format = self.format,
+            .objectFormat = self.format,
             .age = age,
             .length = self.objectHeapSize(),
         };
@@ -576,6 +576,12 @@ pub const Age = enum(u4) {
             else => false,
         };
     }
+    pub inline fn isLocal(self: Self) bool {
+        return switch (self) {
+            .onStack, .nursery, .nursery2, .nursery3, .nursery4, .nursery5, .nurseryLast => true,
+            else => false,
+        };
+    }
     pub inline fn isGlobal(self: Self) bool {
         return switch (self) {
             .global, .globalMarked, .aStruct, .globalScanned, .aoo, .aooMarked, .free, .aooScanned => true,
@@ -631,11 +637,10 @@ pub const AllocResult = struct {
     }
 };
 pub const AllocReturn = AllocErrors!AllocResult;
-const getHeader = HeapHeader.headerPtr;
 pub const HeapHeader = packed struct(u64) {
     classIndex: ClassIndex = .none,
     hash: u24 = 0,
-    format: Format = .free,
+    objectFormat: Format = .free,
     immutable: bool = false,
     age: Age = .nursery,
     length: u11 = 0,
@@ -646,26 +651,44 @@ pub const HeapHeader = packed struct(u64) {
         assert(@sizeOf(HeapHeader) == 8);
         std.debug.assert(std.meta.hasUniqueRepresentation(HeapHeader));
     }
+    pub fn format(
+        self: HeapHeader,
+        writer: anytype,
+    ) !void {
+        if (self.ifForwarded()) |ptr| {
+            try writer.print("-> {*}", .{ ptr });
+        } else {
+            try writer.print("HeapHeader{{{} {} {}{s} {} len:{}}}", .{self.classIndex, self.hash, self.objectFormat, if (self.immutable) " immutable" else "", self.age, self.length});
+        }
+    }
+    fn forwardTo(where: anytype) HeapHeader {
+        return @bitCast(@intFromPtr(where) | 0x8000_0000_0000_0000);
+    }
     pub inline fn isForwarded(self: HeapHeader) bool {
         return self.forwarded;
     }
+    pub inline fn ifForwarded(self: HeapHeader) ?HeapObjectPtr {
+        if (self.isForwarded())
+            return @ptrFromInt(@as(u64, @bitCast(self)) & 0xffff_ffff_fff8);
+        return null;
+    }
     pub inline fn array(self: HeapHeader, obj: HeapObjectConstPtr, elementSize: usize) ![]Object {
-        return self.format.array(self, obj, elementSize);
+        return self.objectFormat.array(self, obj, elementSize);
     }
     pub inline fn instVars(self: HeapHeader, obj: HeapObjectConstPtr) ![]Object {
-        return self.format.instVars(self, obj);
+        return self.objectFormat.instVars(self, obj);
     }
     pub inline fn size(self: HeapHeader, obj: HeapObjectConstPtr) !usize {
-        return self.format.size(self, obj);
+        return self.objectFormat.size(self, obj);
     }
     pub inline fn objectInNursery(self: *HeapHeader, class: ClassIndex, objectSize: u11) void {
-        self.* = .{ .classIndex = class, .hash = hashFromPtr(self), .format = .directIndexed, .age = .nursery, .length = objectSize };
+        self.* = .{ .classIndex = class, .hash = hashFromPtr(self), .objectFormat = .directIndexed, .age = .nursery, .length = objectSize };
     }
     pub inline fn headerStatic(comptime class: ClassIndex, hash: u24, length: u11) HeapHeader {
-        return .{ .classIndex = class, .hash = hash, .format = .special, .age = .static, .length = length };
+        return .{ .classIndex = class, .hash = hash, .objectFormat = .special, .age = .static, .length = length };
     }
     pub fn freeHeader(length: u11) HeapHeader {
-        return .{ .classIndex = .none, .hash = 0, .format = .free, .age = .free, .length = length };
+        return .{ .classIndex = .none, .hash = 0, .objectFormat = .free, .age = .free, .length = length };
     }
     pub inline fn storeFreeHeader(self: *HeapHeader) void {
         self.* = freeHeader(0);
@@ -673,28 +696,25 @@ pub const HeapHeader = packed struct(u64) {
     pub inline fn staticHeaderWithClassAllocHash(classIndex: ClassIndex, ai: AllocationInfo, hash: u24) HeapHeader {
         return ai.heapHeader(classIndex, .static, hash);
     }
-    pub inline fn staticHeaderWithClassLengthHash(classIndex: ClassIndex, length: u12, hash: u24) HeapHeader {
-        return .{ .classIndex = classIndex, .hash = hash, .format = .special, .age = .static, .length = length };
+    pub inline fn staticHeaderWithClassStructHash(classIndex: ClassIndex, T: type, hash: u24) HeapHeader {
+        return .{ .classIndex = classIndex, .hash = hash, .objectFormat = .special, .age = .static, .length = @sizeOf(T) / @sizeOf(Object) - 1 };
     }
-    inline fn init(length: u12, format: Format, classIndex: ClassIndex, hash: u24, age: Age) HeapHeader {
+    inline fn init(length: u12, objectFormat: Format, classIndex: ClassIndex, hash: u24, age: Age) HeapHeader {
         return .{
             .classIndex = classIndex,
             .hash = hash,
-            .format = format,
+            .objectFormat = objectFormat,
             .age = age,
             .length = length,
         };
     }
-    // pub inline fn headerPtr(self: anytype) *HeapHeader {
-    //     return @as(*HeapHeader,@ptrCast(@as([*]HeapHeader,@ptrFromInt(@intFromPtr(self)))-1));
-    // }
     pub inline fn calc(classIndex: ClassIndex, iVars: u11, hash: u24, age: Age, indexed: ?usize, comptime element: type, makeWeak: bool) !HeapHeader {
         const aI = AllocationInfo.calc(iVars, indexed, element, makeWeak);
         if (aI.requiresIndex()) return error.DoesntFit;
         return .{
             .classIndex = classIndex,
             .hash = hash,
-            .format = aI.format,
+            .objectFormat = aI.format,
             .age = age,
             .length = aI.nInstVars,
         };
@@ -703,7 +723,7 @@ pub const HeapHeader = packed struct(u64) {
         return .{
             .classIndex = self.classIndex,
             .hash = self.hash,
-            .format = self.format,
+            .objectFormat = self.objectFormat,
             .age = self.age,
             .length = length,
         };
@@ -712,7 +732,7 @@ pub const HeapHeader = packed struct(u64) {
         return .{
             .classIndex = self.classIndex,
             .hash = hash,
-            .format = self.format,
+            .objectFormat = self.objectFormat,
             .age = self.age,
             .length = self.length,
         };
@@ -729,11 +749,6 @@ pub const HeapHeader = packed struct(u64) {
     pub inline fn isUnmoving(self: HeapHeader) bool {
         return self.age.isUnmoving();
     }
-    pub inline fn forwardedTo(self: HeapHeader) ?HeapObjectConstPtr {
-        if (self.isForwarded())
-            return @ptrFromInt(@as(u64, @bitCast(self)) & 0xffff_ffff_ffff);
-        return null;
-    }
     pub inline fn setHash(self: *HeapHeader, hash: u24) void {
         self.hash = hash;
     }
@@ -747,13 +762,13 @@ pub const HeapHeader = packed struct(u64) {
         return @truncate(self.hash);
     }
     pub inline fn hasInstVars(self: HeapHeader) bool {
-        return self.format.hasInstVars();
+        return self.objectFormat.hasInstVars();
     }
     pub inline fn hasInstVarsWithPtrs(self: HeapHeader) bool {
-        return self.format.hasInstVarsWithPtrs();
+        return self.objectFormat.hasInstVarsWithPtrs();
     }
     pub inline fn isIndexable(self: HeapHeader) bool {
-        return self.format.isIndexable();
+        return self.objectFormat.isIndexable();
     }
     pub inline fn o(self: HeapHeader) Object {
         return @bitCast(self);
@@ -765,47 +780,50 @@ pub const HeapObjectPtr = *align(@alignOf(u64)) HeapObject;
 pub const HeapObjectConstPtr = *align(@alignOf(u64)) const HeapObject;
 pub const HeapObject = packed struct {
     header: HeapHeader,
-    pub inline //
+    pub // inline
     fn alignProperBoundary(self: HeapObjectArray) HeapObjectArray {
         if (@intFromPtr(self) & 8 == 0)
             return self;
         self[0].header = HeapHeader.freeHeader(0);
         return self + 1;
     }
-    pub inline fn headerPtr(self: *const HeapObject) *HeapHeader {
-        return @constCast(&self.header);
+    pub inline fn setHeader(self: *HeapObject, aHeader: HeapHeader) void {
+        self.header = aHeader;
     }
-    pub inline fn setHeader(self: *const HeapObject, aHeader: HeapHeader) void {
-        self.headerPtr().* = aHeader;
+    pub inline fn forwardTo(self: *HeapObject, where: anytype) void {
+        self.header = HeapHeader.forwardTo(where);
     }
     pub inline fn at(self: *const HeapObject, index: usize) HeapOperationError!u64 {
         const h = self.header;
-        return h.format.at(h, self, index);
+        return h.objectFormat.at(h, self, index);
     }
     pub inline fn atPut(self: *HeapObject, index: usize, data: u64) HeapOperationError!void {
         const h = self.header;
-        h.format.atPut(h, self, index, data);
+        h.objectFormat.atPut(h, self, index, data);
     }
     pub inline fn size(self: *const HeapObject) HeapOperationError!usize {
         const h = self.header;
-        return h.format.size(h, self);
+        return h.objectFormat.size(h, self);
     }
     pub inline fn iterator(self: *HeapObject) ?HeapObjectPtrIterator {
         const h = self.header;
-        return h.format.pointerIterator(h, self);
+        return h.objectFormat.pointerIterator(h, self);
     }
     pub inline fn isIndexable(self: HeapObjectConstPtr) bool {
         return self.header.isIndexable();
     }
-    pub inline //
+    pub // inline
     fn isUnmoving(self: HeapObjectConstPtr) bool {
         return self.header.isUnmoving();
     }
-    pub inline fn isForwarded(self: HeapObjectConstPtr) bool {
+    pub fn isForwarded(self: HeapObjectConstPtr) bool {
         return self.header.isForwarded();
     }
     pub inline fn isNursery(self: HeapObjectConstPtr) bool {
         return self.header.age.isNursery();
+    }
+    pub inline fn isLocal(self: HeapObjectConstPtr) bool {
+        return self.header.age.isLocal();
     }
     pub inline fn forwarded(self: HeapObjectConstPtr) HeapObjectConstPtr {
         return self.header.forwardedTo() orelse self;
@@ -813,27 +831,17 @@ pub const HeapObject = packed struct {
     pub inline fn getClass(self: HeapObjectConstPtr) ClassIndex {
         return self.header.classIndex;
     }
-    pub inline fn copyTo(self: HeapObjectPtr, hp: [*]HeapObject, reference: *Object) [*]HeapObject {
+    pub fn copyTo(self: HeapObjectPtr, hp: [*]HeapObject, reference: *Object) [*]HeapObject {
         const head = self.header;
-        if (head.forwardedTo()) |_| { // already forwarded
-            reference.* = switch (config.objectEncoding) {
-                .nan => Nil(), //@bitCast((reference.rawU() & 0xffff000000000000) + @as(u48, @truncate(@intFromPtr(target)))),
-                .zag => Nil(),
-                else => unreachable,
-            };
+        if (head.ifForwarded()) |ptr| { // already forwarded
+            reference.* = Object.fromAddress(ptr);
             return hp;
         }
         const len = head.length + 1;
         const newHp = hp + len;
-        @memcpy(hp[0..len], @as([*]HeapObject, @ptrCast(self.start())));
-        self.setHeader(@bitCast((@as(u64, @bitCast(HeapHeader{ .forwarded = true })) << 48) + @intFromPtr(hp + 1)));
-        // ToDo: adjust header if necessary
-        reference.* = switch (config.objectEncoding) {
-            .nan => Nil(), //@bitCast((reference.rawU() & 0xffff000000000000) + @intFromPtr(hp + 1)),
-            .zag => Nil(),
-            .ptr => Nil(),
-            else => unreachable,
-        };
+        @memcpy(hp[0..len], @as([*]HeapObject, @ptrCast(self)));
+        self.forwardTo(hp);
+        reference.* = Object.fromAddress(hp);
         return newHp;
     }
     pub inline fn prev(self: HeapObjectPtr) Object {
@@ -845,12 +853,12 @@ pub const HeapObject = packed struct {
         return ptr[0];
     }
     pub inline fn setFields(self: HeapObjectPtr, fill: Object, age: ?Age) void {
-        if (fill == Nil and !self.format.isExternal()) {
-            unreachable;
+        if (fill == Nil and !self.objectFormat.isExternal()) {
+            @panic("unreachable");
             //mem.set(Object,result.wholeObjectSlice(),fill);
             //return;
         } else {
-            unreachable;
+            @panic("unreachable");
         }
         _ = age; // if (age) |newAge| self.age = newAge;
     }
@@ -860,16 +868,16 @@ pub const HeapObject = packed struct {
     }
     pub inline fn asSlice(maybeForwarded: HeapObjectConstPtr) ![]Object {
         const self = maybeForwarded.forwarded();
-        return self.start[0..self.length];
+        return self.start()[0..self.length];
     }
     pub inline fn asSliceWithoutHeader(maybeForwarded: HeapObjectConstPtr) ![]Object {
         const self = maybeForwarded.forwarded();
-        return self.start[1..self.length];
+        return self.start()[1..self.length];
     }
-    pub inline //
+    pub // inline
     fn arrayAsSlice(self: HeapObjectConstPtr, comptime T: type) ![]T {
         const head = self.header;
-        const arry = if (head.forwardedTo()) |realSelf|
+        const arry = if (head.ifForwarded()) |realSelf|
             try realSelf.header.array(realSelf, @sizeOf(T))
         else
             try head.array(self, @sizeOf(T));
@@ -878,13 +886,13 @@ pub const HeapObject = packed struct {
     }
     pub inline fn arraySize(self: HeapObjectConstPtr) !usize {
         const head = self.header;
-        if (head.forwardedTo()) |realSelf| {
+        if (head.ifForwarded()) |realSelf| {
             return realSelf.header.size(realSelf);
         } else return head.size(self);
     }
     pub inline fn instVars(self: HeapObjectConstPtr) ![]Object {
         const head = self.header;
-        if (head.forwardedTo()) |realSelf| {
+        if (head.ifForwarded()) |realSelf| {
             return realSelf.header.instVars(realSelf);
         }
         return head.instVars(self);
@@ -896,16 +904,16 @@ pub const HeapObject = packed struct {
         if (obj.asMemoryObject()) |otherHeapObject| {
             if (otherHeapObject.header.age.needsPromotionTo(head.age))
                 return error.needsPromotion;
-            const format = head.format;
+            const format = head.objectFormat;
             const newFormat = format.operations().instVarWithPtr;
             if (newFormat != format)
-                self.header.format = newFormat;
+                self.header.objectFormat = newFormat;
         }
         ivs[index] = obj;
     }
     // pub fn growSizeX(maybeForwarded: HeapObjectConstPtr, stepSize: usize) !usize {
     //     const self = maybeForwarded.forwarded();
-    //     const form = self.format;
+    //     const form = self.objectFormat;
     //     if (!form.isIndexable()) return error.NotIndexable;
     //     var len: usize = self.length;
     //     if (form.hasInstVars()) {
@@ -919,11 +927,11 @@ pub const HeapObject = packed struct {
     pub inline fn inHeapSize(maybeForwarded: HeapObjectConstPtr) usize {
         const self = maybeForwarded.forwarded();
         const header = self.header;
-        return header.format.inHeapSize(header, self);
+        return header.objectFormat.inHeapSize(header, self);
     }
     pub inline fn isIndirect(maybeForwarded: HeapObjectConstPtr) bool {
         const self = maybeForwarded.forwarded();
-        const form = self.format;
+        const form = self.objectFormat;
         const len: usize = self.length;
         if (!form.isIndexable()) return false;
         if (form.hasInstVars()) {
@@ -933,9 +941,9 @@ pub const HeapObject = packed struct {
         return false;
     }
     pub inline fn isRaw(self: HeapObjectConstPtr) bool {
-        return self.format.isRaw();
+        return self.objectFormat.isRaw();
     }
-    pub inline //
+    pub // inline
     fn asObject(self: HeapObjectConstPtr) Object {
         return Object.fromAddress(self);
     }

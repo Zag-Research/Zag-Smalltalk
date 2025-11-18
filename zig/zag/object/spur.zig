@@ -8,6 +8,7 @@ const trace = zag.config.trace;
 const object = zag.object;
 const Process = zag.Process;
 const Context = zag.Context;
+const SP = Process.SP;
 const testing = std.testing;
 const ClassIndex = object.ClassIndex;
 const heap = zag.heap;
@@ -275,7 +276,6 @@ pub const Object = packed union {
     // Conversion from Zig types
     pub inline fn from(value: anytype, sp: SP, context: *Context) Object {
         const T = @TypeOf(value);
-        if (T == Object) return value;
         switch (@typeInfo(T)) {
             .int, .comptime_int => return Self.fromSmallInteger(value),
             .float => {
@@ -393,13 +393,20 @@ pub const Object = packed union {
         // However, this is only done for signature objects, which already aren't quite valid
         return @bitCast(self.rawU() | prim << 40);
     }
-
-    pub inline fn extraValue(self: Object) Object {
+    pub inline fn heapObject(self: object.Object) ?*InMemory.PointedObject {
+        if (self.isHeap() and !self.equals(Nil())) return @ptrFromInt(self.rawU());
+        return null;
+    }
+    pub inline fn extraValue(_: Object) Object {
         // For spur encoding, extract value from immediate objects
+<<<<<<< HEAD
         if (self.isImmediate()) {
             return Object.fromSmallInteger(@as(i64, @intCast(self.immediate.hash)));
         }
         return self;
+=======
+        @panic("Not implemented");
+>>>>>>> main
     }
 
     const OF = object.ObjectFunctions;

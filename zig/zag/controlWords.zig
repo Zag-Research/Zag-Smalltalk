@@ -353,11 +353,9 @@ pub const pushLiteral = struct {
         sp.traceStack("pushLiteral");
         const value = pc.object();
         if (sp.push(value)) |newSp| {
-            trace("pushLiteral: {*} {f}", .{ newSp, extra });
             return @call(tailCall, process.check(pc.prim2()), .{ pc.next2(), newSp, process, context, extra });
         } else {
             const newSp, const newContext, const newExtra = sp.spillStackAndPush(value, context, extra);
-            trace("pushLiteral: {*} {f} {f}", .{ newSp, extra, newExtra });
             return @call(tailCall, process.check(pc.prim2()), .{ pc.next2(), newSp, process, newContext, newExtra });
         }
     }
@@ -391,7 +389,7 @@ pub const store = struct {
 pub const callLabel = if (zag.config.is_test) struct {
     pub const hidden = true;
     pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, _: Extra) Result {
-        if (true) unreachable;
+        if (true) @panic("unreachable");
         const target = pc.targetPC();
         // skip the structure word
         context.setReturn(pc.next().next());

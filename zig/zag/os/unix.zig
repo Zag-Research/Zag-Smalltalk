@@ -35,7 +35,7 @@ pub fn MemoryAllocator(comptime Block: type) type {
                 // if it's too high, we presumably already discarded it, so map directly
                 // but for now, it works
                 std.log.err("next: {*} address: {}\n", .{ next, address });
-                unreachable;
+                @panic("unreachable");
             }
         }
         pub fn map(_: *Self, size: usize, alignment: ?u32) ![]u8 { // aligned to alignment

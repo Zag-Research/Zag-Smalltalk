@@ -17,16 +17,15 @@ pub const objectEncoding = options.objectEncoding;
 pub const max_classes = options.maxClasses;
 pub const singleSteppable = true;//options.singleSteppable;
 // must be more than HeapObject.maxLength*8 so externally allocated
-pub const process_total_size: usize = //if (is_test or testRun) 2048 else
-            64 * 1024;
+pub const process_total_size: usize = if (is_test or testRun) 2048 else 64 * 1024;
 
 pub const debugging = false;
 pub const logThreadExecution = debugging;
-const show_error_stack = debugging;
+const show_error_stack = true;//debugging;
 pub const show_trace = debugging or options.trace;
 
 pub const immediateIntegers = switch (objectEncoding) {
-    .zag, .nan, .spur, .zagAlt, .onlyInt => true,
+    .zag, .nan, .spur, .zagAlt, .onlyInt, .taggedInt => true,
     else => false,
 };
 pub const immediateSymbols = switch (objectEncoding) {

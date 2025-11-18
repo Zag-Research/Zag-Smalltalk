@@ -31,7 +31,7 @@ pub const inlines = struct {
         _ = self;
         _ = other;
         //        return error.primitiveError;
-        unreachable;
+        @panic("unreachable");
     }
 };
 pub const embedded = struct {
@@ -44,11 +44,11 @@ pub const embedded = struct {
 pub const primitives = struct {
     pub fn p70(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result { // basicNew
         _ = .{ pc, sp, process, context, extra };
-        unreachable;
+        @panic("unreachable");
     }
     pub fn p71(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result { // basicNew:
         _ = .{ pc, sp, process, context, extra };
-        unreachable;
+        @panic("unreachable");
     }
 };
 fn testExecute(method: CompiledMethodPtr) []Object {

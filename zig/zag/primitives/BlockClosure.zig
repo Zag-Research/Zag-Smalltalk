@@ -35,7 +35,7 @@ pub const moduleName = "BlockClosure";
 const zModuleName = stringOf(moduleName).init().obj();
 pub const ThunkReturnSmallInteger = struct {
     pub fn primitive(_: PC, sp: SP, process: *Process, _: *Context, _: Extra) Result {
-        if (true) unreachable;
+        if (true) @panic("unreachable");
         const val = sp.top;
         const result = Object.from(@as(i50, val.extraI()), null);
         const targetContext = val.highPointer(*Context).?;
@@ -317,10 +317,10 @@ pub const threadedFns = struct {
                         return @call(tailCall, process.check(pc.prim()), .{ pc.next(), sp, process, context, extra });
                     },
                     .BlockAssignLocal, .BlockAssignInstance => {
-                        unreachable;
+                        @panic("unreachable");
                     },
                     else => {
-                        unreachable;
+                        @panic("unreachable");
                     },
                 }
             }
@@ -407,7 +407,7 @@ pub const inlines = struct {
         return newSp;
     }
     pub inline fn generalClosure(oldSp: SP, process: *Process, val: Object) SP {
-        // const sp = process.allocStack(oldSp, .BlockClosure, 1, null, Object) catch unreachable; // can't fail because preallocated
+        // const sp = process.allocStack(oldSp, .BlockClosure, 1, null, Object) catch @panic("unreachable"); // can't fail because preallocated
         // sp.third = val;
         // return sp;
         _ = .{ oldSp, process, val, unreachable };

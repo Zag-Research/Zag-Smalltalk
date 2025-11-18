@@ -162,6 +162,12 @@ pub const PointedObject = packed struct {
     const staticCacheSize = 0;
     var staticCacheUsed: usize = 0;
     var staticCache = [_]PointedObject{.{ .header = .{}, .data = undefined }} ** staticCacheSize;
+    pub fn format(
+        self: PointedObject,
+        writer: anytype,
+    ) !void {
+        try writer.print("PointedObject{{ {f}, 0x{x}}}", .{ self.header, @as(u64,@bitCast(self.data)) });
+    }
     fn cached(self: PointedObject) ?*PointedObject {
         for (staticCache[0..]) |*p| {
             if (p.header.classIndex == self.header.classIndex and
@@ -181,10 +187,33 @@ pub const PointedObject = packed struct {
         self.header = .{
             .classIndex = classIndex,
             .hash = hash,
-            .format = .notIndexable,
+            .objectFormat = .notIndexable,
             .age = .static,
             .length = 1,
         };
+    }
+    pub fn set(self: *PointedObject, classIndex: object.ClassIndex, value: anytype) *PointedObject {
+        const hash = @as(u64, @bitCast(
+            switch (@typeInfo(@TypeOf(value))) {
+                .comptime_int => @as(i64, value),
+                .comptime_float => @as(f64, value),
+                else => value,
+            }));
+        self.header = .{
+            .classIndex = classIndex,
+            .hash = @truncate(hash | hash >> 24 | hash >> 48),
+            .objectFormat = .notIndexable,
+            .age = .static,
+            .length = 1,
+        };
+        switch (@typeInfo(@TypeOf(value))) {
+            .int, .comptime_int => self.data.int = value,
+            .float, .comptime_float => self.data.float = value,
+            .bool => self.data.bool = value,
+            .null => self.data.null = value,
+            else => @panic("Unsupported type for static set"),
+        }
+        return self;
     }
 };
 pub const PointedObjectRef = packed struct {
@@ -195,6 +224,7 @@ pub inline fn int(i: i64, sp: SP, context: *Context) Object {
         return Object.from(&SmallIntegerCache.objects[(@as(usize, @bitCast(i - SICacheMin))) << 1], null);
     const allocResult = sp.alloc(context, .SmallInteger, 1, null, Object, false);
     allocResult.allocated.array(i64)[1] = i;
+    allocResult.allocated.header.hash = @truncate(@as(u64,@bitCast(i)));
     return allocResult.allocated.asObject();
 }
 test "inMemory int()" {
@@ -226,7 +256,7 @@ pub const MemoryFloat = struct {
     pub inline fn init(self: *MemoryFloat, v: f64, age: Age) void {
         const u: u64 = @bitCast(v);
         const hash: u24 = @truncate(u ^ (u >> 40));
-        self.header = .{ .classIndex = .Float, .hash = hash, .format = .notIndexable, .age = age, .length = 1 };
+        self.header = .{ .classIndex = .Float, .hash = hash, .objectFormat = .notIndexable, .age = age, .length = 1 };
         self.value = v;
     }
 };

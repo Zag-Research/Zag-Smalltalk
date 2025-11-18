@@ -3,7 +3,7 @@ const std = @import("std");
 pub fn main() void {
     const iterations = 1_000_000_000;
     const ns = 1.0 / @as(f64, @floatFromInt(iterations));
-    var timer = std.time.Timer.start() catch unreachable;
+    var timer = std.time.Timer.start() catch @panic("unreachable");
 
     const zag = @import("floatZag.zig");
     _ = timer.lap();

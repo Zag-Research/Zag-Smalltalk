@@ -8,8 +8,8 @@ const MainExecutor = zag.execute.Execution.MainExecutor;
 const compileMethod = zag.execute.compileMethod;
 const tf = zag.threadedFn.Enum;
 const Sym = zag.symbol.symbols;
-const SmallInteger = zag.primitives.SmallInteger;
-const Float = zag.primitives.Float;
+const SmallInteger = zag.primitives.primitives.SmallInteger;
+const Float = zag.primitives.primitives.Float;
 const PC = zag.execute.PC;
 const Process = zag.Process;
 const SP = Process.SP;
@@ -197,11 +197,13 @@ const fibIntegerBr = struct {
             //            tf.debug,
             tf.push,                  self,
             tf.pushLiteral,           "1const",
+            tf.dup,tf.drop,
             tf.inlinePrimitive,       leq,
             tf.branchFalse,           "false",
             tf.returnSelf,            ":false",
             tf.push,                  self,
             tf.pushLiteral,           "0const",
+            tf.dup,tf.drop,
             tf.inlinePrimitive,       minus,
             tf.send,                  signature(.fibonacci, 0),
             &nullMethod,              tf.push,
@@ -214,9 +216,13 @@ const fibIntegerBr = struct {
             tf.returnTop,
         });
     var exe: MainExecutor = undefined;
+    var one_: Object.StaticObject = undefined;
+    var two_: Object.StaticObject = undefined;
     fn init() void {
         exe = MainExecutor.new();
-        fib.resolve(&[_]Object{ exe.object(1), exe.object(2) }) catch unreachable;
+        const one = Object.initStaticObject(1, &one_);
+        const two = Object.initStaticObject(2, &two_);
+        fib.resolve(&[_]Object{ one, two }) catch @panic("Failed to resolve");
         fib.initExecute();
         zag.dispatch.addMethod(@ptrCast(&fib));
         if (zag.config.show_trace) {
@@ -549,13 +555,13 @@ pub fn timing(args: []const []const u8, default: bool) !void {
 }
 pub fn main() !void {
     const do_all = [_][]const u8{
-        "Config",            "Header",
-        "Native",            "NativeF",
+        "Config", "Header",
+        "Native", "NativeF",
         //"Integer",
         "IntegerBr?Integer",
         //"Integer0?Integer",
         //"IntegerCnP",
-        "Float",
+        //"Float",
     };
     // var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     // const allocator = gpa.allocator();
@@ -570,6 +576,6 @@ pub fn main() !void {
     try timing(if (default) @constCast(do_all[0..]) else args[1..], default);
 }
 const testRun = zag.config.testRun;
-const fibN = if (testRun) 15 else 15;
+const fibN = if (testRun) 5 else 35;
 const nRuns = if (testRun) 1 else 5;
 const warmups = if (testRun) 0 else null;

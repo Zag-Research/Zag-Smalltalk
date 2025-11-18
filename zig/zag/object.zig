@@ -145,10 +145,10 @@ pub const ClassIndex = enum(u16) {
 };
 comptime {
     std.debug.assert(@intFromEnum(ClassIndex.replace0) == 0xffff);
-    std.testing.expectEqual(@intFromEnum(ClassIndex.ThunkReturnLocal), 1) catch unreachable;
+    std.testing.expectEqual(@intFromEnum(ClassIndex.ThunkReturnLocal), 1) catch @panic("unreachable");
     //    std.debug.assert(std.meta.hasUniqueRepresentation(Object));
     for (@typeInfo(ClassIndex.Compact).@"enum".fields, @typeInfo(ClassIndex).@"enum".fields[0..@typeInfo(ClassIndex.Compact).@"enum".fields.len]) |ci, cci| {
-        std.testing.expectEqual(ci, cci) catch unreachable;
+        std.testing.expectEqual(ci, cci) catch @panic("unreachable");
     }
 }
 pub const Object = switch (config.objectEncoding) {
@@ -169,6 +169,19 @@ pub const testObjects = blk: {
     }
     break :blk testArray;
 };
+// const ints = blk: {
+//     var osArray: [4]Object.StaticObject = undefined;
+//     var objs: [4]Object = undefined;
+//     for (0..4) |i| {
+//         objs[i] = Object.initStaticObject(i, &osArray[i]);
+//     }
+//     break :blk .{ objs, osArray };
+//     };
+// pub const zero = ints[0][0];
+// pub const one = ints[0][1];
+// pub const two = ints[0][2];
+// pub const three = ints[0][3];
+
 pub const ObjectFunctions = struct {
     pub const empty = &[0]Object{};
     pub const Sentinel = Object.from(@as(*Object, @ptrFromInt(8)), null);
@@ -181,39 +194,48 @@ pub const ObjectFunctions = struct {
     pub inline fn numArgs(self: Object) u4 {
         return symbol.symbolArity(self);
     }
-    pub inline //
+    pub // inline
     fn setField(self: Object, field: usize, value: Object) void {
         if (self.asObjectArray()) |ptr| ptr[field] = value;
     }
-    pub inline fn getField(self: Object, field: usize) Object {
+    pub // inline
+    fn getField(self: Object, field: usize) Object {
         if (self.asObjectArray()) |ptr|
             return ptr[field];
         return Nil();
     }
-    pub inline fn isNil(self: Object) bool {
+    pub // inline
+    fn isNil(self: Object) bool {
         return self == Object.Nil();
     }
-    pub inline fn isBool(self: Object) bool {
+    pub // inline
+    fn isBool(self: Object) bool {
         return self == Object.False() or self == Object.True();
     }
-    pub inline fn isString(self: Object) bool {
+    pub // inline
+    fn isString(self: Object) bool {
         return self.which_class() == .String;
     }
-    pub inline fn isUnmoving(self: Object) bool {
+    pub // inline
+    fn isUnmoving(self: Object) bool {
         return !self.isMemoryAllocated() or self.to(HeapObjectPtr).isUnmoving();
     }
-    pub inline fn hash(self: Object) Object {
-        return self.from(self.hash32()) catch unreachable;
+    pub // inline
+    fn hash(self: Object) Object {
+        return self.from(self.hash32()) catch @panic("unreachable");
     }
-    pub inline fn toBool(self: Object) !bool {
+    pub // inline
+    fn toBool(self: Object) !bool {
         if (self.isBool()) return self.toBoolNoCheck();
         return error.wrongType;
     }
-    pub inline fn toNat(self: Object) !u64 {
+    pub // inline
+    fn toNat(self: Object) !u64 {
         if (self.isNat()) return self.toNatNoCheck();
         return error.wrongType;
     }
-    pub inline fn toDouble(self: Object) !f64 {
+    pub // inline
+    fn toDouble(self: Object) !f64 {
         if (self.isDouble()) return self.toDoubleNoCheck();
         return error.wrongType;
     }
@@ -270,7 +292,7 @@ pub const ObjectFunctions = struct {
         const ord = std.math.Order;
         if (self.equals(other)) return ord.eq;
         if (!self.isHeapObject() or !other.isHeapObject()) {
-            //unreachable;
+            //@panic("unreachable");
             // const u64s = self.rawU();
             // const u64o = other.rawU();
             // return std.math.order(u64s, u64o);
@@ -298,7 +320,7 @@ pub const ObjectFunctions = struct {
         writer: anytype,
     ) !void {
         if (false) {
-            try writer.print("Object({x})", .{@as(u64, @bitCast(self))});
+            try writer.print("({x})", .{@as(u64, @bitCast(self))});
             return;
         }
         if (zag.config.is_test) {
@@ -314,7 +336,7 @@ pub const ObjectFunctions = struct {
         } else if (self.signature()) |signature| {
             try writer.print("{f}", .{signature});
         } else if (self.nativeI()) |i| {
-            try writer.print("{d}", .{i});
+            try writer.print("{d} {x}", .{i, @as(u64, @bitCast(self))});
         } else if (self.symbolHash()) |_| {
             try writer.print("#{s}", .{symbol.asString(self).arrayAsSlice(u8) catch "???"});
         } else if (self.equals(False())) {
@@ -325,6 +347,8 @@ pub const ObjectFunctions = struct {
             try writer.print("{}", .{float});
         } else if (self.equals(Nil())) {
             try writer.print("nil", .{});
+        } else if (self.heapObject()) |obj| {
+            try writer.print("{f}@{x}", .{obj, @as(u64, @bitCast(self))});
         } else {
             try writer.print("{{?0x{x:0>16}}}", .{@as(u64, @bitCast(self))});
         }
@@ -337,12 +361,6 @@ pub const PackedObject = packed struct {
     f2: u14 = 0,
     f3: u14 = 0,
     f4: std.meta.Int(.unsigned, 64 - 42 - @bitSizeOf(Object.PackedTagType)) = 0,
-    pub inline fn from3(f1: u14, f2: u14, f3: u14) PackedObject {
-        return .{ .tag = Object.from(0).tagbits(), .f1 = f1, .f2 = f2, .f3 = f3 };
-    }
-    pub inline fn from(fs: []u14) PackedObject {
-        return .{ .tag = Object.from(0).tagbits(), .f1 = fs[0], .f2 = fs[1], .f3 = fs[2], .f4 = fs[3] };
-    }
     pub fn asU64(self: PackedObject) u64 {
         return @as(u64, @bitCast(self)) >> @bitSizeOf(Object.PackedTagType);
     }

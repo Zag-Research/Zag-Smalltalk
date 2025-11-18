@@ -22,6 +22,7 @@ const False = object.False;
 const Sym = zag.symbol.symbols;
 const signature = zag.symbol.signature;
 const heap = zag.heap;
+const primitives = zag.primitives;
 const empty = &[0]Object{};
 const tf = zag.threadedFn.Enum;
 
@@ -134,11 +135,11 @@ pub const @"+" = struct {
         const receiver = sp.next;
         if (!receiver.isInt()) {
             trace("SmallInteger>>#inlinePrimitive: + {f}", .{receiver});
-            if (true) unreachable;
-            return @call(tailCall, PC.inlinePrimitiveFailed, .{ pc, sp, process, context, extra });
+            if (true) @panic("unreachable");
+            return @call(tailCall, primitives.inlinePrimitiveFailed, .{ pc, sp, process, context, extra });
         }
         const newSp = sp.dropPut(with(receiver, sp.top, sp, context) catch
-            return @call(tailCall, PC.inlinePrimitiveFailed, .{ pc, sp, process, context, extra }));
+            return @call(tailCall, primitives.inlinePrimitiveFailed, .{ pc, sp, process, context, extra }));
         return @call(tailCall, process.check(pc.prim2()), .{ pc.next2(), newSp, process, context, extra });
     }
 };
@@ -161,11 +162,13 @@ pub const @"-" = struct {
         sp.traceStack("-");
         const receiver = sp.next;
         if (!receiver.isInt()) {
-            trace("SmallInteger>>#inlinePrimitive: - {f}", .{receiver});
-            return @call(tailCall, PC.inlinePrimitiveFailed, .{ pc, sp, process, context, extra });
+            std.log.err("SmallInteger>>#inlinePrimitive: -y {f}", .{sp});
+            return @call(tailCall, primitives.inlinePrimitiveFailed, .{ pc, sp, process, context, extra });
         }
-        const newSp = sp.dropPut(with(receiver, sp.top, sp, context) catch
-            return @call(tailCall, PC.inlinePrimitiveFailed, .{ pc, sp, process, context, extra }));
+        const newSp = sp.dropPut(with(receiver, sp.top, sp, context) catch {
+            std.log.err("SmallInteger>>#inlinePrimitive: -x {f}", .{sp});
+            return @call(tailCall, primitives.inlinePrimitiveFailed, .{ pc, sp, process, context, extra });
+        });
         return @call(tailCall, process.check(pc.prim2()), .{ pc.next2(), newSp, process, context, extra });
     }
 };
@@ -187,11 +190,11 @@ pub const @"<=" = struct {
         const receiver = sp.next;
         if (!receiver.isInt()) {
             trace("SmallInteger>>#inlinePrimitive: <= {f}", .{receiver});
-            if (true) unreachable;
-            return @call(tailCall, PC.inlinePrimitiveFailed, .{ pc, sp, process, context, extra });
+            if (true) @panic("unreachable");
+            return @call(tailCall, primitives.inlinePrimitiveFailed, .{ pc, sp, process, context, extra });
         }
         const newSp = sp.dropPut(Object.from(with(receiver, sp.top) catch
-            return @call(tailCall, PC.inlinePrimitiveFailed, .{ pc, sp, process, context, extra }), sp, context));
+            return @call(tailCall, primitives.inlinePrimitiveFailed, .{ pc, sp, process, context, extra }), sp, context));
         trace("Inline <= called, {*} {f}", .{ newSp, extra });
         return @call(tailCall, process.check(pc.prim2()), .{ pc.next2(), newSp, process, context, extra });
     }
@@ -217,10 +220,10 @@ pub const @"*" = struct {
         const receiver = sp.next;
         if (!receiver.isInt()) {
             trace("SmallInteger>>#inlinePrimitive: * {f}", .{receiver});
-            return @call(tailCall, PC.inlinePrimitiveFailed, .{ pc, sp, process, context, extra });
+            return @call(tailCall, primitives.inlinePrimitiveFailed, .{ pc, sp, process, context, extra });
         }
         const newSp = sp.dropPut(inlines.@"*"(receiver, sp.top, sp, context) catch
-            return @call(tailCall, PC.inlinePrimitiveFailed, .{ pc, sp, process, context, extra }));
+            return @call(tailCall, primitives.inlinePrimitiveFailed, .{ pc, sp, process, context, extra }));
         return @call(tailCall, process.check(pc.prim2()), .{ pc.next2(), newSp, process, context, extra });
     }
 };

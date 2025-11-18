@@ -45,14 +45,14 @@ pub const Object = packed struct(u64) {
     }
     pub const taggedI = untaggedI;
     pub const taggedI_noCheck = untaggedI_noCheck;
-    pub inline fn fromTaggedI(i: i64, _: *Process) object.Object {
+    pub inline fn fromTaggedI(i: i64, _: anytype, _: anytype) object.Object {
         return @bitCast(i);
     }
     pub const fromUntaggedI = fromTaggedI;
     pub inline fn symbol40(_: object.Object) u40 {
         return 0;
     }
-    pub inline //
+    pub // inline
     fn nativeI(self: object.Object) ?i64 {
         return @bitCast(self);
     }
@@ -74,6 +74,9 @@ pub const Object = packed struct(u64) {
     pub inline fn symbolHash(self: object.Object) ?u24 {
         return @truncate(self.hash32());
     }
+    pub inline fn heapObject(_: object.Object) ?*InMemory.PointedObject {
+        return null;
+    }
     pub inline fn extraValue(self: object.Object) object.Object {
         return @bitCast(self.rawU() >> 8);
     }
@@ -82,12 +85,16 @@ pub const Object = packed struct(u64) {
     }
     pub const testU = rawU;
     pub const testI = rawI;
-    pub inline //
+    pub // inline
     fn rawU(self: object.Object) u64 {
         return @bitCast(self);
     }
     inline fn rawI(self: object.Object) i64 {
         return @bitCast(self);
+    }
+    pub inline fn invalidObject(_: object.Object) ?u64 {
+        // there are no invalid objects in this encoding
+        return null;
     }
     inline fn of(comptime v: u64) object.Object {
         return @bitCast(v);
@@ -107,7 +114,7 @@ pub const Object = packed struct(u64) {
     pub inline fn isMemoryDouble(_: object.Object) bool {
         return false;
     }
-    pub inline //
+    pub // inline
     fn isInt(_: Object) bool {
         return true;
     }
@@ -169,11 +176,19 @@ pub const Object = packed struct(u64) {
     pub inline fn isSymbol(_: object.Object) bool {
         return true;
     }
-    pub inline //
+    pub // inline
     fn fromAddress(value: anytype) Object {
         return @bitCast(@intFromPtr(value));
     }
-    pub inline fn from(value: anytype, _: *Process) Object {
+    pub const StaticObject = void;
+    pub fn initStaticObject(comptime value: anytype, _: anytype) object.Object {
+        switch (@typeInfo(@TypeOf(value))) {
+            .int, .comptime_int => return @bitCast(@as(i64,value)),
+            .bool => return if (value) object.Object.True() else object.Object.False(),
+            else => @panic("Unsupported type for compile-time object creation"),
+        }
+    }
+    pub inline fn from(value: anytype, _: anytype, _: anytype) Object {
         const T = @TypeOf(value);
         if (T == Object) return value;
         switch (@typeInfo(T)) {
@@ -217,7 +232,7 @@ pub const Object = packed struct(u64) {
         }
         @panic("Trying to convert Object to " ++ @typeName(T));
     }
-    pub inline //
+    pub // inline
     fn which_class(_: Object) ClassIndex {
         return .SmallInteger;
     }
