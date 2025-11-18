@@ -7,9 +7,11 @@ const zag = @import("../zag.zig");
 const trace = zag.config.trace;
 const object = zag.object;
 const Process = zag.Process;
+const Context = zag.Context;
 const testing = std.testing;
 const ClassIndex = object.ClassIndex;
 const heap = zag.heap;
+const SP = Process.SP;
 const HeapHeader = heap.HeapHeader;
 const HeapObjectPtr = heap.HeapObjectPtr;
 const HeapObjectConstPtr = heap.HeapObjectConstPtr;
@@ -56,15 +58,24 @@ pub const Object = packed union {
     const TagAndClassType = u3;
 
     // Static constructor functions
-    pub inline fn False() Object {
+    pub fn False() Object {
+        if (@inComptime()) {
+            return Object{ .ref = undefined };
+        }
         return Object.fromAddress(&InMemory.False);
     }
 
-    pub inline fn True() Object {
+    pub fn True() Object {
+        if (@inComptime()) {
+            return Object{ .ref = undefined };
+        }
         return Object.fromAddress(&InMemory.True);
     }
 
-    pub inline fn Nil() Object {
+    pub fn Nil() Object {
+        if (false and @inComptime()) {
+            return Object{ .ref = undefined };
+        }
         return Object.fromAddress(&InMemory.Nil);
     }
 
@@ -90,11 +101,11 @@ pub const Object = packed union {
         return @bitCast(self);
     }
 
-    pub inline fn fromTaggedI(i: i64, _: anytype) Object {
+    pub inline fn fromTaggedI(i: i64, _: anytype, _: anytype) Object {
         return @bitCast(i);
     }
 
-    pub inline fn fromUntaggedI(i: i64, _: anytype) Object {
+    pub inline fn fromUntaggedI(i: i64, _: anytype, _: anytype) Object {
         return @bitCast(@as(u64, @bitCast(i)) | SmallIntegerTag);
     }
 
@@ -113,14 +124,14 @@ pub const Object = packed union {
         return null;
     }
     pub inline fn nativeI_noCheck(self: Object) i64 {
-        return @as(i64, self.rawI()) >> 1 << 1;
+        return @as(i64, self.rawI()) >> 3;
     }
     pub inline fn nativeU(self: Object) ?u64 {
         if (self.isNat()) return self.nativeU_noCheck();
         return null;
     }
     pub inline fn nativeU_noCheck(self: Object) u64 {
-        return @as(u64, self.rawU()) >> 1 << 1;
+        return @as(u64, self.rawU()) >> 3;
     }
     pub inline fn nativeF(self: Object) ?f64 {
         if (self.isFloat()) return self.toDoubleNoCheck();
@@ -146,8 +157,9 @@ pub const Object = packed union {
         return null;
     }
     pub inline fn fromPointer(ptr: anytype) Object {
+        @setRuntimeSafety(false);
         const Foo = packed struct { ref: *u64 };
-        const foo = Foo{ .ref = @constCast(@ptrCast(ptr)) };
+        const foo = Foo{ .ref = @ptrCast(@constCast(ptr)) };
         return @bitCast(foo);
     }
 
@@ -192,7 +204,7 @@ pub const Object = packed union {
     }
     pub inline fn isSymbol(self: Object) bool {
         // Spur-encoded symbols are heap objects
-        return self.isHeap() and self.to(HeapObjectPtr).*.getClass() == .Symbol;
+        return self.isHeap() and self.ref.header.classIndex == .Symbol;
     }
     pub inline fn isNil(self: Object) bool {
         return self.rawU() == Object.Nil().rawU();
@@ -213,8 +225,8 @@ pub const Object = packed union {
     }
 
     // Add fromNativeF for compatibility
-    pub inline fn fromNativeF(t: f64, maybeProcess: ?*Process) object.Object {
-        return from(t, maybeProcess);
+    pub inline fn fromNativeF(t: f64, sp: SP, context: *Context) object.Object {
+        return from(t, sp, context);
     }
 
 
@@ -224,7 +236,7 @@ pub const Object = packed union {
         return self.ref.header.hash;
     }
     pub inline fn hash32(self: Object) u32 {
-        return @truncate(self.ref.data.unsigned >> 8);
+        return @truncate(self.ref.data.unsigned);
     }
     pub inline fn hash48(self: Object) u48 {
         return @truncate(self.rawU());
@@ -257,18 +269,11 @@ pub const Object = packed union {
         return decode(@bitCast(self));
     }
 
-    fn memoryFloat(value: f64, maybeProcess: ?*Process) object.Object {
-        if (math.isNan(value)) return object.Object.fromAddress(&InMemory.nanMemObject);
-        if (math.inf(f64) == value) return object.Object.fromAddress(&InMemory.pInfMemObject);
-        if (math.inf(f64) == -value) return object.Object.fromAddress(&InMemory.nInfMemObject);
-        return InMemory.float(value, maybeProcess);
-    }
-
     pub fn fromAddress(value: anytype) Object {
         return @bitCast(@intFromPtr(value));
     }
     // Conversion from Zig types
-    pub inline fn from(value: anytype, maybeProcess: ?*zag.Process) Object {
+    pub inline fn from(value: anytype, sp: SP, context: *Context) Object {
         const T = @TypeOf(value);
         if (T == Object) return value;
         switch (@typeInfo(T)) {
@@ -277,10 +282,10 @@ pub const Object = packed union {
                 if (encode(value)) |encoded| {
                     return @bitCast(encoded);
                 } else |_| {
-                    return memoryFloat(value, maybeProcess);
+                    return InMemory.float(value, sp, context);
                 }
             },
-            .comptime_float => return from(@as(f64, value), maybeProcess),
+            .comptime_float => return from(@as(f64, value), sp, context),
             .bool => return if (value) Object.True() else Object.False(),
             .null => return Object.Nil(),
             .pointer => |ptr_info| {
@@ -295,7 +300,7 @@ pub const Object = packed union {
     }
 
     pub inline fn isMemoryDouble(self: object.Object) bool {
-        return self.isMemoryAllocated() and self.to(HeapObjectPtr).*.getClass() == .Float;
+        return self.isMemoryAllocated() and self.ref.header.classIndex == .Float;
     }
 
     inline fn toDoubleFromMemory(self: object.Object) f64 {
@@ -318,21 +323,43 @@ pub const Object = packed union {
             bool => {
                 if (!check or self.isBool()) return self.toBoolNoCheck();
             },
-            else => {},
+            else => {
+                switch (@typeInfo(T)) {
+                    .pointer => |ptrInfo| {
+                        switch (@typeInfo(ptrInfo.child)) {
+                            .@"fn" => {},
+                            .@"struct" => {
+                                if (!check or (self.isMemoryAllocated() and (!@hasDecl(ptrInfo.child, "ClassIndex") or self.to(HeapObjectConstPtr).classIndex == ptrInfo.child.ClassIndex))) {
+                                    if (@hasField(ptrInfo.child, "header") or (@hasDecl(ptrInfo.child, "includesHeader") and ptrInfo.child.includesHeader)) {
+                                        return @as(T, @ptrFromInt(@as(usize, @bitCast(self))));
+                                    } else {
+                                        return @as(T, @ptrFromInt(@sizeOf(HeapHeader) + (@as(usize, @bitCast(self)))));
+                                    }
+                                }
+                            },
+                            else => {},
+                        }
+                    },
+                    else => {},
+                }
+            },
         }
         @panic("Trying to convert Object to " ++ @typeName(T));
     }
 
     // Class detection (stub)
     pub inline fn which_class(self: Object) ClassIndex {
-        if (self.isInt()) {@branchHint(.likely);
+        if (self.isInt()) {
+            @branchHint(.likely);
             return .SmallInteger;
-        } else if (self.isFloat()) {@branchHint(.likely);
+        } else if (self.isFloat()) {
+            @branchHint(.likely);
             return .Float;
-        } else if (self.isCharacter()) {@branchHint(.unlikely);
+        } else if (self.isCharacter()) {
+            @branchHint(.unlikely);
             return .Character;
         }
-        return self.to(HeapObjectPtr).*.getClass();
+        return self.ref.header.classIndex;
     }
 
     pub inline fn isMemoryAllocated(self: Object) bool {
@@ -342,7 +369,7 @@ pub const Object = packed union {
     // Add symbolHash method
     pub inline fn symbolHash(self: Object) ?u24 {
         if (self.isSymbol()) {
-            return @as(u24, self.to(HeapObjectPtr).*.header.hash);
+            return @truncate(self.hash32());
         }
         return null;
     }
@@ -370,7 +397,7 @@ pub const Object = packed union {
     pub inline fn extraValue(self: Object) Object {
         // For spur encoding, extract value from immediate objects
         if (self.isImmediate()) {
-            return Object.from(@as(i64, @intCast(self.immediate.hash)), null);
+            return Object.fromSmallInteger(@as(i64, @intCast(self.immediate.hash)));
         }
         return self;
     }
