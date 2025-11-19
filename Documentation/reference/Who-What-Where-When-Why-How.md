@@ -1,13 +1,13 @@
 ## Daniel Franklin
 - PhD started in 2018 - targ3et graduation Fall 2026
-- paper at IWST2024, [CDP2025](https://cdp-workshop.github.io/CDP/program/#ZAGSMALLTALK)
+- paper at IWST2024, [Creating Context In ZagSmalltalk](papers/Creating-Context-In-ZagSmalltalk.pdf)([CDP2025](https://cdp-workshop.github.io/CDP/program/#ZAGSMALLTALK))
 - AST compilation and inlining, Type inference
 
 ## Maisha Labiba
 - MSc started in 2022
 - benchmarking suite for dynamic languages
 ## Janat Baig
-- CPS040 2024/25, intern 2023/24
+- [CPS040 2024/25](Thesis_Janat_Baig.pdf), intern 2023/24
 - paper at IWST2024
 - LLVM JIT
 ## Adrien Hopkins

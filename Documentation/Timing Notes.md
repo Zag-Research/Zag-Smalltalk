@@ -46,6 +46,10 @@ bigSwitch
 nanSwitch
     IntegerBr 2336ms  2337ms   2.83ms   0.1%
     Float 2292ms  2289ms  10.87ms   0.5%
+#### spur
+    IntegerBr 2319ms  2328ms  26.16ms   1.1%
+    Float 4509ms  4480ms  69.79ms   1.6%
+
 
 ### x86-64  Intel i7-9750H CPU @ 2.60GHz
 #### floatZag
