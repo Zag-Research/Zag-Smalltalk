@@ -112,8 +112,40 @@ test "check sqrtPowerOf2" {
     try expectEqual(sqrtPowerOf2(@as(u16, 15)), 4);
     try expectEqual(sqrtPowerOf2(@as(u16, 16)), 4);
     try expectEqual(sqrtPowerOf2(@as(u16, 17)), 8);
+    try expectEqual(sqrtPowerOf2(@as(u16, 32)), 8);
     try expectEqual(sqrtPowerOf2(@as(u16, 33)), 8);
     try expectEqual(sqrtPowerOf2(@as(u16, 64)), 8);
     try expectEqual(sqrtPowerOf2(@as(u16, 65)), 16);
     try expectEqual(sqrtPowerOf2(@as(u16, 255)), 16);
+}
+pub inline fn length(obj: anytype) u11 {
+    const T = @TypeOf(obj);
+    return switch (@typeInfo(T)) {
+        .pointer => |p| lengthOfType(p.child),
+        .type => lengthOfType(obj),
+        else => lengthOfType(T),
+    };
+}
+inline fn lengthOfType(T: type) u11 {
+    return @sizeOf(T) / 8 -
+        if (@hasField(T,"header") and @offsetOf(T,"header") == 0) 1 else 0;
+}
+test "length" {
+    const expectEqual = std.testing.expectEqual;
+    const s1 = struct{x:u64,y:u64};
+    const s2 = struct{header:u64,y:u64};
+    const s3 = struct{x:u64,header:u64};
+    const v1:s1 = undefined;
+    const v2:s2 = undefined;
+    const v3:s3 = undefined;
+    try expectEqual(2, length(s1));
+    try expectEqual(1, length(s2));
+    try expectEqual(2, length(s3));
+    try expectEqual(2, length(v1));
+    try expectEqual(1, length(v2));
+    try expectEqual(2, length(v3));
+    try expectEqual(2, length(&v1));
+    try expectEqual(1, length(&v2));
+    try expectEqual(2, length(&v3));
+    _ = std.posix.clock_gettime(42);
 }

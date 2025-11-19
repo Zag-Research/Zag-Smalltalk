@@ -9,8 +9,14 @@
   {
     "label": "test-current",
     "command": "zig test -freference-trace=20 $ZED_FILENAME",
-    "cwd": "$ZED_WORKTREE_ROOT/$ZED_RELATIVE_DIR",
-    "hide": "on_success"
+    "cwd": "$ZED_WORKTREE_ROOT/$ZED_RELATIVE_DIR"
+    //"hide": "on_success"
+  },
+  {
+    "label": "test utilities",
+    "command": "zig test -freference-trace=20 general.zig",
+    "cwd": "$ZED_WORKTREE_ROOT/zig/zag/utilities"
+    //"hide": "on_success"
   },
   {
     "label": "test",

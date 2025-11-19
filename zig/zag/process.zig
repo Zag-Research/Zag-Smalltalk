@@ -67,7 +67,7 @@ const Process = struct {
     };
     const processAvail = (process_total_size - @sizeOf(Fields) - @sizeOf(Context)) / @sizeOf(Object);
     const approx_nursery_size = (processAvail - processAvail / 9) / 2;
-    const approx_stack_size = processAvail - approx_nursery_size * 2;
+    const approx_stack_size = 30; // FIXME: processAvail - approx_nursery_size * 2;
     const stack_size: usize = zag.utilities.largerPowerOf2(approx_stack_size) - 1;
     const nursery_size = (processAvail - stack_size) / 2;
     const fill_size = processAvail - stack_size - nursery_size * 2;
@@ -88,25 +88,25 @@ const Process = struct {
 
     fn collectNursery(self: *Process, sp: SP, context: *Context, need: usize) void {
         assert(need <= Process.nursery_size);
-        const ageSizes = [_]usize{0} ** Age.lastNurseryAge;
-        self.collectNurseryPass(sp, context, ageSizes, Age.lastNurseryAge + 1);
+        var ageSizes = [_]usize{0} ** Age.lastNurseryAge;
+        self.collectNurseryPass(sp, context, &ageSizes, Age.lastNurseryAge + 1);
         if (self.freeNursery() >= need) return;
         var total: usize = 0;
         var age = Age.lastNurseryAge;
         while (age >= 0) : (age -= 1) {
             total += ageSizes[age];
             if (total >= need) {
-                self.collectNurseryPass(sp, context, ageSizes, age);
+                self.collectNurseryPass(sp, context, &ageSizes, age);
                 return;
             }
         }
         @panic("Insufficient nursery space");
     }
-    fn collectNurseryPass(self: *Process, originalSp: SP, originalContext: *Context, sizes: [Age.lastNurseryAge]usize, promoteAge: usize) void {
+    fn collectNurseryPass(self: *Process, originalSp: SP, originalContext: *Context, sizes: []usize, promoteAge: usize) void {
         const hp = self.collectStack(originalSp, originalContext, sizes, promoteAge);
-        self.finishCollection(hp, sizes, promoteAge);
+        self.finishCollection(hp, self.h.otherHeap, sizes, promoteAge);
     }
-    fn collectStack(self: *Process, originalSp: SP, originalContext: *Context, sizes: [Age.lastNurseryAge]usize, promoteAge: usize) HeapObjectArray {
+    fn collectStack(self: *Process, originalSp: SP, originalContext: *Context, sizes: []usize, promoteAge: usize) HeapObjectArray {
         _ = .{ sizes, promoteAge };
         var hp = self.h.otherHeap;
         var context = originalContext;
@@ -129,10 +129,17 @@ const Process = struct {
         }
         return hp;
     }
-    fn finishCollection(self: *Process, startingHp: HeapObjectArray, sizes: [Age.lastNurseryAge]usize, promoteAge: usize) void {
+    fn copyObject(self: *Process, obj: anytype) @TypeOf(obj) {
+        const result = self.h.currHp;
+        const hp = @as(HeapObjectPtr, @ptrCast(result)).copyTo(result, null);
+        var sizes = [_]usize{0} ** Age.lastNurseryAge;
+        self.finishCollection(hp, result, &sizes, 0);
+        return @ptrCast(result);
+    }
+    fn finishCollection(self: *Process, startingHp: HeapObjectArray, startingScan: HeapObjectArray, sizes: []usize, promoteAge: usize) void {
         _ = .{ sizes, promoteAge };
         var hp = startingHp;
-        var scan = self.h.otherHeap;
+        var scan = startingScan;
         while (@intFromPtr(scan) < @intFromPtr(hp)) {
             if (scan[0].iterator()) |iter| {
                 var it = iter;
@@ -472,7 +479,7 @@ const Stack = struct {
     pub // inline
     fn sliceTo(self: SP, a_ptr: anytype) []Object {
         const i_ptr = @intFromPtr(a_ptr);
-        return self.slice(((i_ptr - @intFromPtr(self))) / @sizeOf(Object));
+        return self.slice((i_ptr - @intFromPtr(self)) / @sizeOf(Object));
     }
     pub inline fn at(self: SP, n: usize) Object {
         return self.array()[n];
@@ -486,16 +493,20 @@ const Stack = struct {
     }
     pub inline fn dumpStack(self: SP, why: []const u8) void {
         std.debug.print("dumpStack ({s})\n", .{why});
-        for (self.getStack()) |*obj|
+        for (self.getStack()) |*obj| {
             std.debug.print("[{x:0>10}]: {f}\n", .{ @intFromPtr(obj), obj.* });
+        }
     }
     pub inline fn traceStack(self: SP, why: []const u8) void {
         trace("traceStack ({s})", .{why});
         for (self.getStack()) |*obj|
             trace("[{x:0>10}]: {f}", .{ @intFromPtr(obj), obj.* });
     }
-    pub inline fn theProcess(self: SP) *Process {
+    inline fn theProcess(self: SP) *Process {
         return @ptrFromInt(@intFromPtr(self) & alignment_mask);
+    }
+    pub fn trapContextNumber(self: SP) u64 {
+        return self.theProcess().trapContextNumber;
     }
     pub inline fn endOfStack(self: SP) SP {
         return @ptrFromInt((@intFromPtr(self) | stack_mask));
@@ -536,7 +547,22 @@ const Stack = struct {
     pub fn spillStack(sp: SP, context: *Context, extra: Extra) struct { SP, *Context, Extra } {
         if (!context.isOnStack(sp)) return .{ sp, context, extra };
         // if the Context is on the stack, the Context, Extra and SP will move
-        @panic("spillStack unimplemented");
+        const process = sp.theProcess();
+        const size = (@intFromPtr(sp.endOfStack()) - @intFromPtr(sp)) / @sizeOf(Object);
+        process.collectNursery(sp, context, size);
+        const stackToCopy = sp.sliceTo(context.endOfStack(sp));
+        context.reify(sp);
+        sp.dumpStack("in spillStack");
+        const newContext = process.copyObject(context);
+        var n = stackToCopy.len;
+        const newSp = @as([*]Stack,@ptrCast(sp.endOfStack())) - n;
+        const targetStack = @as(SP, @ptrCast(newSp)).slice(n);
+        while (n > 0) : (n -= 1) {
+            targetStack[n - 1] = stackToCopy[n - 1];
+        }
+        sp.dumpStack("at end of spillStack");
+        _ = .{ newContext };
+        @panic("spillStack unfinished");
     }
     pub fn format(
         self: *const @This(),

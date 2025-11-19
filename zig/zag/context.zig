@@ -64,6 +64,10 @@ const ContextOnStack = struct {
             l.* = Nil();
         }
     }
+    fn reify(self: *ContextOnStack) ?*Context {
+        _ = .{ self, unreachable };
+
+    }
     pub inline fn selfAddress(self: *const ContextOnStack) ?[*]Object {
         const locals: [*]Object = @ptrCast(@constCast(&self.locals));
         return @ptrCast(&locals[self.spAndSelfOffset & Process.stack_mask]);
@@ -77,13 +81,18 @@ const ContextOnStack = struct {
     inline fn alloc(self: *ContextOnStack, sp: SP, size: usize) struct { [*]Object, SP } {
         _ = .{ self, sp, size, unreachable };
     }
-    fn reify(self: *ContextOnStack) void {
-        _ = .{ self, unreachable };
-    }
     inline fn callerStack(self: *const ContextOnStack) SP {
         return @constCast(@ptrCast(&self.locals));
     }
 };
+pub fn reify(self: *Context, sp: SP) void {
+    var context = self;
+    while (context.ifOnStack(sp)) |contextOnStack| {
+        if (@constCast(contextOnStack).reify()) |ctxt| {
+            context = ctxt;
+        } else break;
+    }
+}
 fn ifOnStack(context: *const Context, sp: SP) ?*const ContextOnStack {
     if (sp.contains(context)) {
         return @ptrCast(context);

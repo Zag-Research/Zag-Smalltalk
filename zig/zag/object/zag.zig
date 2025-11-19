@@ -138,7 +138,7 @@ pub const Object = packed struct(u64) {
         return null;
     }
     pub inline fn heapObject(self: object.Object) ?*InMemory.PointedObject {
-        if (self.isHeap() and !self.equals(Nil())) return @ptrFromInt(self.rawU());
+        if (self.rawU() & 0xf == 0 and !self.equals(Nil())) return @ptrFromInt(self.rawU());
         return null;
     }
     pub inline fn extraValue(self: object.Object) object.Object {
@@ -198,9 +198,6 @@ pub const Object = packed struct(u64) {
     }
     pub inline fn isImmediateClass(self: object.Object, comptime class: ClassIndex.Compact) bool {
         return self.tagbits() == oImm(class, 0).tagbits();
-    }
-    pub inline fn isHeap(self: object.Object) bool {
-        return self.tag == .heap;
     }
     pub inline fn isImmediateDouble(self: object.Object) bool {
         return (self.rawU() & 6) != 0;
@@ -528,7 +525,7 @@ pub const Object = packed struct(u64) {
         }
     }
     pub inline fn isMemoryAllocated(self: object.Object) bool {
-        return if (self.isHeap()) self != object.Object.Nil() else @intFromEnum(self.class) <= @intFromEnum(ClassIndex.Compact.ThunkHeap);
+        return if (self.isHeapObject()) self != object.Object.Nil() else @intFromEnum(self.class) <= @intFromEnum(ClassIndex.Compact.ThunkHeap);
     }
     pub const Special = packed struct {
         imm: TagAndClassType,
