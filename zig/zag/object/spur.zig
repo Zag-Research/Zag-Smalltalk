@@ -1,4 +1,3 @@
-//! This module implements Object encoding for Spur encoding
 const std = @import("std");
 const math = std.math;
 const expectEqual = std.testing.expectEqual;
@@ -12,7 +11,6 @@ const SP = Process.SP;
 const testing = std.testing;
 const ClassIndex = object.ClassIndex;
 const heap = zag.heap;
-const SP = Process.SP;
 const HeapHeader = heap.HeapHeader;
 const HeapObjectPtr = heap.HeapObjectPtr;
 const HeapObjectConstPtr = heap.HeapObjectConstPtr;
@@ -230,8 +228,6 @@ pub const Object = packed union {
         return from(t, sp, context);
     }
 
-
-
     // Hash helpers
     pub inline fn hash24(self: Object) u24 {
         return self.ref.header.hash;
@@ -276,6 +272,7 @@ pub const Object = packed union {
     // Conversion from Zig types
     pub inline fn from(value: anytype, sp: SP, context: *Context) Object {
         const T = @TypeOf(value);
+        if (T == Object) return value;
         switch (@typeInfo(T)) {
             .int, .comptime_int => return Self.fromSmallInteger(value),
             .float => {
@@ -398,15 +395,21 @@ pub const Object = packed union {
         return null;
     }
     pub inline fn extraValue(_: Object) Object {
-        // For spur encoding, extract value from immediate objects
-<<<<<<< HEAD
-        if (self.isImmediate()) {
-            return Object.fromSmallInteger(@as(i64, @intCast(self.immediate.hash)));
-        }
-        return self;
-=======
         @panic("Not implemented");
->>>>>>> main
+    }
+
+    pub const StaticObject = void;
+    pub fn initStaticObject(comptime value: anytype, ptr: anytype) object.Object {
+        switch (@typeInfo(@TypeOf(value))) {
+            .int, .comptime_int => return fromUntaggedI(value << 3, {}, {}),
+            .comptime_float => {
+                if (encode(value)) |encoded| {
+                    return @bitCast(encoded);
+                } else |_| return fromAddress(ptr.set(.Float, value));
+            },
+            .bool => return if (value) object.Object.True() else object.Object.False(),
+            else => @panic("Unsupported type for compile-time object creation"),
+        }
     }
 
     const OF = object.ObjectFunctions;
