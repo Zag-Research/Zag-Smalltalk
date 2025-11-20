@@ -3,6 +3,7 @@ const zag = @import("zag");
 const config = zag.config;
 const trace = config.trace;
 const tailCall = config.tailCall;
+const Encoding = @TypeOf(config.objectEncoding);
 const Object = zag.Object;
 const MainExecutor = zag.execute.Execution.MainExecutor;
 const compileMethod = zag.execute.compileMethod;
@@ -41,7 +42,7 @@ const Info = struct {
 };
 
 const fibNative = struct {
-    const included = true;
+    const exclude: []const Encoding = &[_]Encoding{};
     var info = Info{ .name = "Native" };
     fn init() void {}
     fn runIt(comptime _: void, proof: usize) usize {
@@ -54,7 +55,7 @@ const fibNative = struct {
 };
 
 const fibNativeFloat = struct {
-    const included = true;
+    const exclude: []const Encoding = &[_]Encoding{};
     var info = Info{ .name = "NativeF" };
     fn init() void {}
     fn runIt(comptime _: void, proof: usize) usize {
@@ -69,7 +70,7 @@ const fibNativeFloat = struct {
 
 const codeAlignment = 64;
 const fibInteger = struct {
-    const included = true;
+    const exclude: []const Encoding = &[_]Encoding{.onlyFloat};
     var info = Info{ .name = "Integer" };
     const self = zag.Context.makeVariable(0, 1, .Parameter, &.{});
     const leq = SmallInteger.@"<=".inlined;
@@ -126,7 +127,7 @@ const fibInteger = struct {
 };
 
 const fibInteger0 = struct {
-    const included = true;
+    const exclude: []const Encoding = &[_]Encoding{.onlyFloat};
     var info = Info{ .name = "Integer0" };
     const self = zag.Context.makeVariable(0, 1, .Parameter, &.{});
     const leq = SmallInteger.@"<=".inlined;
@@ -183,7 +184,7 @@ const fibInteger0 = struct {
 };
 
 const fibIntegerBr = struct {
-    const included = true;
+    const exclude: []const Encoding = &[_]Encoding{.onlyFloat};
     var info = Info{ .name = "IntegerBr" };
     const self = zag.Context.makeVariable(0, 1, .Parameter, &.{});
     const leq = SmallInteger.@"<=".inlined;
@@ -197,13 +198,13 @@ const fibIntegerBr = struct {
             //            tf.debug,
             tf.push,                  self,
             tf.pushLiteral,           "1const",
-            tf.dup,tf.drop,
+            tf.dup,                   tf.drop,
             tf.inlinePrimitive,       leq,
             tf.branchFalse,           "false",
             tf.returnSelf,            ":false",
             tf.push,                  self,
             tf.pushLiteral,           "0const",
-            tf.dup,tf.drop,
+            tf.dup,                   tf.drop,
             tf.inlinePrimitive,       minus,
             tf.send,                  signature(.fibonacci, 0),
             &nullMethod,              tf.push,
@@ -248,7 +249,7 @@ const fibIntegerBr = struct {
 };
 
 const fibIntegerCnP = struct {
-    const included = true;
+    const exclude: []const Encoding = &[_]Encoding{.onlyFloat};
     var info = Info{ .name = "IntegerCnP" };
     const self = zag.Context.makeVariable(0, 1, .Parameter, &.{});
     const leq = SmallInteger.@"<=".inlined;
@@ -431,7 +432,7 @@ const fibIntegerCnP = struct {
 };
 
 const fibFloat = struct {
-    const included = true;
+    const exclude: []const Encoding = &[_]Encoding{.onlyInt};
     var info = Info{ .name = "Float" };
     const self = zag.Context.makeVariable(0, 1, .Parameter, &.{});
     const leq = Float.@"<=".inlined;
@@ -520,6 +521,12 @@ fn name(original: []const u8) []const u8 {
     }
     return original;
 }
+fn includeFor(benchmark: anytype) bool {
+    for (benchmark.exclude) |exclude| {
+        if (config.objectEncoding == exclude) return false;
+    }
+    return true;
+}
 const Stats = zag.Stats;
 pub fn timing(args: []const []const u8, default: bool) !void {
     const eql = std.mem.eql;
@@ -534,7 +541,7 @@ pub fn timing(args: []const []const u8, default: bool) !void {
         } else {
             var anyRun = false;
             inline for (&.{ fibNative, fibNativeFloat, fibInteger, fibInteger0, fibIntegerBr, fibFloat, fibIntegerCnP }) |benchmark| {
-                if (benchmark.included and std.mem.eql(u8, name(arg), benchmark.info.name)) {
+                if (includeFor(benchmark) and std.mem.eql(u8, name(arg), benchmark.info.name)) {
                     anyRun = true;
                     print("{s:>9}", .{benchmark.info.name});
                     benchmark.init();
@@ -555,13 +562,13 @@ pub fn timing(args: []const []const u8, default: bool) !void {
 }
 pub fn main() !void {
     const do_all = [_][]const u8{
-        "Config", "Header",
-        "Native", "NativeF",
+        "Config",            "Header",
+        "Native",            "NativeF",
         //"Integer",
         "IntegerBr?Integer",
         //"Integer0?Integer",
         //"IntegerCnP",
-        //"Float",
+        "Float",
     };
     // var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     // const allocator = gpa.allocator();

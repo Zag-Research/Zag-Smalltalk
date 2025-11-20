@@ -1,10 +1,14 @@
 const general = @import("utilities/general.zig");
-pub const PhiHash = @import("utilities/hash.zig").Phi;
-pub const ProspectorHash = @import("utilities/hash.zig").Prospector;
 pub const bitsToRepresent = general.bitsToRepresent;
 pub const smallerPowerOf2 = general.smallerPowerOf2;
 pub const largerPowerOf2 = general.largerPowerOf2;
 pub const largeEnoughType = general.largeEnoughType;
+pub const structLength = general.length;
+const hash = @import("utilities/hash.zig");
+pub const PhiHash = hash.Phi;
+pub const ProspectorHash = hash.Prospector;
+pub const objectHash = hash.objectHash;
+pub const randomHash = hash.randomHash;
 pub const Treap = @import("utilities/treap.zig").Treap;
 const primes = @import("utilities/primes.zig");
 pub const smallestPrimeAtLeast = primes.smallestPrimeAtLeast;
@@ -22,6 +26,7 @@ pub fn checkEqual(comptime int: u32, comptime int2: u32) ?[]const u8 {
 test {
     _ = .{
         general,
+        hash,
         Treap,
         primes,
         Stats,

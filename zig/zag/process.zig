@@ -67,7 +67,7 @@ const Process = struct {
     };
     const processAvail = (process_total_size - @sizeOf(Fields) - @sizeOf(Context)) / @sizeOf(Object);
     const approx_nursery_size = (processAvail - processAvail / 9) / 2;
-    const approx_stack_size = 30; // FIXME: processAvail - approx_nursery_size * 2;
+    const approx_stack_size = processAvail - approx_nursery_size * 2;
     const stack_size: usize = zag.utilities.largerPowerOf2(approx_stack_size) - 1;
     const nursery_size = (processAvail - stack_size) / 2;
     const fill_size = processAvail - stack_size - nursery_size * 2;
@@ -172,7 +172,7 @@ const Process = struct {
         var scan = self.h.currHeap;
         const hp = self.h.currHp;
         while (@intFromPtr(scan) < @intFromPtr(hp)) {
-            std.debug.print("[{x:0>10}]: {f}\n", .{@intFromPtr(scan), scan[0].header});
+            std.debug.print("[{x:0>10}]: {f}\n", .{ @intFromPtr(scan), scan[0].header });
             scan = scan[0].skipForward();
         }
     }
@@ -506,7 +506,7 @@ const Stack = struct {
         return @ptrFromInt(@intFromPtr(self) & alignment_mask);
     }
     pub fn trapContextNumber(self: SP) u64 {
-        return self.theProcess().trapContextNumber;
+        return self.theProcess().h.trapContextNumber;
     }
     pub inline fn endOfStack(self: SP) SP {
         return @ptrFromInt((@intFromPtr(self) | stack_mask));
@@ -555,13 +555,13 @@ const Stack = struct {
         sp.dumpStack("in spillStack");
         const newContext = process.copyObject(context);
         var n = stackToCopy.len;
-        const newSp = @as([*]Stack,@ptrCast(sp.endOfStack())) - n;
+        const newSp = @as([*]Stack, @ptrCast(sp.endOfStack())) - n;
         const targetStack = @as(SP, @ptrCast(newSp)).slice(n);
         while (n > 0) : (n -= 1) {
             targetStack[n - 1] = stackToCopy[n - 1];
         }
         sp.dumpStack("at end of spillStack");
-        _ = .{ newContext };
+        _ = .{newContext};
         @panic("spillStack unfinished");
     }
     pub fn format(

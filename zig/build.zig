@@ -66,7 +66,6 @@ pub fn build(b: *std.Build) void {
             },
         }),
     });
-    //b.step("fib", "Compile fib").dependOn(&b.installArtifact(fib).step);
     b.installArtifact(fib);
 
     const branchPrediction = b.addExecutable(.{
@@ -153,6 +152,62 @@ pub fn build(b: *std.Build) void {
         test_step.dependOn(&run_enc_tests.step);
     }
 }
+
+// --- Encoding benchs ---
+// const bench_encodings: []const Encoding =
+//     if (encoding_option) |specific_encoding|
+//         &[_]Encoding{specific_encoding}
+//     else
+//         &[_]Encoding{
+//             .zag,
+//             .zagAlt,
+//             .nan,
+//             .spur,
+//             .taggedInt,
+//             .ptr,
+//             .onlyInt,
+//             .onlyFloat,
+//             //.taggedPtr,
+//             //.cachedPtr,
+//         };
+
+// const bench_step = b.step("bench", "Run bench for all encoding types");
+// for (bench_encodings) |enc| {
+//     const enc_options = b.addOptions();
+//     enc_options.addOption(bool, "includeLLVM", includeLLVM);
+//     enc_options.addOption([]const u8, "git_version", git_version);
+//     enc_options.addOption([]const u8, "compile_date", compile_date);
+//     enc_options.addOption(Encoding, "objectEncoding", enc);
+//     enc_options.addOption(u16, "maxClasses", max_classes);
+//     enc_options.addOption(bool, "trace", trace);
+
+//     const zag_enc = b.createModule(.{
+//         .root_source_file = b.path("zag/zag.zig"),
+//         .target = target,
+//     });
+
+//     zag_enc.addOptions("options", enc_options);
+
+//     if (includeLLVM) {
+//         zag_enc.addImport("llvm-build-module", llvm_module);
+//     }
+
+//     const bench_module = b.createModule(.{
+//         .root_source_file = b.path("experiments/fib.zig"),
+//         .target = target,
+//         .optimize = optimize,
+//         .imports = &.{
+//             .{ .name = "zag", .module = zag },
+//         },
+//     });
+//     const enc_benchs = b.addExecutable(.{
+//         .name = "bench",
+//         .root_module = bench_module,
+//     });
+//     enc_benchs.root_module.addOptions("options", enc_options);
+//     const run_enc_benchs = b.addRunArtifact(enc_benchs);
+//     bench_step.dependOn(&run_enc_benchs.step);
+// }
 
 fn build_llvm_module(b: *std.Build, target: std.Build.ResolvedTarget, optimize: std.builtin.OptimizeMode) *std.Build.Module {
     const llvm_module = b.addModule("llvm-build-module", .{

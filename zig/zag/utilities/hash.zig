@@ -216,7 +216,7 @@ fn SAC_test(T: type, rng: fn (T) T, order: u64) f64 {
     }
     return chi;
 }
-pub const Prospector = struct{
+pub const Prospector = struct {
     // From: https://nullprogram.com/blog/2018/07/31/
     // the 64 bit version is derived from https://xoshiro.di.unimi.it/splitmix64.c
     // which is derived from Java 8's SplittableRandom generator
@@ -284,7 +284,7 @@ pub const Prospector = struct{
         return x;
     }
 };
-pub const Phi = struct{
+pub const Phi = struct {
     const phi = std.math.phi;
     // returns an odd number (changes u8) so all possible values are generated
     pub fn inversePhi(comptime T: type) T {
@@ -297,14 +297,13 @@ pub const Phi = struct{
         }
         @compileError("invalid type for inversePhi: " ++ @typeName(T));
     }
-    // there isn't a closed form way to calculate this, but
     pub fn undoPhi(comptime T: type) T {
-        return @import("general.zig").inverseMod(T, inversePhi(T)) catch @panic("not invertible");
+        return @import("general.zig").inverseMod(Phi.inversePhi(T)) catch @panic("not invertible");
     }
     pub fn MakePhiHash(comptime T: type) type {
         return struct {
             pub inline fn hash(v: T) T {
-                return v *% inversePhi(T);
+                return v *% Phi.inversePhi(T);
             }
             pub inline fn unhash(v: T) T {
                 return v *% undoPhi(T);
@@ -314,16 +313,16 @@ pub const Phi = struct{
     pub fn hash(comptime T: type) fn (v: T) callconv(.@"inline") T {
         return MakePhiHash(T).hash;
     }
-    pub const hash64= MakePhiHash(u64).hash;
-    pub const hash32= MakePhiHash(u32).hash;
-    pub const hash24= MakePhiHash(u24).hash;
-    pub const hash16= MakePhiHash(u16).hash;
-    pub const hash8= MakePhiHash(u8).hash;
-    pub const unhash64= MakePhiHash(u64).unhash;
-    pub const unhash32= MakePhiHash(u32).unhash;
-    pub const unhash24= MakePhiHash(u24).unhash;
-    pub const unhash16= MakePhiHash(u16).unhash;
-    pub const unhash8= MakePhiHash(u8).unhash;
+    pub const hash64 = MakePhiHash(u64).hash;
+    pub const hash32 = MakePhiHash(u32).hash;
+    pub const hash24 = MakePhiHash(u24).hash;
+    pub const hash16 = MakePhiHash(u16).hash;
+    pub const hash8 = MakePhiHash(u8).hash;
+    pub const unhash64 = MakePhiHash(u64).unhash;
+    pub const unhash32 = MakePhiHash(u32).unhash;
+    pub const unhash24 = MakePhiHash(u24).unhash;
+    pub const unhash16 = MakePhiHash(u16).unhash;
+    pub const unhash8 = MakePhiHash(u8).unhash;
     test "check inversePhi" {
         const expectEqual = std.testing.expectEqual;
         try expectEqual(hash64(1), 11400714819323198485);
@@ -428,4 +427,39 @@ pub fn main() void {
     // showSequence(sequential.sequence());
     var bitPattern = BitPattern{};
     showSequence(bitPattern.sequence());
+}
+var randomizer: u32 = 0;
+const inversePhi = Phi.inversePhi(u32);
+pub fn randomHash(value: anytype) u24 {
+    const temp = inversePhi +% randomizer;
+    randomizer = temp;
+    return @truncate(temp ^ objectHash(value));
+}
+pub inline fn objectHash(value: anytype) u24 {
+    const T = @TypeOf(value);
+    return switch (@typeInfo(T)) {
+        .pointer => simple_hash(@intFromPtr(value) >> 4),
+        .int => |i| switch (i.signedness) {
+            .signed => simple_hash(@bitCast(@as(i64, @intCast(value)))),
+            .unsigned => simple_hash(@intCast(value)),
+        },
+        else => if (@bitSizeOf(value) == 64)
+            simple_hash(@as(u64, @bitCast(value)))
+        else
+            @compileError("can't hash: \"" ++ @typeName(T) ++ "\""),
+    };
+}
+inline fn simple_hash(value: u64) u24 {
+    return @truncate(value ^ value >> 24);
+}
+test "hash" {
+    const expectEqual = std.testing.expectEqual;
+    const foo32: u32 = 42 << 24;
+    const foo16: i16 = -42;
+    _ = objectHash(&foo32);
+    try expectEqual(42, objectHash(foo32));
+    try expectEqual(41, objectHash(foo16));
+    randomizer = 0;
+    try expectEqual(3635603, randomHash(foo32));
+    try expectEqual(7271256, randomHash(foo32));
 }

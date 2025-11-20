@@ -5,6 +5,7 @@ const config = zag.config;
 const tailCall = config.tailCall;
 const trace = config.trace;
 const checkEqual = zag.utilities.checkEqual;
+const structLength = zag.utilities.structLength;
 const Process = zag.Process;
 const object = zag.object;
 const Object = object.Object;
@@ -64,9 +65,15 @@ const ContextOnStack = struct {
             l.* = Nil();
         }
     }
-    fn reify(self: *ContextOnStack) ?*Context {
-        _ = .{ self, unreachable };
-
+    fn reify(self: *ContextOnStack, trapContextNumber: u64) ?*Context {
+        // FIXME: Implement reification logic
+        const dataLength = 1;
+        HeapHeader.objectOnStackWithHash(.ContextData, .special, dataLength, @truncate(self.spAndSelfOffset)).at(&self.contextDataHeader);
+        // and then overwrite it with the Context header
+        HeapHeader.objectOnStack(.Context, .special, structLength(Context)).at(self);
+        self.trapContextNumber = trapContextNumber;
+        self.contextData = @ptrCast(&self.contextDataHeader);
+        return self.prevCtxt;
     }
     pub inline fn selfAddress(self: *const ContextOnStack) ?[*]Object {
         const locals: [*]Object = @ptrCast(@constCast(&self.locals));
@@ -88,7 +95,7 @@ const ContextOnStack = struct {
 pub fn reify(self: *Context, sp: SP) void {
     var context = self;
     while (context.ifOnStack(sp)) |contextOnStack| {
-        if (@constCast(contextOnStack).reify()) |ctxt| {
+        if (@constCast(contextOnStack).reify(sp.trapContextNumber())) |ctxt| {
             context = ctxt;
         } else break;
     }

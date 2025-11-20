@@ -1,8 +1,8 @@
 const std = @import("std");
 // https://en.wikipedia.org/wiki/Extended_Euclidean_algorithm#Computing_multiplicative_inverses_in_modular_structures
 // shows the Extended Eclidean algorithm can calculate in log time
-pub fn inverseMod(comptime T: type, a: T) !T {
-    const n = 1 << @typeInfo(T).int.bits;
+pub fn inverseMod(a: anytype) !@TypeOf(a) {
+    const n = 1 << @typeInfo(@TypeOf(a)).int.bits;
     var t: i128 = 0;
     var newt: i128 = 1;
     var r: i128 = n;
@@ -20,7 +20,14 @@ pub fn inverseMod(comptime T: type, a: T) !T {
     if (t < 0) t = t + n;
     return @truncate(@as(u128, @intCast(t)));
 }
-
+test "inverseMod" {
+    const expectEqual = std.testing.expectEqual;
+    var i: u64 = 1;
+    while (i < 0x8000_0000_0000_0000) {
+        try expectEqual(1, try inverseMod(i) *% i);
+        i = if (i <= 100) i + 2 else i * 17;
+    }
+}
 pub inline fn bitsToRepresent(value: anytype) u7 {
     const T = @TypeOf(value);
     switch (@typeInfo(T)) {
@@ -128,16 +135,16 @@ pub inline fn length(obj: anytype) u11 {
 }
 inline fn lengthOfType(T: type) u11 {
     return @sizeOf(T) / 8 -
-        if (@hasField(T,"header") and @offsetOf(T,"header") == 0) 1 else 0;
+        if (@hasField(T, "header") and @offsetOf(T, "header") == 0) 1 else 0;
 }
 test "length" {
     const expectEqual = std.testing.expectEqual;
-    const s1 = struct{x:u64,y:u64};
-    const s2 = struct{header:u64,y:u64};
-    const s3 = struct{x:u64,header:u64};
-    const v1:s1 = undefined;
-    const v2:s2 = undefined;
-    const v3:s3 = undefined;
+    const s1 = struct { x: u64, y: u64 };
+    const s2 = struct { header: u64, y: u64 };
+    const s3 = struct { x: u64, header: u64 };
+    const v1: s1 = undefined;
+    const v2: s2 = undefined;
+    const v3: s3 = undefined;
     try expectEqual(2, length(s1));
     try expectEqual(1, length(s2));
     try expectEqual(2, length(s3));
@@ -147,5 +154,4 @@ test "length" {
     try expectEqual(2, length(&v1));
     try expectEqual(1, length(&v2));
     try expectEqual(2, length(&v3));
-    _ = std.posix.clock_gettime(42);
 }

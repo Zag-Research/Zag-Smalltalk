@@ -684,18 +684,14 @@ pub const HeapHeader = packed struct(u64) {
     pub inline fn objectInNursery(self: *HeapHeader, class: ClassIndex, objectSize: u11) void {
         self.* = .{ .classIndex = class, .hash = hashFromPtr(self), .objectFormat = .directIndexed, .age = .nursery, .length = objectSize };
     }
-    inline fn length(obj: anytype) u11 {
-        const T = @TypeOf(obj);
-        return switch (@typeInfo(T)) {
-            .pointer => |p| lengthOfType(p.child),
-            else => lengthOfType(T),
-        }
+    pub inline fn objectOnStack(class: ClassIndex, objectFormat: Format, objectSize: u11) HeapHeader {
+        return .{ .classIndex = class, .objectFormat = objectFormat, .age = .onStack, .length = objectSize };
     }
-    inline fn lengthOfType(T: type) u11 {
-        return @sizeOf(T) / @sizeOf(Object) - 1;
+    pub inline fn objectOnStackWithHash(class: ClassIndex, objectFormat: Format, objectSize: u11, hash: u24) HeapHeader {
+        return .{ .classIndex = class, .objectFormat = objectFormat, .age = .onStack, .length = objectSize, .hash = hash };
     }
-    pub inline fn objectOnStack(self: anytype, class: ClassIndex, objectFormat: Format, objectSize: u11) void {
-        @as(*HeapHeader,@pointerCast(self)).* = .{ .classIndex = class, .hash = hashFromPtr(self), .objectFormat = objectFormat, .age = .onStack, .length = objectSize };
+    pub inline fn at(self: HeapHeader, where: anytype) void {
+        @as(*HeapHeader,@ptrCast(where)).* = self;
     }
     pub inline fn headerStatic(comptime class: ClassIndex, hash: u24, length: u11) HeapHeader {
         return .{ .classIndex = class, .hash = hash, .objectFormat = .special, .age = .static, .length = length };
