@@ -8,8 +8,9 @@
   },
   {
     "label": "bench",
-    "command": "zig build bench --summary all -freference-trace=20",
-    "cwd": "$ZED_WORKTREE_ROOT/zig/zag"
+    "command": "experiments/bench",
+    //    "command": "zig build bench -Doptimize=ReleaseFast --summary all -freference-trace=20",
+    "cwd": "$ZED_WORKTREE_ROOT/zig"
   },
   {
     "label": "test-current",

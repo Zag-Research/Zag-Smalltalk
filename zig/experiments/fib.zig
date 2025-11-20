@@ -99,9 +99,13 @@ const fibInteger = struct {
             plus,                     tf.returnTop,
         });
     var exe: MainExecutor = undefined;
+    var one_: Object.StaticObject = undefined;
+    var two_: Object.StaticObject = undefined;
     fn init() void {
         exe = MainExecutor.new();
-        fib.resolve(&[_]Object{ exe.object(1), exe.object(2) }) catch unreachable;
+        const one = one_.init(1);
+        const two = two_.init(2);
+        fib.resolve(&[_]Object{ one, two }) catch @panic("Failed to resolve");
         fib.initExecute();
         zag.dispatch.addMethod(@ptrCast(&fib));
         if (zag.config.show_trace) {
@@ -156,9 +160,13 @@ const fibInteger0 = struct {
             plus,                     tf.returnTop,
         });
     var exe: MainExecutor = undefined;
+    var one_: Object.StaticObject = undefined;
+    var two_: Object.StaticObject = undefined;
     fn init() void {
         exe = MainExecutor.new();
-        fib.resolve(&[_]Object{ exe.object(1), exe.object(2) }) catch unreachable;
+        const one = one_.init(1);
+        const two = two_.init(2);
+        fib.resolve(&[_]Object{ one, two }) catch @panic("Failed to resolve");
         fib.initExecute();
         zag.dispatch.addMethod(@ptrCast(&fib));
         if (zag.config.show_trace) {
@@ -221,8 +229,8 @@ const fibIntegerBr = struct {
     var two_: Object.StaticObject = undefined;
     fn init() void {
         exe = MainExecutor.new();
-        const one = Object.initStaticObject(1, &one_);
-        const two = Object.initStaticObject(2, &two_);
+        const one = one_.init(1);
+        const two = two_.init(2);
         fib.resolve(&[_]Object{ one, two }) catch @panic("Failed to resolve");
         fib.initExecute();
         zag.dispatch.addMethod(@ptrCast(&fib));
@@ -404,9 +412,13 @@ const fibIntegerCnP = struct {
         } // end of tf.returnTop
     }
     var exe: MainExecutor = undefined;
+    var one_: Object.StaticObject = undefined;
+    var two_: Object.StaticObject = undefined;
     fn init() void {
         exe = MainExecutor.new();
-        fib.resolve(&[_]Object{ exe.object(1), exe.object(2) }) catch unreachable;
+        const one = one_.init(1);
+        const two = two_.init(2);
+        fib.resolve(&[_]Object{ one, two }) catch @panic("Failed to resolve");
         fib.executeFn = &cps1;
         zag.dispatch.addMethod(@ptrCast(&fib));
         if (zag.config.show_trace) {
@@ -461,9 +473,13 @@ const fibFloat = struct {
             tf.returnTop,
         });
     var exe: MainExecutor = undefined;
+    var one_: Object.StaticObject = undefined;
+    var two_: Object.StaticObject = undefined;
     fn init() void {
         exe = MainExecutor.new();
-        fib.resolve(&[_]Object{ exe.object(1.0), exe.object(2.0) }) catch unreachable;
+        const one = one_.init(1.0);
+        const two = two_.init(2.0);
+        fib.resolve(&[_]Object{ one, two }) catch @panic("Failed to resolve");
         fib.initExecute();
         zag.dispatch.addMethod(@ptrCast(&fib));
         if (zag.config.show_trace) {
@@ -583,6 +599,6 @@ pub fn main() !void {
     try timing(if (default) @constCast(do_all[0..]) else args[1..], default);
 }
 const testRun = zag.config.testRun;
-const fibN = if (testRun) 5 else 35;
+const fibN = if (testRun) 5 else 40;
 const nRuns = if (testRun) 1 else 5;
 const warmups = if (testRun) 0 else null;

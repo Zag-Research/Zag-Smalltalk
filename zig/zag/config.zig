@@ -15,13 +15,13 @@ pub const git_version = options.git_version;
 pub const compile_date = options.compile_date;
 pub const objectEncoding = options.objectEncoding;
 pub const max_classes = options.maxClasses;
-pub const singleSteppable = true;//options.singleSteppable;
+pub const singleSteppable = true; //options.singleSteppable;
 // must be more than HeapObject.maxLength*8 so externally allocated
 pub const process_total_size: usize = if (is_test or testRun) 2048 else 64 * 1024;
 
 pub const debugging = false;
 pub const logThreadExecution = debugging;
-const show_error_stack = true;//debugging;
+const show_error_stack = debugging;
 pub const show_trace = debugging or options.trace;
 
 pub const immediateIntegers = switch (objectEncoding) {
@@ -46,7 +46,7 @@ pub fn printConfig() void {
         \\  native_endian  = {}
         \\  stack_size     = {d}w
         \\  nursery_size   = {d}w
-        \\ {s}{s}
+        \\  process_total_size = {d}w{s}{s}{s}{s}
         \\
     , .{
         compile_date,
@@ -56,8 +56,11 @@ pub fn printConfig() void {
         native_endian,
         Process.process_stack_size,
         Process.process_nursery_size,
-        if (show_trace) "trace enabled\n" else "",
-        if (show_error_stack) "error stack enabled\n" else "",
+        process_total_size / 8,
+        if (is_test) "\n  is test" else "",
+        if (debugMode) "\n  is debugMode" else "",
+        if (show_trace) "\n  trace enabled" else "",
+        if (show_error_stack) "\n  error stack enabled" else "",
     });
 }
 comptime {

@@ -1,0 +1,6 @@
+#!/bin/sh
+for encoding in onlyInt onlyFloat taggedInt nan zag zagAlt spur ptr
+do
+    zig build -Dencoding=$encoding -Doptimize=ReleaseFast && ./zig-out/bin/fib
+    echo
+done

@@ -41,6 +41,7 @@ pub const Object = packed union {
     const CharacterTag = Group.u(.character);
     const FloatTag = Group.u(.float);
     const TagMask = SmallIntegerTag | CharacterTag | FloatTag;
+    const tagBits = 3;
 
     const Self = @This();
     pub const ZERO: Object = @bitCast(@as(u64, 0));
@@ -398,19 +399,22 @@ pub const Object = packed union {
         @panic("Not implemented");
     }
 
-    pub const StaticObject = void;
-    pub fn initStaticObject(comptime value: anytype, ptr: anytype) object.Object {
-        switch (@typeInfo(@TypeOf(value))) {
-            .int, .comptime_int => return fromUntaggedI(value << 3, {}, {}),
-            .comptime_float => {
-                if (encode(value)) |encoded| {
-                    return @bitCast(encoded);
-                } else |_| return fromAddress(ptr.set(.Float, value));
-            },
-            .bool => return if (value) object.Object.True() else object.Object.False(),
-            else => @panic("Unsupported type for compile-time object creation"),
+    pub const StaticObject = struct {
+        obj: InMemory.PointedObject,
+        pub fn init(self: *StaticObject, value: anytype) object.Object {
+            const ptr: *InMemory.PointedObject = @ptrCast(self);
+            switch (@typeInfo(@TypeOf(value))) {
+                .int, .comptime_int => return fromUntaggedI(value << tagBits, {}, {}),
+                .comptime_float => {
+                    if (encode(value)) |encoded| {
+                        return @bitCast(encoded);
+                    } else |_| return fromAddress(ptr.set(.Float, value));
+                },
+                .bool => return if (value) object.Object.True() else object.Object.False(),
+                else => @panic("Unsupported type for compile-time object creation"),
+            }
         }
-    }
+    };
 
     const OF = object.ObjectFunctions;
     pub const PackedObject = object.PackedObject;

@@ -66,7 +66,7 @@ const Process = struct {
         foo: [3]u64,
     };
     const processAvail = (process_total_size - @sizeOf(Fields) - @sizeOf(Context)) / @sizeOf(Object);
-    const approx_nursery_size = (processAvail - processAvail / 9) / 2;
+    const approx_nursery_size = (processAvail - processAvail / 16) / 2;
     const approx_stack_size = processAvail - approx_nursery_size * 2;
     const stack_size: usize = zag.utilities.largerPowerOf2(approx_stack_size) - 1;
     const nursery_size = (processAvail - stack_size) / 2;

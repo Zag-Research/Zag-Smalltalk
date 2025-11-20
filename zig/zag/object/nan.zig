@@ -293,16 +293,16 @@ pub const Object = packed struct(u64) {
     pub inline fn fromAddress(value: anytype) object.Object {
         return cast(@as(u48, @truncate(@intFromPtr(value))) + Start_of_Heap_Objects);
     }
-    pub const StaticObject = void;
-    pub fn initStaticObject(comptime value: anytype, _: anytype) object.Object {
-        const T = @TypeOf(value);
-        switch (@typeInfo(T)) {
-            .int, .comptime_int => return cast(@as(u50, @bitCast(@as(i50, @truncate(value)))) +% u64_ZERO),
-            .comptime_float => return @bitCast(@as(f64, value)),
-            .bool => return if (value) object.Object.True() else object.Object.False(),
-            else => @panic("Unsupported type for compile-time object creation"),
+    pub const StaticObject = struct {
+        pub fn init(_: *StaticObject, comptime value: anytype) object.Object {
+            switch (@typeInfo(@TypeOf(value))) {
+                .int, .comptime_int => return cast(@as(u50, @bitCast(@as(i50, @truncate(value)))) +% u64_ZERO),
+                .comptime_float => return @bitCast(@as(f64, value)),
+                .bool => return if (value) object.Object.True() else object.Object.False(),
+                else => @panic("Unsupported type for compile-time object creation"),
+            }
         }
-    }
+    };
     pub inline fn from(value: anytype, _: anytype, _: anytype) object.Object {
     //     return fromWithError(value) catch @panic("unreachable");
     // }

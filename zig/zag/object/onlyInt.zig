@@ -5,15 +5,8 @@ const math = std.math;
 const zag = @import("../zag.zig");
 const config = zag.config;
 const assert = std.debug.assert;
-const debugError = false;
-const InMemory = zag.InMemory;
 const object = zag.object;
 const ClassIndex = object.ClassIndex;
-const heap = zag.heap;
-const HeapHeader = heap.HeapHeader;
-const HeapObjectPtr = heap.HeapObjectPtr;
-const HeapObjectConstPtr = heap.HeapObjectConstPtr;
-const Process = zag.Process;
 pub const Object = packed struct(u64) {
     int: u64,
     const Self = @This();
@@ -68,13 +61,13 @@ pub const Object = packed struct(u64) {
     pub inline fn nativeF_noCheck(_: object.Object) f64 {
         @panic("not implemented");
     }
-    pub inline fn fromNativeF(_: f64, _: *Process) object.Object {
+    pub inline fn fromNativeF(_: f64, _: anytype, _: anytype) object.Object {
         @panic("not implemented");
     }
     pub inline fn symbolHash(self: object.Object) ?u24 {
         return @truncate(self.hash32());
     }
-    pub inline fn heapObject(_: object.Object) ?*InMemory.PointedObject {
+    pub inline fn heapObject(_: object.Object) ?*zag.InMemory.PointedObject {
         return null;
     }
     pub inline fn extraValue(self: object.Object) object.Object {
@@ -180,14 +173,15 @@ pub const Object = packed struct(u64) {
     fn fromAddress(value: anytype) Object {
         return @bitCast(@intFromPtr(value));
     }
-    pub const StaticObject = void;
-    pub fn initStaticObject(comptime value: anytype, _: anytype) object.Object {
-        switch (@typeInfo(@TypeOf(value))) {
-            .int, .comptime_int => return @bitCast(@as(i64,value)),
-            .bool => return if (value) object.Object.True() else object.Object.False(),
-            else => @panic("Unsupported type for compile-time object creation"),
+    pub const StaticObject = struct {
+        pub fn init(_: *StaticObject, comptime value: anytype) object.Object {
+            switch (@typeInfo(@TypeOf(value))) {
+                .int, .comptime_int => return @bitCast(@as(i64,value)),
+                .bool => return if (value) object.Object.True() else object.Object.False(),
+                else => @panic("Unsupported type for compile-time object creation"),
+            }
         }
-    }
+    };
     pub inline fn from(value: anytype, _: anytype, _: anytype) Object {
         const T = @TypeOf(value);
         if (T == Object) return value;
@@ -198,7 +192,7 @@ pub const Object = packed struct(u64) {
             else => return undefined,
         }
     }
-    pub fn toWithCheck(self: Object, comptime T: type, comptime check: bool) T {
+    pub fn toWithCheck(self: Object, comptime T: type, comptime _: bool) T {
         switch (T) {
             i64 => {
                 return self.toIntNoCheck();
@@ -209,26 +203,7 @@ pub const Object = packed struct(u64) {
             bool => {
                 return self.toBoolNoCheck();
             },
-            else => {
-                switch (@typeInfo(T)) {
-                    .pointer => |ptrInfo| {
-                        switch (@typeInfo(ptrInfo.child)) {
-                            .@"fn" => {},
-                            .@"struct" => {
-                                if (!check or (self.isMemoryAllocated() and (!@hasDecl(ptrInfo.child, "ClassIndex") or self.to(HeapObjectConstPtr).classIndex == ptrInfo.child.ClassIndex))) {
-                                    if (@hasField(ptrInfo.child, "header") or (@hasDecl(ptrInfo.child, "includesHeader") and ptrInfo.child.includesHeader)) {
-                                        return @as(T, @ptrFromInt(@as(usize, @bitCast(self))));
-                                    } else {
-                                        return @as(T, @ptrFromInt(@sizeOf(HeapHeader) + (@as(usize, @bitCast(self)))));
-                                    }
-                                }
-                            },
-                            else => {},
-                        }
-                    },
-                    else => {},
-                }
-            },
+            else => {},
         }
         @panic("Trying to convert Object to " ++ @typeName(T));
     }

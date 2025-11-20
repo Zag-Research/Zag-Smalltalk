@@ -203,16 +203,18 @@ pub const Object = packed struct(u64) {
     fn fromAddress(value: anytype) Object {
         return @bitCast(@intFromPtr(value));
     }
-    pub const StaticObject = InMemory.PointedObject;
-    pub fn initStaticObject(value: anytype, ptr: *InMemory.PointedObject) object.Object {
-        const T = @TypeOf(value);
-        switch (@typeInfo(T)) {
-            .int, .comptime_int => return fromAddress(ptr.set(.SmallInteger, value)),
-            .comptime_float => return fromAddress(ptr.set(.Float, value)),
-            .bool => return if (value) object.Object.True() else object.Object.False(),
-            else => @panic("Unsupported type for compile-time object creation"),
+    pub const StaticObject = struct {
+        obj: InMemory.PointedObject,
+        pub fn init(self: *StaticObject, comptime value: anytype) object.Object {
+            const ptr: *InMemory.PointedObject = @ptrCast(self);
+            switch (@typeInfo(@TypeOf(value))) {
+                .int, .comptime_int => return fromAddress(ptr.set(.SmallInteger, value)),
+                .comptime_float => return fromAddress(ptr.set(.Float, value)),
+                .bool => return if (value) object.Object.True() else object.Object.False(),
+                else => @panic("Unsupported type for compile-time object creation"),
+            }
         }
-    }
+    };
     pub inline fn from(value: anytype, sp: SP, context: *Context) Object {
         const T = @TypeOf(value);
         if (T == Object) return value;
