@@ -1,4 +1,3 @@
-//! This module implements Object encoding for Spur encoding
 const std = @import("std");
 const math = std.math;
 const expectEqual = std.testing.expectEqual;
@@ -7,6 +6,7 @@ const zag = @import("../zag.zig");
 const trace = zag.config.trace;
 const object = zag.object;
 const Process = zag.Process;
+const Context = zag.Context;
 const SP = Process.SP;
 const testing = std.testing;
 const ClassIndex = object.ClassIndex;
@@ -57,15 +57,24 @@ pub const Object = packed union {
     const TagAndClassType = u3;
 
     // Static constructor functions
-    pub inline fn False() Object {
+    pub fn False() Object {
+        if (@inComptime()) {
+            return Object{ .ref = undefined };
+        }
         return Object.fromAddress(&InMemory.False);
     }
 
-    pub inline fn True() Object {
+    pub fn True() Object {
+        if (@inComptime()) {
+            return Object{ .ref = undefined };
+        }
         return Object.fromAddress(&InMemory.True);
     }
 
-    pub inline fn Nil() Object {
+    pub fn Nil() Object {
+        if (false and @inComptime()) {
+            return Object{ .ref = undefined };
+        }
         return Object.fromAddress(&InMemory.Nil);
     }
 
@@ -114,14 +123,14 @@ pub const Object = packed union {
         return null;
     }
     pub inline fn nativeI_noCheck(self: Object) i64 {
-        return @as(i64, self.rawI()) >> 1 << 1;
+        return @as(i64, self.rawI()) >> 3;
     }
     pub inline fn nativeU(self: Object) ?u64 {
         if (self.isNat()) return self.nativeU_noCheck();
         return null;
     }
     pub inline fn nativeU_noCheck(self: Object) u64 {
-        return @as(u64, self.rawU()) >> 1 << 1;
+        return @as(u64, self.rawU()) >> 3;
     }
     pub inline fn nativeF(self: Object) ?f64 {
         if (self.isFloat()) return self.toDoubleNoCheck();
@@ -147,8 +156,9 @@ pub const Object = packed union {
         return null;
     }
     pub inline fn fromPointer(ptr: anytype) Object {
+        @setRuntimeSafety(false);
         const Foo = packed struct { ref: *u64 };
-        const foo = Foo{ .ref = @constCast(@ptrCast(ptr)) };
+        const foo = Foo{ .ref = @ptrCast(@constCast(ptr)) };
         return @bitCast(foo);
     }
 
@@ -193,7 +203,7 @@ pub const Object = packed union {
     }
     pub inline fn isSymbol(self: Object) bool {
         // Spur-encoded symbols are heap objects
-        return self.isHeap() and self.to(HeapObjectPtr).*.getClass() == .Symbol;
+        return self.isHeap() and self.ref.header.classIndex == .Symbol;
     }
     pub inline fn isNil(self: Object) bool {
         return self.rawU() == Object.Nil().rawU();
@@ -214,18 +224,16 @@ pub const Object = packed union {
     }
 
     // Add fromNativeF for compatibility
-    pub inline fn fromNativeF(t: f64, sp: SP, context: *zag.Context) object.Object {
+    pub inline fn fromNativeF(t: f64, sp: SP, context: *Context) object.Object {
         return from(t, sp, context);
     }
-
-
 
     // Hash helpers
     pub inline fn hash24(self: Object) u24 {
         return self.ref.header.hash;
     }
     pub inline fn hash32(self: Object) u32 {
-        return @truncate(self.ref.data.unsigned >> 8);
+        return @truncate(self.ref.data.unsigned);
     }
     pub inline fn hash48(self: Object) u48 {
         return @truncate(self.rawU());
@@ -258,41 +266,22 @@ pub const Object = packed union {
         return decode(@bitCast(self));
     }
 
-    fn memoryFloat(value: f64, sp: SP, context: *zag.Context) object.Object {
-        if (math.isNan(value)) return object.Object.fromAddress(&InMemory.nanMemObject);
-        if (math.inf(f64) == value) return object.Object.fromAddress(&InMemory.pInfMemObject);
-        if (math.inf(f64) == -value) return object.Object.fromAddress(&InMemory.nInfMemObject);
-        return InMemory.float(value, sp, context);
-    }
-
     pub fn fromAddress(value: anytype) Object {
         return @bitCast(@intFromPtr(value));
     }
-    pub const StaticObject = InMemory.PointedObject;
-    pub fn initStaticObject(value: anytype, ptr: *InMemory.PointedObject) object.Object {
+    // Conversion from Zig types
+    pub inline fn from(value: anytype, sp: SP, context: *Context) Object {
         const T = @TypeOf(value);
+        if (T == Object) return value;
         switch (@typeInfo(T)) {
             .int, .comptime_int => return Self.fromSmallInteger(value),
             .float => {
                 if (encode(value)) |encoded| {
                     return @bitCast(encoded);
-                } else |_| return ptr.set(.Float, value);
+                } else |_| {
+                    return InMemory.float(value, sp, context);
+                }
             },
-            .comptime_float => return initStaticObject(@as(f64, value), ptr),
-            .bool => return if (value) object.Object.True() else object.Object.False(),
-            else => @panic("Unsupported type for compile-time object creation"),
-        }
-        return fromAddress(ptr);
-    }
-    // Conversion from Zig types
-    pub inline fn from(value: anytype, sp: SP, context: *zag.Context) Object {
-        const T = @TypeOf(value);
-        if (T == Object) return value;
-        switch (@typeInfo(T)) {
-            .int, .comptime_int => return Self.fromSmallInteger(value),
-            .float => return @bitCast(encode(value) catch {
-                return memoryFloat(value, sp, context);
-            }),
             .comptime_float => return from(@as(f64, value), sp, context),
             .bool => return if (value) Object.True() else Object.False(),
             .null => return Object.Nil(),
@@ -308,7 +297,7 @@ pub const Object = packed union {
     }
 
     pub inline fn isMemoryDouble(self: object.Object) bool {
-        return self.isMemoryAllocated() and self.to(HeapObjectPtr).*.getClass() == .Float;
+        return self.isMemoryAllocated() and self.ref.header.classIndex == .Float;
     }
 
     inline fn toDoubleFromMemory(self: object.Object) f64 {
@@ -331,8 +320,6 @@ pub const Object = packed union {
             bool => {
                 if (!check or self.isBool()) return self.toBoolNoCheck();
             },
-
-            //u8  => {return @intCast(u8, self.hash & 0xff);},
             else => {
                 switch (@typeInfo(T)) {
                     .pointer => |ptrInfo| {
@@ -359,14 +346,17 @@ pub const Object = packed union {
 
     // Class detection (stub)
     pub inline fn which_class(self: Object) ClassIndex {
-        if (self.isInt()) {@branchHint(.likely);
+        if (self.isInt()) {
+            @branchHint(.likely);
             return .SmallInteger;
-        } else if (self.isFloat()) {@branchHint(.likely);
+        } else if (self.isFloat()) {
+            @branchHint(.likely);
             return .Float;
-        } else if (self.isCharacter()) {@branchHint(.unlikely);
+        } else if (self.isCharacter()) {
+            @branchHint(.unlikely);
             return .Character;
         }
-        return self.to(HeapObjectPtr).*.getClass();
+        return self.ref.header.classIndex;
     }
 
     pub inline fn isMemoryAllocated(self: Object) bool {
@@ -376,7 +366,7 @@ pub const Object = packed union {
     // Add symbolHash method
     pub inline fn symbolHash(self: Object) ?u24 {
         if (self.isSymbol()) {
-            return @as(u24, self.to(HeapObjectPtr).*.header.hash);
+            return @truncate(self.hash32());
         }
         return null;
     }
@@ -405,8 +395,21 @@ pub const Object = packed union {
         return null;
     }
     pub inline fn extraValue(_: Object) Object {
-        // For spur encoding, extract value from immediate objects
         @panic("Not implemented");
+    }
+
+    pub const StaticObject = void;
+    pub fn initStaticObject(comptime value: anytype, ptr: anytype) object.Object {
+        switch (@typeInfo(@TypeOf(value))) {
+            .int, .comptime_int => return fromUntaggedI(value << 3, {}, {}),
+            .comptime_float => {
+                if (encode(value)) |encoded| {
+                    return @bitCast(encoded);
+                } else |_| return fromAddress(ptr.set(.Float, value));
+            },
+            .bool => return if (value) object.Object.True() else object.Object.False(),
+            else => @panic("Unsupported type for compile-time object creation"),
+        }
     }
 
     const OF = object.ObjectFunctions;
