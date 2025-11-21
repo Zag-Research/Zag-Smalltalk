@@ -41,6 +41,7 @@ pub fn printConfig() void {
         \\Config:
         \\  compile_date   = {s}
         \\  git_version    = {s}
+        \\  cpu            = {s} ({})
         \\  objectEncoding = {}
         \\  max_classes    = {}
         \\  native_endian  = {}
@@ -51,6 +52,8 @@ pub fn printConfig() void {
     , .{
         compile_date,
         git_version,
+        builtin.target.cpu.model.name,
+        builtin.target.cpu.arch,
         objectEncoding,
         max_classes,
         native_endian,
