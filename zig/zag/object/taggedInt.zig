@@ -37,20 +37,8 @@ pub const Object = packed union {
     const TagMask = SmallIntegerTag;
 
     const Self = @This();
+    pub const maxInt = 0x3fff_ffff_ffff_ffff;
     pub const ZERO: Object = @bitCast(@as(u64, 0));
-    pub const LowTagType = TagAndClassType;
-    pub const lowTagSmallInteger = makeImmediate(.SmallInteger, 0).tagbits();
-    pub const HighTagType = void;
-    pub const highTagSmallInteger = {};
-    pub const PackedTagType = u3;
-    pub const packedTagSmallInteger = intTag;
-    pub const intTag = @intFromEnum(Group.smallInteger);
-    pub const immediatesTag = 1;
-    pub const maxInt = 0x3fffffffffffffff;
-    pub const tagged0: i64 = 1; // SmallInteger 0 in spur encoding
-    const TagAndClassType = u1;
-
-    // Static constructor functions
     pub inline fn False() Object {
         return Object.fromAddress(&InMemory.False);
     }
@@ -63,6 +51,16 @@ pub const Object = packed union {
         return Object.fromAddress(&InMemory.Nil);
     }
 
+    pub const LowTagType = TagAndClassType;
+    pub const lowTagSmallInteger = makeImmediate(.SmallInteger, 0).tagbits();
+    pub const HighTagType = void;
+    pub const highTagSmallInteger = {};
+    pub const PackedTagType = u3;
+    pub const packedTagSmallInteger = intTag;
+    pub const intTag = @intFromEnum(Group.smallInteger);
+    pub const immediatesTag = 1;
+    pub const tagged0: i64 = 1; // SmallInteger 0 in spur encoding
+    const TagAndClassType = u1;
     pub inline fn tagbits(self: Self) TagAndClassType {
         return @truncate(self.rawU());
     }
@@ -90,7 +88,7 @@ pub const Object = packed union {
     }
 
     pub inline fn fromUntaggedI(i: i64, _: anytype, _: anytype) Object {
-        return @bitCast(@as(u64, @bitCast(i)) | SmallIntegerTag);
+        return @bitCast(@as(u64, @bitCast(i)) + SmallIntegerTag);
     }
 
     // Spur SmallInteger
@@ -98,7 +96,7 @@ pub const Object = packed union {
         return (self.rawU() & SmallIntegerTag) != 0;
     }
     pub inline fn isNat(self: Object) bool {
-        return self.isInt() and self.nativeI_noCheck() >= 0;
+        return self.isInt() and self.rawI() >= 0;
     }
     pub inline fn symbol40(self: object.Object) u40 {
         return @truncate(self.ref.data.unsigned);
@@ -114,11 +112,11 @@ pub const Object = packed union {
         if (self.isNat()) return self.nativeU_noCheck();
         return null;
     }
-    pub inline fn nativeU_noCheck(self: Object) u64 {
+    inline fn nativeU_noCheck(self: Object) u64 {
         return @as(u64, self.rawU()) >> 1;
     }
-    pub inline fn fromSmallInteger(i: i64) Object {
-        return @bitCast((@as(u64, @bitCast(i)) << 1) | SmallIntegerTag);
+    pub inline fn fromNativeI(i: i63, _: anytype, _: anytype) Object {
+        return @bitCast((@as(u64, @bitCast(@as(i64, i))) << 1) + SmallIntegerTag);
     }
 
     pub inline fn isHeap(self: Object) bool {
@@ -131,12 +129,6 @@ pub const Object = packed union {
         if (self.isHeap()) return @ptrFromInt(self.rawU());
         return null;
     }
-    pub inline fn fromPointer(ptr: anytype) Object {
-        const Foo = packed struct { ref: *u64 };
-        const foo = Foo{ .ref = @constCast(@ptrCast(ptr)) };
-        return @bitCast(foo);
-    }
-
     pub inline fn isImmediate(self: Object) bool {
         return !self.isHeap();
     }
@@ -197,7 +189,7 @@ pub const Object = packed union {
         return self.toDoubleFromMemory();
     }
     pub inline fn fromNativeF(t: f64, sp: SP, context: *Context) object.Object {
-        return from(t, sp, context);
+        return memoryFloat(t, sp, context);
     }
 
     // Hash helpers
@@ -249,12 +241,7 @@ pub const Object = packed union {
         pub fn init(self: *StaticObject, comptime value: anytype) object.Object {
             const ptr: *InMemory.PointedObject = @ptrCast(self);
             switch (@typeInfo(@TypeOf(value))) {
-                .int, .comptime_int => return .{
-                    .immediate = .{
-                        .tag = .smallInteger,
-                        .hash = value,
-                    },
-                },
+                .int, .comptime_int => return fromNativeI(value, null, null),
                 .comptime_float => return fromAddress(ptr.set(.Float, value)),
                 .bool => return if (value) object.Object.True() else object.Object.False(),
                 else => @panic("Unsupported type for compile-time object creation"),
@@ -267,14 +254,13 @@ pub const Object = packed union {
         const T = @TypeOf(value);
         if (T == Object) return value;
         switch (@typeInfo(T)) {
-            .int, .comptime_int => return Self.fromSmallInteger(value),
-            .float => return memoryFloat(value, sp, context),
-            .comptime_float => return from(@as(f64, value), sp, context),
+            .int, .comptime_int => return fromNativeI(value, sp, context),
+            .float, .comptime_float => return fromNativeF(value, sp, context),
             .bool => return if (value) Object.True() else Object.False(),
             .null => return Object.Nil(),
             .pointer => |ptr_info| {
                 switch (ptr_info.size) {
-                    .one, .many => return Self.fromPointer(value),
+                    .one, .many => return fromAddress(value),
                     else => {},
                 }
             },
@@ -373,10 +359,11 @@ pub const Object = packed union {
 
     pub inline fn extraValue(self: Object) Object {
         // For spur encoding, extract value from immediate objects
-        if (self.isImmediate()) {
-            return fromSmallInteger(self.immediate.hash);
-        }
-        return self;
+        // if (self.isImmediate()) {
+        //     return fromSmallInteger(self.immediate.hash);
+        // }
+        // return self;
+        _ = .{ self, @panic("Not implemented") };
     }
 
     const OF = object.ObjectFunctions;

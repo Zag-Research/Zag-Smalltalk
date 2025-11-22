@@ -10,14 +10,14 @@ const ClassIndex = object.ClassIndex;
 pub const Object = packed struct(u64) {
     int: u64,
     const Self = @This();
-    pub const ZERO = of(0);
-    pub fn False() Object {
+    pub const ZERO: Object = @bitCast(@as(u64, 0));
+    pub inline fn False() Object {
         return @bitCast(@as(u64, 0));
     }
-    pub fn True() Object {
+    pub inline fn True() Object {
         return @bitCast(@as(u64, 1));
     }
-    pub fn Nil() Object {
+    pub inline fn Nil() Object {
         return @bitCast(@as(u64, 2));
     }
     pub const maxInt = 0x7fff_ffff_ffff_ffff;
@@ -88,9 +88,6 @@ pub const Object = packed struct(u64) {
     pub inline fn invalidObject(_: object.Object) ?u64 {
         // there are no invalid objects in this encoding
         return null;
-    }
-    inline fn of(comptime v: u64) object.Object {
-        return @bitCast(v);
     }
     pub inline fn thunkImmediate(o: Object) ?Object {
         _ = .{ o, unreachable };

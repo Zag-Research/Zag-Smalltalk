@@ -22,7 +22,7 @@ pub const True = Object.True;
 pub const Nil = Object.Nil;
 pub fn fromLE(comptime T: type, v: T) Object {
     const val = @as(*const [@sizeOf(T)]u8, @ptrCast(&v));
-    return Object.of(mem.readIntLittle(T, val));
+    return @bitCast(mem.readIntLittle(T, val));
 }
 pub const compareObject = Object.compare;
 pub const ClassIndex = enum(u16) {

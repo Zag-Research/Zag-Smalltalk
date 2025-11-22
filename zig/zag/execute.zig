@@ -386,12 +386,12 @@ pub const Code = union(enum) {
     }
 };
 pub const StackStructure = packed struct {
-    tag: object.Object.LowTagType = object.Object.lowTagSmallInteger,
+    tag: Object.LowTagType = Object.lowTagSmallInteger,
     _fillerLow: std.meta.Int(.unsigned, 16 - @bitSizeOf(Object.LowTagType)) = 0,
     locals: u16 = 0,
     selfOffset: u16 = 0,
     _fillerHigh: std.meta.Int(.unsigned, 64 - 48 - @bitSizeOf(Object.HighTagType)) = 0,
-    highTag: object.Object.HighTagType = object.Object.highTagSmallInteger,
+    highTag: Object.HighTagType = Object.highTagSmallInteger,
 };
 pub const endMethod = CompiledMethod.init(Sym.value, Code.end);
 pub const CompiledMethod = struct {

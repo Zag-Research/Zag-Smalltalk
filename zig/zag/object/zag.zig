@@ -1,25 +1,23 @@
 //! This module implements Object encoding for Zag encoding
 const std = @import("std");
-const builtin = @import("builtin");
-const mem = std.mem;
+const expectEqual = std.testing.expectEqual;
+const expect = std.testing.expect;
+const assert = std.debug.assert;
 const math = std.math;
 const zag = @import("../zag.zig");
-const config = zag.config;
-const trace = config.trace;
-const assert = std.debug.assert;
-const debugError = false;
+const trace = zag.config.trace;
 const object = zag.object;
 const ClassIndex = object.ClassIndex;
-const heap = zag.heap;
-const HeapHeader = heap.HeapHeader;
-const HeapObjectPtr = heap.HeapObjectPtr;
-const HeapObjectConstPtr = heap.HeapObjectConstPtr;
 const Process = zag.Process;
 const SP = Process.SP;
 const Context = zag.Context;
+const HeapHeader = zag.heap.HeapHeader;
+const HeapObjectPtr = zag.heap.HeapObjectPtr;
+const HeapObjectConstPtr = zag.heap.HeapObjectConstPtr;
 const InMemory = zag.InMemory;
 const encode = @import("floatZag.zig").encode;
 const decode = @import("floatZag.zig").decode;
+
 pub const Object = packed struct(u64) {
     tag: Group,
     class: ClassIndex.Compact,
@@ -39,7 +37,7 @@ pub const Object = packed struct(u64) {
     };
     const Self = @This();
     pub const maxInt = 0x7f_ffff_ffff_ffff;
-    pub const ZERO = of(0);
+    pub const ZERO: Object = @bitCast(@as(u64, 0));
     pub inline fn False() Object {
         return oImm(.False, 0);
     }
@@ -59,7 +57,7 @@ pub const Object = packed struct(u64) {
     pub const intTag = oImm(.SmallInteger, 0).tagbits();
     pub const immediatesTag = @intFromEnum(Group.immediates);
     const TagAndClassType = u8;
-    const tagAndClassBits = enumBits(Group) + enumBits(ClassIndex.Compact);
+    const tagAndClassBits = @bitSizeOf(Group) + @bitSizeOf(ClassIndex.Compact);
     comptime {
         assert(tagAndClassBits == @bitSizeOf(TagAndClassType));
     }
@@ -73,34 +71,40 @@ pub const Object = packed struct(u64) {
     pub inline fn tagbits(self: Self) TagAndClassType {
         return @as(TaggedClass, @bitCast(self)).tag;
     }
-    fn enumBits(T: type) usize {
-        return @typeInfo(@typeInfo(T).@"enum".tag_type).int.bits;
-    }
+
     pub inline fn untaggedI(self: object.Object) ?i64 {
         if (self.isInt()) return untaggedI_noCheck(self);
         return null;
     }
+
     pub inline fn untaggedI_noCheck(self: object.Object) i64 {
         return @bitCast(self.rawU() >> tagAndClassBits << tagAndClassBits);
         //return @bitCast(self.rawU() & ~tagAndClass);
     }
+
     pub inline fn taggedI(self: object.Object) ?i64 {
         if (self.isInt()) return taggedI_noCheck(self);
         return null;
     }
+
     pub inline fn taggedI_noCheck(self: object.Object) i64 {
         return @bitCast(self);
     }
+
     pub inline fn fromTaggedI(i: i64, _: anytype, _: anytype) object.Object {
         return @bitCast(i);
     }
+
     pub inline fn fromUntaggedI(i: i64, _: anytype, _: anytype) object.Object {
         return @bitCast(i + oImm(.SmallInteger, 0).tagbits());
     }
-    // pub inline fn cast(v: anytype) object.Object {
-    //     // stored using little-endian order
-    //     return @bitCast(v);
-    // }
+
+    pub inline fn isInt(self: object.Object) bool {
+        return self.isImmediateClass(.SmallInteger);
+    }
+    pub inline fn isNat(self: object.Object) bool {
+        return self.isInt() and self.rawI() >= 0;
+    }
     pub inline fn symbol40(self: object.Object) u40 {
         return @truncate(self.rawU());
     }
@@ -131,7 +135,9 @@ pub const Object = packed struct(u64) {
         return self.toDoubleFromMemory();
     }
     pub inline fn fromNativeF(t: f64, sp: SP, context: *Context) object.Object {
-        return from(t, sp, context);
+        return @bitCast(encode(t) catch {
+            return InMemory.float(t, sp, context);
+        });
     }
     pub inline fn symbolHash(self: object.Object) ?u24 {
         if (self.isImmediateClass(.Symbol)) return @truncate(self.hash);
@@ -158,9 +164,6 @@ pub const Object = packed struct(u64) {
     pub inline fn invalidObject(_: object.Object) ?u64 {
         // there are no invalid objects in this encoding
         return null;
-    }
-    inline fn of(comptime v: u64) object.Object {
-        return @bitCast(v);
     }
     pub inline fn makeThunk(class: ClassIndex.Compact, obj: anytype, tag: u8) Object {
         return oImm(class, @truncate((@intFromPtr(obj) << 8) | tag));
@@ -208,15 +211,6 @@ pub const Object = packed struct(u64) {
     inline fn oImm(c: ClassIndex.Compact, h: u56) Self {
         return Self{ .tag = .immediates, .class = c, .hash = h };
     }
-    inline fn g(grp: Group) u64 {
-        return grp.base();
-    }
-    pub inline fn isInt(self: object.Object) bool {
-        return self.isImmediateClass(.SmallInteger);
-    }
-    pub inline fn isNat(self: object.Object) bool {
-        return self.isInt() and self.rawI() >= 0;
-    }
     pub inline fn hasPointer(self: object.Object) bool {
         const bits = math.rotr(TagAndClassType, self.tagbits(), 3);
         return bits <= math.rotr(TagAndClassType, oImm(.ThunkHeap, 0).tagbits(), 3) and bits != 0;
@@ -261,13 +255,6 @@ pub const Object = packed struct(u64) {
         return @truncate(self.hash);
     }
 
-    fn memoryFloat(value: f64, sp: SP, context: *Context) object.Object {
-        if (math.isNan(value)) return object.Object.fromAddress(&InMemory.nanMemObject);
-        if (math.inf(f64) == value) return object.Object.fromAddress(&InMemory.pInfMemObject);
-        if (math.inf(f64) == -value) return object.Object.fromAddress(&InMemory.nInfMemObject);
-        return InMemory.float(value, sp, context);
-    }
-
     pub fn fromAddress(value: anytype) Object {
         return @bitCast(@intFromPtr(value));
     }
@@ -292,10 +279,7 @@ pub const Object = packed struct(u64) {
         if (T == object.Object) return value;
         switch (@typeInfo(T)) {
             .int, .comptime_int => return oImm(.SmallInteger, @as(u56, @bitCast(@as(i56, value)))),
-            .float => return @bitCast(encode(value) catch {
-                return memoryFloat(value, sp, context);
-            }),
-            .comptime_float => return from(@as(f64, value), sp, context),
+            .float, .comptime_float => return fromNativeF(value, sp, context),
             .bool => return if (value) object.Object.True() else object.Object.False(),
             .null => return object.Object.Nil(),
             .pointer => |ptr_info| {

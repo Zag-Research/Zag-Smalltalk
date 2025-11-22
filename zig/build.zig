@@ -65,6 +65,7 @@ pub fn build(b: *std.Build) void {
                 .{ .name = "zag", .module = zag },
             },
         }),
+        .use_llvm = true,
     });
     b.installArtifact(fib);
 
@@ -78,6 +79,7 @@ pub fn build(b: *std.Build) void {
                 .{ .name = "zag", .module = zag },
             },
         }),
+        .use_llvm = true,
     });
     _ = branchPrediction;
     //b.step("branchPrediction", "Compile branchPrediction").dependOn(&b.installArtifact(branchPrediction).step);
@@ -93,6 +95,7 @@ pub fn build(b: *std.Build) void {
                 .{ .name = "zag", .module = zag },
             },
         }),
+        .use_llvm = true,
     });
     const check = b.step("check", "Check if foo compiles");
     check.dependOn(&fib_check.step);
@@ -172,7 +175,6 @@ pub fn build(b: *std.Build) void {
 
     const bench_step = b.step("bench", "Run bench for all encoding types");
     for (bench_encodings) |enc| {
-        std.debug.print("Benchmarking encoding: {}\n", .{enc});
         const enc_options = b.addOptions();
         enc_options.addOption(bool, "includeLLVM", includeLLVM);
         enc_options.addOption([]const u8, "git_version", git_version);
@@ -203,6 +205,7 @@ pub fn build(b: *std.Build) void {
         const enc_benchs = b.addExecutable(.{
             .name = "bench",
             .root_module = bench_module,
+            .use_llvm = true,
         });
         // std.debug.print("Benchmarking options: \n{s}\n", .{enc_options.contents.items});
         enc_benchs.root_module.addOptions("options", enc_options);

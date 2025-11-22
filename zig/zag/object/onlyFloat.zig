@@ -12,17 +12,16 @@ pub const Object = packed struct(u64) {
     float: u64,
 
     const Self = @This();
-    pub const ZERO = of(0.0);
-
-    pub fn False() Object {
+    pub const ZERO: Object = @bitCast(@as(f64, 0));
+    pub inline fn False() Object {
         return @bitCast(@as(u64, 0));
     }
 
-    pub fn True() Object {
+    pub inline fn True() Object {
         return @bitCast(@as(u64, 1));
     }
 
-    pub fn Nil() Object {
+    pub inline fn Nil() Object {
         return @bitCast(@as(u64, 2));
     }
 
@@ -37,80 +36,77 @@ pub const Object = packed struct(u64) {
     pub const intTag = @import("zag.zig").Object.intTag;
     pub const immediatesTag = 0;
 
-    pub inline fn untaggedI(_: object.Object) ?i64 {
+    pub inline fn untaggedI(_: Object) ?i64 {
         @panic("not implemented");
     }
 
-    pub inline fn untaggedI_noCheck(_: object.Object) i64 {
+    inline fn untaggedI_noCheck(_: Object) i64 {
         @panic("not implemented");
     }
 
     pub const taggedI = untaggedI;
-    pub const taggedI_noCheck = untaggedI_noCheck;
+    const taggedI_noCheck = untaggedI_noCheck;
 
-    pub inline fn fromTaggedI(_: i64, _: anytype, _: anytype) object.Object {
+    pub inline fn fromTaggedI(_: i64, _: anytype, _: anytype) Object {
         @panic("not implemented");
     }
 
     pub const fromUntaggedI = fromTaggedI;
 
-    pub inline fn symbol40(self: object.Object) u40 {
+    pub inline fn symbol40(self: Object) u40 {
         return @truncate(self.rawU());
     }
 
-    pub inline fn nativeI(_: object.Object) ?i64 {
+    pub inline fn nativeI(_: Object) ?i64 {
         @panic("not implemented");
     }
 
-    pub inline fn nativeU(_: object.Object) ?u64 {
+    pub inline fn nativeU(_: Object) ?u64 {
         @panic("not implemented");
     }
 
-    pub inline fn nativeF(self: object.Object) ?f64 {
+    pub inline fn nativeF(self: Object) ?f64 {
         return @bitCast(self);
     }
 
-    pub inline fn isFloat(_: object.Object) bool {
+    pub inline fn isFloat(_: Object) bool {
         return true;
     }
 
-    pub inline fn nativeF_noCheck(self: object.Object) f64 {
+    pub inline fn nativeF_noCheck(self: Object) f64 {
         return @bitCast(self);
     }
 
-    pub inline fn fromNativeF(f: f64, _: anytype, _: anytype) object.Object {
+    pub inline fn fromNativeF(f: f64, _: anytype, _: anytype) Object {
         return @bitCast(f);
     }
 
-    pub inline fn symbolHash(self: object.Object) ?u24 {
+    pub inline fn symbolHash(self: Object) ?u24 {
         return @truncate(self.hash32());
     }
 
-    pub inline fn extraValue(self: object.Object) object.Object {
+    pub inline fn extraValue(self: Object) Object {
         return @bitCast(self.rawU() >> 8);
     }
 
-    pub inline fn extraI(self: object.Object) i8 {
+    pub inline fn extraI(self: Object) i8 {
         _ = .{ self, unreachable };
     }
 
     pub const testU = rawU;
     pub const testI = rawI;
 
-    pub inline fn rawU(self: object.Object) u64 {
+    pub inline fn rawU(self: Object) u64 {
         return @bitCast(self);
     }
 
-    inline fn rawI(self: object.Object) i64 {
+    inline fn rawI(self: Object) i64 {
         return @bitCast(self);
     }
 
-    pub inline fn invalidObject(_: object.Object) ?u64 {
+    pub inline fn invalidObject(_: Object) ?u64 {
         // there are no invalid objects in this encoding
         return null;
-    }
-    inline fn of(comptime v: f64) object.Object {
-        return @bitCast(v);
     }
 
     pub inline fn thunkImmediate(o: Object) ?Object {
@@ -129,7 +125,7 @@ pub const Object = packed struct(u64) {
         return false;
     }
 
-    pub inline fn isMemoryDouble(_: object.Object) bool {
+    pub inline fn isMemoryDouble(_: Object) bool {
         return false;
     }
 
@@ -169,7 +165,7 @@ pub const Object = packed struct(u64) {
         @panic("not implemented");
     }
 
-    pub inline fn withPrimitive(self: object.Object, prim: u64) object.Object {
+    pub inline fn withPrimitive(self: Object, prim: u64) Object {
         return @bitCast(self.rawU() | prim << 40);
     }
 
@@ -181,7 +177,7 @@ pub const Object = packed struct(u64) {
         return self.rawU() & 0xffff_ffff_fff8;
     }
 
-    inline fn toDoubleFromMemory(_: object.Object) f64 {
+    inline fn toDoubleFromMemory(_: Object) f64 {
         @panic("Not implemented");
     }
 
@@ -205,7 +201,7 @@ pub const Object = packed struct(u64) {
         return @truncate(self.rawU());
     }
 
-    pub inline fn isSymbol(_: object.Object) bool {
+    pub inline fn isSymbol(_: Object) bool {
         return true;
     }
 
@@ -213,10 +209,10 @@ pub const Object = packed struct(u64) {
         return @bitCast(@intFromPtr(value));
     }
     pub const StaticObject = struct {
-        pub fn init(_: *StaticObject, comptime value: anytype) object.Object {
+        pub fn init(_: *StaticObject, comptime value: anytype) Object {
             switch (@typeInfo(@TypeOf(value))) {
-                .float, .comptime_float => return @bitCast(@as(f64, value)),
-                .bool => return if (value) object.Object.True() else object.Object.False(),
+                .float, .comptime_float => return fromNativeF(value, null, null),
+                .bool => return if (value) Object.True() else Object.False(),
                 else => @panic("Unsupported type for compile-time object creation"),
             }
         }
@@ -225,7 +221,7 @@ pub const Object = packed struct(u64) {
         const T = @TypeOf(value);
         if (T == Object) return value;
         switch (@typeInfo(T)) {
-            .float, .comptime_float => return @bitCast(@as(f64, value)),
+            .float, .comptime_float => return fromNativeF(value, null, null),
             .bool => return if (value) Object.True() else Object.False(),
             .null => return Object.Nil(),
             else => return undefined,

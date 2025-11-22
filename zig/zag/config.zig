@@ -41,22 +41,19 @@ pub fn printConfig() void {
         \\Config:
         \\  compile_date   = {s}
         \\  git_version    = {s}
-        \\  cpu            = {s} ({})
+        \\  cpu            = {s} ({}){s}
         \\  objectEncoding = {}
         \\  max_classes    = {}
-        \\  native_endian  = {}
-        \\  stack_size     = {d}w
-        \\  nursery_size   = {d}w
-        \\  process_total_size = {d}w{s}{s}{s}{s}
+        \\  stack/nursery  = {d}w/{d}w ({d}w){s}{s}{s}{s}
         \\
     , .{
         compile_date,
         git_version,
         builtin.target.cpu.model.name,
         builtin.target.cpu.arch,
+        if (native_endian == .big) " big endian" else "",
         objectEncoding,
         max_classes,
-        native_endian,
         Process.process_stack_size,
         Process.process_nursery_size,
         process_total_size / 8,

@@ -20,22 +20,22 @@ const Context = zag.Context;
 pub const Object = packed struct(u64) {
     ref: *const InMemory.PointedObject,
     const Self = @This();
-    pub const ZERO = of(0);
-    pub fn False() Object {
+    pub const ZERO: Object = @bitCast(@as(u64, 0));
+    pub inline fn False() Object {
         if (@inComptime()) {
             return Object{ .ref = undefined };
         }
         return Object.fromAddress(&InMemory.False);
     }
 
-    pub fn True() Object {
+    pub inline fn True() Object {
         if (@inComptime()) {
             return Object{ .ref = undefined };
         }
         return Object.fromAddress(&InMemory.True);
     }
 
-    pub fn Nil() Object {
+    pub inline fn Nil() Object {
         if (false and @inComptime()) {
             return Object{ .ref = undefined };
         }
@@ -119,9 +119,6 @@ pub const Object = packed struct(u64) {
         if (value == 0) return value;
         if (value & 7 != 0) return value;
         return null;
-    }
-    inline fn of(comptime v: u64) object.Object {
-        return @bitCast(v);
     }
     pub inline fn thunkImmediate(o: Object) ?Object {
         _ = .{ o, unreachable };
@@ -226,10 +223,7 @@ pub const Object = packed struct(u64) {
             .null => return Object.Nil(),
             .pointer => |ptr_info| {
                 switch (ptr_info.size) {
-                    .one, .many => {
-                        //@compileLog("from: ",value);
-                        return fromAddress(value);
-                    },
+                    .one, .many => return fromAddress(value),
                     else => {},
                 }
             },

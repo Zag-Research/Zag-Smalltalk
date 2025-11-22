@@ -19,9 +19,6 @@ pub const TaggedPtrObject = packed struct(u64) {
     pub inline fn untaggedI(self: Object) i64 {
         _ = .{ self, unreachable };
     }
-    inline fn of(comptime v: u64) Object {
-        return @bitCast(v);
-    }
     pub inline fn thunkImmediate(o: Object) ?Object {
         _ = .{ o, unreachable };
     }
@@ -40,7 +37,7 @@ pub const TaggedPtrObject = packed struct(u64) {
     pub inline fn oImm(c: ClassIndex.Compact, h: u56) Self {
         return Self{ .tag = .immediates, .class = c, .hash = h };
     }
-    pub const ZERO = of(0);
+    pub const ZERO: Object = @bitCast(@as(u64, 0));
     pub const False = oImm(.False, 0);
     pub const True = oImm(.True, 0);
     pub const Nil = Self{ .tag = .heap, .class = .none, .hash = 0 };
