@@ -45,7 +45,7 @@ pub const Object = packed struct(u64) {
     pub inline fn symbol40(_: object.Object) u40 {
         return 0;
     }
-    pub // inline
+    pub inline //
     fn nativeI(self: object.Object) ?i64 {
         return @bitCast(self);
     }
@@ -78,7 +78,7 @@ pub const Object = packed struct(u64) {
     }
     pub const testU = rawU;
     pub const testI = rawI;
-    pub // inline
+    pub inline //
     fn rawU(self: object.Object) u64 {
         return @bitCast(self);
     }
@@ -104,7 +104,7 @@ pub const Object = packed struct(u64) {
     pub inline fn isMemoryDouble(_: object.Object) bool {
         return false;
     }
-    pub // inline
+    pub inline //
     fn isInt(_: Object) bool {
         return true;
     }
@@ -166,7 +166,7 @@ pub const Object = packed struct(u64) {
     pub inline fn isSymbol(_: object.Object) bool {
         return true;
     }
-    pub // inline
+    pub inline //
     fn fromAddress(value: anytype) Object {
         return @bitCast(@intFromPtr(value));
     }
@@ -204,7 +204,7 @@ pub const Object = packed struct(u64) {
         }
         @panic("Trying to convert Object to " ++ @typeName(T));
     }
-    pub // inline
+    pub inline //
     fn which_class(_: Object) ClassIndex {
         return .SmallInteger;
     }

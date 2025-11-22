@@ -408,7 +408,7 @@ pub fn promote(obj: Object) !Object {
     //       @memcpy(@ptrCast([*]u8,result),@ptrCast([*]const u8,ptr),totalSize*8);
     //       return result.asObject();
 }
-// inline fn boundaryCalc(space: []HeapObject) usize {
+// fn boundaryCalc(space: []HeapObject) usize {
 //     const po2: usize = smallerPowerOf2(space.len);
 //     const mask = @as(usize, @bitCast(-@as(isize, @intCast(po2 * @sizeOf(HeapObject)))));
 //     const alignedLen = ((@intFromPtr(space.ptr + space.len) & mask) - @intFromPtr(space.ptr)) / @sizeOf(HeapObject);

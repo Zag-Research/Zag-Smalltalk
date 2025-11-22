@@ -12,7 +12,7 @@ fn initSymbol(sym: *PointedObject) void {
 inline fn symbol_of(index: u24, _: u4) Object {
     return Object{ .ref = @ptrCast(&staticSymbols[index - 1]) };
 }
-// inline
+inline //
 fn symbol0(index: u24) Object {
     return symbol_of(index, 0);
 }

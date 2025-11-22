@@ -32,7 +32,7 @@ pub const addMethod = DispatchHandler.addMethod;
 const DispatchHandler = struct {
     const loadFactor = 70; // hashing load factor
     var dispatches = [_]*Dispatch{&Dispatch.empty} ** config.max_classes;
-    // inline
+    inline //
     fn lookupMethodForClass(ci: ClassIndex, signature: Signature) *const CompiledMethod {
         if (dispatches[@intFromEnum(ci)].lookupMethod(signature)) |method|
             return method;
@@ -131,15 +131,15 @@ const Dispatch = struct {
         return @divExact(@sizeOf(Self) +
             @sizeOf(DispatchElement) * (smallestPrimeAtLeast(@max(5, nMethods)) + overAllocate - 1), @sizeOf(Object)); // extra -1 is for `start` field
     }
-    // inline
+    inline //
     fn methods(self: *const Self) [*]DispatchElement {
         return @as([*]DispatchElement, @ptrCast(@alignCast(@constCast(&self.matches))));
     }
-    // inline
+    inline //
     fn methodSlice(self: *Self) []DispatchElement {
         return self.methods()[0..self.nMethods];
     }
-    // inline
+    inline //
     fn methodsAllocatedSlice(self: *Self) []DispatchElement {
         return self.methods()[0 .. self.nMethods + overAllocate];
     }
@@ -150,17 +150,17 @@ const Dispatch = struct {
         }
         return newDispatch.add(method);
     }
-    // inline
+    inline //
     fn lookupMethod(self: *const Self, signature: Signature) ?*const CompiledMethod {
         const dm = self.dispatchMatch(signature);
         return dm.match(signature);
     }
-    // inline
+    inline //
     fn dispatchMatch(self: *const Self, signature: Signature) *DispatchMatch {
         const index = getIndex(signature, self.nMethods);
         return @ptrCast(self.methods() + index);
     }
-    // inline
+    inline //
     fn getIndex(signature: Signature, size: u64) u64 {
         return signature.hash() * size >> 32;
     }
@@ -325,7 +325,7 @@ pub const threadedFunctions = struct {
             @panic("unreachable");
         }
     };
-    // inline
+    inline //
     fn getMethod(pc: PC, selector: Signature, receiver: Object) *const CompiledMethod {
         const methodAddress = pc.next();
         var method = methodAddress.method();
@@ -410,7 +410,7 @@ const DispatchMethod = struct {
     }
     const emptyMethod = dummyCompiledMethod(Signature.empty);
     const empty = new(&emptyMethod);
-    // inline
+    inline //
     fn cas(self: *Self, replacement: *const CompiledMethod) ?Self {
         const current = self.asInt();
         const replace = new(replacement).asInt();
@@ -418,11 +418,11 @@ const DispatchMethod = struct {
             return @bitCast(notClean);
         return null;
     }
-    // inline
+    inline //
     fn storeMethod(self: *Self, replacement: *const CompiledMethod) void {
         self.method = replacement;
     }
-    // inline
+    inline //
     fn match(self: *DispatchMethod, signature: Signature) ?*const CompiledMethod {
         const method = self.method;
         if (method.signature.equals(signature))
@@ -430,21 +430,21 @@ const DispatchMethod = struct {
         trace("match {*} {f} {f}", .{ self, method.signature, signature });
         return null;
     }
-    // inline
+    inline //
     fn activeMethod(self: *const Self) ?*const CompiledMethod {
         if (self.isEmpty())
             return null;
         return self.method;
     }
-    // inline
+    inline //
     fn isEmpty(self: *const Self) bool {
         return self.method == &emptyMethod;
     }
-    // inline
+    inline //
     fn asInt(self: Self) IntSelf {
         return @bitCast(self);
     }
-    // inline
+    inline //
     fn asIntPtr(self: *Self) *IntSelf {
         return @ptrCast(@alignCast(self));
     }
@@ -453,7 +453,7 @@ const DispatchMatch = struct {
     elements: [matchSize]DispatchElement,
     const matchSize = 3;
     const empty = DispatchMatch{ .elements = [_]DispatchElement{DispatchElement.empty} ** matchSize };
-    // inline
+    inline //
     fn match(self: *DispatchMatch, signature: Signature) ?*const CompiledMethod {
         inline for (&self.elements) |*element| {
             if (element.match(signature)) |method| {
@@ -462,7 +462,7 @@ const DispatchMatch = struct {
         }
         return null;
     }
-    // inline
+    inline //
     fn matchOrEmpty(self: *DispatchMatch, signature: Signature) ?*DispatchMethod {
         inline for (&self.elements) |*element| {
             if (element.isEmpty())

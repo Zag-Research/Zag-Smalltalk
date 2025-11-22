@@ -135,7 +135,7 @@ pub const PC = packed struct {
         exitCode[0] = Code.endCode;
         return init(@ptrCast(&exitCode[0]));
     }
-    pub // inline
+    pub inline //
     fn packedObject(self: PC) PackedObject {
         if (logging) {
             @setRuntimeSafety(false);
@@ -146,7 +146,7 @@ pub const PC = packed struct {
     pub fn offset(self: PC, cm: *const CompiledMethod) usize {
         return (@intFromPtr(self.code) - @intFromPtr(&cm.code[0])) / @sizeOf(Code);
     }
-    pub // inline
+    pub inline //
     fn method(self: PC) *const CompiledMethod {
         if (logging) {
             @setRuntimeSafety(false);
@@ -154,7 +154,7 @@ pub const PC = packed struct {
         }
         return self.code.method;
     }
-    pub // inline
+    pub inline //
     fn codeAddress(self: PC) *const Code {
         if (logging) {
             @setRuntimeSafety(false);
@@ -162,18 +162,18 @@ pub const PC = packed struct {
         }
         return self.code.codePtr;
     }
-    pub // inline
+    pub inline //
     fn targetPC(self: PC) PC {
         return .{ .code = self.codeAddress() };
     }
-    pub // inline
+    pub inline //
     fn asThreadedFn(self: PC) *const fn (PC, SP, *Process, *Context, Extra) Result {
         if (logging) {
             std.log.err("PC_asThreadedFn: {x:0>12}: {f}\n", .{ @intFromPtr(self.code), self });
         }
         return self.code.prim();
     }
-    pub // inline
+    pub inline //
     fn prim(self: PC) *const fn (PC, SP, *Process, *Context, Extra) Result {
         return primOf(self.code);
     }
@@ -204,7 +204,7 @@ pub const PC = packed struct {
         }
         return self.code.variable;
     }
-    pub // inline
+    pub inline //
     fn signature(self: PC) Signature {
         if (logging) {
             @setRuntimeSafety(false);
@@ -224,7 +224,7 @@ pub const PC = packed struct {
     pub inline fn structure(self: PC) StackStructure {
         return self.code.structure;
     }
-    pub // inline
+    pub inline //
     fn uint(self: PC) u64 {
         if (logging) {
             @setRuntimeSafety(false);
@@ -232,7 +232,7 @@ pub const PC = packed struct {
         }
         return self.code.object.to(u64);
     }
-    pub // inline
+    pub inline //
     fn int(self: PC) i64 {
         if (logging) {
             @setRuntimeSafety(false);
@@ -301,7 +301,7 @@ pub const Code = union(enum) {
     pub inline fn patchMethod(self: *Code, method: *const CompiledMethod) void {
         self.* = Code{ .method = method };
     }
-    pub // inline
+    pub inline //
     fn asVariable(self: Code) Variable {
         //        @setRuntimeSafety(false);
         return self.variable;
@@ -309,7 +309,7 @@ pub const Code = union(enum) {
     pub inline fn variableOf(v: Variable) Code {
         return Code{ .variable = v };
     }
-    pub // inline
+    pub inline //
     fn asObject(self: Code) Object {
         //        @setRuntimeSafety(false);
         return self.object;
@@ -333,7 +333,7 @@ pub const Code = union(enum) {
         const addr = @as([*]Code, @ptrCast(code)) + 1;
         return Code{ .codePtr = @ptrCast(addr + @as(u64, @bitCast(offs))) };
     }
-    pub // inline
+    pub inline //
     fn prim(self: Code) *const fn (PC, SP, *Process, *Context, Extra) Result {
         return self.threadedFn;
     }

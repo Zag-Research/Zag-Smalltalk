@@ -31,22 +31,22 @@ pub const ClassIndex = enum(u16) {
     ThunkReturnInstance,
     ThunkReturnSmallInteger,
     ThunkReturnImmediate,
-    ThunkReturnCharacter,
-    ThunkReturnFloat,
     ThunkLocal,
     BlockAssignLocal,
     ThunkInstance,
     BlockAssignInstance,
     ThunkHeap,
-    LLVM,
     ThunkImmediate,
-    ThunkFloat,
-    SmallInteger,
     Symbol,
-    Signature,
     False,
     True,
     Character,
+    Signature,
+    ThunkReturnCharacter,
+    ThunkReturnFloat,
+    ThunkFloat,
+    LLVM,
+    SmallInteger,
     reserved_21,
     reserved_22,
     reserved_23,
@@ -101,22 +101,22 @@ pub const ClassIndex = enum(u16) {
         ThunkReturnInstance,
         ThunkReturnSmallInteger,
         ThunkReturnImmediate,
-        ThunkReturnCharacter,
-        ThunkReturnFloat,
         ThunkLocal,
         BlockAssignLocal,
         ThunkInstance,
         BlockAssignInstance,
         ThunkHeap,
-        LLVM,
         ThunkImmediate,
-        ThunkFloat,
-        SmallInteger,
         Symbol,
-        Signature,
         False,
         True,
         Character,
+        Signature,
+        ThunkReturnCharacter,
+        ThunkReturnFloat,
+        ThunkFloat,
+        LLVM,
+        SmallInteger,
         reserved_21,
         reserved_22,
         reserved_23,
@@ -194,47 +194,47 @@ pub const ObjectFunctions = struct {
     pub inline fn numArgs(self: Object) u4 {
         return symbol.symbolArity(self);
     }
-    pub // inline
+    pub inline //
     fn setField(self: Object, field: usize, value: Object) void {
         if (self.asObjectArray()) |ptr| ptr[field] = value;
     }
-    pub // inline
+    pub inline //
     fn getField(self: Object, field: usize) Object {
         if (self.asObjectArray()) |ptr|
             return ptr[field];
         return Nil();
     }
-    pub // inline
+    pub inline //
     fn isNil(self: Object) bool {
         return self == Object.Nil();
     }
-    pub // inline
+    pub inline //
     fn isBool(self: Object) bool {
         return self == Object.False() or self == Object.True();
     }
-    pub // inline
+    pub inline //
     fn isString(self: Object) bool {
         return self.which_class() == .String;
     }
-    pub // inline
+    pub inline //
     fn isUnmoving(self: Object) bool {
         return !self.isMemoryAllocated() or self.to(HeapObjectPtr).isUnmoving();
     }
-    pub // inline
+    pub inline //
     fn hash(self: Object) Object {
         return self.from(self.hash32()) catch @panic("unreachable");
     }
-    pub // inline
+    pub inline //
     fn toBool(self: Object) !bool {
         if (self.isBool()) return self.toBoolNoCheck();
         return error.wrongType;
     }
-    pub // inline
+    pub inline //
     fn toNat(self: Object) !u64 {
         if (self.isNat()) return self.toNatNoCheck();
         return error.wrongType;
     }
-    pub // inline
+    pub inline //
     fn toDouble(self: Object) !f64 {
         if (self.isDouble()) return self.toDoubleNoCheck();
         return error.wrongType;

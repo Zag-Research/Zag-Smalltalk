@@ -310,7 +310,7 @@ pub inline fn setReturnBoth(self: *Context, npc: *const fn (PC, SP, *Process, *C
     self.npc = npc;
     self.tpc = tpc;
 }
-pub // inline
+pub inline //
 fn setReturn(self: *Context, tpc: PC) void {
     self.setReturnBoth(tpc.asThreadedFn(), tpc.next());
 }
