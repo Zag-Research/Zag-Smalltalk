@@ -33,7 +33,7 @@ There are currently two runs of the `bench` script on an [Apple M1](benchmarking
 
 To extract and compare just the results, in the directory you can do:
 ```shell
-grep 'ctEnco\|IntegerB' bench-m1;grep 'ctEnco\|Float ' bench-m1
+grep 'ctEnco\|IntegerB\|Float ' bench-m1
 ```
 The current values are (1st number is median, 2nd mean, 3rd&4th variance):
 ```

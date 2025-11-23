@@ -20,6 +20,7 @@ pub fn build(b: *std.Build) void {
             .imports = &.{
                 .{ .name = "zag", .module = zag },
             },
+            .omit_frame_pointer = true,
         }),
         .use_llvm = true,
     });
@@ -64,6 +65,7 @@ pub fn build(b: *std.Build) void {
             .imports = &.{
                 .{ .name = "zag", .module = zag },
             },
+            .omit_frame_pointer = true,
         }),
         .use_llvm = true,
     });
@@ -78,6 +80,7 @@ pub fn build(b: *std.Build) void {
             .imports = &.{
                 .{ .name = "zag", .module = zag },
             },
+            .omit_frame_pointer = true,
         }),
         .use_llvm = true,
     });
@@ -94,6 +97,7 @@ pub fn build(b: *std.Build) void {
             .imports = &.{
                 .{ .name = "zag", .module = zag },
             },
+            .omit_frame_pointer = true,
         }),
         .use_llvm = true,
     });
@@ -201,6 +205,7 @@ pub fn build(b: *std.Build) void {
             .imports = &.{
                 .{ .name = "zag", .module = zag },
             },
+            .omit_frame_pointer = true,
         });
         const enc_benchs = b.addExecutable(.{
             .name = "bench",
