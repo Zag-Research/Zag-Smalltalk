@@ -18,23 +18,23 @@ const InMemory = zag.InMemory;
 const encode = @import("floatZag.zig").encode;
 const decode = @import("floatZag.zig").decode;
 
+pub const Tag = enum(u3) {
+    heap = 0,
+    immediates,
+    float2,
+    float3,
+    float4,
+    float5,
+    float6,
+    float7,
+    inline fn u(cg: Tag) u3 {
+        return @intFromEnum(cg);
+    }
+};
 pub const Object = packed struct(u64) {
-    tag: Group,
+    tag: Tag,
     class: ClassIndex.Compact,
     hash: u56,
-    pub const Group = enum(u3) {
-        heap = 0,
-        immediates,
-        float2,
-        float3,
-        float4,
-        float5,
-        float6,
-        float7,
-        inline fn u(cg: Group) u3 {
-            return @intFromEnum(cg);
-        }
-    };
     const Self = @This();
     pub const maxInt = 0x7f_ffff_ffff_ffff;
     pub const ZERO: Object = @bitCast(@as(u64, 0));
@@ -55,21 +55,30 @@ pub const Object = packed struct(u64) {
     pub const PackedTagType = u8;
     pub const packedTagSmallInteger = intTag;
     pub const intTag = oImm(.SmallInteger, 0).tagbits();
-    pub const immediatesTag = @intFromEnum(Group.immediates);
+    pub const immediatesTag = Tag.u(.immediates);
     const TagAndClassType = u8;
-    const tagAndClassBits = @bitSizeOf(Group) + @bitSizeOf(ClassIndex.Compact);
+    const tagAndClassBits = @bitSizeOf(Tag) + @bitSizeOf(ClassIndex.Compact);
     comptime {
         assert(tagAndClassBits == @bitSizeOf(TagAndClassType));
     }
     const tagAndClass = (@as(u64, 1) << tagAndClassBits) - 1;
     const extraMask = 0xff;
     const ExtraType = u8;
-    const TaggedClass = packed struct {
+    const TaggedClass = packed struct(u64) {
         tag: TagAndClassType,
-        _: u56,
+        data: u56,
+        inline fn from(obj: Object) TaggedClass {
+            return @bitCast(obj);
+        }
+        inline fn dataU(self: TaggedClass) u64 {
+            return self.data;
+        }
+        inline fn dataI(self: TaggedClass) i64 {
+            return @as(i56, @bitCast(self.data));
+        }
     };
     pub inline fn tagbits(self: Self) TagAndClassType {
-        return @as(TaggedClass, @bitCast(self)).tag;
+        return TaggedClass.from(self).tag;
     }
 
     pub inline fn untaggedI(self: object.Object) ?i64 {
@@ -113,14 +122,7 @@ pub const Object = packed struct(u64) {
         return null;
     }
     inline fn nativeI_noCheck(self: object.Object) i64 {
-        return self.rawI() >> tagAndClassBits;
-    }
-    pub inline fn nativeU(self: object.Object) ?u64 {
-        if (self.isInt()) return self.nativeU_noCheck();
-        return null;
-    }
-    inline fn nativeU_noCheck(self: object.Object) u64 {
-        return self.hash;
+        return TaggedClass.from(self).dataI();
     }
     pub inline fn nativeF(self: object.Object) ?f64 {
         if (self.isImmediateDouble()) return self.toDoubleNoCheck();
@@ -236,9 +238,6 @@ pub const Object = packed struct(u64) {
         if (!self.isSymbol()) std.debug.panic("not a Symbol: {f}", self);
         return @bitCast((self.rawU() & 0xffffffffff) | (@as(u64, @intFromEnum(class)) << 40));
     }
-    pub inline fn rawWordAddress(self: object.Object) u64 {
-        return self.rawU() & 0xffff_ffff_fff8;
-    }
     pub inline fn toDoubleNoCheck(self: object.Object) f64 {
         return decode(@bitCast(self));
     }
@@ -300,9 +299,6 @@ pub const Object = packed struct(u64) {
             },
             i64 => {
                 if (!check or self.isInt()) return self.nativeI_noCheck();
-            },
-            u64 => {
-                if (!check or self.isNat()) return self.nativeU_noCheck();
             },
             bool => {
                 if (!check or self.isBool()) return self.toBoolNoCheck();

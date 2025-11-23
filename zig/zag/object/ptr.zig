@@ -72,10 +72,6 @@ pub const Object = packed struct(u64) {
         if (self.isInt()) return self.rawI();
         return null;
     }
-    pub inline fn nativeU(self: object.Object) ?u64 {
-        if (self.isInt()) return self.rawU();
-        return null;
-    }
     pub inline fn nativeF(self: object.Object) ?f64 {
         if (self.isMemoryDouble()) return self.toDoubleFromMemory();
         return null;
@@ -173,9 +169,6 @@ pub const Object = packed struct(u64) {
     pub inline fn withClass(self: Object, class: ClassIndex) Object {
         if (!self.isSymbol()) std.debug.panic("not a Symbol: {f}", self);
         return @bitCast((self.rawU() & 0xffffffffff) | (@as(u64, @intFromEnum(class)) << 40));
-    }
-    pub inline fn rawWordAddress(self: Object) u64 {
-        return self.rawU() & 0xffff_ffff_fff8;
     }
     inline fn toDoubleFromMemory(self: object.Object) f64 {
         return self.to(*InMemory.MemoryFloat).*.value;

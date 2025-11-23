@@ -14,40 +14,39 @@ const HeapObjectPtr = heap.HeapObjectPtr;
 const HeapObjectConstPtr = heap.HeapObjectConstPtr;
 const HeapHeader = heap.HeapHeader;
 const Process = zag.Process;
+pub const Tag = enum(u16) {
+    nan = 0x7ff0,
+    heap = 0xfff0,
+    thunkReturnLocal,
+    thunkReturnInstance,
+    thunkReturnSmallInteger,
+    thunkReturnImmediate,
+    thunkLocal,
+    thunkInstance,
+    picPointer,
+    thunkHeap,
+    thunkImmediate,
+    _reserved,
+    immediates,
+    smallInteger,
+    smallInteger_1,
+    smallInteger_2,
+    smallInteger_3,
+    _,
+    inline fn base(cg: Tag) u64 {
+        return @as(u64, @intFromEnum(cg)) << 48;
+    }
+    inline fn tag(cg: Tag, low: u48) u64 {
+        return cg.base() | low;
+    }
+    inline fn u(cg: Tag) u16 {
+        return @intFromEnum(cg);
+    }
+};
 pub const Object = packed struct(u64) {
     hash: u32,
     classIndex: ClassIndex,
-    tag: Group,
-    pub const Group = enum(u16) {
-        nan = 0x7ff0,
-        heap = 0xfff0,
-        thunkReturnLocal,
-        thunkReturnInstance,
-        thunkReturnSmallInteger,
-        thunkReturnImmediate,
-        thunkLocal,
-        thunkInstance,
-        picPointer,
-        thunkHeap,
-        thunkImmediate,
-        _reserved,
-        immediates,
-        smallInteger,
-        smallInteger_1,
-        smallInteger_2,
-        smallInteger_3,
-        _,
-        const Self = @This();
-        inline fn base(cg: Self) u64 {
-            return @as(u64, @intFromEnum(cg)) << 48;
-        }
-        inline fn tag(cg: Self, low: u48) u64 {
-            return cg.base() | low;
-        }
-        inline fn u(cg: Self) u16 {
-            return @intFromEnum(cg);
-        }
-    };
+    tag: Tag,
     pub const maxInt = 0x7_ffff_ffff_ffff;
     pub const ZERO: Object = @bitCast(@as(u64, 0));
     pub inline fn False() Object {
@@ -63,13 +62,13 @@ pub const Object = packed struct(u64) {
     pub const LowTagType = void;
     pub const lowTagSmallInteger = {};
     pub const HighTagType = u14;
-    pub const highTagSmallInteger: HighTagType = Group.u(.smallInteger) >> 2;
+    pub const highTagSmallInteger: HighTagType = Tag.u(.smallInteger) >> 2;
     pub const PackedTagType = u3;
     pub const packedTagSmallInteger = 1;
     pub const intTag = @import("zag.zig").Object.intTag;
     pub const immediatesTag = 1;
     const TagAndClassType = u32;
-    const tagAndClassBits = @bitSizeOf(Group) + @bitSizeOf(ClassIndex);
+    const tagAndClassBits = @bitSizeOf(Tag) + @bitSizeOf(ClassIndex);
     comptime {
         assert(tagAndClassBits == @bitSizeOf(TagAndClassType));
     }
@@ -96,7 +95,7 @@ pub const Object = packed struct(u64) {
     }
     const Negative_Infinity: u64 = g(.heap); //0xfff0000000000000;
     const Start_of_Heap_Objects: u64 = g(.heap);
-    inline fn oPtr(grp: Group, p: u48) Object {
+    inline fn oPtr(grp: Tag, p: u48) Object {
         return @bitCast(grp.tag(p));
     }
     pub inline fn isImmediateClass(self: Object, comptime class: ClassIndex) bool {
@@ -108,7 +107,7 @@ pub const Object = packed struct(u64) {
     inline fn imm(c: ClassIndex, h: u32) u64 {
         return g(.immediates) | (@as(u64, @intFromEnum(c)) << 32) | h;
     }
-    inline fn g(grp: Group) u64 {
+    inline fn g(grp: Tag) u64 {
         return grp.base();
     }
     pub inline fn isSymbol(self: Object) bool {
@@ -123,7 +122,7 @@ pub const Object = packed struct(u64) {
     }
     pub const invalidHeapPointer:Object = @bitCast(@as(u64, Start_of_Heap_Objects));
     const u64_ZERO = g(.smallInteger);
-    pub inline fn makeGroup(grp: Group, low48: u48) Object {
+    pub inline fn makeTag(grp: Tag, low48: u48) Object {
         return cast(grp.base() | low48);
     }
     pub inline fn low16(self: Object) u16 {
@@ -139,7 +138,7 @@ pub const Object = packed struct(u64) {
         return @bitCast(self.rawU() | prim << 40);
     }
     pub inline fn makeImmediate(cls: ClassIndex, low32: u32) Object {
-        return @bitCast(Group.immediates.base() | (@as(u64, @intFromEnum(cls)) << 32) | low32);
+        return @bitCast(Tag.immediates.base() | (@as(u64, @intFromEnum(cls)) << 32) | low32);
     }
     pub inline fn hash24(self: Object) u24 {
         return @truncate(self.rawU());
@@ -171,7 +170,7 @@ pub const Object = packed struct(u64) {
     pub const taggedI_noCheck = untaggedI_noCheck;
     pub const fromTaggedI = fromUntaggedI;
     pub inline fn fromUntaggedI(i: i64, _: anytype, _: anytype) Object {
-        return cast(math.rotr(u64, @as(u64, @bitCast(i)) | (Group.u(.smallInteger) >> 2), 14));
+        return cast(math.rotr(u64, @as(u64, @bitCast(i)) | (Tag.u(.smallInteger) >> 2), 14));
         // return cast(@as(u64, @bitCast(i)) >> 14 | g(.smallInteger));
     }
     pub inline fn symbol40(self: Object) u40 {
@@ -180,7 +179,7 @@ pub const Object = packed struct(u64) {
     pub inline fn untaggedInt(self: Object) u64 {
         return self.toNatNoCheck();
     }
-    pub inline fn tagged(tag: Group, low: u3, addr: u64) Object {
+    pub inline fn tagged(tag: Tag, low: u3, addr: u64) Object {
         return cast((Object{ .tag = tag, .classIndex = .none, .h1 = 0, .h0 = low }).rawU() + addr);
     }
     pub inline fn hashEquals(self: Object, other: Object) bool {
@@ -193,13 +192,6 @@ pub const Object = packed struct(u64) {
     }
     inline fn nativeI_noCheck(self: Object) i64 {
         return @as(i64, @bitCast(self.rawU() << 14)) >> 14;
-    }
-    pub inline fn nativeU(self: Object) ?u64 {
-        if (self.isInt()) return self.nativeU_noCheck();
-        return null;
-    }
-    inline fn nativeU_noCheck(self: Object) u64 {
-        return self.rawU() << 14 >> 14;
     }
     pub inline fn fromNativeI(t: i50, _: anytype, _: anytype) Object {
         return @bitCast(@as(u50, @bitCast(t)) +% u64_ZERO);
@@ -285,9 +277,6 @@ pub const Object = packed struct(u64) {
     pub inline fn toBoolNoCheck(self: Object) bool {
         return self == True();
     }
-    pub inline fn rawWordAddress(self: Object) u64 {
-        return self.rawU() & 0xffff_ffff_fff8;
-    }
     pub inline fn toDoubleNoCheck(self: Object) f64 {
         return @bitCast(self);
     }
@@ -332,9 +321,6 @@ pub const Object = packed struct(u64) {
             },
             i64 => {
                 if (!check or self.isInt()) return self.nativeI_noCheck();
-            },
-            u64 => {
-                if (!check or self.isNat()) return self.nativeU_noCheck();
             },
             bool => {
                 if (!check or self.isBool()) return self.toBoolNoCheck();
@@ -381,8 +367,8 @@ pub const Object = packed struct(u64) {
         };
         switch (Choose.nanSigned) {
             .fullCompare => {
-                const u = Group.u;
-                const base = Group.base;
+                const u = Tag.u;
+                const base = Tag.base;
                 const full = self.rawU();
                 if (full >= base(.smallInteger)) {@branchHint(.likely);
                     return .SmallInteger;
@@ -410,13 +396,13 @@ pub const Object = packed struct(u64) {
             .tagCompare => {
                 const tagEnum = self.tag;
                 const tag = tagEnum.u();
-                const u = Group.u;
+                const u = Tag.u;
                 if (tag >= u(.smallInteger)) {@branchHint(.likely);
                     return .SmallInteger;
                 } else if (tag < u(.heap)) {@branchHint(.likely);
                     return .Float;
                 } else if (tag == u(.heap)) {@branchHint(.likely);
-                    if (self.rawU() == Group.base(.heap)) {@branchHint(.unlikely);
+                    if (self.rawU() == Tag.base(.heap)) {@branchHint(.unlikely);
                         return .Float;
                     }
                     return self.toUnchecked(HeapObjectPtr).*.getClass();
@@ -438,7 +424,7 @@ pub const Object = packed struct(u64) {
             .nanCompare => {
                 const tagEnum = self.tag;
                 const tag = tagEnum.u();
-                const u = Group.u;
+                const u = Tag.u;
                 if (tag >= u(.smallInteger)) {@branchHint(.likely);
                     return .SmallInteger;
                 } else if (!std.math.isNan(@as(f64, @bitCast(self)))) {@branchHint(.likely);
@@ -473,7 +459,7 @@ pub const Object = packed struct(u64) {
                 }
                 const tagEnum = self.tag;
                 const tag = tagEnum.u();
-                const u = Group.u;
+                const u = Tag.u;
                 if (tag == u(.heap)) {@branchHint(.likely);
                     return self.toUnchecked(HeapObjectPtr).*.getClass();
                 } else if (tag == u(.immediates)) {@branchHint(.likely);
@@ -493,7 +479,7 @@ pub const Object = packed struct(u64) {
                 }
             },
             .nanSwitch => {
-                if (@as(u64, @bitCast(self)) >= Group.base(.smallInteger)) {@branchHint(.likely);
+                if (@as(u64, @bitCast(self)) >= Tag.base(.smallInteger)) {@branchHint(.likely);
                     return .SmallInteger;
                 } else if (!std.math.isNan(@as(f64, @bitCast(self)))) {@branchHint(.likely);
                     return .Float;

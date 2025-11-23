@@ -37,7 +37,8 @@ pub fn skipNotZag() !void {
     if (notZag) return error.SkipZigTest;
 }
 pub fn printConfig() void {
-    std.log.info(
+    std.debug.print(
+        \\
         \\Config:
         \\  compile_date   = {s}
         \\  git_version    = {s}

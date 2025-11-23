@@ -60,7 +60,7 @@ const fibNativeFloat = struct {
     fn init() void {}
     fn runIt(comptime _: void, proof: usize) usize {
         const result: usize = @intFromFloat(fib(@floatFromInt(fibN)));
-        return result + proof;
+        return @as(u64,@bitCast(result)) + proof;
     }
     fn fib(n: f64) f64 {
         if (n <= 2) return n;
@@ -122,8 +122,8 @@ const fibInteger = struct {
     }
     fn runIt(comptime _: void, proof: usize) usize {
         const obj = exe.sendTo(Sym.fibonacci.asObject(), exe.object(fibN)) catch unreachable;
-        if (obj.nativeU()) |result| {
-            return result + proof;
+        if (obj.nativeI()) |result| {
+            return @as(u64,@bitCast(result)) + proof;
         }
         std.log.err("fib object: {f}\n", .{obj});
         unreachable;
@@ -183,8 +183,8 @@ const fibInteger0 = struct {
     }
     fn runIt(comptime _: void, proof: usize) usize {
         const obj = exe.sendTo(Sym.fibonacci.asObject(), exe.object(fibN)) catch unreachable;
-        if (obj.nativeU()) |result| {
-            return result + proof;
+        if (obj.nativeI()) |result| {
+            return @as(u64,@bitCast(result)) + proof;
         }
         std.log.err("fib object: {f}\n", .{obj});
         unreachable;
@@ -248,8 +248,8 @@ const fibIntegerBr = struct {
     }
     fn runIt(comptime _: void, proof: usize) usize {
         const obj = exe.sendTo(Sym.fibonacci.asObject(), exe.object(fibN)) catch unreachable;
-        if (obj.nativeU()) |result| {
-            return result + proof;
+        if (obj.nativeI()) |result| {
+            return @as(u64,@bitCast(result)) + proof;
         }
         std.log.err("fib object: {f}\n", .{obj});
         unreachable;
@@ -435,8 +435,8 @@ const fibIntegerCnP = struct {
     }
     fn runIt(comptime _: void, proof: usize) usize {
         const obj = exe.sendTo(Sym.fibonacci.asObject(), exe.object(fibN)) catch unreachable;
-        if (obj.nativeU()) |result| {
-            return result + proof;
+        if (obj.nativeI()) |result| {
+            return @as(u64,@bitCast(result)) + proof;
         }
         std.log.err("fib object: {f}\n", .{obj});
         unreachable;

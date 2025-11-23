@@ -17,23 +17,22 @@ const HeapObjectPtr = heap.HeapObjectPtr;
 const HeapObjectConstPtr = heap.HeapObjectConstPtr;
 const InMemory = zag.InMemory;
 
+const Tag = enum(Object.LowTagType) {
+    pointer = 0,
+    smallInteger = 1,
+    inline fn u(cg: Tag) u1 {
+        return @intFromEnum(cg);
+    }
+};
 pub const Object = packed union {
     ref: *InMemory.PointedObject,
     immediate: packed struct(u64) {
-        tag: Group,
+        tag: Tag,
         hash: u63,
     },
 
-    const Group = enum(LowTagType) {
-        pointer = 0,
-        smallInteger = 1,
-        inline fn u(cg: Group) u1 {
-            return @intFromEnum(cg);
-        }
-    };
-
-    const PointerTag = Group.u(.pointer);
-    const SmallIntegerTag = Group.u(.smallInteger);
+    const PointerTag = Tag.u(.pointer);
+    const SmallIntegerTag = Tag.u(.smallInteger);
     const TagMask = SmallIntegerTag;
 
     const Self = @This();
@@ -57,9 +56,9 @@ pub const Object = packed union {
     pub const highTagSmallInteger = {};
     pub const PackedTagType = u3;
     pub const packedTagSmallInteger = intTag;
-    pub const intTag = @intFromEnum(Group.smallInteger);
-    pub const immediatesTag = 1;
-    pub const tagged0: i64 = 1; // SmallInteger 0 in spur encoding
+    pub const intTag = Tag.u(.smallInteger);
+    pub const immediatesTag = Tag.u(.smallInteger);
+    pub const tagged0: i64 = Tag.u(.smallInteger); // SmallInteger 0 in spur encoding
     const TagAndClassType = u1;
     pub inline fn tagbits(self: Self) TagAndClassType {
         return @truncate(self.rawU());
@@ -107,13 +106,6 @@ pub const Object = packed union {
     }
     pub inline fn nativeI_noCheck(self: Object) i64 {
         return @as(i64, self.rawI()) >> 1;
-    }
-    pub inline fn nativeU(self: Object) ?u64 {
-        if (self.isNat()) return self.nativeU_noCheck();
-        return null;
-    }
-    inline fn nativeU_noCheck(self: Object) u64 {
-        return @as(u64, self.rawU()) >> 1;
     }
     pub inline fn fromNativeI(i: i63, _: anytype, _: anytype) Object {
         return @bitCast((@as(u64, @bitCast(@as(i64, i))) << 1) + SmallIntegerTag);
@@ -164,16 +156,16 @@ pub const Object = packed union {
         return self.rawU() == Object.Nil().rawU();
     }
 
-    inline fn oImm(c: Group, h: u61) Self {
+    inline fn oImm(c: Tag, h: u61) Self {
         return Self{ .immediate = .{ .tag = c, .hash = h } };
     }
     pub inline fn makeImmediate(cls: ClassIndex, hash: u61) object.Object {
-        // Map ClassIndex to appropriate Group
+        // Map ClassIndex to appropriate Tag
         const group = switch (cls) {
-            .SmallInteger => Group.smallInteger,
-            .Character => Group.character,
-            .Float => Group.float,
-            else => Group.pointer, // heap objects
+            .SmallInteger => Tag.smallInteger,
+            .Character => Tag.character,
+            .Float => Tag.float,
+            else => Tag.pointer, // heap objects
         };
         return oImm(group, hash);
     }
@@ -215,9 +207,6 @@ pub const Object = packed union {
 
     inline fn rawI(self: Object) i64 {
         return @bitCast(self.rawU());
-    }
-    pub inline fn rawWordAddress(self: Object) u64 {
-        return self.rawU() & ~TagMask;
     }
     pub inline fn invalidObject(self: object.Object) ?u64 {
         const value: u64 = @bitCast(self);
@@ -285,9 +274,6 @@ pub const Object = packed union {
             },
             i64 => {
                 if (!check or self.isInt()) return self.nativeI_noCheck();
-            },
-            u64 => {
-                if (!check or self.isNat()) return self.nativeU_noCheck();
             },
             bool => {
                 if (!check or self.isBool()) return self.toBoolNoCheck();

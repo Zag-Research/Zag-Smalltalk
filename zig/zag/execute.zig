@@ -230,7 +230,7 @@ pub const PC = packed struct {
             @setRuntimeSafety(false);
             std.log.err("PC_uint:         {x:0>12}: {f}\n", .{ @intFromPtr(self.code), self.code.object });
         }
-        return self.code.object.to(u64);
+        return @bitCast(self.code.object.to(i64));
     }
     pub inline //
     fn int(self: PC) i64 {

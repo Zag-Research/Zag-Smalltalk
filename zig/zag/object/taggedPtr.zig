@@ -74,9 +74,6 @@ pub const TaggedPtrObject = packed struct(u64) {
         if (!self.isSymbol()) std.debug.panic("not a Symbol: {f}", self);
         return @bitCast((self.rawU() & 0xffffffffff) | (@as(u64, @intFromEnum(class)) << 40));
     }
-    pub inline fn rawWordAddress(self: Object) u64 {
-        return self.rawU() & 0xffff_ffff_fff8;
-    }
     pub inline fn toDoubleNoCheck(self: Object) f64 {
         return decode(self);
     }

@@ -417,7 +417,7 @@ test "to conversion" {
     const ee = std.testing.expectEqual;
     try ee((Object.from(3.14, sp, context)).to(f64), 3.14);
     //    trace("value: {}", .{@as(zag.InMemory.PointedObjectRef, @bitCast(Object.from(42, sp, context)))});
-    try ee((Object.from(42, sp, context)).to(u64), 42);
+    try ee((Object.from(42, sp, context)).to(i64), 42);
     try std.testing.expect((Object.from(42, sp, context)).isInt());
     try ee((Object.from(true, sp, context)).to(bool), true);
     try ee((Object.from(-0x400000, sp, context)).toUnchecked(i64), -0x400000);

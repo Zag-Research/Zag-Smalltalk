@@ -49,9 +49,6 @@ pub const Object = packed struct(u64) {
     fn nativeI(self: object.Object) ?i64 {
         return @bitCast(self);
     }
-    pub inline fn nativeU(self: object.Object) ?u64 {
-        return @bitCast(self);
-    }
     pub inline fn nativeF(_: object.Object) ?f64 {
         @panic("not implemented");
     }
@@ -140,9 +137,6 @@ pub const Object = packed struct(u64) {
     }
     pub inline fn withClass(self: Object, class: ClassIndex) Object {
         return @bitCast((self.rawU() & 0xffffffffff) | (@as(u64, @intFromEnum(class)) << 40));
-    }
-    pub inline fn rawWordAddress(self: Object) u64 {
-        return self.rawU() & 0xffff_ffff_fff8;
     }
     inline fn toDoubleFromMemory(_: object.Object) f64 {
         @panic("Not implemented");
