@@ -347,20 +347,15 @@ pub const Object = packed struct(u64) {
         @panic("Trying to convert Object to " ++ @typeName(T));
     }
     pub inline fn which_class(self: Object) ClassIndex {
-        if (Tag.isSet(self, .smallInteger)) {
-            @branchHint(.likely);
+        if (self.isInt()) {@branchHint(.likely);
             return .SmallInteger;
-        } else if (Tag.isSet(self, .float)) {
-            @branchHint(.likely);
+        } else if (Tag.isSet(self, .float)) {@branchHint(.likely);
             return .Float;
-        } else if (Tag.isSet(self, .immediates)) {
-            @branchHint(.unlikely);
+        } else if (Tag.isSet(self, .immediates)) {@branchHint(.likely);
             return self.class.classIndex();
-        } else if (@as(u64, @bitCast(self)) == 0) {
-            @branchHint(.unlikely);
+        } else if (@as(u64, @bitCast(self)) == 0) {@branchHint(.unlikely);
             return .UndefinedObject;
-        } else {
-            @branchHint(.likely);
+        } else {@branchHint(.likely);
             return self.to(HeapObjectPtr).*.getClass();
         }
     }

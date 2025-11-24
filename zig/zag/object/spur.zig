@@ -165,10 +165,6 @@ pub const Object = packed union {
     pub inline fn isHeapObject(self: Object) bool {
         return self.isHeap();
     }
-    pub inline fn pointer(self: Object, T: type) ?T {
-        if (self.isHeap()) return @ptrFromInt(self.rawU());
-        return null;
-    }
     pub inline fn isImmediate(self: Object) bool {
         return !self.isHeap();
     }
@@ -199,6 +195,10 @@ pub const Object = packed union {
     pub inline fn characterValue(self: Self) ?u24 {
         if (self.isCharacter())
             return @intCast(Tag.shiftFromObject(self));
+        return null;
+    }
+    pub inline fn pointer(self: Object, T: type) ?T {
+        if (self.isHeap()) return @ptrFromInt(self.rawU());
         return null;
     }
 
@@ -350,14 +350,11 @@ pub const Object = packed union {
 
     // Class detection (stub)
     pub inline fn which_class(self: Object) ClassIndex {
-        if (self.isInt()) {
-            @branchHint(.likely);
+        if (self.isInt()) {@branchHint(.likely);
             return .SmallInteger;
-        } else if (self.isFloat()) {
-            @branchHint(.likely);
+        } else if (Tag.isSet(self, .float)) {@branchHint(.likely);
             return .Float;
-        } else if (self.isCharacter()) {
-            @branchHint(.unlikely);
+        } else if (self.isCharacter()) {@branchHint(.unlikely);
             return .Character;
         }
         return self.ref.header.classIndex;
