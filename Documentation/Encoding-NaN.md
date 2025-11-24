@@ -34,7 +34,7 @@ So this leaves us with the following encoding based on the **S**ign+**E**xponent
 | `8000`-`FFEF`   | `xxxx` | `xxxx` | `xxxx` | double (negative)         |
 | `FFF0`          | `0000` | `0000` | `0000` | -inf                      |
 | `FFF0` - `FFF7` | `xxxx` | `xxxx` | `xxxx` | NaN (unused)              |
-| `FFF8` - `FFFF` | `iiii` | `iiii` | `iiii` | `SmallInteger` values     |
+| `FFF8` + `ii`   | `iiii` | `iiii` | `iiii` | `SmallInteger` values     |
 
 So, interpreted as a u64, any value that is less than or equal to -inf is a double. Else, the top 4 bits of the mantissa are a class grouping. For group B, the next 16 bits are a class number so the first 8 classes have (and all classes can have) a compressed representation. 
 Groups 0 through A have the low 48 bits being the address of an object.
