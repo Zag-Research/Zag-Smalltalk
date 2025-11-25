@@ -326,20 +326,16 @@ pub const threadedFunctions = struct {
         }
     };
     inline //
-    fn getMethod(pc: PC, selector: Signature, receiver: Object) *const CompiledMethod {
-        const methodAddress = pc.next();
-        var method = methodAddress.method();
+    fn getMethod(pc: PC, signature: Signature, receiver: Object) *const CompiledMethod {
         const class = receiver.get_class();
-        const methodSignature = method.signature;
-        const signature = selector.withClass(class);
-        if (methodSignature == signature) {
-            //trace("getMethod: cached {f} {any}", .{ signature, method });
-            return method;
+        const requiredSignature = signature.withClass(class);
+        if (signature == requiredSignature) {
+            return pc.next().method();
         }
-        method = class.lookupMethodForClass(signature);
-        if (methodSignature.isEmpty()) {
-            trace("getMethod: patch {f} {any}", .{ signature, method });
-            methodAddress.patchPtr().patchMethod(method);
+        const method = class.lookupMethodForClass(requiredSignature);
+        if (signature.getClass() == .none) {
+            trace("getMethod: patch {f} {any}", .{ requiredSignature, method });
+            pc.patchPtr().patchMethod(requiredSignature, method);
         } else {
             //trace("getMethod: alt {f} {any}", .{ signature, method });
         }
@@ -351,12 +347,18 @@ pub const threadedFunctions = struct {
             const signature = pc.signature();
             const method = getMethod(pc, signature, sp.at(signature.numArgs()));
             const newPc = method.codePc();
-            const newSp, const newContext =
-                if (extra.installContextIfNone(sp, process, context)) |new| .{ new.sp, new.context } else .{ sp, context };
+            if (extra.installContextIfNone(sp, process, context)) |new| {
+                const newSp = new.sp;
+                const newContext = new.context;
+                newSp.traceStack("send new context");
+                newContext.setReturn(pc.next2());
+                return @call(tailCall, newPc.prim(), .{ newPc.next(), newSp, process, newContext, Extra.forMethod(method, newSp) });
+            } else {
+                sp.traceStack("send existing context");
+                context.setReturn(pc.next2());
+                return @call(tailCall, newPc.prim(), .{ newPc.next(), sp, process, context, Extra.forMethod(method, sp) });
+            }
             //trace("sending...: sp:{x} {f} method:{x}", .{ @intFromPtr(sp), extra, @intFromPtr(method) });
-            newSp.traceStack("send maybe new");
-            newContext.setReturn(pc.next2());
-            return @call(tailCall, newPc.prim(), .{ newPc.next(), newSp, process, newContext, Extra.forMethod(method, newSp) });
         }
     };
     pub const send0 = struct {

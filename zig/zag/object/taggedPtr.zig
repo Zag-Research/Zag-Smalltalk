@@ -28,9 +28,6 @@ pub const TaggedPtrObject = packed struct(u64) {
     pub inline fn isImmediateClass(_: Object, comptime _: ClassIndex.Compact) bool {
         return false;
     }
-    pub inline fn isHeap(_: Object) bool {
-        return true;
-    }
     pub inline fn isDouble(self: Object) bool {
         return (self.rawU() & 6) != 0;
     }
@@ -71,7 +68,7 @@ pub const TaggedPtrObject = packed struct(u64) {
         return self.hash;
     }
     pub inline fn withClass(self: Object, class: ClassIndex) Object {
-        if (!self.isSymbol()) std.debug.panic("not a Symbol: {f}", self);
+        if (!self.isSymbol()) unreachable;
         return @bitCast((self.rawU() & 0xffffffffff) | (@as(u64, @intFromEnum(class)) << 40));
     }
     pub inline fn toDoubleNoCheck(self: Object) f64 {
@@ -178,7 +175,7 @@ pub const TaggedPtrObject = packed struct(u64) {
         };
     }
     pub inline fn isMemoryAllocated(self: Object) bool {
-        return if (self.isHeap()) self != Object.Nil else @intFromEnum(self.class) <= @intFromEnum(ClassIndex.Compact.ThunkHeap);
+        return if (self.isHeapObject()) self != Object.Nil else @intFromEnum(self.class) <= @intFromEnum(ClassIndex.Compact.ThunkHeap);
     }
     pub const Scanner = struct {
         ptr: *anyopaque,
@@ -195,9 +192,6 @@ pub const TaggedPtrObject = packed struct(u64) {
     };
     pub inline fn isSymbol(self: Object) bool {
         return self.tagbits() == comptime Object.makeImmediate(.Symbol, 0).tagbits();
-    }
-    pub inline fn isImmediate(self: Object) bool {
-        return self.tag == .immediates;
     }
     pub inline fn isHeapObject(self: Object) bool {
         return self.tag == .heap;

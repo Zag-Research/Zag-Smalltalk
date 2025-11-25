@@ -159,9 +159,14 @@ pub const Object = packed struct(u64) {
         return null;
     }
     pub inline fn heapObject(self: Object) ?*InMemory.PointedObject {
-        if (self.rawU() & 0x7 == 0 and !self.equals(Nil())) return @ptrFromInt(self.rawU());
+        if (self.isHeapObject() and !self.equals(Nil())) return @ptrFromInt(self.rawU());
         return null;
     }
+
+    pub inline fn isHeapObject(self: Object) bool {
+        return Tag.isSet(self, .pointer);
+    }
+
     pub inline fn extraValue(self: Object) Object {
         return @bitCast(self.nativeI_noCheck() >> 8);
     }
@@ -213,9 +218,6 @@ pub const Object = packed struct(u64) {
     pub inline fn isImmediateClass(self: Object, comptime class: ClassIndex.Compact) bool {
         return self.tagbits() == oImm(class, 0).tagbits();
     }
-    pub inline fn isHeap(self: Object) bool {
-        return Tag.isSet(self, .pointer);
-    }
     pub inline fn isImmediateDouble(self: Object) bool {
         return Tag.isSet(self, .float);
     }
@@ -250,7 +252,7 @@ pub const Object = packed struct(u64) {
         return self.rawU() == Object.True().rawU();
     }
     pub inline fn withClass(self: Object, class: ClassIndex) Object {
-        if (!self.isSymbol()) std.debug.panic("not a Symbol: {f}", self);
+        if (!self.isSymbol()) unreachable;
         return @bitCast((self.rawU() & 0xffffffffff) | (@as(u64, @intFromEnum(class)) << 40));
     }
     pub inline fn toDoubleNoCheck(self: Object) f64 {
@@ -360,7 +362,7 @@ pub const Object = packed struct(u64) {
         }
     }
     pub inline fn isMemoryAllocated(self: Object) bool {
-        return if (self.isHeap()) self != Object.Nil() else @intFromEnum(self.class) <= @intFromEnum(ClassIndex.Compact.ThunkHeap);
+        return if (self.isHeapObject()) self != Object.Nil() else @intFromEnum(self.class) <= @intFromEnum(ClassIndex.Compact.ThunkHeap);
     }
     pub const Special = packed struct {
         imm: TagAndClassType,
@@ -391,12 +393,6 @@ pub const Object = packed struct(u64) {
     };
     pub inline fn isSymbol(self: Object) bool {
         return self.tagbits() == comptime makeImmediate(.Symbol, 0).tagbits();
-    }
-    pub inline fn isImmediate(self: Object) bool {
-        return Tag.isSet(self, .immediates);
-    }
-    pub inline fn isHeapObject(self: Object) bool {
-        return Tag.isSet(self, .pointer);
     }
     const OF = object.ObjectFunctions;
     pub const arrayAsSlice = OF.arrayAsSlice;

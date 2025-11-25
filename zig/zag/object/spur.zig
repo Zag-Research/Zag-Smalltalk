@@ -158,22 +158,39 @@ pub const Object = packed union {
         if (self.isImmediateDouble()) return self.toDoubleNoCheck();
         return self.toDoubleFromMemory();
     }
+    pub inline fn fromNativeF(t: f64, sp: SP, context: *Context) Object {
+        return @bitCast(encode(t) catch {
+            return InMemory.float(t, sp, context);
+        });
+    }
+    pub inline fn symbolHash(self: Object) ?u24 {
+        if (self.isSymbol()) return @truncate(self.hash32());
+        return null;
+    }
+    pub inline fn heapObject(self: Object) ?*InMemory.PointedObject {
+        if (self.isHeapObject() and !self.equals(Nil())) return @ptrFromInt(self.rawU());
+        return null;
+    }
 
-    pub inline fn isHeap(self: Object) bool {
+    pub inline fn isHeapObject(self: Object) bool {
         return Tag.isSet(self, .pointer);
     }
-    pub inline fn isHeapObject(self: Object) bool {
-        return self.isHeap();
-    }
-    pub inline fn isImmediate(self: Object) bool {
-        return !self.isHeap();
-    }
 
+    pub inline fn extraValue(_: Object) Object {
+        @panic("Not implemented");
+    }
+    pub inline fn withPrimitive(self: Object, prim: u64) Object {
+        // For spur encoding, we can't easily embed primitives in objects
+        // However, this is only done for signature objects, which already aren't quite valid
+        return @bitCast(self.rawU() | prim << 40);
+    }
     pub inline fn isImmediateClass(self: Object, comptime class: ClassIndex) bool {
-        if (self.isHeap()) return false;
-        if (self.isInt()) return class == .SmallInteger;
-        if (self.isFloat()) return class == .Float;
-        return class == .Character;
+        switch (class) {
+            .SmallInteger => self.isInt(),
+            .Float => self.isImmediateDouble(),
+            .Character => self.isCharacter(),
+            else => false,
+        }
     }
     pub inline fn isImmediateDouble(self: Object) bool {
         return Tag.isSet(self, .float);
@@ -198,7 +215,7 @@ pub const Object = packed union {
         return null;
     }
     pub inline fn pointer(self: Object, T: type) ?T {
-        if (self.isHeap()) return @ptrFromInt(self.rawU());
+        if (self.isHeapObject()) return @ptrFromInt(self.rawU());
         return null;
     }
 
@@ -210,7 +227,7 @@ pub const Object = packed union {
     }
     pub inline fn isSymbol(self: Object) bool {
         // Spur-encoded symbols are heap objects
-        return self.isHeap() and self.ref.header.classIndex == .Symbol;
+        return self.isHeapObject() and self.ref.header.classIndex == .Symbol;
     }
     pub inline fn isNil(self: Object) bool {
         return self.rawU() == Object.Nil().rawU();
@@ -222,12 +239,6 @@ pub const Object = packed union {
     pub inline fn makeImmediate(cls: ClassIndex, hash: u61) Object {
         // Map ClassIndex to appropriate Tag
         return oImm(Tag.fromClassIndex(cls), hash);
-    }
-
-    pub inline fn fromNativeF(t: f64, sp: SP, context: *Context) Object {
-        return @bitCast(encode(t) catch {
-            return InMemory.float(t, sp, context);
-        });
     }
 
     // Hash helpers
@@ -250,19 +261,12 @@ pub const Object = packed union {
     pub inline fn rawU(self: Object) u64 {
         return @bitCast(self);
     }
-
     inline fn rawI(self: Object) i64 {
-        return @bitCast(self.rawU());
+        return @bitCast(self);
     }
     pub inline fn invalidObject(self: Object) ?u64 {
-        const value: u64 = @bitCast(self);
-        if (value == 0) return value;
-        if (@popCount(value & 7) > 1) return value;
+        if (@popCount(@as(u64, @bitCast(self)) & 7) != 1) return @bitCast(self);
         return null;
-    }
-
-    pub inline fn toDoubleNoCheck(self: Object) f64 {
-        return decode(@bitCast(self));
     }
 
     pub fn fromAddress(value: anytype) Object {
@@ -307,6 +311,9 @@ pub const Object = packed union {
         return self.isMemoryAllocated() and self.ref.header.classIndex == .Float;
     }
 
+    pub inline fn toDoubleNoCheck(self: Object) f64 {
+        return decode(@bitCast(self));
+    }
     inline fn toDoubleFromMemory(self: Object) f64 {
         return self.to(*InMemory.MemoryFloat).*.value;
     }
@@ -315,7 +322,7 @@ pub const Object = packed union {
     pub fn toWithCheck(self: Object, comptime T: type, comptime check: bool) T {
         switch (T) {
             f64 => {
-                if (!check or self.isFloat()) return self.toDoubleNoCheck();
+                if (!check or self.isImmediateDouble()) return self.toDoubleNoCheck();
                 if (!check or self.isMemoryDouble()) return self.toDoubleFromMemory();
             },
             i64 => {
@@ -361,15 +368,7 @@ pub const Object = packed union {
     }
 
     pub inline fn isMemoryAllocated(self: Object) bool {
-        return self.isHeap();
-    }
-
-    // Add symbolHash method
-    pub inline fn symbolHash(self: Object) ?u24 {
-        if (self.isSymbol()) {
-            return @truncate(self.hash32());
-        }
-        return null;
+        return self.isHeapObject();
     }
 
     // Add missing methods
@@ -381,19 +380,6 @@ pub const Object = packed union {
 
     pub inline fn asObject(self: Object) Object {
         return self;
-    }
-
-    pub inline fn withPrimitive(self: Object, prim: u64) Object {
-        // For spur encoding, we can't easily embed primitives in objects
-        // However, this is only done for signature objects, which already aren't quite valid
-        return @bitCast(self.rawU() | prim << 40);
-    }
-    pub inline fn heapObject(self: Object) ?*InMemory.PointedObject {
-        if (self.isHeap() and !self.equals(Nil())) return @ptrFromInt(self.rawU());
-        return null;
-    }
-    pub inline fn extraValue(_: Object) Object {
-        @panic("Not implemented");
     }
 
     const OF = object.ObjectFunctions;
@@ -457,7 +443,7 @@ test "float from/to conversion" {
 
     for (memoryValues) |value| {
         const obj = Object.fromAddress(value);
-        try expect(obj.isHeap()); // Should be heap-allocated
+        try expect(obj.isHeapObject());
         try expectEqual(value, obj.toWithCheck(f64, false));
     }
 

@@ -235,7 +235,7 @@ pub const Object = packed struct(u64) {
         return self.rawU() == object.Object.True().rawU();
     }
     pub inline fn withClass(self: object.Object, class: ClassIndex) object.Object {
-        if (!self.isSymbol()) std.debug.panic("not a Symbol: {f}", self);
+        if (!self.isSymbol()) unreachable;
         return @bitCast((self.rawU() & 0xffffffffff) | (@as(u64, @intFromEnum(class)) << 40));
     }
     pub inline fn toDoubleNoCheck(self: object.Object) f64 {
@@ -539,9 +539,6 @@ pub const Object = packed struct(u64) {
     };
     pub inline fn isSymbol(self: object.Object) bool {
         return self.tagbits() == comptime makeImmediate(.Symbol, 0).tagbits();
-    }
-    pub inline fn isImmediate(self: object.Object) bool {
-        return self.tag == .immediates;
     }
     pub inline fn isImmediateWhenNotDouble(self: object.Object) bool {
         return self.rawU() & 1 != 0;

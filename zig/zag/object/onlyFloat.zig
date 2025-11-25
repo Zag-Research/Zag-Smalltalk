@@ -117,10 +117,6 @@ pub const Object = packed struct(u64) {
         return false;
     }
 
-    pub inline fn isHeap(_: Object) bool {
-        return false;
-    }
-
     pub inline fn isMemoryDouble(_: Object) bool {
         return false;
     }

@@ -23,6 +23,12 @@ const Tag = enum(Object.LowTagType) {
     inline fn u(cg: Tag) u1 {
         return @intFromEnum(cg);
     }
+    inline fn isSet(obj: Object, comptime tag: Tag) bool {
+        if (tag == .pointer) {
+            return obj.rawU() & 1 == 0;
+        }
+        return (obj.rawU() & @intFromEnum(tag)) != 0;
+    }
 };
 pub const Object = packed union {
     ref: *InMemory.PointedObject,
@@ -111,18 +117,12 @@ pub const Object = packed union {
         return @bitCast((@as(u64, @bitCast(@as(i64, i))) << 1) + SmallIntegerTag);
     }
 
-    pub inline fn isHeap(self: Object) bool {
-        return (self.rawU() & TagMask) == PointerTag;
-    }
     pub inline fn isHeapObject(self: Object) bool {
-        return self.isHeap();
+        return Tag.isSet(self, .pointer);
     }
     pub inline fn pointer(self: Object, T: type) ?T {
-        if (self.isHeap()) return @ptrFromInt(self.rawU());
+        if (self.isHeapObject()) return @ptrFromInt(self.rawU());
         return null;
-    }
-    pub inline fn isImmediate(self: Object) bool {
-        return !self.isHeap();
     }
 
     pub inline fn isImmediateClass(self: object.Object, comptime class: ClassIndex) bool {
@@ -310,7 +310,7 @@ pub const Object = packed union {
         return self.ref.header.classIndex;
     }
     pub inline fn isMemoryAllocated(self: object.Object) bool {
-        return self.isHeap();
+        return self.isHeapObject();
     }
 
     // Add symbolHash method
@@ -339,7 +339,7 @@ pub const Object = packed union {
         return @bitCast(self.rawU() | prim << 40);
     }
     pub inline fn heapObject(self: object.Object) ?*InMemory.PointedObject {
-        if (self.isHeap()) return self.ref;
+        if (self.isHeapObject()) return self.ref;
         return null;
     }
 

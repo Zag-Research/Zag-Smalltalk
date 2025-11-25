@@ -95,9 +95,6 @@ pub const Object = packed struct(u64) {
     pub inline fn isImmediateClass(_: Object, comptime _: ClassIndex) bool {
         return false;
     }
-    pub inline fn isHeap(_: Object) bool {
-        return false;
-    }
     pub inline fn isMemoryDouble(_: object.Object) bool {
         return false;
     }

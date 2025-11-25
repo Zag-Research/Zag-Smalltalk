@@ -96,10 +96,10 @@ pub const Signature = packed struct {
         return @as(Internal, @bitCast(self)).prim;
     }
     pub inline fn getClassIndex(self: Signature) u16 {
-        return @intFromEnum(@as(Internal, @bitCast(self)).class);
+        return @intFromEnum(self.getClass());
     }
     pub inline fn getClass(self: Signature) ClassIndex {
-        return @as(Internal, @bitCast(self.int)).class;
+        return @as(Internal, @bitCast(self)).class;
     }
     pub fn withClass(self: Signature, class: ClassIndex) Signature {
         return .{ .int = (self.int & 0xffffffffff) + (@as(u64, @intFromEnum(class)) << 40) };
@@ -298,8 +298,9 @@ pub const Code = union(enum) {
     pub inline fn patchPrim(self: *Code, pp: *const fn (PC, SP, *Process, *Context, Extra) Result) void {
         self.* = Code{ .threadedFn = pp };
     }
-    pub inline fn patchMethod(self: *Code, method: *const CompiledMethod) void {
-        self.* = Code{ .method = method };
+    pub inline fn patchMethod(self: *Code, signature: Signature, method: *const CompiledMethod) void {
+        self.* = Code{ .signature = signature };
+        @as([*]Code, @ptrCast(self))[1] = Code{ .method = method };
     }
     pub inline //
     fn asVariable(self: Code) Variable {

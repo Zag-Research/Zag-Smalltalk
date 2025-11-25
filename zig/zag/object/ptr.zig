@@ -125,9 +125,6 @@ pub const Object = packed struct(u64) {
     pub inline fn isImmediateClass(self: Object, comptime class: ClassIndex) bool {
         return self.ref.header.classIndex == class;
     }
-    pub inline fn isHeap(_: Object) bool {
-        return true;
-    }
     pub inline fn isMemoryDouble(self: object.Object) bool {
         return self.isMemoryAllocated() and self.to(HeapObjectPtr).*.getClass() == .Float;
     }
@@ -167,7 +164,7 @@ pub const Object = packed struct(u64) {
         return @bitCast(self.rawU() | prim << 40);
     }
     pub inline fn withClass(self: Object, class: ClassIndex) Object {
-        if (!self.isSymbol()) std.debug.panic("not a Symbol: {f}", self);
+        if (!self.isSymbol()) unreachable;
         return @bitCast((self.rawU() & 0xffffffffff) | (@as(u64, @intFromEnum(class)) << 40));
     }
     inline fn toDoubleFromMemory(self: object.Object) f64 {
