@@ -45,7 +45,7 @@ pub const Signature = packed struct {
     };
     const Create = packed struct {
         tag: u8 = sigTag,
-        selector: u32,
+        selector: u32 = 0,
         class: ClassIndex = .none,
         prim: u8 = 0,
         const sigTag: u8 = @intFromEnum(ClassIndex.Compact.Signature) << 3 | Object.immediatesTag;
@@ -67,10 +67,16 @@ pub const Signature = packed struct {
         return .{ .int = @bitCast(Create{ .selector = selector, .prim = primitiveNumber }) };
     }
     pub fn fromPrimitive(primitiveNumber: u8) Signature {
-        return .{ .int = @bitCast(Create{ .selector = 0, .prim = primitiveNumber }) };
+        return .{ .int = @bitCast(Create{ .prim = primitiveNumber }) };
     }
     pub fn fromNameClass(name: anytype, class: ClassIndex) Signature {
         return .{ .int = @bitCast(Create{ .selector = @as(u32, name.numArgs()) << 24 | @as(u32, (name.symbolHash().?)), .class = class }) };
+    }
+    pub fn fromClassU8(class: ClassIndex, number: u8) Signature {
+        return .{ .int = @bitCast(Create{ .class = class, .prim = number }) };
+    }
+    pub fn fromClassI8(class: ClassIndex, number: i8) Signature {
+        return .{ .int = @bitCast(Create{ .class = class, .prim = @as(u8, @bitCast(number)) }) };
     }
     pub fn equals(self: Signature, other: Signature) bool {
         return self.int == other.int;

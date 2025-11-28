@@ -204,6 +204,12 @@ pub const threadedFns = struct {
             _ = .{ pc, sp, process, context, extra, unreachable };
         }
     };
+    pub const createClosure = struct {
+        pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
+            const signature = pc.signature();
+            _ = .{ signature, sp, process, context, extra, unreachable };
+        }
+    };
     pub const pushClosure = struct {
         pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
             const structure: PackedObject = pc.packedObject();
@@ -534,19 +540,19 @@ pub fn generalClosureX(pc: PC, sp: SP, process: *Process, context: *Context, ext
 //     try ee(try testNonlocalClosure(&process, Object.from(1000.3)), .nonLocalClosure);
 // }
 pub const primitives = struct {
-    pub fn p201(pc: PC, sp: SP, process: *Process, context: *Context, signature: Extra) Result { // value
-        _ = .{ pc, sp, process, context, signature, @panic("prim201") };
+    pub fn p201(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result { // value
+        _ = .{ pc, sp, process, context, extra, @panic("prim201") };
     }
-    pub fn p202(pc: PC, sp: SP, process: *Process, context: *Context, signature: Extra) Result { // value:
-        _ = .{ pc, sp, process, context, signature, @panic("prim202") };
+    pub fn p202(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result { // value:
+        _ = .{ pc, sp, process, context, extra, @panic("prim202") };
     }
-    pub fn p203(pc: PC, sp: SP, process: *Process, context: *Context, signature: Extra) Result { // value:value:
-        _ = .{ pc, sp, process, context, signature, @panic("prim203") };
+    pub fn p203(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result { // value:value:
+        _ = .{ pc, sp, process, context, extra, @panic("prim203") };
     }
-    pub fn p204(pc: PC, sp: SP, process: *Process, context: *Context, signature: Extra) Result { // value:value:value:
-        _ = .{ pc, sp, process, context, signature, @panic("prim204") };
+    pub fn p204(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result { // value:value:value:
+        _ = .{ pc, sp, process, context, extra, @panic("prim204") };
     }
-    pub fn p205(pc: PC, sp: SP, process: *Process, context: *Context, signature: Extra) Result { // value:value:value:value:
-        _ = .{ pc, sp, process, context, signature, @panic("prim205") };
+    pub fn p205(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result { // value:value:value:value:
+        _ = .{ pc, sp, process, context, extra, @panic("prim205") };
     }
 };

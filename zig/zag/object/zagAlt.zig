@@ -25,8 +25,8 @@ const Tag = enum(u3) {
     float = 0b100,
     _,
     inline fn u(tag: Tag) u3 {
-         return @intFromEnum(tag);
-     }
+        return @intFromEnum(tag);
+    }
     inline fn fromClassIndex(cls: ClassIndex) Tag {
         return switch (cls) {
             .SmallInteger => .smallInteger,
@@ -170,12 +170,13 @@ pub const Object = packed struct(u64) {
     pub inline fn extraValue(self: Object) Object {
         return @bitCast(self.nativeI_noCheck() >> 8);
     }
-    pub inline fn withPrimitive(self: Self, prim: u64) Object {
+    pub inline fn withPrimitive(self: Object, prim: u64) Object {
+        // This is only done for signature objects, which already aren't quite valid
         return @bitCast(self.rawU() | prim << 40);
     }
     pub const testU = rawU;
     pub const testI = rawI;
-    pub inline fn rawU(self: Self) u64 {
+    pub inline fn rawU(self: Object) u64 {
         return @bitCast(self);
     }
     inline fn rawI(self: Object) i64 {
@@ -349,17 +350,20 @@ pub const Object = packed struct(u64) {
         @panic("Trying to convert Object to " ++ @typeName(T));
     }
     pub inline fn which_class(self: Object) ClassIndex {
-        if (self.isInt()) {@branchHint(.likely);
+        if (self.isInt()) {
+            @branchHint(.likely);
             return .SmallInteger;
-        } else if (Tag.isSet(self, .float)) {@branchHint(.likely);
+        } else if (Tag.isSet(self, .float)) {
+            @branchHint(.likely);
             return .Float;
-        } else if (Tag.isSet(self, .immediates)) {@branchHint(.likely);
+        } else if (Tag.isSet(self, .immediates)) {
+            @branchHint(.unpredictable);
             return self.class.classIndex();
-        } else if (@as(u64, @bitCast(self)) == 0) {@branchHint(.unlikely);
+        } else if (@as(u64, @bitCast(self)) == 0) {
+            @branchHint(.unlikely);
             return .UndefinedObject;
-        } else {@branchHint(.likely);
-            return self.to(HeapObjectPtr).*.getClass();
         }
+        return self.to(HeapObjectPtr).*.getClass();
     }
     pub inline fn isMemoryAllocated(self: Object) bool {
         return if (self.isHeapObject()) self != Object.Nil() else @intFromEnum(self.class) <= @intFromEnum(ClassIndex.Compact.ThunkHeap);

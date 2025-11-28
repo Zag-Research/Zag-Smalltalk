@@ -25,8 +25,8 @@ const Tag = enum(u3) {
     float = 0b100,
     _,
     inline fn u(tag: Tag) u3 {
-         return @intFromEnum(tag);
-     }
+        return @intFromEnum(tag);
+    }
     inline fn fromClassIndex(cls: ClassIndex) Tag {
         return switch (cls) {
             .SmallInteger => .smallInteger,
@@ -180,8 +180,7 @@ pub const Object = packed union {
         @panic("Not implemented");
     }
     pub inline fn withPrimitive(self: Object, prim: u64) Object {
-        // For spur encoding, we can't easily embed primitives in objects
-        // However, this is only done for signature objects, which already aren't quite valid
+        // This is only done for signature objects, which already aren't quite valid
         return @bitCast(self.rawU() | prim << 40);
     }
     pub inline fn isImmediateClass(self: Object, comptime class: ClassIndex) bool {
@@ -195,7 +194,6 @@ pub const Object = packed union {
     pub inline fn isImmediateDouble(self: Object) bool {
         return Tag.isSet(self, .float);
     }
-
 
     pub const MaxImmediateCharacter = 0x10FFFF;
 
@@ -357,11 +355,14 @@ pub const Object = packed union {
 
     // Class detection (stub)
     pub inline fn which_class(self: Object) ClassIndex {
-        if (self.isInt()) {@branchHint(.likely);
+        if (self.isInt()) {
+            @branchHint(.likely);
             return .SmallInteger;
-        } else if (Tag.isSet(self, .float)) {@branchHint(.likely);
+        } else if (Tag.isSet(self, .float)) {
+            @branchHint(.likely);
             return .Float;
-        } else if (self.isCharacter()) {@branchHint(.unlikely);
+        } else if (self.isCharacter()) {
+            @branchHint(.unlikely);
             return .Character;
         }
         return self.ref.header.classIndex;
@@ -376,7 +377,6 @@ pub const Object = packed union {
         // Spur doesn't use immediate signatures like other encodings
         return null;
     }
-
 
     pub inline fn asObject(self: Object) Object {
         return self;

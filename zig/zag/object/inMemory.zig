@@ -166,7 +166,7 @@ pub const PointedObject = packed struct {
         self: PointedObject,
         writer: anytype,
     ) !void {
-        try writer.print("PointedObject{{ {f}, 0x{x}}}", .{ self.header, @as(u64,@bitCast(self.data)) });
+        try writer.print("PointedObject{{ {f}, 0x{x}}}", .{ self.header, @as(u64, @bitCast(self.data)) });
     }
     fn cached(self: PointedObject) ?*PointedObject {
         for (staticCache[0..]) |*p| {
@@ -193,12 +193,11 @@ pub const PointedObject = packed struct {
         };
     }
     pub fn set(self: *PointedObject, classIndex: object.ClassIndex, value: anytype) *PointedObject {
-        const hash = @as(u64, @bitCast(
-            switch (@typeInfo(@TypeOf(value))) {
-                .comptime_int => @as(i64, value),
-                .comptime_float => @as(f64, value),
-                else => value,
-            }));
+        const hash = @as(u64, @bitCast(switch (@typeInfo(@TypeOf(value))) {
+            .comptime_int => @as(i64, value),
+            .comptime_float => @as(f64, value),
+            else => value,
+        }));
         self.header = .{
             .classIndex = classIndex,
             .hash = @truncate(hash | hash >> 24 | hash >> 48),
@@ -224,7 +223,7 @@ pub inline fn int(i: i64, sp: SP, context: *Context) Object {
         return Object.from(&SmallIntegerCache.objects[(@as(usize, @bitCast(i - SICacheMin))) << 1], null);
     const allocResult = sp.alloc(context, .SmallInteger, 1, null, Object, false);
     allocResult.allocated.array(i64)[1] = i;
-    allocResult.allocated.header.hash = @truncate(@as(u64,@bitCast(i)));
+    allocResult.allocated.header.hash = @truncate(@as(u64, @bitCast(i)));
     return allocResult.allocated.asObject();
 }
 test "inMemory int()" {

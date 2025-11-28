@@ -451,6 +451,14 @@ const Stack = struct {
         return self.unreserve(1);
     }
     pub inline fn reserve(self: SP, n: anytype) ?SP {
+        if (@TypeOf(n) == comptime_int and n == 1) {
+            const newP = @intFromPtr(self) - 8;
+            if (newP & stack_mask == 0) {
+                @branchHint(.unlikely);
+                return null;
+            }
+            return @ptrFromInt(newP);
+        }
         const newP = @intFromPtr(self) - @sizeOf(Object) * n;
         if (newP < @intFromPtr(&self.theProcess().stack)) {
             @branchHint(.unlikely);
