@@ -37,7 +37,7 @@ const Result = execute.Result;
 const Self = @This();
 const process_total_size = config.process_total_size;
 m: [process_total_size]u8 align(1), // alignment explicitly stated to emphasize the difference from Process
-pub const alignment = @as(u64, @max(stack_mask_overflow, flagMask + 1)) * 2;
+pub const alignment = @max(stack_mask_overflow * 2, flagMask + 1);
 const alignment_mask = @as(u64, @bitCast(-@as(i64, alignment)));
 const stack_mask_overflow: usize = zag.utilities.largerPowerOf2(Process.stack_size * @sizeOf(Object));
 pub const stack_mask = stack_mask_overflow - @sizeOf(Object);

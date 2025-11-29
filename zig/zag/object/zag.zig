@@ -15,6 +15,8 @@ const HeapHeader = zag.heap.HeapHeader;
 const HeapObjectPtr = zag.heap.HeapObjectPtr;
 const HeapObjectConstPtr = zag.heap.HeapObjectConstPtr;
 const InMemory = zag.InMemory;
+const execute = zag.execute;
+const Signature = execute.Signature;
 const encode = @import("floatZag.zig").encode;
 const decode = @import("floatZag.zig").decode;
 
@@ -224,7 +226,7 @@ pub const Object = packed struct(u64) {
         switch (self.tag) {
             .heap => return @ptrFromInt(self.rawU()),
             .immediates => switch (self.class) {
-                .ThunkReturnLocal, .ThunkReturnInstance, .ThunkReturnSmallInteger, .ThunkReturnImmediate, .ThunkReturnCharacter, .ThunkReturnFloat, .ThunkHeap, .ThunkLocal, .ThunkInstance, .BlockAssignLocal, .BlockAssignInstance => return self.highPointer(T),
+                .ThunkReturnLocal, .ThunkReturnInstance, .ThunkReturnObject, .ThunkReturnImmediate, .ThunkReturnCharacter, .ThunkReturnFloat, .ThunkHeap, .ThunkLocal, .ThunkInstance, .BlockAssignLocal, .BlockAssignInstance => return self.highPointer(T),
                 else => {},
             },
             else => {},
@@ -252,6 +254,10 @@ pub const Object = packed struct(u64) {
     }
     pub inline fn hash32(self: object.Object) u32 {
         return @truncate(self.hash);
+    }
+
+    pub fn immediateClosure(sig: Signature, sp: SP, context: *Context) *HeapObject {
+        _ = .{sig, sp, context, @panic("unimplemented")};
     }
 
     pub fn fromAddress(value: anytype) Object {
@@ -393,9 +399,9 @@ pub const Object = packed struct(u64) {
                         @branchHint(.unlikely);
                         return .ThunkReturnInstance;
                     },
-                    t(.ThunkReturnSmallInteger) => {
+                    t(.ThunkReturnObject) => {
                         @branchHint(.unlikely);
-                        return .ThunkReturnSmallInteger;
+                        return .ThunkReturnObject;
                     },
                     t(.ThunkReturnImmediate) => {
                         @branchHint(.unlikely);

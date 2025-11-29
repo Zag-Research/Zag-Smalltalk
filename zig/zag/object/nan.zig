@@ -20,7 +20,7 @@ const TagBaseType = u16;
 pub const Tag = enum(TagBaseType) {
     ThunkReturnLocal = 0x7ff0,
     ThunkReturnInstance,
-    ThunkReturnSmallInteger,
+    ThunkReturnObject,
     ThunkReturnImmediate,
     ThunkLocal,
     BlockAssignLocal,
@@ -231,7 +231,7 @@ pub const Object = packed struct(u64) {
             .heap => {@branchHint(.likely);
                 return self.highPointer(T);
             },
-            .ThunkReturnLocal, .ThunkReturnInstance, .ThunkReturnSmallInteger, .ThunkReturnImmediate, .ThunkLocal, .ThunkInstance, .ThunkHeap => return self.highPointer(T),
+            .ThunkReturnLocal, .ThunkReturnInstance, .ThunkReturnObject, .ThunkReturnImmediate, .ThunkLocal, .ThunkInstance, .ThunkHeap => return self.highPointer(T),
             else => {},
         }
         return null;
@@ -242,7 +242,7 @@ pub const Object = packed struct(u64) {
     }
     pub inline fn isMemoryAllocated(self: Object) bool {
         return switch (self.tag) {
-            .heap, .ThunkReturnLocal, .ThunkReturnInstance, .ThunkReturnSmallInteger, .ThunkReturnImmediate, .ThunkLocal, .ThunkInstance, .ThunkHeap => true,
+            .heap, .ThunkReturnLocal, .ThunkReturnInstance, .ThunkReturnObject, .ThunkReturnImmediate, .ThunkLocal, .ThunkInstance, .ThunkHeap => true,
             else => false,
         };
     }

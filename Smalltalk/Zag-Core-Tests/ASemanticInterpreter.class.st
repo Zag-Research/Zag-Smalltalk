@@ -232,7 +232,7 @@ ASemanticInterpreter >> reset [
 	self addClasses: {
 			#ThunkHeap.
 			#ThunkReturnLocal.
-			#ThunkReturnSmallInteger.
+			#ThunkReturnObject.
 			#ThunkReturnImmediate.
 			#ThunkReturnCharacter.
 			#ThunkImmediate.

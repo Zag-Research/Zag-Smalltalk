@@ -20,7 +20,7 @@ We extend this slightly, by using all 8 possible tag values:
 | `0000000000000000` | `aaaaaaaa` | `aaaaaaaa` | `aaaaa000` | (heap) pointer            |
 | `aaaaaaaaaaaaaaaa` | `aaaaaaaa` | `llllllll` | `00001001` | `ThunkReturnLocal`        |
 | `aaaaaaaaaaaaaaaa` | `aaaaaaaa` | `iiiiiiii` | `00010001` | `ThunkReturnInstance`     |
-| `aaaaaaaaaaaaaaaa` | `aaaaaaaa` | `nnnnnnnn` | `00011001` | `ThunkReturnSmallInteger` |
+| `aaaaaaaaaaaaaaaa` | `aaaaaaaa` | `nnnnnnnn` | `00011001` | `ThunkReturnObject` |
 | `aaaaaaaaaaaaaaaa` | `aaaaaaaa` | `iiiiiiii` | `00100001` | `ThunkReturnImmediate`    |
 | `aaaaaaaaaaaaaaaa` | `aaaaaaaa` | `cccccccc` | `00101001` | `ThunkReturnCharacter`    |
 | `aaaaaaaaaaaaaaaa` | `aaaaaaaa` | `seeemmmm` | `00110001` | `ThunkReturnFloat`        |
@@ -58,26 +58,26 @@ Any selection of zero-sized objects could be encoded in the Object value if they
 
 Immediates are interpreted similarly to a header word for heap objects. That is, they contain a class index and a hash code. The class index is 5 bits and the hash code is 24-56 bits. Some immediate classes use the hash24 value which is the 24 bits after the tag. Others contain a pointer in the top 48 bits with some other data in the other 8 bits.
 #### Class numbers
-1. `ThunkReturnLocal`: This and the following 4 classes encode thunks that do non-local returns of a value, where the address of the `Context` is in the high 48 bits. This class returns a value from the `Context` (a local, parameter, or the `self` object). The local index is encoded in the extra field.
+1. `ThunkReturnLocal`: This and the following 4 classes encode thunks that do non-local returns of a value. When encoded as an immediate, the address of the `Context` is in the high 48 bits. This class returns a value from the `Context` (a local, parameter, or the `self` object). The local index is encoded in the extra field which, in the immediate form limits it to 256 values.
 2. `ThunkReturnInstance`: This encodes a non-local return of an instance variable. The variable index is encoded in the extra field. The `self` field of the `Context` is the referenced object.
-3. `ThunkReturnSmallInteger`: This encodes a non-local return of an 8-bit signed integer, encoded in the extra field.
-4. `ThunkReturnImmediate`: This encodes a non-local return of an immediate value (`nil`, `false`, or `true`). Simply returns the extra field, so 0 is `nil`, `01101001` is `true`, etc.
-5. `ThunkReturnCharacter`: This encodes a non-local return of an 8-bit character, with the character encoded in the extra field. This doesn't encode all characters, but it encodes all the ASCII characters.
-6. `ThunkReturnFloat`: This encodes a non-local return of a limited floating-point value, with the value encoded in the extra field. This only encodes 256 values, but it encodes all the integral values from 0 to 8, all the powers of 2 up to 128 and their inverses, powers of 2 times 10 up to 320, 1/8 to 7/8, `nan` and `inf`. And it has negative and positives for all of them.
-7. `ThunkLocal`: This evaluates to the value of a local variable in the `Context` referred to in the high 48 bits. The variable index is encoded in the extra field.
-8. `BlockAssignLocal`: This takes 1 parameter and assigns the value to a local variable in the `Context`. That value is also the result. The local index is encoded in the extra field. If the local variable number is 0, no assignment is done, and it simply does a non-local return of the parameter - i.e. this is a continuation.
-9. `ThunkInstance`: This evaluates to the value of an instance variable of the object referred to in the high 48 bits. The variable index is encoded in the extra field.
-10. `BlockAssignInstance`: This takes 1 parameter and assigns the value to an instance variable of the object referred to in the high 48 bits. That value is also the result. The variable index is encoded in the extra field.
-11. `ThunkHeap`: This encodes a thunk (a `BlockClosure` that takes no parameters) that evaluates to a heap object. The address of the heap object is in the high 48 bits. The extra field is ignored.
-12. `LLVM`: Interface object to LLVM library. The 8 bit tag differentiates different kinds of LLVM JIT pointers.
-13. `ThunkImmediate`: This encodes  a thunk that evaluates to an immediate value. A sign-extended copy of the top 56 bits is returned. This encodes 48-bit `SmallInteger`s, and all of the other immediate values, as well as `nil`.
-14. `ThunkFloat`: This encodes  a thunk that evaluates to a `Float` value. A copy of the top 52 bits, concatenated to 8 zero bits and the next 4 bits. This encodes any floating-point number we can otherwise encode as long as the bottom 8 bits are zero (this include 45-bit integral values as well as values with common fractional parts such as 0.5, 0.25, 0.75). Values that can't be encoded that way would use `ThunkHeap` to return an object.
-15. `SmallInteger`: this encodes small integers. In this encoding, the high 56 bits of the word make up the value, so this provides 56-bit integers (-36,028,797,018,963,968 to 36,028,797,018,963,967). This allows numerous optimizations of `SmallInteger` operations (see [[Optimizations]]).
-16. `Symbol`: See [Symbol](Symbol.md) for detailed information on the format.
-17. `Signature`: See [Symbol](Symbol.md) for detailed information on the format.
-18. `False`: This encodes the singleton value `false`. The `False` and `True` classes only differ by 1 bit so they can be tested easily if that is appropriate (in code generation).
-19. `True`: This encodes the singleton value `true`.
-20. `Character`: The hash code contains the full Unicode value for the character/code-point. This allows orders of magnitude more possible character values than the 294,645 allocated code points as of [Unicode](https://www.unicode.org/versions/stats/)16 and even the 1,112,064 possible Unicode code points.
+3. `ThunkReturnObject`: This encodes a non-local return of an object. In the immediate version, this is an 8-bit signed integer, encoded in the extra field.
+4. `ThunkReturnImmediate`: This encodes a non-local return of an immediate value (`nil`, `false`, or `true`). Simply returns the extra field, so 0 is `nil`, `01101001` is `true`, etc. This is never used for in-memory objects as it is subsumed by `ThunkReturnObject`.
+5. `ThunkLocal`: This evaluates to the value of a local variable in the `Context` referred to in the high 48 bits. The variable index is encoded in the extra field.
+6. `BlockAssignLocal`: This takes 1 parameter and assigns the value to a local variable in the `Context`. That value is also the result. The local index is encoded in the extra field. If the local variable number is 0, no assignment is done, and it simply does a non-local return of the parameter - i.e. this is a continuation.
+7. `ThunkInstance`: This evaluates to the value of an instance variable of the object referred to in the high 48 bits. The variable index is encoded in the extra field.
+8. `BlockAssignInstance`: This takes 1 parameter and assigns the value to an instance variable of the object referred to in the high 48 bits. That value is also the result. The variable index is encoded in the extra field.
+9. `ThunkHeap`: This encodes a thunk (a `BlockClosure` that takes no parameters) that evaluates to a heap object. The address of the heap object is in the high 48 bits. The extra field is ignored.
+10. `ThunkImmediate`: This encodes  a thunk that evaluates to an immediate value. A sign-extended copy of the top 56 bits is returned. This encodes 48-bit `SmallInteger`s, and all of the other immediate values, as well as `nil`.
+11. `Symbol`: See [Symbol](Symbol.md) for detailed information on the format.
+12. `False`: This encodes the singleton value `false`. The `False` and `True` classes only differ by 1 bit so they can be tested easily if that is appropriate (in code generation).
+13. `True`: This encodes the singleton value `true`.
+14. `Character`: The hash code contains the full Unicode value for the character/code-point. This allows orders of magnitude more possible character values than the 294,645 allocated code points as of [Unicode](https://www.unicode.org/versions/stats/)16 and even the 1,112,064 possible Unicode code points.
+15. `Signature`: This is a superset of [Symbol](Symbol.md) with a `ClassIndex` and a possible 8-bit primitive number.
+16. `ThunkReturnCharacter`: This encodes a non-local return of an 8-bit character, with the character encoded in the extra field. This doesn't encode all characters, but it encodes all the ASCII characters. This is never used for in-memory objects as it is subsumed by `ThunkReturnObject`.
+17. `ThunkReturnFloat`: This encodes a non-local return of a limited floating-point value, with the value encoded in the extra field. This only encodes 256 values, but it encodes all the integral values from 0 to 8, all the powers of 2 up to 128 and their inverses, powers of 2 times 10 up to 320, 1/8 to 7/8, `nan` and `inf`. And it has negative and positives for all of them. This is never used for in-memory objects as it is subsumed by `ThunkReturnObject`.
+18. `ThunkFloat`: This encodes  a thunk that evaluates to a `Float` value. A copy of the top 52 bits, concatenated to 8 zero bits and the next 4 bits. This encodes any floating-point number we can otherwise encode as long as the bottom 8 bits are zero (this include 45-bit integral values as well as values with common fractional parts such as 0.5, 0.25, 0.75). Values that can't be encoded that way would use `ThunkHeap` to evaluate to an object.
+19. `LLVM`: Interface object to LLVM library. The 8 bit tag differentiates different kinds of LLVM JIT pointers.
+20. `SmallInteger`: this encodes small integers. In this encoding, the high 56 bits of the word make up the value, so this provides 56-bit integers (-36,028,797,018,963,968 to 36,028,797,018,963,967). This allows numerous optimizations of `SmallInteger` operations (see [[Optimizations]]).
 21. to 31 unused
 
 The additional classes that are hard-coded (because they are referenced by Zig code) are:

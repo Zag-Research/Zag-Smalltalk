@@ -810,6 +810,9 @@ pub const HeapObject = packed struct {
         const h = self.header;
         h.objectFormat.atPut(h, self, index, data);
     }
+    pub inline fn atSet(self: *HeapObject, index: usize, obj: Object) void {
+        @as(*Object, @ptrCast(self))[index] = obj;
+    }
     pub inline fn size(self: *const HeapObject) HeapOperationError!usize {
         const h = self.header;
         return h.objectFormat.size(h, self);

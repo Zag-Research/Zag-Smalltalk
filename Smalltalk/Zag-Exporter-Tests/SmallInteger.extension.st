@@ -8,8 +8,8 @@ SmallInteger >> zagClosureClass [
 ]
 
 { #category : '*Zag-Exporter-Tests' }
-SmallInteger >> zagClosureReturnClass [
+Object >> zagClosureReturnClass [
 
-	(self between: -128 and: 127) ifTrue: [ ^ #ThunkReturnSmallInteger ].
+	(self between: -128 and: 127) ifTrue: [ ^ #ThunkReturnObject ].
 	^ BlockClosure
 ]

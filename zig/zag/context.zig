@@ -14,6 +14,7 @@ const o1 = object.testObjects[1];
 const Nil = object.Nil;
 const True = object.True;
 const False = object.False;
+const ClassIndex = object.ClassIndex;
 const heap = zag.heap;
 const HeapObjectPtr = heap.HeapObjectPtr;
 const HeapObject = heap.HeapObject;
@@ -357,6 +358,9 @@ pub fn print(self: *const Context, process: *const Process) void {
     if (self.prevCtxt) |ctxt| {
         ctxt.print(process);
     }
+}
+pub fn initClosure(self: *const Context, sp: SP, size: usize, class: *const ClassIndex) HeapObjectPtr {
+    _ = .{ self, sp, size, class, @panic("unimplemented") };
 }
 pub const Variable = packed struct {
     lowBits: u8,

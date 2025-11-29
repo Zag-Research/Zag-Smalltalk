@@ -29,7 +29,7 @@ pub const ClassIndex = enum(u16) {
     none = 0,
     ThunkReturnLocal,
     ThunkReturnInstance,
-    ThunkReturnSmallInteger,
+    ThunkReturnObject,
     ThunkReturnImmediate,
     ThunkLocal,
     BlockAssignLocal,
@@ -99,7 +99,7 @@ pub const ClassIndex = enum(u16) {
         none = 0,
         ThunkReturnLocal,
         ThunkReturnInstance,
-        ThunkReturnSmallInteger,
+        ThunkReturnObject,
         ThunkReturnImmediate,
         ThunkLocal,
         BlockAssignLocal,
@@ -145,6 +145,7 @@ pub const ClassIndex = enum(u16) {
 };
 comptime {
     std.debug.assert(@intFromEnum(ClassIndex.replace0) == 0xffff);
+    std.debug.assert(@intFromEnum(ClassIndex.o0) == 0x1f);
     std.testing.expectEqual(@intFromEnum(ClassIndex.ThunkReturnLocal), 1) catch @panic("unreachable");
     //    std.debug.assert(std.meta.hasUniqueRepresentation(Object));
     for (@typeInfo(ClassIndex.Compact).@"enum".fields, @typeInfo(ClassIndex).@"enum".fields[0..@typeInfo(ClassIndex.Compact).@"enum".fields.len]) |ci, cci| {

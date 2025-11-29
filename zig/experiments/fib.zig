@@ -276,7 +276,7 @@ const fibIntegerCl = struct {
             tf.push,                  self,
             tf.pushLiteral,           "1const",
             tf.inlinePrimitive,       leq,
-            tf.createClosure, fromClassI8(.ThunkReturnSmallInteger, 1),
+            tf.createClosure, fromClassI8(.ThunkReturnObject, 1),
             tf.send,                  signature(.@"ifTrue:", 0),
             tf.push,                  self,
             tf.pushLiteral,           "0const",
@@ -671,6 +671,6 @@ pub fn main() !void {
     try timing(if (default) @constCast(do_all[0..]) else args[1..], default);
 }
 const testRun = zag.config.testRun;
-const fibN = if (testRun) 5 else 40;
+const fibN = if (testRun) 5 else 10;
 const nRuns = if (testRun) 1 else 5;
 const warmups = if (testRun) 0 else null;
