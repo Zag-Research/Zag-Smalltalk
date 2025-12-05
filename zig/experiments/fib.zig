@@ -211,7 +211,6 @@ const fibIntegerBr = struct {
             tf.returnSelf,            ":false",
             tf.push,                  self,
             tf.pushLiteral,           "0const",
-            tf.dup,                   tf.drop,
             tf.inlinePrimitive,       minus,
             tf.send,                  signature(.fibonacci, 0),
             &nullMethod,              tf.push,
@@ -280,7 +279,6 @@ const fibIntegerCl = struct {
             tf.send,                  signature(.@"ifTrue:", 0),
             tf.push,                  self,
             tf.pushLiteral,           "0const",
-            tf.dup,                   tf.drop,
             tf.inlinePrimitive,       minus,
             tf.send,                  signature(.fibonacci, 0),
             &nullMethod,              tf.push,
@@ -626,8 +624,9 @@ pub fn timing(args: []const []const u8, default: bool) !void {
             print("          Median   Mean   StdDev  SD/Mean ({} run{s}, {} warmup{s})\n", .{ stat.runs, if (stat.runs != 1) "s" else "", stat.warmups, if (stat.warmups != 1) "s" else "" });
         } else {
             var anyRun = false;
-            inline for (&.{ fibNative, fibNativeFloat, fibInteger, fibInteger0, fibIntegerBr, fibFloat, fibIntegerCnP, //fibIntegerCl
-                    }) |benchmark| {
+            inline for (&.{ fibNative, fibNativeFloat, fibInteger, fibInteger0, fibIntegerBr, fibFloat,
+                            fibIntegerCnP, fibIntegerCl
+                          }) |benchmark| {
                 if (includeFor(benchmark) and std.mem.eql(u8, name(arg), benchmark.info.name)) {
                     anyRun = true;
                     print("{s:>9}", .{benchmark.info.name});
@@ -652,10 +651,10 @@ pub fn main() !void {
         "Config",            "Header",
         "Native",            "NativeF",
         //"Integer",
-        "IntegerBr?Integer",
+        //"IntegerBr?Integer",
         //"Integer0?Integer",
         //"IntegerCnP",
-        "Float",
+        //"Float",
         "IntegerCl",
     };
     // var gpa = std.heap.GeneralPurposeAllocator(.{}){};

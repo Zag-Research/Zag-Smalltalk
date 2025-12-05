@@ -64,6 +64,7 @@ pub const branch = struct {
             ":label",
         });
         assert(@alignOf(@TypeOf(exe)) > 50);
+        try exe.resolve(Object.empty);
         exe.execute(Object.empty);
         try exe.matchStack(Object.empty);
     }

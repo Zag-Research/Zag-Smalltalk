@@ -13,7 +13,6 @@ const heap = @import("heap.zig");
 const Age = heap.Age;
 const HeapObject = heap.HeapObject;
 const HeapHeader = heap.HeapHeader;
-const HeapObjectPtr = heap.HeapObjectPtr;
 const HeapObjectConstPtr = heap.HeapObjectConstPtr;
 const largerPowerOf2 = @import("utilities.zig").largerPowerOf2;
 //pub const SelfObject = if (!builtin.is_test) struct {} else Object.oImm(.Symbol, 0xf0000ff);
@@ -219,7 +218,7 @@ pub const ObjectFunctions = struct {
     }
     pub inline //
     fn isUnmoving(self: Object) bool {
-        return !self.isMemoryAllocated() or self.to(HeapObjectPtr).isUnmoving();
+        return !self.hasMemoryReference() or self.to(*HeapObject).isUnmoving();
     }
     pub inline //
     fn hash(self: Object) Object {
@@ -249,21 +248,16 @@ pub const ObjectFunctions = struct {
     pub fn toUnchecked(self: Object, comptime T: type) T {
         return self.toWithCheck(T, false);
     }
-    pub inline fn asMemoryObject(self: Object) ?HeapObjectPtr {
-        if (self.isMemoryAllocated()) return self.pointer(HeapObjectPtr);
-        return null;
-    }
     pub inline fn asObjectArray(self: Object) ?[*]Object {
-        if (self.isHeapObject()) return self.pointer([*]Object);
+        if (self.ifHeapObject()) |ptr| return @ptrCast(ptr);
         return null;
     }
     pub fn header(self: Object) HeapHeader {
-        if (self.isHeapObject()) return self.to(HeapObjectPtr).header;
+        if (self.ifHeapObject()) |ptr| return ptr.header;
         return @as(HeapHeader, @bitCast(@as(u64, 0)));
     }
     pub fn instVars(self: Object) []Object {
-        if (self.isHeapObject()) return self.to(HeapObjectPtr).instVars() catch
-            return &[0]Object{};
+        if (self.ifHeapObject()) |ptr| return ptr.instVars();
         return &[0]Object{};
     }
     pub fn asZeroTerminatedString(self: Object, target: []u8) ![*:0]u8 {
@@ -274,40 +268,39 @@ pub const ObjectFunctions = struct {
         return target[0..m.len :0];
     }
     pub fn arrayAsSlice(self: Object, comptime T: type) ![]T {
-        if (self.isIndexable()) return self.to(HeapObjectPtr).arrayAsSlice(T);
+        if (self.isIndexable()) return self.to(*HeapObject).arrayAsSlice(T);
         return error.ObjectNotIndexable;
     }
     pub fn size(self: Object) !usize {
-        if (!self.isHeapObject()) return error.NotIndexable;
-        return self.to(HeapObjectPtr).arraySize();
+        if (self.ifHeapObject()) |ptr| return ptr.arraySize();
+        return error.NotIndexable;
     }
     pub fn isIndexable(self: Object) bool {
-        if (self.isHeapObject()) return self.to(HeapObjectConstPtr).isIndexable();
+        if (self.ifHeapObject()) |ptr| return ptr.isIndexable();
         return false;
     }
     pub fn inHeapSize(self: Object) usize {
-        if (self.isHeapObject()) return self.to(HeapObjectPtr).inHeapSize();
+        if (self.ifHeapObject()) |ptr| return ptr.inHeapSize();
         return 0;
     }
     pub fn compare(self: Object, other: Object) std.math.Order {
         const ord = std.math.Order;
         if (self.equals(other)) return ord.eq;
-        if (!self.isHeapObject() or !other.isHeapObject()) {
-            //@panic("unreachable");
-            // const u64s = self.rawU();
-            // const u64o = other.rawU();
-            // return std.math.order(u64s, u64o);
+        if (self.ifHeapObject()) |_| {
+            if (other.ifHeapObject()) |_| {
+                const sla = self.arrayAsSlice(u8) catch &[0]u8{};
+                const slb = other.arrayAsSlice(u8) catch &[0]u8{};
+                for (sla[0..@min(sla.len, slb.len)], 0..) |va, index| {
+                    const vb = slb[index];
+                    if (va < vb) return ord.lt;
+                    if (va > vb) return ord.gt;
+                }
+                if (sla.len < slb.len) return ord.lt;
+                if (sla.len > slb.len) return ord.gt;
+                return ord.eq;
+            }
         }
-        const sla = self.arrayAsSlice(u8) catch &[0]u8{};
-        const slb = other.arrayAsSlice(u8) catch &[0]u8{};
-        for (sla[0..@min(sla.len, slb.len)], 0..) |va, index| {
-            const vb = slb[index];
-            if (va < vb) return ord.lt;
-            if (va > vb) return ord.gt;
-        }
-        if (sla.len < slb.len) return ord.lt;
-        if (sla.len > slb.len) return ord.gt;
-        return ord.eq;
+        @panic("unreachable");
     }
     pub inline fn get_class(self: Object) ClassIndex {
         return self.which_class();
@@ -337,13 +330,19 @@ pub const ObjectFunctions = struct {
         } else if (self.signature()) |signature| {
             try writer.print("{f}", .{signature});
         } else if (self.nativeI()) |i| {
-            try writer.print("{d} {x}", .{i, @as(u64, @bitCast(self))});
+            try writer.print("{d}", .{i});
         } else if (self.symbolHash()) |_| {
             try writer.print("#{s}", .{symbol.asString(self).arrayAsSlice(u8) catch "???"});
+        } else if (self.extraImmediateU()) {
+            try writer.print("{}({})", .{self.which_class(), self.extraU()});
+        } else if (self.extraImmediateI()) {
+            try writer.print("{}({})", .{self.which_class(), self.extraI()});
         } else if (self.equals(False())) {
             try writer.print("false", .{});
         } else if (self.equals(True())) {
             try writer.print("true", .{});
+        } else if (@as(u64, @bitCast(self)) == 0xaaaaaaaaaaaaaaaa) {
+            try writer.print("undefined", .{});
         } else if (self.nativeF()) |float| {
             try writer.print("{}", .{float});
         } else if (self.equals(Nil())) {
@@ -386,7 +385,7 @@ pub const PackedObject = packed struct {
     test "combiners" {
         const expectEqual = std.testing.expectEqual;
         try expectEqual(16384 + 2, combine14(.{ 2, 1 }));
-        try expectEqual(0x4000F, combine14([_]ClassIndex{ .SmallInteger, .Symbol }));
+        try expectEqual(0x2C014, combine14([_]ClassIndex{ .SmallInteger, .Symbol }));
     }
 };
 

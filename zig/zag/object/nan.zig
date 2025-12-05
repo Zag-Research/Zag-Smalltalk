@@ -11,7 +11,7 @@ const debugError = false;
 const object = zag.object;
 const ClassIndex = object.ClassIndex;
 const heap = zag.heap;
-const HeapObjectPtr = heap.HeapObjectPtr;
+const HeapObject = heap.HeapObject;
 const HeapObjectConstPtr = heap.HeapObjectConstPtr;
 const HeapHeader = heap.HeapHeader;
 const Process = zag.Process;
@@ -240,7 +240,7 @@ pub const Object = packed struct(u64) {
     pub inline fn isDouble(self: Object) bool {
         return self.isMemoryDouble();
     }
-    pub inline fn isMemoryAllocated(self: Object) bool {
+    pub inline fn hasMemoryReference(self: Object) bool {
         return switch (self.tag) {
             .heap, .ThunkReturnLocal, .ThunkReturnInstance, .ThunkReturnObject, .ThunkReturnImmediate, .ThunkLocal, .ThunkInstance, .ThunkHeap => true,
             else => false,
@@ -263,7 +263,7 @@ pub const Object = packed struct(u64) {
         return @bitCast(self);
     }
     pub inline fn fromAddress(value: anytype) Object {
-        return .{ .tag = .heap, .data = @as(u48, @truncate(@intFromPtr(value)))};
+        return .{ .tag = .heap, .data = @as(u48, @intCast(@intFromPtr(value)))};
     }
     pub const StaticObject = struct {
         pub fn init(_: *StaticObject, comptime value: anytype) Object {
@@ -282,7 +282,7 @@ pub const Object = packed struct(u64) {
         const T = @TypeOf(value);
         if (T == Object) return value;
         switch (@typeInfo(T)) {
-            .int, .comptime_int => return fromNativeI(@truncate(value), null, null),
+            .int, .comptime_int => return fromNativeI(@intCast(value), null, null),
             .float, .comptime_float => return fromNativeF(value, null, null),
             .bool => return if (value) Object.True() else Object.False(),
             .null => return Object.Nil(),
@@ -318,7 +318,7 @@ pub const Object = packed struct(u64) {
                         switch (@typeInfo(ptrInfo.child)) {
                             .@"fn" => {},
                             .@"struct" => {
-                                if (!check or (self.isMemoryAllocated() and (!@hasDecl(ptrInfo.child, "ClassIndex") or self.to(HeapObjectConstPtr).classIndex == ptrInfo.child.ClassIndex))) {
+                                if (!check or (self.hasMemoryReference() and (!@hasDecl(ptrInfo.child, "ClassIndex") or self.to(HeapObjectConstPtr).classIndex == ptrInfo.child.ClassIndex))) {
                                     if (@hasField(ptrInfo.child, "header") or (@hasDecl(ptrInfo.child, "includesHeader") and ptrInfo.child.includesHeader)) {
                                         return @as(T, @ptrFromInt(self.nanPointerAsInt()));
                                     } else {
@@ -347,7 +347,7 @@ pub const Object = packed struct(u64) {
         }
         const tag = self.tag;
         if (tag == .heap) {@branchHint(.likely);
-            return self.toUnchecked(HeapObjectPtr).*.getClass();
+            return self.toUnchecked(*HeapObject).*.getClass();
         }
         if (self.rawU() == NaN) {@branchHint(.unlikely); return .Float;}
         return tag.class();
@@ -357,7 +357,6 @@ pub const Object = packed struct(u64) {
     }
     const OF = object.ObjectFunctions;
     pub const arrayAsSlice = OF.arrayAsSlice;
-    pub const asMemoryObject = OF.asMemoryObject;
     pub const asObjectArray = OF.asObjectArray;
     pub const asZeroTerminatedString = OF.asZeroTerminatedString;
     pub const compare = OF.compare;

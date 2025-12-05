@@ -12,7 +12,7 @@ const Process = zag.Process;
 const SP = Process.SP;
 const Context = zag.Context;
 const HeapHeader = zag.heap.HeapHeader;
-const HeapObjectPtr = zag.heap.HeapObjectPtr;
+const HeapObject = zag.heap.HeapObject;
 const HeapObjectConstPtr = zag.heap.HeapObjectConstPtr;
 const InMemory = zag.InMemory;
 const encode = @import("floatSpur.zig").encode;
@@ -205,8 +205,11 @@ pub const Object = packed struct(u64) {
     inline fn isThunkImmediate(self: Object) bool {
         return self.isImmediateClass(.ThunkImmediate);
     }
-    pub inline fn extraI(self: Object) i8 {
-        return @bitCast(@as(u8, @truncate(self.hash & extraMask)));
+    pub inline fn extraU(self: object.Object) u8 {
+        return @intCast(self.hash & extraMask);
+    }
+    pub inline fn extraI(self: object.Object) i8 {
+        return @bitCast(self.extraU());
     }
     test "ThunkImmediate" {
         const ee = std.testing.expectEqual;
@@ -223,7 +226,7 @@ pub const Object = packed struct(u64) {
         return Tag.isSet(self, .float);
     }
     pub inline fn isMemoryDouble(self: Object) bool {
-        return self.isMemoryAllocated() and self.to(HeapObjectPtr).*.getClass() == .Float;
+        return if (self.ifMemoryAllocated()) |ptr| ptr.getClass() == .Float else false;
     }
     inline fn oImm(c: ClassIndex.Compact, h: u56) Self {
         return Self{ .tag = .immediates, .class = c, .hash = h };
@@ -332,7 +335,7 @@ pub const Object = packed struct(u64) {
                         switch (@typeInfo(ptrInfo.child)) {
                             .@"fn" => {},
                             .@"struct" => {
-                                if (!check or (self.isMemoryAllocated() and (!@hasDecl(ptrInfo.child, "ClassIndex") or self.to(HeapObjectConstPtr).classIndex == ptrInfo.child.ClassIndex))) {
+                                if (!check or (self.hasMemoryReference() and (!@hasDecl(ptrInfo.child, "ClassIndex") or self.to(HeapObjectConstPtr).classIndex == ptrInfo.child.ClassIndex))) {
                                     if (@hasField(ptrInfo.child, "header") or (@hasDecl(ptrInfo.child, "includesHeader") and ptrInfo.child.includesHeader)) {
                                         return @as(T, @ptrFromInt(@as(usize, @bitCast(self))));
                                     } else {
@@ -363,9 +366,9 @@ pub const Object = packed struct(u64) {
             @branchHint(.unlikely);
             return .UndefinedObject;
         }
-        return self.to(HeapObjectPtr).*.getClass();
+        return self.to(*HeapObject).*.getClass();
     }
-    pub inline fn isMemoryAllocated(self: Object) bool {
+    pub inline fn hasMemoryReference(self: Object) bool {
         return if (self.isHeapObject()) self != Object.Nil() else @intFromEnum(self.class) <= @intFromEnum(ClassIndex.Compact.ThunkHeap);
     }
     pub const Special = packed struct {
@@ -376,7 +379,7 @@ pub const Object = packed struct(u64) {
             return @ptrFromInt(self.rest);
         }
         pub fn objectFrom(tact: TagAndClassType, tag: u8, p: *opaque {}) Object {
-            return @bitCast(Special{ .imm = tact, .tag = tag, .rest = @truncate(@intFromPtr(p)) });
+            return @bitCast(Special{ .imm = tact, .tag = tag, .rest = @intCast(@intFromPtr(p)) });
         }
     };
     pub inline fn rawSpecial(self: Object) Special {
@@ -400,7 +403,6 @@ pub const Object = packed struct(u64) {
     }
     const OF = object.ObjectFunctions;
     pub const arrayAsSlice = OF.arrayAsSlice;
-    pub const asMemoryObject = OF.asMemoryObject;
     pub const asObjectArray = OF.asObjectArray;
     pub const asZeroTerminatedString = OF.asZeroTerminatedString;
     pub const compare = OF.compare;

@@ -67,7 +67,7 @@ fn mmap(hint: pageAddressType, size: usize, fd: os.fd_t) ![]align(page_size) u8 
 }
 fn alignedMap(hint: pageAddressType, allocation: usize, alignment: usize) ![]u8 {
     // may return alignment smaller than allocation so bump up if need
-    assert(@as(usize, alignment) >> @as(u6, @truncate(@ctz(alignment))) == 1); // alignedMap must have a power-of-2 alignment
+    assert(@as(usize, alignment) >> @as(u6, @intCast(@ctz(alignment))) == 1); // alignedMap must have a power-of-2 alignment
     assert(alignment >= page_size); // alignedMap must have a alignment >= than page_size
     const slice = try mmap(hint, allocation, -1);
     const addr = @intFromPtr(slice.ptr);

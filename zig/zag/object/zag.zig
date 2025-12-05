@@ -12,7 +12,7 @@ const Process = zag.Process;
 const SP = Process.SP;
 const Context = zag.Context;
 const HeapHeader = zag.heap.HeapHeader;
-const HeapObjectPtr = zag.heap.HeapObjectPtr;
+const HeapObject = zag.heap.HeapObject;
 const HeapObjectConstPtr = zag.heap.HeapObjectConstPtr;
 const InMemory = zag.InMemory;
 const execute = zag.execute;
@@ -170,7 +170,7 @@ pub const Object = packed struct(u64) {
         return null;
     }
     pub inline fn makeThunk(class: ClassIndex.Compact, obj: anytype, tag: u8) Object {
-        return oImm(class, @truncate((@intFromPtr(obj) << 8) | tag));
+        return oImm(class, @intCast((@intFromPtr(obj) << 8) | tag));
     }
     pub inline fn makeThunkNoArg(class: ClassIndex.Compact, value: u56) Object {
         return .oImm(class, value);
@@ -188,8 +188,11 @@ pub const Object = packed struct(u64) {
     inline fn isThunkImmediate(self: object.Object) bool {
         return self.isImmediateClass(.ThunkImmediate);
     }
+    pub inline fn extraU(self: object.Object) u8 {
+        return @intCast(self.hash & extraMask);
+    }
     pub inline fn extraI(self: object.Object) i8 {
-        return @bitCast(@as(u8, @truncate(self.hash & extraMask)));
+        return @bitCast(self.extraU());
     }
     test "ThunkImmediate" {
         var process: Process align(Process.alignment) = undefined;
@@ -210,7 +213,9 @@ pub const Object = packed struct(u64) {
         return (self.rawU() & 6) != 0;
     }
     pub inline fn isMemoryDouble(self: object.Object) bool {
-        return self.isMemoryAllocated() and self.toUnchecked(HeapObjectPtr).*.getClass() == .Float;
+        return if (self.ifHeapObject()) |ptr|
+                ptr.getClass() == .Float
+            else false;
     }
     inline fn oImm(c: ClassIndex.Compact, h: u56) Self {
         return Self{ .tag = .immediates, .class = c, .hash = h };
@@ -256,8 +261,28 @@ pub const Object = packed struct(u64) {
         return @truncate(self.hash);
     }
 
-    pub fn immediateClosure(sig: Signature, sp: SP, context: *Context) *HeapObject {
-        _ = .{sig, sp, context, @panic("unimplemented")};
+    pub fn extraImmediateU(obj: Object) bool {
+        return obj.isImmediateClass(.ThunkReturnLocal) or
+            obj.isImmediateClass(.ThunkReturnInstance) or
+            obj.isImmediateClass(.ThunkReturnImmediate) or
+            obj.isImmediateClass(.ThunkReturnCharacter) or
+            obj.isImmediateClass(.ThunkReturnFloat);
+    }
+
+    pub fn extraImmediateI(obj: Object) bool {
+        return obj.isImmediateClass(.ThunkReturnObject);
+    }
+
+    pub fn immediateClosure(sig: Signature, sp: SP, context: *Context) ?Object {
+        const class: ClassIndex.Compact = @enumFromInt(@intFromEnum(sig.getClass()));
+        _ = sp;
+        return switch (class) {
+            .ThunkReturnObject,
+            .ThunkReturnLocal, .ThunkReturnInstance, .ThunkReturnImmediate,
+            .ThunkReturnCharacter, .ThunkReturnFloat =>
+                oImm(class, @intCast(@intFromPtr(context) << 8 | sig.primitive())),
+            else => null,
+        };
     }
 
     pub fn fromAddress(value: anytype) Object {
@@ -320,7 +345,7 @@ pub const Object = packed struct(u64) {
                         switch (@typeInfo(ptrInfo.child)) {
                             .@"fn" => {},
                             .@"struct" => {
-                                if (!check or (self.isMemoryAllocated() and (!@hasDecl(ptrInfo.child, "ClassIndex") or self.toUnchecked(HeapObjectConstPtr).classIndex == ptrInfo.child.ClassIndex))) {
+                                if (!check or (self.hasMemoryReference() and (!@hasDecl(ptrInfo.child, "ClassIndex") or self.toUnchecked(HeapObjectConstPtr).classIndex == ptrInfo.child.ClassIndex))) {
                                     if (@hasField(ptrInfo.child, "header") or (@hasDecl(ptrInfo.child, "includesHeader") and ptrInfo.child.includesHeader)) {
                                         return @as(T, @ptrFromInt(@as(usize, @bitCast(self))));
                                     } else {
@@ -360,7 +385,7 @@ pub const Object = packed struct(u64) {
                     .heap => if (self.rawU() == 0) {
                         @branchHint(.unlikely);
                         return .UndefinedObject;
-                    } else return self.toUnchecked(HeapObjectPtr).*.getClass(),
+                    } else return self.toUnchecked(*HeapObject).*.getClass(),
                     .immediates => {
                         @branchHint(.likely);
                         return self.class.classIndex();
@@ -378,7 +403,7 @@ pub const Object = packed struct(u64) {
                     if (self.rawU() == 0) {
                         @branchHint(.unlikely);
                         return .UndefinedObject;
-                    } else return self.toUnchecked(HeapObjectPtr).*.getClass();
+                    } else return self.toUnchecked(*HeapObject).*.getClass();
                 }
                 return class;
             },
@@ -389,7 +414,7 @@ pub const Object = packed struct(u64) {
                         if (self.rawU() == 0) {
                             @branchHint(.unlikely);
                             return .UndefinedObject;
-                        } else return self.toUnchecked(HeapObjectPtr).*.getClass();
+                        } else return self.toUnchecked(*HeapObject).*.getClass();
                     },
                     t(.ThunkReturnLocal) => {
                         @branchHint(.unlikely);
@@ -491,12 +516,12 @@ pub const Object = packed struct(u64) {
                 } else if (self.rawU() == 0) {
                     @branchHint(.unlikely);
                     return .UndefinedObject;
-                } else return self.toUnchecked(HeapObjectPtr).*.getClass();
+                } else return self.toUnchecked(*HeapObject).*.getClass();
             },
             .andTagbits => {
                 const tag_bits = self.tagbits();
                 const tag = tag_bits & 7;
-                if (tag == 1) return @enumFromInt(tag_bits >> 3) else if (tag > 1) return .Float else if (self.rawU() == 0) return .UndefinedObject else return self.toUnchecked(HeapObjectPtr).*.getClass();
+                if (tag == 1) return @enumFromInt(tag_bits >> 3) else if (tag > 1) return .Float else if (self.rawU() == 0) return .UndefinedObject else return self.toUnchecked(*HeapObject).*.getClass();
             },
             .rotateTagbits => {
                 const tag_bits = std.math.rotl(u8, self.tagbits(), 5);
@@ -509,12 +534,9 @@ pub const Object = packed struct(u64) {
                 } else if (self.rawU() == 0) {
                     @branchHint(.unlikely);
                     return .UndefinedObject;
-                } else return self.toUnchecked(HeapObjectPtr).*.getClass();
+                } else return self.toUnchecked(*HeapObject).*.getClass();
             },
         }
-    }
-    pub inline fn isMemoryAllocated(self: object.Object) bool {
-        return if (self.isHeapObject()) self != object.Object.Nil() else @intFromEnum(self.class) <= @intFromEnum(ClassIndex.Compact.ThunkHeap);
     }
     pub const Special = packed struct {
         imm: TagAndClassType,
@@ -549,12 +571,30 @@ pub const Object = packed struct(u64) {
     pub inline fn isImmediateWhenNotDouble(self: object.Object) bool {
         return self.rawU() & 1 != 0;
     }
-    pub inline fn isHeapObject(self: object.Object) bool {
-        return self.tag == .heap;
+    pub inline fn ifHeapObject(self: object.Object) ?*HeapObject {
+        if (self.tag == .heap) return @ptrFromInt(@as(u64,@bitCast(self)));
+        return null;
+    }
+    pub inline fn hasMemoryReference(self: Object) bool {
+        return if (self.ifHeapObject()) |_|
+                true
+            else switch (self.class) {
+                .ThunkReturnLocal,
+                .ThunkReturnInstance,
+                .ThunkReturnObject,
+                .ThunkReturnImmediate,
+                .ThunkLocal,
+                .BlockAssignLocal,
+                .ThunkInstance,
+                .BlockAssignInstance,
+                .ThunkHeap,
+                .ThunkReturnCharacter,
+                .ThunkReturnFloat => true,
+                else => false, // catches the nil case
+            };
     }
     const OF = object.ObjectFunctions;
     pub const arrayAsSlice = OF.arrayAsSlice;
-    pub const asMemoryObject = OF.asMemoryObject;
     pub const asObjectArray = OF.asObjectArray;
     pub const asZeroTerminatedString = OF.asZeroTerminatedString;
     pub const compare = OF.compare;

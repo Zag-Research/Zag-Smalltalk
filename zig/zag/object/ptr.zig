@@ -12,7 +12,7 @@ const object = zag.object;
 const ClassIndex = object.ClassIndex;
 const heap = zag.heap;
 const HeapHeader = heap.HeapHeader;
-const HeapObjectPtr = heap.HeapObjectPtr;
+const HeapObject = heap.HeapObject;
 const HeapObjectConstPtr = heap.HeapObjectConstPtr;
 const Process = zag.Process;
 const SP = Process.SP;
@@ -126,7 +126,7 @@ pub const Object = packed struct(u64) {
         return self.ref.header.classIndex == class;
     }
     pub inline fn isMemoryDouble(self: object.Object) bool {
-        return self.isMemoryAllocated() and self.to(HeapObjectPtr).*.getClass() == .Float;
+        return if (self.ifMemoryAllocated()) |ptr| ptr.getClass() == .Float else false;
     }
     pub inline //
     fn isInt(self: Object) bool {
@@ -142,13 +142,13 @@ pub const Object = packed struct(u64) {
     //     return Self{ .tag = .immediates, .class = c, .hash = h };
     // }
     pub inline fn hasPointer(self: Object) bool {
-        return self.isMemoryAllocated();
+        return self.hasMemoryReference();
     }
     pub inline fn highPointer(self: Object, T: type) ?T {
         return @ptrCast(self.ref.data.objects);
     }
     pub inline fn pointer(self: Object, T: type) ?T {
-        if (self.isMemoryAllocated()) return @constCast(@ptrCast(self.ref));
+        if (self.hasMemoryReference()) return @constCast(@ptrCast(self.ref));
         return null;
     }
     pub inline fn toBoolNoCheck(self: Object) bool {
@@ -243,7 +243,7 @@ pub const Object = packed struct(u64) {
                         switch (@typeInfo(ptrInfo.child)) {
                             .@"fn" => {},
                             .@"struct" => {
-                                if (!check or (self.isMemoryAllocated() and (!@hasDecl(ptrInfo.child, "ClassIndex") or self.to(HeapObjectConstPtr).classIndex == ptrInfo.child.ClassIndex))) {
+                                if (!check or (self.hasMemoryReference() and (!@hasDecl(ptrInfo.child, "ClassIndex") or self.to(HeapObjectConstPtr).classIndex == ptrInfo.child.ClassIndex))) {
                                     if (@hasField(ptrInfo.child, "header") or (@hasDecl(ptrInfo.child, "includesHeader") and ptrInfo.child.includesHeader)) {
                                         return @as(T, @ptrFromInt(@as(usize, @bitCast(self))));
                                     } else {
@@ -264,7 +264,7 @@ pub const Object = packed struct(u64) {
     fn which_class(self: Object) ClassIndex {
         return self.ref.header.classIndex;
     }
-    pub inline fn isMemoryAllocated(self: Object) bool {
+    pub inline fn hasMemoryReference(self: Object) bool {
         return @intFromPtr(self.ref) & 0x7 == 0 and self != Object.Nil();
     }
     pub const Scanner = struct {
@@ -288,7 +288,6 @@ pub const Object = packed struct(u64) {
     }
     const OF = object.ObjectFunctions;
     pub const arrayAsSlice = OF.arrayAsSlice;
-    pub const asMemoryObject = OF.asMemoryObject;
     pub const asObjectArray = OF.asObjectArray;
     pub const asZeroTerminatedString = OF.asZeroTerminatedString;
     pub const compare = OF.compare;

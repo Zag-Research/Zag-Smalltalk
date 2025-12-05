@@ -23,7 +23,7 @@ pub inline fn symbolIndex(obj: object.Object) u24 {
     return unhash(obj.hash24());
 }
 pub inline fn symbolArity(obj: object.Object) u4 {
-    return @truncate(obj.hash32() >> 24);
+    return @intCast(obj.hash32() >> 24);
 }
 inline fn hash_of(index: u24, arity: u4) u32 {
     return @as(u32, hash(index)) | (@as(u32, arity) << 24);
@@ -105,7 +105,7 @@ const SymbolsEnum = enum(u32) {
         sym.data.unsigned = s_hash | @as(u64, symbol.numArgs()) << 24;
     }
     pub inline fn numArgs(self: SymbolsEnum) u4 {
-        return @truncate(@intFromEnum(self) >> 24);
+        return @intCast(@intFromEnum(self) >> 24);
     }
     pub inline fn symbolHash(self: SymbolsEnum) ?u24 {
         return hash(@truncate(@intFromEnum(self)));
@@ -116,7 +116,7 @@ const SymbolsEnum = enum(u32) {
     pub fn asObject(self: SymbolsEnum) Object {
         const index: u24 = @truncate(@intFromEnum(self));
         if (config.immediateSymbols) {
-            return Object.makeImmediate(.Symbol, hash_of(index, @truncate(@intFromEnum(self) >> 24)));
+            return Object.makeImmediate(.Symbol, hash_of(index, @intCast(@intFromEnum(self) >> 24)));
         }
         const O = packed struct { sym: *const PointedObject };
         return @bitCast(O{ .sym = &staticSymbols[index - 1] });
@@ -126,7 +126,7 @@ const SymbolsEnum = enum(u32) {
     }
     fn signature(sym: SymbolsEnum, primitive: u8) Signature {
         const int = @intFromEnum(sym);
-        return Signature.fromHashPrimitive(hash_of(@truncate(int), @truncate(int >> 24)), primitive);
+        return Signature.fromHashPrimitive(hash_of(@truncate(int), @intCast(int >> 24)), primitive);
     }
     inline fn symbol_of(index: u24, nArgs: u4) Object {
         if (config.immediateSymbols) {
@@ -279,8 +279,8 @@ test "symbols match initialized symbol table" {
     try expectEqual(0, symbolArity(symbols.Object.asObject()));
     switch (config.objectEncoding) {
         .zag => {
-            try expectEqual(0x5FB38681, symbols.Object.asObject().testU());
-            try expectEqual(0x2736AD181, symbols.@"value:value:".asObject().testU());
+            try expectEqual(0x5FB38659, symbols.Object.asObject().testU());
+            try expectEqual(0x2736AD159, symbols.@"value:value:".asObject().testU());
         },
         .nan => {
             try expectEqual(0x0, symbols.Object.asObject().testU());
@@ -316,7 +316,7 @@ test "find key value for quick selectors" {
     var mask: u64 = 0;
     var match: u64 = 0;
     outer: for (8..32) |bit| {
-        const bitmask = @as(u64, 1) << @truncate(bit);
+        const bitmask = @as(u64, 1) << @intCast(bit);
         const bitmatch = QuickSelectors[0].testU() & bitmask;
         for (QuickSelectors) |obj| {
             if ((obj.testU() & bitmask) != bitmatch) continue :outer;

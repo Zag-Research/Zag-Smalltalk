@@ -12,7 +12,7 @@ const Process = zag.Process;
 const SP = Process.SP;
 const Context = zag.Context;
 const HeapHeader = zag.heap.HeapHeader;
-const HeapObjectPtr = zag.heap.HeapObjectPtr;
+const HeapObject = zag.heap.HeapObject;
 const HeapObjectConstPtr = zag.heap.HeapObjectConstPtr;
 const InMemory = zag.InMemory;
 const encode = @import("floatSpur.zig").encode;
@@ -306,7 +306,7 @@ pub const Object = packed union {
     }
 
     pub inline fn isMemoryDouble(self: Object) bool {
-        return self.isMemoryAllocated() and self.ref.header.classIndex == .Float;
+        return if (self.hasMemoryReference()) |ptr| ptr.getClass() == .Float else false;
     }
 
     pub inline fn toDoubleNoCheck(self: Object) f64 {
@@ -335,7 +335,7 @@ pub const Object = packed union {
                         switch (@typeInfo(ptrInfo.child)) {
                             .@"fn" => {},
                             .@"struct" => {
-                                if (!check or (self.isMemoryAllocated() and (!@hasDecl(ptrInfo.child, "ClassIndex") or self.to(HeapObjectConstPtr).classIndex == ptrInfo.child.ClassIndex))) {
+                                if (!check or (self.hasMemoryReference() and (!@hasDecl(ptrInfo.child, "ClassIndex") or self.to(HeapObjectConstPtr).classIndex == ptrInfo.child.ClassIndex))) {
                                     if (@hasField(ptrInfo.child, "header") or (@hasDecl(ptrInfo.child, "includesHeader") and ptrInfo.child.includesHeader)) {
                                         return @as(T, @ptrFromInt(@as(usize, @bitCast(self))));
                                     } else {
@@ -368,7 +368,7 @@ pub const Object = packed union {
         return self.ref.header.classIndex;
     }
 
-    pub inline fn isMemoryAllocated(self: Object) bool {
+    pub inline fn hasMemoryReference(self: Object) bool {
         return self.isHeapObject();
     }
 
@@ -385,7 +385,6 @@ pub const Object = packed union {
     const OF = object.ObjectFunctions;
     pub const PackedObject = object.PackedObject;
     pub const arrayAsSlice = OF.arrayAsSlice;
-    pub const asMemoryObject = OF.asMemoryObject;
     pub const asObjectArray = OF.asObjectArray;
     pub const asZeroTerminatedString = OF.asZeroTerminatedString;
     pub const compare = OF.compare;

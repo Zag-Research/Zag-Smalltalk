@@ -76,7 +76,7 @@ pub const threadedFns = struct {
         }
         inline fn encodeZag(obj: Object) ?Object {
             switch (obj.tag) {
-                .heap => return Object.makeThunk(.ThunkHeap, obj.to(heap.HeapObjectPtr), 0),
+                .heap => return Object.makeThunk(.ThunkHeap, obj.to(*HeapObject), 0),
                 .immediates => {
                     const original: i64 = @bitCast(obj);
                     const signExtended: i56 = @truncate(original << 8 >> 8);
@@ -267,25 +267,31 @@ pub const threadedFns = struct {
     };
     pub const createClosure = struct {
         pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
+            sp.dumpStack("createClosure before", context);
             if (extra.installContextIfNone(sp, process, context)) |new| {
                 return @call(tailCall, threadedFn, .{ pc, new.sp, process, new.context, new.extra });
             }
             const signature = pc.signature();
             if (Object.immediateClosure(signature, sp, context)) |closure| {
+                std.debug.print("Immediate closure created: {x} {f}\n", .{@as(u64,@bitCast(closure)), closure});
                 if (sp.push(closure)) |newSp| {
-                    return @call(tailCall, process.check(pc.prim()), .{ pc.next(), newSp, process, context, extra });
+                    newSp.dumpStack("createClosure1", context);
+                    return @call(tailCall, process.check(pc.prim2()), .{ pc.next2(), newSp, process, context, extra });
                 } else {
                     const newSp, const newContext, const newExtra = sp.spillStackAndPush(closure, context, extra);
-                    return @call(tailCall, process.check(pc.prim()), .{ pc.next(), newSp, process, newContext, newExtra });
+                    newSp.dumpStack("createClosure2", newContext);
+                    return @call(tailCall, process.check(pc.prim2()), .{ pc.next2(), newSp, process, newContext, newExtra });
                 }
             }
             if (context.initClosure(sp, 2, signature.getClass())) |newSp| {
-                const closureAddress = context.closureAddress();
-                initMemoryClosure(closureAddress, signature, sp, context);
+                const closureAddress: *HeapObject = @ptrCast(context.endOfStack(newSp));
+                initMemoryClosure(closureAddress, signature, newSp, context);
                 newSp.top = Object.fromAddress(closureAddress);
+                newSp.dumpStack("createClosure3", context);
                 return @call(tailCall, process.check(pc.prim()), .{ pc.next(), newSp, process, context, extra });
             } else {
                 const newSp, const newContext, const newExtra = sp.spillStack(context, extra);
+                newSp.dumpStack("createClosure4", newContext);
                 return @call(tailCall, threadedFn, .{ pc, newSp, process, newContext, newExtra });
             }
         }
@@ -385,7 +391,7 @@ pub const threadedFns = struct {
             if (false and val.isImmediate()) {
                 switch (val.class) {
                     .BlockAssignLocal, .BlockAssignInstance => {
-                        const closure = val.to(heap.HeapObjectPtr);
+                        const closure = val.to(*HeapObject);
                         const method = closure.prev().to(*CompiledMethod);
                         //                if (!Sym.@"value:".selectorEquals(method.selector)) @panic("wrong selector"); //return @call(tailCall,eprocess.check(.dnu),.{pc,sp,process,context,selector});
                         const newPc = method.codePtr();
@@ -451,7 +457,7 @@ pub const inlines = struct {
             sp.top = Object.makeGroup(.numericThunk, @as(u48, 1) << 47 | @as(u48, @truncate(val.u() >> 17)));
         } else if (val.isImmediate()) {
             sp.top.tag = .immediateThunk;
-        } else if (val.isHeapObject()) {
+        } else if (val.ifHeapObject()) |_| {
             sp.top.tag = .heapThunk;
         } else {
             newSp = generalClosure(sp.drop(), process, val);
@@ -488,7 +494,7 @@ pub const inlines = struct {
         _ = .{ oldSp, process, block, context, extra, @panic("fullClosure") };
     }
     fn pushValue(_: PC, sp: SP, _: *Process, _: *Context, _: Object) SP {
-        const closure = sp.top.to(heap.HeapObjectPtr);
+        const closure = sp.top.to(*HeapObject);
         sp.top = closure.prevPrev();
         @panic("unfinished");
     }

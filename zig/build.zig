@@ -1,6 +1,7 @@
 const std = @import("std");
 const Encoding = @import("zag/object/encoding.zig").Encoding;
 pub fn build(b: *std.Build) void {
+    const omit_frame_pointer = false;
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
     const options = b.addOptions();
@@ -20,7 +21,7 @@ pub fn build(b: *std.Build) void {
             .imports = &.{
                 .{ .name = "zag", .module = zag },
             },
-            .omit_frame_pointer = true,
+            .omit_frame_pointer = omit_frame_pointer,
         }),
         .use_llvm = true,
     });
@@ -65,7 +66,7 @@ pub fn build(b: *std.Build) void {
             .imports = &.{
                 .{ .name = "zag", .module = zag },
             },
-            .omit_frame_pointer = true,
+            .omit_frame_pointer = omit_frame_pointer,
         }),
         .use_llvm = true,
     });
@@ -80,7 +81,7 @@ pub fn build(b: *std.Build) void {
             .imports = &.{
                 .{ .name = "zag", .module = zag },
             },
-            .omit_frame_pointer = true,
+            .omit_frame_pointer = omit_frame_pointer,
         }),
         .use_llvm = true,
     });
@@ -97,7 +98,7 @@ pub fn build(b: *std.Build) void {
             .imports = &.{
                 .{ .name = "zag", .module = zag },
             },
-            .omit_frame_pointer = true,
+            .omit_frame_pointer = omit_frame_pointer,
         }),
         .use_llvm = true,
     });
@@ -205,7 +206,7 @@ pub fn build(b: *std.Build) void {
             .imports = &.{
                 .{ .name = "zag", .module = zag },
             },
-            .omit_frame_pointer = true,
+            .omit_frame_pointer = omit_frame_pointer,
         });
         const enc_benchs = b.addExecutable(.{
             .name = "bench",

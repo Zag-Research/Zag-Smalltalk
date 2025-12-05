@@ -19,3 +19,5 @@ See [this blog](https://ziggit.dev/t/debugging-zig-with-a-debugger/7160) which [
 [Detailed Primer on Data Statistics](https://lakens.github.io/statistical_inferences/)
 
 [Hash Function Prospector](https://github.com/skeeto/hash-prospector?tab=readme-ov-file)
+
+[Big Idea Initiaitive](https://www.bigideainitiative.org/)

@@ -233,7 +233,7 @@ pub const Object = packed struct(u64) {
         return .Float;
     }
 
-    pub inline fn isMemoryAllocated(_: Object) bool {
+    pub inline fn hasMemoryReference(_: Object) bool {
         return false;
     }
 
@@ -243,7 +243,6 @@ pub const Object = packed struct(u64) {
 
     const OF = object.ObjectFunctions;
     pub const arrayAsSlice = OF.arrayAsSlice;
-    pub const asMemoryObject = OF.asMemoryObject;
     pub const asObjectArray = OF.asObjectArray;
     pub const asZeroTerminatedString = OF.asZeroTerminatedString;
     pub const compare = OF.compare;
