@@ -609,8 +609,11 @@ test "Stack" {
 pub const threadedFunctions = struct {
     pub const pushThisProcess = struct {
         pub fn threadedFn(pc: PC, sp: SP, process: *Self, context: *Context, extra: Extra) Result {
-            const newSp = sp.push(Object.fromAddress(process.ptr()));
-            return @call(tailCall, process.check(pc.prim()), .{ pc.next(), newSp.?, process, context, extra });
+            if (sp.push(Object.fromAddress(process.ptr()))) |newSp| {
+                return @call(tailCall, process.check(pc.prim()), .{ pc.next(), newSp, process, context, extra });
+            } else {
+                @panic("StackOverflow");
+            }
         }
     };
     pub const debug = struct {

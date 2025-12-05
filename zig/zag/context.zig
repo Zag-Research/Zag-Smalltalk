@@ -370,8 +370,15 @@ pub fn print(self: *const Context, process: *const Process) void {
         ctxt.print(process);
     }
 }
-pub fn initClosure(self: *const Context, sp: SP, size: usize, class: ClassIndex) ?SP {
-    _ = .{ self, sp, size, class, @panic("Context.initClosure unimplemented") };
+pub fn initStackClosure(self: *const Context, sp: SP, size: usize, class: ClassIndex) ?*HeapObject {
+    if (!self.isOnStack(sp)) return null; // only allocate on the stack if the context is on the stack
+    _ = .{ size, class, @panic("Context.initStackClosure unimplemented") };
+    // return @ptrCast(context.endOfStack(newSp));
+}
+pub fn initHeapClosure(self: *const Context, sp: SP, size: usize, class: ClassIndex) ?*HeapObject {
+    if (self.isOnStack(sp)) return null; // initStackClosure must have failed
+    if (sp.reserve(1) == null) return null; // make sure there is enough space to push the result for the closure
+    _ = .{ size, class, @panic("Context.initHeapClosure unimplemented") };
 }
 pub const Variable = packed struct {
     lowBits: u8,

@@ -267,36 +267,35 @@ pub const threadedFns = struct {
     };
     pub const createClosure = struct {
         pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
-            sp.dumpStack("createClosure before", context);
+            // at several places where the context could move we re-call this function rather than handling all the cases inline
+            // this has a bit of cost, but it's worth it for the simplicity and is very rare
             if (extra.installContextIfNone(sp, process, context)) |new| {
                 return @call(tailCall, threadedFn, .{ pc, new.sp, process, new.context, new.extra });
             }
             const signature = pc.signature();
             if (Object.immediateClosure(signature, sp, context)) |closure| {
-                std.debug.print("Immediate closure created: {x} {f}\n", .{@as(u64,@bitCast(closure)), closure});
                 if (sp.push(closure)) |newSp| {
-                    newSp.dumpStack("createClosure1", context);
                     return @call(tailCall, process.check(pc.prim2()), .{ pc.next2(), newSp, process, context, extra });
                 } else {
-                    const newSp, const newContext, const newExtra = sp.spillStackAndPush(closure, context, extra);
-                    newSp.dumpStack("createClosure2", newContext);
-                    return @call(tailCall, process.check(pc.prim2()), .{ pc.next2(), newSp, process, newContext, newExtra });
+                    const newSp, const newContext, const newExtra = sp.spillStack(context, extra);
+                    return @call(tailCall, threadedFn, .{ pc, newSp, process, newContext, newExtra });
                 }
             }
-            if (context.initClosure(sp, 2, signature.getClass())) |newSp| {
-                const closureAddress: *HeapObject = @ptrCast(context.endOfStack(newSp));
-                initMemoryClosure(closureAddress, signature, newSp, context);
-                newSp.top = Object.fromAddress(closureAddress);
-                newSp.dumpStack("createClosure3", context);
-                return @call(tailCall, process.check(pc.prim()), .{ pc.next(), newSp, process, context, extra });
-            } else {
-                const newSp, const newContext, const newExtra = sp.spillStack(context, extra);
-                newSp.dumpStack("createClosure4", newContext);
-                return @call(tailCall, threadedFn, .{ pc, newSp, process, newContext, newExtra });
+            if (context.initStackClosure(sp, 2, signature.getClass())) |closureAddress| {
+                if (sp.push(initMemoryClosure(closureAddress, signature, sp, context))) |newSp| {
+                    return @call(tailCall, process.check(pc.prim()), .{ pc.next(), newSp, process, context, extra });
+                }
             }
+            if (context.initHeapClosure(sp, 2, signature.getClass())) |closureAddress| {
+                if (sp.push(initMemoryClosure(closureAddress, signature, sp, context))) |newSp| {
+                    return @call(tailCall, process.check(pc.prim()), .{ pc.next(), newSp, process, context, extra });
+                }
+            }
+            const newSp, const newContext, const newExtra = sp.spillStack(context, extra);
+            return @call(tailCall, threadedFn, .{ pc, newSp, process, newContext, newExtra });
         }
     };
-    fn initMemoryClosure(closureAddress: *HeapObject, signature: Signature, sp: SP, context: *Context) void {
+    fn initMemoryClosure(closureAddress: *HeapObject, signature: Signature, sp: SP, context: *Context) Object {
         switch (signature.getClass()) {
             .ThunkReturnLocal, .ThunkReturnInstance, .ThunkLocal, .BlockAssignLocal, .ThunkInstance, .BlockAssignInstance, .ThunkReturnCharacter, .ThunkReturnFloat => {
                 closureAddress.atSet(0, Object.fromAddress(context));
@@ -312,6 +311,7 @@ pub const threadedFns = struct {
             },
             else => @panic("incomplete"),
         }
+        return Object.fromAddress(closureAddress);
     }
     inline fn extraToObject(extra: u8) Object {
         return switch (@as(Compact,@enumFromInt(extra >> 3))) {

@@ -334,9 +334,9 @@ pub const ObjectFunctions = struct {
         } else if (self.symbolHash()) |_| {
             try writer.print("#{s}", .{symbol.asString(self).arrayAsSlice(u8) catch "???"});
         } else if (self.extraImmediateU()) {
-            try writer.print("{}({})", .{self.which_class(), self.extraU()});
+            try writer.print("{}({}) -> {*}", .{self.which_class(), self.extraU(), self.highPointer(*zag.Context)});
         } else if (self.extraImmediateI()) {
-            try writer.print("{}({})", .{self.which_class(), self.extraI()});
+            try writer.print("{}({}) -> {*}", .{self.which_class(), self.extraI(), self.highPointer(*zag.Context)});
         } else if (self.equals(False())) {
             try writer.print("false", .{});
         } else if (self.equals(True())) {
