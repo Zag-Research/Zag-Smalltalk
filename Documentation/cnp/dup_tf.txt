@@ -107,3 +107,66 @@ Disassembly of section .text:
  103a04b: 74 ab                        	je	0x1039ff8 <controlWords.dup.threadedFn+0x28>
  103a04d: eb ac                        	jmp	0x1039ffb <controlWords.dup.threadedFn+0x2b>
  103a04f: 90                           	nop
+
+-- After the single step config change
+➜ llvm-objdump -d fib -S --disassemble-symbols=controlWords.dup.threadedFn
+
+fib:	file format elf64-x86-64
+
+Disassembly of section .text:
+
+0000000001039fd0 <controlWords.dup.threadedFn>:
+;     pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
+ 1039fd0: 41 57                        	pushq	%r15
+ 1039fd2: 41 56                        	pushq	%r14
+ 1039fd4: 53                           	pushq	%rbx
+ 1039fd5: 48 83 ec 20                  	subq	$0x20, %rsp
+;         const value = sp.top;
+ 1039fd9: 4c 8b 3e                     	movq	(%rsi), %r15
+;             const newP = @intFromPtr(self) - 8;
+ 1039fdc: 48 8d 46 f8                  	leaq	-0x8(%rsi), %rax
+;             if (newP & stack_mask == 0) {
+ 1039fe0: a9 f8 0f 00 00               	testl	$0xff8, %eax            # imm = 0xFF8
+;         if (self.reserve(1)) |newSp| {
+ 1039fe5: 74 19                        	je	0x103a000 <controlWords.dup.threadedFn+0x30>
+;             newSp.top = @bitCast(v);
+ 1039fe7: 4c 89 38                     	movq	%r15, (%rax)
+;         return code.prim();
+ 1039fea: 4c 8b 0f                     	movq	(%rdi), %r9
+;         return asPC(self.array() + 1);
+ 1039fed: 48 83 c7 10                  	addq	$0x10, %rdi
+;             return @call(tailCall, process.check(pc.prim()), .{ pc.next(), newSp, process, context, extra });
+ 1039ff1: 48 89 c6                     	movq	%rax, %rsi
+ 1039ff4: 48 83 c4 20                  	addq	$0x20, %rsp
+ 1039ff8: 5b                           	popq	%rbx
+ 1039ff9: 41 5e                        	popq	%r14
+ 1039ffb: 41 5f                        	popq	%r15
+ 1039ffd: 41 ff e1                     	jmpq	*%r9
+ 103a000: 48 8d 44 24 08               	leaq	0x8(%rsp), %rax
+ 103a005: 48 89 fb                     	movq	%rdi, %rbx
+;         const newSp, const newContext, const newExtra = sp.spillStack(context, extra);
+ 103a008: 48 89 c7                     	movq	%rax, %rdi
+ 103a00b: 49 89 d6                     	movq	%rdx, %r14
+ 103a00e: 48 89 ca                     	movq	%rcx, %rdx
+ 103a011: 4c 89 c1                     	movq	%r8, %rcx
+ 103a014: e8 e7 43 02 00               	callq	0x105e400 <process.Stack.spillStack>
+ 103a019: 48 8b 74 24 08               	movq	0x8(%rsp), %rsi
+ 103a01e: 48 8b 4c 24 10               	movq	0x10(%rsp), %rcx
+ 103a023: 4c 8b 44 24 18               	movq	0x18(%rsp), %r8
+;         newSp.top = value;
+ 103a028: 4c 89 7e f8                  	movq	%r15, -0x8(%rsi)
+;         return @ptrFromInt(@intFromPtr(self) - @sizeOf(Object) * n);
+ 103a02c: 48 83 c6 f8                  	addq	$-0x8, %rsi
+;         return code.prim();
+ 103a030: 48 8b 03                     	movq	(%rbx), %rax
+;         return asPC(self.array() + 1);
+ 103a033: 48 83 c3 10                  	addq	$0x10, %rbx
+;             return @call(tailCall, process.check(pc.prim()), .{ pc.next(), newSp, process, newContext, newExtra });
+ 103a037: 48 89 df                     	movq	%rbx, %rdi
+ 103a03a: 4c 89 f2                     	movq	%r14, %rdx
+ 103a03d: 48 83 c4 20                  	addq	$0x20, %rsp
+ 103a041: 5b                           	popq	%rbx
+ 103a042: 41 5e                        	popq	%r14
+ 103a044: 41 5f                        	popq	%r15
+ 103a046: ff e0                        	jmpq	*%rax
+ 103a048: 0f 1f 84 00 00 00 00 00      	nopl	(%rax,%rax)
