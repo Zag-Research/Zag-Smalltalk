@@ -21,3 +21,7 @@ See [this blog](https://ziggit.dev/t/debugging-zig-with-a-debugger/7160) which [
 [Hash Function Prospector](https://github.com/skeeto/hash-prospector?tab=readme-ov-file)
 
 [Big Idea Initiaitive](https://www.bigideainitiative.org/)
+
+## Zig <--> Rust interface
+[Calling rust from zig from rust from zig](https://www.youtube.com/watch?v=QQGRd_r12fw) watched first hour
+[Wiring Together the Rust and Zig Build Systems](https://www.youtube.com/watch?v=zRM_vOxbAx8)
