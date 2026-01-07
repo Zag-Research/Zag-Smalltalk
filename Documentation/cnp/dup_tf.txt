@@ -45,3 +45,65 @@ Disassembly of section .text:
  103a04b: 74 ab                         je      0x1039ff8 <controlWords.dup.threadedFn+0x28>
  103a04d: eb ac                         jmp     0x1039ffb <controlWords.dup.threadedFn+0x2b>
  103a04f: 90                            nop
+
+
+----- With source
+
+
+➜ llvm-objdump -d fib -S --disassemble-symbols=controlWords.dup.threadedFn
+
+fib:	file format elf64-x86-64
+
+Disassembly of section .text:
+
+0000000001039fd0 <controlWords.dup.threadedFn>:
+;     pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
+ 1039fd0: 41 57                        	pushq	%r15
+ 1039fd2: 41 56                        	pushq	%r14
+ 1039fd4: 53                           	pushq	%rbx
+ 1039fd5: 48 83 ec 20                  	subq	$0x20, %rsp
+ 1039fd9: 48 89 f0                     	movq	%rsi, %rax
+;         const value = sp.top;
+ 1039fdc: 48 8b 1e                     	movq	(%rsi), %rbx
+;             const newP = @intFromPtr(self) - 8;
+ 1039fdf: 48 83 c6 f8                  	addq	$-0x8, %rsi
+;             if (newP & stack_mask == 0) {
+ 1039fe3: f7 c6 f8 0f 00 00            	testl	$0xff8, %esi            # imm = 0xFF8
+;         if (self.reserve(1)) |newSp| {
+ 1039fe9: 74 1f                        	je	0x103a00a <controlWords.dup.threadedFn+0x3a>
+;             newSp.top = @bitCast(v);
+ 1039feb: 48 89 1e                     	movq	%rbx, (%rsi)
+ 1039fee: b8 50 9d 03 01               	movl	$0x1039d50, %eax        # imm = 0x1039D50
+ 1039ff3: f6 c2 60                     	testb	$0x60, %dl
+ 1039ff6: 75 03                        	jne	0x1039ffb <controlWords.dup.threadedFn+0x2b>
+ 1039ff8: 48 8b 07                     	movq	(%rdi), %rax
+ 1039ffb: 48 83 c7 10                  	addq	$0x10, %rdi
+ 1039fff: 48 83 c4 20                  	addq	$0x20, %rsp
+ 103a003: 5b                           	popq	%rbx
+ 103a004: 41 5e                        	popq	%r14
+ 103a006: 41 5f                        	popq	%r15
+ 103a008: ff e0                        	jmpq	*%rax
+ 103a00a: 48 8d 74 24 08               	leaq	0x8(%rsp), %rsi
+ 103a00f: 49 89 fe                     	movq	%rdi, %r14
+;         const newSp, const newContext, const newExtra = sp.spillStack(context, extra);
+ 103a012: 48 89 f7                     	movq	%rsi, %rdi
+ 103a015: 48 89 c6                     	movq	%rax, %rsi
+ 103a018: 49 89 d7                     	movq	%rdx, %r15
+ 103a01b: 48 89 ca                     	movq	%rcx, %rdx
+ 103a01e: 4c 89 c1                     	movq	%r8, %rcx
+ 103a021: e8 8a 44 02 00               	callq	0x105e4b0 <process.Stack.spillStack>
+ 103a026: 4c 89 f7                     	movq	%r14, %rdi
+ 103a029: 4c 89 fa                     	movq	%r15, %rdx
+;         const newSp, const newContext, const newExtra = sp.spillStack(context, extra);
+ 103a02c: 48 8b 74 24 08               	movq	0x8(%rsp), %rsi
+ 103a031: 48 8b 4c 24 10               	movq	0x10(%rsp), %rcx
+ 103a036: 4c 8b 44 24 18               	movq	0x18(%rsp), %r8
+;         newSp.top = value;
+ 103a03b: 48 89 5e f8                  	movq	%rbx, -0x8(%rsi)
+;         return @ptrFromInt(@intFromPtr(self) - @sizeOf(Object) * n);
+ 103a03f: 48 83 c6 f8                  	addq	$-0x8, %rsi
+ 103a043: b8 50 9d 03 01               	movl	$0x1039d50, %eax        # imm = 0x1039D50
+ 103a048: f6 c2 60                     	testb	$0x60, %dl
+ 103a04b: 74 ab                        	je	0x1039ff8 <controlWords.dup.threadedFn+0x28>
+ 103a04d: eb ac                        	jmp	0x1039ffb <controlWords.dup.threadedFn+0x2b>
+ 103a04f: 90                           	nop
