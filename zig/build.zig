@@ -2,7 +2,6 @@ const std = @import("std");
 const Encoding = @import("zag/object/encoding.zig").Encoding;
 
 pub fn build(b: *std.Build) void {
-    const omit_frame_pointer = false;
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
 
@@ -19,7 +18,7 @@ pub fn build(b: *std.Build) void {
     createMainExecutable(b, target, optimize, zag, build_options, llvm_module);
 
     // Experiment executables
-    createExperimentExecutables(b, target, optimize, zag);
+    createExperimentExecutables(b, target, optimize, build_options, zag);
 
     // Test and benchmark steps
     createTestStep(b, target, optimize, build_options, llvm_module);
@@ -35,6 +34,7 @@ fn createBuildOptions(b: *std.Build) BuildOptions {
     const max_classes = b.option(u16, "maxClasses", "Maximum number of classes") orelse 255;
     const trace = b.option(bool, "trace", "trace execution") orelse false;
     const quit_on_first_failure = b.option(bool, "quitOnFirstFailure", "Stop after first error");
+    const omit_frame_pointer = false;
 
     return .{
         .include_llvm = include_llvm,
@@ -44,6 +44,7 @@ fn createBuildOptions(b: *std.Build) BuildOptions {
         .max_classes = max_classes,
         .trace = trace,
         .quit_on_first_failure = quit_on_first_failure,
+        .omit_frame_pointer = omit_frame_pointer,
     };
 }
 
@@ -100,7 +101,7 @@ fn createMainExecutable(
             .imports = &.{
                 .{ .name = "zag", .module = zag },
             },
-            .omit_frame_pointer = omit_frame_pointer,
+            .omit_frame_pointer = build_options.omit_frame_pointer,
         }),
         .use_llvm = true,
     });
@@ -123,6 +124,7 @@ fn createExperimentExecutables(
     b: *std.Build,
     target: std.Build.ResolvedTarget,
     optimize: std.builtin.OptimizeMode,
+    build_options: BuildOptions,
     zag: *std.Build.Module,
 ) void {
     const fib = b.addExecutable(.{
@@ -134,7 +136,7 @@ fn createExperimentExecutables(
             .imports = &.{
                 .{ .name = "zag", .module = zag },
             },
-            .omit_frame_pointer = omit_frame_pointer,
+            .omit_frame_pointer = build_options.omit_frame_pointer,
         }),
         .use_llvm = true,
     });
@@ -149,7 +151,7 @@ fn createExperimentExecutables(
             .imports = &.{
                 .{ .name = "zag", .module = zag },
             },
-            .omit_frame_pointer = omit_frame_pointer,
+            .omit_frame_pointer = build_options.omit_frame_pointer,
         }),
         .use_llvm = true,
     });
@@ -164,7 +166,7 @@ fn createExperimentExecutables(
             .imports = &.{
                 .{ .name = "zag", .module = zag },
             },
-            .omit_frame_pointer = omit_frame_pointer,
+            .omit_frame_pointer = build_options.omit_frame_pointer,
         }),
         .use_llvm = true,
     });
@@ -263,7 +265,7 @@ fn createBenchStep(
             .imports = &.{
                 .{ .name = "zag", .module = zag },
             },
-            .omit_frame_pointer = omit_frame_pointer,
+            .omit_frame_pointer = build_options.omit_frame_pointer,
         });
 
         const enc_benchs = b.addExecutable(.{
@@ -327,4 +329,5 @@ const BuildOptions = struct {
     max_classes: u16,
     trace: bool,
     quit_on_first_failure: ?bool,
+    omit_frame_pointer: bool,
 };
