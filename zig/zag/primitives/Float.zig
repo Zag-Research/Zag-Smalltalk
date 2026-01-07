@@ -100,7 +100,7 @@ pub const @"+" = struct {
         );
     }
     pub fn inlinePrimitive(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
-        sp.traceStack("+");
+        sp.traceStack("+", context, extra);
         const receiver = sp.next;
         if (!receiver.isFloat()) {
             trace("Float>>#inlinePrimitive: + {f}", .{receiver});
@@ -128,7 +128,7 @@ pub const @"-" = struct {
         return @call(tailCall, process.check(context.npc), .{ context.tpc, newSp, process, context, Extra.fromContextData(context.contextDataPtr(sp)) });
     }
     pub fn inlinePrimitive(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
-        sp.traceStack("-");
+        sp.traceStack("-", context, extra);
         const receiver = sp.next;
         if (!receiver.isFloat()) {
             trace("Float>>#inlinePrimitive: - {f}", .{receiver});
@@ -148,7 +148,7 @@ pub const @"<=" = struct {
         return @call(tailCall, process.check(context.npc), .{ context.tpc, newSp, process, context, Extra.fromContextData(context.contextDataPtr(sp)) });
     }
     pub fn inlinePrimitive(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
-        sp.traceStack("<=");
+        sp.traceStack("<=", context, extra);
         const receiver = sp.next;
         if (!receiver.isFloat()) {
             trace("Float>>#inlinePrimitive: <= {f}", .{receiver});

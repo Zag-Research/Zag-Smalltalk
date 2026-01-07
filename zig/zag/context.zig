@@ -119,9 +119,9 @@ pub const Extra = packed struct {
     }
     pub const none: Extra = .{ .addr = 0, .stack_offset = 0 };
     // Three states:
-    //  - method is not encoded - is_encoded will not be set and low bits not zero
-    //  - method is encoded - is_encoded will be set and low bits not zero
-    //  - contextData - low bits zero
+    //  - method is not encoded - is_encoded will not be set and stack_offset not zero
+    //  - method is encoded - is_encoded will be set and stack_offset not zero
+    //  - contextData - stack_offset zero
     pub fn forMethod(method: *const CompiledMethod, sp: SP) Extra {
         // guaranteed that the low bits of sp are not zero by design in Process
         return .{ .addr = @truncate(@intFromPtr(method)), .stack_offset = @truncate(@intFromPtr(sp)) };
@@ -243,9 +243,9 @@ pub inline fn popTargetContext(target: *Context, sp: SP, result: Object) struct 
 }
 pub inline fn pop(self: *Context, sp: SP) struct { SP, *Context } {
     if (self.ifOnStack(sp)) |contextOnStack| {
-        const newSp = contextOnStack.selfAddress();
+        const newSp: SP = @ptrCast(contextOnStack.selfAddress());
         trace("popContext: {*}, {*}", .{ self, newSp });
-        return .{ @ptrCast(newSp), self.previous() };
+        return .{ newSp, self.previous() };
     }
     trace("popContext: not on stack, {*}, {*}", .{ self, sp });
     @panic("incomplete");
@@ -343,10 +343,8 @@ pub inline fn selfAddress(self: *const Context, sp: SP) [*]Object {
     if (self.ifOnStack(sp)) |contextOnStack|
         return contextOnStack.selfAddress();
     const wordsToDiscard = self.header.hash16();
-    return @ptrCast(@constCast(&self.asObjectPtr()[wordsToDiscard]));
-}
-pub inline fn setResult(self: *const Context, value: Object, sp: SP) void {
-    self.selfAddress(sp)[0] = value;
+    _ = .{ wordsToDiscard, @panic("not on stack") };
+    //return @ptrCast(@constCast(&self.asObjectPtr()[wordsToDiscard]));
 }
 pub inline fn previous(self: *const Context) *Context {
     return self.prevCtxt orelse @panic("0 prev");

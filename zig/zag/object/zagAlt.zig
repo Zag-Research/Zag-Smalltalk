@@ -231,9 +231,6 @@ pub const Object = packed struct(u64) {
     inline fn oImm(c: ClassIndex.Compact, h: u56) Self {
         return Self{ .tag = .immediates, .class = c, .hash = h };
     }
-    // inline fn g(grp: Tag) u64 {
-    //     return grp.base();
-    // }
     pub inline fn hasPointer(self: Object) bool {
         const bits = math.rotr(TagAndClassType, self.tagbits(), 3);
         return bits <= math.rotr(TagAndClassType, oImm(.ThunkHeap, 0).tagbits(), 3) and bits != 0;

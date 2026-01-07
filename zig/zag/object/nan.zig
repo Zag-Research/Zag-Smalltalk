@@ -36,12 +36,6 @@ pub const Tag = enum(TagBaseType) {
     heap,
     smallInteger = 0xfff8,
     _,
-    // inline fn base(cg: Tag) u64 {
-    //     return @as(u64, @intFromEnum(cg)) << 48;
-    // }
-    // inline fn tag(cg: Tag, low: u48) u64 {
-    //     return cg.base() | low;
-    // }
     inline fn u(cg: Tag) TagBaseType {
         return @intFromEnum(cg);
     }

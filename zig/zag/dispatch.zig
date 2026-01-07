@@ -41,7 +41,7 @@ const DispatchHandler = struct {
     fn loadMethodForClass(ci: ClassIndex, signature: Signature) *const CompiledMethod {
         if (defaultForTest != void)
             return defaultForTest.loadMethodForClass(ci, signature);
-        std.log.err("loadMethodForClass({} {b} {f} {})\n", .{ ci, @as(u64, @bitCast(signature)), signature, signature.hash() });
+        std.log.err("loadMethodForClass({} {b} {f} {})\n", .{ ci, @as(u64, @bitCast(signature)), signature, signature.fullHash() });
         @panic("Method not found");
     }
     fn stats(index: ClassIndex) Dispatch.Stats {
@@ -53,7 +53,7 @@ const DispatchHandler = struct {
     fn addMethod(method: *const CompiledMethod) void {
         const index = method.signature.getClassIndex();
         trace("addMethod({b} {f} {}) {} {*}\n",
-            .{ @as(u64, @bitCast(method.signature)), method.signature, method.signature.hash(), index, dispatches[index] });
+            .{ @as(u64, @bitCast(method.signature)), method.signature, method.signature.fullHash(), index, dispatches[index] });
         if (dispatches[index].addIfAllocated(method)) return;
         while (true) {
             if (dispatches[index].lock()) |dispatch| {
@@ -162,7 +162,7 @@ const Dispatch = struct {
     }
     inline //
     fn getIndex(signature: Signature, size: u64) u64 {
-        return signature.hash() * size >> 32;
+        return signature.fullHash() * size >> 32;
     }
     fn lock(self: *Self) ?*Self {
         if (@cmpxchgWeak(DispatchState, &self.state, .clean, .beingUpdated, .seq_cst, .seq_cst)) |notClean| {
@@ -256,17 +256,15 @@ pub const threadedFunctions = struct {
     const tf = zag.threadedFn.Enum;
     pub const returnSelf = struct {
         pub fn threadedFn(_: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
-            sp.traceStack("returnSelf");
+            sp.traceStack("returnSelf", context, extra);
+            trace("returnSelf extra=0x{x:0>16}", .{ @as(u64, @bitCast(extra)) });
             if (extra.selfAddress(sp)) |address| {
                 const newSp: SP = @ptrCast(address);
-                trace("returnSelf: {*}->{*} {f}", .{ sp, newSp, extra });
+                newSp.traceStack("returnSelf after", context, extra);
                 return @call(tailCall, process.check(context.npc), .{ context.tpc, newSp, process, context, Extra.fromContextData(context.contextDataPtr(sp)) });
             }
-            sp.traceStack("returnSelf after pop");
             const newSp, const callerContext = context.pop(sp);
-            sp.traceStack("returnSelf sp after pop");
-            trace("returnSelf: {*}->{*}", .{ sp, newSp });
-            newSp.traceStack("returnSelf newSp after pop");
+            newSp.traceStack("returnSelf after pop", context, extra);
             return @call(tailCall, process.branchCheck(callerContext.getNPc()), .{ callerContext.getTPc(), newSp, process, callerContext, Extra.fromContextData(callerContext.contextData) });
         }
         test "returnSelf" {
@@ -290,16 +288,16 @@ pub const threadedFunctions = struct {
     pub const returnTop = struct {
         pub fn threadedFn(_: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
             const top = sp.top;
-            sp.traceStack("returnTop");
+            sp.traceStack("returnTop", context, extra);
             if (extra.selfAddress(sp)) |address| {
                 const newSp: SP = @ptrCast(address);
-                trace("returnTop: {f} {*} {*} {f}", .{ top, sp, newSp, extra });
                 newSp.top = top;
+                newSp.traceStack("returnTop after", context, extra);
                 return @call(tailCall, process.check(context.npc), .{ context.tpc, newSp, process, context, Extra.fromContextData(context.contextDataPtr(sp)) });
             }
             const newSp, const callerContext = context.pop(sp);
-            trace("returnTop: {f} {*} {*} {*} {f}", .{ top, newSp, callerContext, callerContext.npc, callerContext.tpc });
             newSp.top = top;
+            newSp.traceStack("returnTop after pop", context, extra);
             return @call(tailCall, process.branchCheck(callerContext.npc), .{ callerContext.tpc, newSp, process, callerContext, Extra.fromContextData(callerContext.contextDataPtr(sp)) });
         }
         test "returnTopNoContext" {
@@ -325,10 +323,11 @@ pub const threadedFunctions = struct {
             @panic("unreachable");
         }
     };
-    inline //
+    inline
     fn getMethod(pc: PC, signature: Signature, receiver: Object) *const CompiledMethod {
         const class = receiver.get_class();
         const requiredSignature = signature.withClass(class);
+        std.debug.print("getMethod: {} {f} {f} {f}\n", .{ class, signature, receiver, requiredSignature });
         if (signature == requiredSignature) {
             return pc.next().method();
         }
@@ -343,43 +342,43 @@ pub const threadedFunctions = struct {
     }
     pub const send = struct {
         pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
-            sp.traceStack("send");
+            sp.traceStack("send", context, extra);
             const signature = pc.signature();
-            const method = getMethod(pc, signature, sp.at(signature.numArgs()));
+            const numArgs = signature.numArgs;
+            const selfAddr = sp.unreserve(numArgs);
+            const method = getMethod(pc, signature, selfAddr.top);
             const newPc = method.codePc();
             if (extra.installContextIfNone(sp, process, context)) |new| {
                 const newSp = new.sp;
                 const newContext = new.context;
-                newSp.traceStack("send new context");
                 newContext.setReturn(pc.next2());
-                return @call(tailCall, newPc.prim(), .{ newPc.next(), newSp, process, newContext, Extra.forMethod(method, newSp) });
-            } else {
-                sp.traceStack("send existing context");
-                context.setReturn(pc.next2());
-                return @call(tailCall, newPc.prim(), .{ newPc.next(), sp, process, context, Extra.forMethod(method, sp) });
+                return @call(tailCall, newPc.prim(), .{ newPc.next(), newSp, process, newContext, Extra.forMethod(method, newSp.unreserve(numArgs)) });
             }
-            //trace("sending...: sp:{x} {f} method:{x}", .{ @intFromPtr(sp), extra, @intFromPtr(method) });
+            context.setReturn(pc.next2());
+            method.dump();
+            return @call(tailCall, newPc.prim(), .{ newPc.next(), sp, process, context, Extra.forMethod(method, selfAddr) });
         }
     };
     pub const send0 = struct {
         pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
-            sp.traceStack("send");
-            trace("send0: {f} {f}", .{ pc, extra });
+            sp.traceStack("send0", context, extra);
             const signature = pc.signature();
             const method = getMethod(pc, signature, sp.top);
             const newPc = method.codePc();
-            const newSp, const newContext =
-                if (extra.installContextIfNone(sp, process, context)) |new| .{ new.sp, new.context } else .{ sp, context };
-            //trace("sending...: sp:{x} {f} method:{x}", .{ @intFromPtr(sp), extra, @intFromPtr(method) });
-            newSp.traceStack("send maybe new");
-            newContext.setReturn(pc.next2());
-            return @call(tailCall, newPc.prim(), .{ newPc.next(), newSp, process, newContext, Extra.forMethod(method, newSp) });
+            if (extra.installContextIfNone(sp, process, context)) |new| {
+                const newSp = new.sp;
+                const newContext = new.context;
+                newContext.setReturn(pc.next2());
+                return @call(tailCall, newPc.prim(), .{ newPc.next(), newSp, process, newContext, Extra.forMethod(method, newSp) });
+            }
+            context.setReturn(pc.next2());
+            return @call(tailCall, newPc.prim(), .{ newPc.next(), sp, process, context, Extra.forMethod(method, sp) });
         }
     };
     pub const tailSend = struct {
         pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
             const signature = pc.signature();
-            const method = getMethod(pc, signature, sp.at(signature.numArgs()));
+            const method = getMethod(pc, signature, sp.at(signature.numArgs));
             const newPc = method.codePc();
             _ = extra; // have to move parameters to self position
             if (true) @panic("unreachable");

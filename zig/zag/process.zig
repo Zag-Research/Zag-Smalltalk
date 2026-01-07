@@ -507,22 +507,29 @@ const Stack = struct {
     fn getStack(self: SP) []Object {
         return self.sliceTo(self.endOfStack());
     }
-    pub inline fn dumpStack(self: SP, why: []const u8, context: *Context) void {
+    pub inline fn dumpStack(self: SP, why: []const u8, context: *Context, extra: Extra) void {
         std.debug.print("dumpStack ({s})\n", .{why});
-        const selfAddr = context.selfAddress(self);
+        const selfAddr = extra.selfAddress(self) orelse context.selfAddress(self);
         for (self.getStack()) |*obj| {
             const addr = @intFromPtr(obj);
             std.debug.print("[{x:0>10}]: {f}{s}{s}{s}\n",
                 .{ addr, obj.*,
                    if (addr == @intFromPtr(self)) " <--sp" else "",
                    if (addr == @intFromPtr(context)) " <--ctx" else "",
-                   if (addr == @intFromPtr(selfAddr)) " (self)" else "" });
+                   if (addr == @intFromPtr(selfAddr)) " <--self" else "" });
         }
     }
-    pub inline fn traceStack(self: SP, why: []const u8) void {
+    pub inline fn traceStack(self: SP, why: []const u8, context: *Context, extra: Extra) void {
         trace("traceStack ({s})", .{why});
-        for (self.getStack()) |*obj|
-            trace("[{x:0>10}]: {f}", .{ @intFromPtr(obj), obj.* });
+        const selfAddr = extra.selfAddress(self) orelse context.selfAddress(self);
+        for (self.getStack()) |*obj| {
+            const addr = @intFromPtr(obj);
+            trace("[{x:0>10}]: {f}{s}{s}{s}",
+                .{ addr, obj.*,
+                   if (addr == @intFromPtr(self)) " <--sp" else "",
+                   if (addr == @intFromPtr(context)) " <--ctx" else "",
+                   if (addr == @intFromPtr(selfAddr)) " <--self" else "" });
+        }
     }
     inline fn theProcess(self: SP) *Process {
         return @ptrFromInt(@intFromPtr(self) & alignment_mask);
@@ -574,7 +581,7 @@ const Stack = struct {
         process.collectNursery(sp, context, size);
         const stackToCopy = sp.sliceTo(context.endOfStack(sp));
         context.reify(sp);
-        sp.dumpStack("in spillStack", context);
+        sp.dumpStack("in spillStack", context, extra);
         const newContext = process.copyObject(context);
         var n = stackToCopy.len;
         const newSp = @as([*]Stack, @ptrCast(sp.endOfStack())) - n;
@@ -582,7 +589,7 @@ const Stack = struct {
         while (n > 0) : (n -= 1) {
             targetStack[n - 1] = stackToCopy[n - 1];
         }
-        sp.dumpStack("at end of spillStack", newContext);
+        sp.dumpStack("at end of spillStack", newContext, extra);
         @panic("spillStack unfinished");
     }
     pub fn format(

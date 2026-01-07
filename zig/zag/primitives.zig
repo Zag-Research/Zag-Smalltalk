@@ -521,7 +521,7 @@ pub const threadedFunctions = struct {
     };
     pub const inlinePrimitive = struct {
         pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
-            sp.traceStack("inlinePrimitive");
+            sp.traceStack("inlinePrimitive", context, extra);
             const obj = pc.signature();
             const primNumber = obj.primitive();
             trace("inlinePrimitive: {f} {}", .{ obj, primNumber });
