@@ -3,7 +3,7 @@ Extension { #name : 'OCArrayNode' }
 { #category : '*Zag-Exporter-Tests' }
 OCArrayNode >> zagClosureArgClass: anArgumentVariable [ 
 
-	^ #BlockClosure
+	^ #BlockClosure:array
 ]
 
 { #category : '*Zag-Exporter-Tests' }
