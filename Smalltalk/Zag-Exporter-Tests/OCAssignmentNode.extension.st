@@ -8,9 +8,10 @@ OCAssignmentNode >> zagClosureArgClass: argument [
 ]
 
 { #category : '*Zag-Exporter-Tests' }
-OCAssignmentNode >> zagClosureArgClass: anArgumentVariable assign: anOCVectorTempVariable [
+OCAssignmentNode >> zagClosureArgClass: anArgumentVariable assign: aVariable [
 
-	^ #BlockClosure
+self halt.
+	^ #BlockClosure:variable
 ]
 
 { #category : '*Zag-Exporter-Tests' }

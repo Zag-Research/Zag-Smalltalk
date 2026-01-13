@@ -7,9 +7,9 @@ OCLiteralArrayNode >> zagClosureArgClass: anArgumentVariable [
 ]
 
 { #category : '*Zag-Exporter-Tests' }
-OCLiteralArrayNode >> zagClosureArgClass: anArgumentVariable assign: anOCVectorTempVariable [
+OCLiteralArrayNode >> zagClosureArgClass: anArgumentVariable assign: aVariable [
 
-	^ #BlockClosure
+	^ #BlockClosure:literalArray
 ]
 
 { #category : '*Zag-Exporter-Tests' }
