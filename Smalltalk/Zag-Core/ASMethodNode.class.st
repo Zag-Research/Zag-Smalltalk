@@ -56,11 +56,6 @@ ASMethodNode >> = other [
 ]
 
 { #category : 'accessing' }
-ASMethodNode >> add: anArg [
-	args add: anArg
-]
-
-{ #category : 'accessing' }
 ASMethodNode >> children [
 
 	| c |
@@ -68,6 +63,13 @@ ASMethodNode >> children [
 	c addAll: pragmas.
 	c addAll: super  children.
 	^ c
+]
+
+{ #category : 'as yet unclassified' }
+ASMethodNode >> classContext: anASClassNode [
+
+	methodClass := anASClassNode.
+	anASClassNode addMethod: self
 ]
 
 { #category : 'accessing' }

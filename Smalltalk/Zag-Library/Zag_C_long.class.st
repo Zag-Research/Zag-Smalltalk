@@ -1,8 +1,8 @@
 "
-I represent a C int type
+I represent a C long type
 "
 Class {
-	#name : 'C_int',
+	#name : 'Zag_C_long',
 	#superclass : 'Object',
 	#category : 'Zag-Library-Types',
 	#package : 'Zag-Library',

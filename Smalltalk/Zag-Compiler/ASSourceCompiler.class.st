@@ -6,7 +6,6 @@ Class {
 	#superclass : 'ASCompiler',
 	#instVars : [
 		'class',
-		'scope',
 		'aScanner'
 	],
 	#category : 'Zag-Compiler-Core',
@@ -22,24 +21,27 @@ ASSourceCompiler >> compileMethod: aMethod [
 
 { #category : 'parsing' }
 ASSourceCompiler >> compileMethodInClass: aClass [
+
 	| selector args method savedScope |
 	args := OrderedCollection new.
 	selector := aScanner peek classSelector: self args: args.
-	method := ASMethodNode new selector: selector; arguments: args; classContext: aClass; yourself.
-	args do: [ : arg | method add: arg ].
-	savedScope := scope.
+	method := ASMethodNode new
+		          selector: selector;
+		          arguments: args;
+		          classContext: aClass;
+		          yourself.
+	args do: [ :arg | method addToScope: arg ].
+	savedScope := currentScope.
 	[
-		scope := method nestedScopeOf: aClass.
-		method body: self methodBody
-	] ensure: [
-		scope := savedScope
-	].
+		currentScope := method nestedScopeOf: aClass.
+		method body: self methodBody ] ensure: [ currentScope := savedScope ].
 	^ method
 ]
 
 { #category : 'parsing' }
 ASSourceCompiler >> localDefs [
-	aScanner peek defs: self scope: scope.
+
+	aScanner peek defs: self scope: currentScope
 ]
 
 { #category : 'parsing' }

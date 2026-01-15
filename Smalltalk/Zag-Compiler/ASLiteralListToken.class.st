@@ -8,5 +8,5 @@ Class {
 
 { #category : 'parsing' }
 ASLiteralListToken >> parseWith: anASCompiler [
-	self shouldBeImplemented
+
 ]

@@ -15,10 +15,10 @@ Class {
 
 { #category : 'slot types' }
 Zag_struct_timeval class >> tm_sec [
-	^ C_long
+	^ Zag_C_long
 ]
 
 { #category : 'slot types' }
 Zag_struct_timeval class >> tm_usec [
-	^ C_int
+	^ Zag_C_int
 ]

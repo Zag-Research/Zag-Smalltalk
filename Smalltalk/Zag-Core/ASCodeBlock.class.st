@@ -8,7 +8,9 @@ Class {
 	#instVars : [
 		'body',
 		'locals',
-		'arguments'
+		'arguments',
+		'scope',
+		'enclosingScope'
 	],
 	#category : 'Zag-Core-AST',
 	#package : 'Zag-Core',
@@ -34,6 +36,12 @@ ASCodeBlock >> = other [
 ASCodeBlock >> addStatement: anASStatement [
 
 	body add: anASStatement
+]
+
+{ #category : 'adding' }
+ASCodeBlock >> addToScope: aName [
+
+	scope add: aName
 ]
 
 { #category : 'accessing' }
@@ -69,8 +77,9 @@ ASCodeBlock >> initialize [
 
 	super initialize.
 	locals := #(  ).
+	body := ASSequence new.
 	arguments := #(  ).
-	body := ASSequence new
+	scope := OrderedCollection new
 ]
 
 { #category : 'printing' }
@@ -112,6 +121,12 @@ ASCodeBlock >> locals [
 ASCodeBlock >> locals: aCollection [
 
 	locals := aCollection asArray
+]
+
+{ #category : 'as yet unclassified' }
+ASCodeBlock >> nestedScopeOf: anASClassNode [ 
+
+	enclosingScope := anASClassNode
 ]
 
 { #category : 'printing' }

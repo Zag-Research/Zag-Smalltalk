@@ -8,7 +8,7 @@ When created from a `String` the result will contain no internal nul bytes becau
 I report my size as 1 less than the allocated size.
 "
 Class {
-	#name : 'C_string',
+	#name : 'Zag_C_string',
 	#superclass : 'String',
 	#category : 'Zag-Library-Types',
 	#package : 'Zag-Library',
@@ -16,7 +16,7 @@ Class {
 }
 
 { #category : 'converting' }
-C_string >> asByteArray [
+Zag_C_string >> asByteArray [
 
 	| ba sz |
 	sz := self byteSize.
@@ -26,24 +26,24 @@ C_string >> asByteArray [
 ]
 
 { #category : 'accessing' }
-C_string >> byteAt: index [
+Zag_C_string >> byteAt: index [
 	^(self at: index) asciiValue
 ]
 
 { #category : 'accessing' }
-C_string >> byteAt: index put: value [
+Zag_C_string >> byteAt: index put: value [
 	self at: index put: value asCharacter.
 	^value
 ]
 
 { #category : 'accessing' }
-C_string >> byteSize [
+Zag_C_string >> byteSize [
 
 	^ super size
 ]
 
 { #category : 'accessing' }
-C_string >> size [
+Zag_C_string >> size [
 
 	^ super size - 1
 ]

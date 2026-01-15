@@ -17,11 +17,11 @@ Class {
 
 { #category : 'slot types' }
 Zag_struct_timezone class >> tz_dsttime [
-	^ C_int
+	^ Zag_C_int
 ]
 
 { #category : 'slot types' }
 Zag_struct_timezone class >> tz_minuteswest [
 
-	^ C_int
+	^ Zag_C_int
 ]
