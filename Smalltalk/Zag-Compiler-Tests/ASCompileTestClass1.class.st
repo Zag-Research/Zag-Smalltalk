@@ -61,6 +61,18 @@ ASCompileTestClass1 >> bar: aBlock [
 ]
 
 { #category : 'testing - examples' }
+ASCompileTestClass1 >> barCallsBlat [
+
+	self blat: 50
+]
+
+{ #category : 'testing - examples' }
+ASCompileTestClass1 >> blat: aNumber [
+
+	(aNumber < 0) ifTrue: [  aNumber ] ifFalse: [ aNumber negated ]
+]
+
+{ #category : 'testing - examples' }
 ASCompileTestClass1 >> block [
 
 	^ { 
@@ -97,6 +109,7 @@ ASCompileTestClass1 >> blockEvaluationWithCallWithoutTailCall [
 
 { #category : 'testing - examples' }
 ASCompileTestClass1 >> blockEvaluationWithSend2 [
+
 	^ [ 10 + 5 ] value
 ]
 
@@ -188,6 +201,41 @@ ASCompileTestClass1 >> collectionAnyOne [
 ]
 
 { #category : 'testing - examples' }
+ASCompileTestClass1 >> converter: param [
+
+	| local |
+	
+	local := 10.
+	
+	....
+	
+	local negated.
+	
+	
+]
+
+{ #category : 'testing - examples' }
+ASCompileTestClass1 >> counter [
+
+	| aBlock counter |
+	counter := 1.
+
+
+	"Block reads and writes to counter"
+	aBlock := [
+		          counter counter + 1.
+		          ^ counter ].
+
+	Transcript
+		show: counter;
+		cr. "Prints 1"
+
+	aBlock value Transcript
+		show: counter;
+		cr "Prints 2"
+]
+
+{ #category : 'testing - examples' }
 ASCompileTestClass1 >> fib2: anInt [
 
 	anInt < 2 ifTrue: [ ^ 1 ].
@@ -257,6 +305,12 @@ ASCompileTestClass1 >> fooBarBlock [
 ]
 
 { #category : 'testing - examples' }
+ASCompileTestClass1 >> fooCallsBarCallsBlat [
+
+	self barCallsBlat
+]
+
+{ #category : 'testing - examples' }
 ASCompileTestClass1 >> gives43 [
 	| forty2 |
 	forty2 := self unaries * 2.
@@ -272,6 +326,14 @@ ASCompileTestClass1 >> inlinePlus1 [
 ASCompileTestClass1 >> instVar [
 
 	^ bar
+]
+
+{ #category : 'testing - examples' }
+ASCompileTestClass1 >> localVarAccessing [
+
+	| forty2 |
+	forty2 := 34.
+	^ forty2 negated
 ]
 
 { #category : 'testing - examples' }
