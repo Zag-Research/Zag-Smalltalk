@@ -40,12 +40,13 @@ So, interpreted as a u64, any value that is less than or equal to -inf is a doub
 Groups 0 through A have the low 48 bits being the address of an object.
 
 #### Class numbers
-1. `ThunkReturnLocal`: non-local return of method values. The immediate version can only access 8 method values. The low 48 bits (with the low 3 bits forced to zero) are the address of the Context. The low 3 bits reference the first 8 local values (0 is `self`, 1 is the first parameter or local, etc.)
-2. `ThunkReturnInstance`: non-local return of instance variables. The immediate version can only access 8 instance variables. The low 48 bits (with the low 3 bits forced to zero) are the address of the Context. The low 3 bits reference the first 8 instance variables of `self`.
-3.  `ThunkReturnObject`: non-local return of any object. The immediate version can only access 8 integer constant values. The low 48 bits (with the low 3 bits forced to zero) are the address of the Context.The low 3 bits reference are treated as an `i3` value, so supporting -4..3.
+For NaN immediate encoding any address (`Context` or `ContextData`) is encoded in the bottom 48 bits with the low 3 bits forced to 0. The extra field is the low 3 bits, which limits the immediate form to 8 possible extra values. For non-immediate versions, the low 48 bits of the object form the address of an in-memory object, of which the first word is the address and the second word is the extra value.
+1. `ThunkReturnLocal`: non-local return of method values. The immediate version can only access 8 method values. The address is the address of the Context. The extra field references the first 8 local values (0 is unused, 1 is `self`, 2 is the first parameter or local, etc.)
+2. `ThunkReturnInstance`: non-local return of instance variables. The immediate version can only access 8 instance variables. The address is the address of the Context. The extra field references the first 8 instance variables of `self`.
+3.  `ThunkReturnObject`: non-local return of any object. The immediate version can only access 8 integer constant values. The address is the address of the Context. The low 3 bits are treated as an `i3` value, so supporting -4..3. The non-immediate version has a full object in the extra word.
 4. `ThunkReturnImmediate`: non-local return of immediate values. The immediate version can only access 3 particular objects. The low 48 bits (with the low 3 bits forced to zero) are the address of the Context. The only possible values (encoded in the low 3 bits) are: `true`, `false`, `nil`. This is never used for in-memory objects as it is subsumed by `ThunkReturnObject`.
-5. `ThunkLocal`: *There is no encoding for this class in NaN encoding.*
-6. `BlockAssignLocal`: *There is no encoding for this class in NaN encoding.*
+5. `ThunkLocal`: This evaluates to the value of a local variable in the `ContextData` referred to in the address. The variable index is encoded in the extra field - see `ThunkReturnLocal`.
+6. `BlockAssignLocal`: This takes 1 parameter and assigns the value to a local variable in the `ContextData`. That value is also the result. The local index is encoded in the extra field. If the local variable number is 0, no assignment is done, and it simply does a non-local return of the parameter - i.e. this is a continuation.
 7. `ThunkInstance`: *There is no encoding for this class in NaN encoding.*
 8. `BlockAssignInstance`: *There is no encoding for this class in NaN encoding.*
 9. `ThunkHeap`: This encodes a thunk that evaluates to a heap object.
