@@ -56,3 +56,4 @@ zig-out/
 *.ll
 c/sacTest
 .claude
+.DS_Store
