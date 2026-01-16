@@ -23,6 +23,7 @@ llvm-objdump -d fib.o --reloc --disassemble-symbols=controlWords.drop.threadedFn
 ```bash
 # Generate JSON output containing sections, symbols, and relocations
 llvm-readobj --elf-output-style=JSON --pretty-print --expand-relocs --section-symbols --section-relocations --sections fib.o > fib.json
+```
 
 ### Analyze Threaded Functions
 ```bash
