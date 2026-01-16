@@ -55,3 +55,4 @@ zig-out/
 .zig-cache/
 *.ll
 c/sacTest
+.claude

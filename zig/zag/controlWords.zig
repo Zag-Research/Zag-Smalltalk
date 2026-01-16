@@ -22,6 +22,7 @@ const Context = zag.Context;
 const execute = zag.execute;
 const PC = execute.PC;
 const SP = Process.SP;
+const Stack = Process.Stack;
 const Extra = Context.Extra;
 const Result = execute.Result;
 const compileMethod = execute.compileMethod;
@@ -35,6 +36,29 @@ const c = object.ClassIndex;
 const o0 = object.testObjects[0];
 const o1 = object.testObjects[1];
 const o2 = object.testObjects[2];
+
+const stencil_lib = true;
+
+// relocation in object file --> that we can extract llvm-objdump 
+// continaution --> address of the next tf
+// 
+// 0: [drop [CONTINUATION: 1 ]
+// 1: [drop [CONTINUATION: 2 ]
+// 2: [drop [CONTINUATION: 2 ]
+extern fn CONTINUATION(PC, SP, *Process, *Context, Extra) callconv(.auto) Result;
+const Continuation = *const fn (PC, SP, *Process, *Context, Extra) Result;
+
+// Concern: Test the tail call in the interpreter mode
+// Different parameter.
+// zig (might) be doing comptime magic... to optimise this
+inline fn tailcallfn(continuation: Continuation, pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
+    if (comptime !stencil_lib) {
+        return @call(tailCall, process.check(continuation), .{ pc, sp, process, context, extra });
+    } else {
+        return @call(tailCall, CONTINUATION, .{ pc, sp, process, context, extra });
+    }
+}
+
 pub fn init() void {}
 pub const module = struct {
     pub const moduleName = "zag";
@@ -164,7 +188,7 @@ pub const classCase = struct {
 pub const drop = struct {
     pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
         const newSp = sp.drop();
-        return @call(tailCall, process.check(pc.prim()), .{ pc.next(), newSp, process, context, extra });
+        return tailcallfn(pc.prim(), pc.next(), newSp, process, context, extra);
     }
     test "drop" {
         var exe = Execution.initTest("drop", .{tf.drop});
@@ -179,14 +203,16 @@ pub const drop = struct {
         );
     }
 };
+
 pub const dup = struct {
     pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
         const value = sp.top;
+
         if (sp.push(value)) |newSp| {
-            return @call(tailCall, process.check(pc.prim()), .{ pc.next(), newSp, process, context, extra });
+            return tailcallfn(pc.prim(), pc.next(), newSp, process, context, extra);
         } else {
             const newSp, const newContext, const newExtra = sp.spillStackAndPush(value, context, extra);
-            return @call(tailCall, process.check(pc.prim()), .{ pc.next(), newSp, process, newContext, newExtra });
+            return tailcallfn(pc.prim(), pc.next(), newSp, process, newContext, newExtra);
         }
     }
     test "dup" {
@@ -274,25 +300,25 @@ pub const popAssociationValue = struct {
 };
 pub const push = struct {
     pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
-        sp.traceStack("push");
+        // sp.traceStack("push");
         const variable = pc.variable();
-        trace("Pushing variable...{*} {f} {f} {f}", .{ sp, pc, extra, variable });
+        // trace("Pushing variable...{*} {f} {f} {f}", .{ sp, pc, extra, variable });
         if (variable.isLocal and extra.noContext()) {
             if (sp.push(Nil())) |newSp| {
-                return @call(tailCall, process.check(pc.prim2()), .{ pc.next2(), newSp, process, context, extra });
+                return tailcallfn(pc.prim2(), pc.next2(), newSp, process, context, extra);
             } else {
                 const newSp, const newContext, const newExtra = sp.spillStackAndPush(Nil(), context, extra);
-                return @call(tailCall, process.check(pc.prim2()), .{ pc.next2(), newSp, process, newContext, newExtra });
+                return tailcallfn(pc.prim2(), pc.next2(), newSp, process, newContext, newExtra);
             }
         }
         const address = variable.getAddress(sp, extra);
         const value = address[0];
-        trace(" .... {*} {f}", .{ address, value });
+        // trace(" .... {*} {f}", .{ address, value });
         if (sp.push(value)) |newSp| {
-            return @call(tailCall, process.check(pc.prim2()), .{ pc.next2(), newSp, process, context, extra });
+            return tailcallfn(pc.prim2(), pc.next2(), newSp, process, context, extra);
         } else {
             const newSp, const newContext, const newExtra = sp.spillStackAndPush(value, context, extra);
-            return @call(tailCall, process.check(pc.prim2()), .{ pc.next2(), newSp, process, newContext, newExtra });
+            return tailcallfn(pc.prim2(), pc.next2(), newSp, process, newContext, newExtra);
         }
     }
     test "push" {

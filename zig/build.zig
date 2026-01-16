@@ -124,7 +124,7 @@ fn createExperimentExecutables(
     optimize: std.builtin.OptimizeMode,
     zag: *std.Build.Module,
 ) void {
-    const fib = b.addExecutable(.{
+    const fib = b.addObject(.{
         .name = "fib",
         .root_module = b.createModule(.{
             .root_source_file = b.path("experiments/fib.zig"),
@@ -134,10 +134,18 @@ fn createExperimentExecutables(
                 .{ .name = "zag", .module = zag },
             },
             .omit_frame_pointer = true,
+            .no_builtin = true,
         }),
         .use_llvm = true,
     });
-    b.installArtifact(fib);
+    // Add assembly output
+    const asm_file = fib.getEmittedAsm();
+    b.getInstallStep().dependOn(&b.addInstallFile(asm_file, "fib.s").step);
+
+    const bin_file = fib.getEmittedBin();
+    b.getInstallStep().dependOn(&b.addInstallFile(bin_file, "fib.o").step);
+
+    // b.installArtifact(fib);
 
     const branchPrediction = b.addExecutable(.{
         .name = "branchPrediction",
