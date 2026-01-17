@@ -23,7 +23,6 @@ const Extra = Context.Extra;
 const heap = zag.heap;
 const HeapHeader = heap.HeapHeader;
 const HeapObject = heap.HeapObject;
-const HeapObjectPtr = heap.HeapObjectPtr;
 const HeapObjectConstPtr = heap.HeapObjectConstPtr;
 const Format = heap.Format;
 const Age = heap.Age;
@@ -37,78 +36,65 @@ const tf = threadedFn.Enum;
 
 pub const Result = SP;
 pub const Signature = packed struct {
-    int: u64,
-    const Internal = packed struct {
-        selector: u40,
-        class: ClassIndex,
-        prim: u8 = 0,
-    };
-    const Create = packed struct {
-        tag: u8 = sigTag,
-        selector: u32 = 0,
-        class: ClassIndex = .none,
-        prim: u8 = 0,
-        const sigTag: u8 = @intFromEnum(ClassIndex.Compact.Signature) << 3 | Object.immediatesTag;
-        fn isTagged(self: Create) bool {
-            return self.tag == sigTag;
-        }
-    };
-    pub const empty: Signature = .{ .int = Create.sigTag };
-    pub fn isEmpty(self: Signature) bool {
-        return self.int == empty.int;
+    tag: u8 = sigTag,
+    hash: u24 = 0,
+    numArgs: u8 = 0,
+    class: ClassIndex = .none,
+    prim: u8 = 0,
+    const sigTag = @as(u8, @intFromEnum(ClassIndex.Compact.Signature)) << 3 | Object.immediatesTag;
+    fn isTagged(self: Signature) bool {
+        return self.tag == sigTag;
     }
-    pub fn hash(self: Signature) u32 {
-        return @truncate(self.int);
-    }
-    pub fn from(selector: Object, class: ClassIndex) Signature {
-        return .{ .int = @bitCast(Create{ .selector = selector.hash32(), .class = class }) };
-    }
-    pub fn fromHashPrimitive(selector: u32, primitiveNumber: u8) Signature {
-        return .{ .int = @bitCast(Create{ .selector = selector, .prim = primitiveNumber }) };
-    }
-    pub fn fromPrimitive(primitiveNumber: u8) Signature {
-        return .{ .int = @bitCast(Create{ .prim = primitiveNumber }) };
-    }
-    pub fn fromNameClass(name: anytype, class: ClassIndex) Signature {
-        return .{ .int = @bitCast(Create{ .selector = @as(u32, name.numArgs()) << 24 | @as(u32, (name.symbolHash().?)), .class = class }) };
-    }
-    pub fn fromClassU8(class: ClassIndex, number: u8) Signature {
-        return .{ .int = @bitCast(Create{ .class = class, .prim = number }) };
-    }
-    pub fn fromClassI8(class: ClassIndex, number: i8) Signature {
-        return .{ .int = @bitCast(Create{ .class = class, .prim = @as(u8, @bitCast(number)) }) };
-    }
-    pub fn equals(self: Signature, other: Signature) bool {
-        return self.int == other.int;
-    }
-    pub fn numArgs(self: Signature) u8 {
-        return @truncate(self.int >> 32);
-    }
-    pub fn signature(self: Object) ?Signature {
-        const sig: Create = @bitCast(self);
-        if (sig.isTagged()) {
-            trace("sig = {}", .{sig});
-            return @bitCast(self);
-        }
-        return null;
-    }
-    pub fn asObject(self: Signature) Object {
+    pub const empty: Signature = .{};
+    inline fn asInt(self: Signature) u64 {
         return @bitCast(self);
     }
+    pub fn isEmpty(self: Signature) bool {
+        return self.asInt() == sigTag;
+    }
+    pub fn fullHash(self: Signature) u32 {
+        return @truncate(self.asInt());
+    }
+    pub fn from(selector: Object, class: ClassIndex) Signature {
+        return .{ .hash = @truncate(selector.hash24()), .numArgs = selector.numArgs(), .class = class };
+    }
+    pub fn fromHashPrimitive(selector: u32, primitiveNumber: u8) Signature {
+        return .{ .hash = @truncate(selector), .numArgs = @intCast(selector >> 24), .prim = primitiveNumber };
+    }
+    pub fn fromPrimitive(primitiveNumber: u8) Signature {
+        return .{ .prim = primitiveNumber };
+    }
+    pub fn fromNameClass(name: anytype, class: ClassIndex) Signature {
+        return .{ .numArgs = name.numArgs(), .hash = name.symbolHash().?, .class = class };
+    }
+    pub fn fromClassU8(class: ClassIndex, number: u8) Signature {
+        return .{ .class = class, .prim = number };
+    }
+    pub fn fromClassI8(class: ClassIndex, number: i8) Signature {
+        return .{ .class = class, .prim = @as(u8, @bitCast(number)) };
+    }
+    pub fn equals(self: Signature, other: Signature) bool {
+        return self.asInt() == other.asInt();
+    }
+    pub fn signature(self: Object) ?Signature {
+        const sig: Signature = @bitCast(self);
+        if (sig.isTagged()) return sig;
+        return null;
+    }
     pub inline fn asSymbol(self: Signature) Object {
-        return symbol.fromHash((self.int & 0xffffff00) >> 8);
+        return symbol.fromHash((self.asInt() & 0xffff_ffff) >> 8);
     }
     pub inline fn primitive(self: Signature) u8 {
-        return @as(Internal, @bitCast(self)).prim;
+        return self.prim;
     }
     pub inline fn getClassIndex(self: Signature) u16 {
         return @intFromEnum(self.getClass());
     }
     pub inline fn getClass(self: Signature) ClassIndex {
-        return @as(Internal, @bitCast(self)).class;
+        return self.class;
     }
     pub fn withClass(self: Signature, class: ClassIndex) Signature {
-        return .{ .int = (self.int & 0xffffffffff) + (@as(u64, @intFromEnum(class)) << 40) };
+        return @bitCast((self.asInt() & 0xff_ffff_ffff) + (@as(u64, @intFromEnum(class)) << 40));
     }
     pub fn format(
         self: Signature,
@@ -124,7 +110,7 @@ pub const Signature = packed struct {
                 },
                 else => |class| try writer.print("{}", .{class}),
             }
-            try writer.print(" #{s}", .{ symbol.asStringFromHash(@truncate((self.int & 0xffffff00) >> 8)).arrayAsSlice(u8) catch "???" });
+            try writer.print(" #{s}", .{ symbol.asStringFromHash(@intCast((self.asInt() & 0xffffff00) >> 8)).arrayAsSlice(u8) catch "???" });
         }
     }
 };
@@ -143,28 +129,28 @@ pub const PC = packed struct {
     }
     pub inline //
     fn packedObject(self: PC) PackedObject {
-        if (logging) {
+        if (logging) |log| {
             @setRuntimeSafety(false);
-            std.log.err("PC_packed:       {x:0>12}: {}\n", .{ @intFromPtr(self.code), self.code.packedObject });
+            log("PC_packed:       {x:0>12}: {}", .{ @intFromPtr(self.code), self.code.packedObject });
         }
         return self.code.packedObject;
     }
     pub fn offset(self: PC, cm: *const CompiledMethod) usize {
         return (@intFromPtr(self.code) - @intFromPtr(&cm.code[0])) / @sizeOf(Code);
     }
-    pub inline //
+    pub inline
     fn method(self: PC) *const CompiledMethod {
-        if (logging) {
+        if (logging) |log| {
             @setRuntimeSafety(false);
-            std.log.err("PC_method:       {x:0>12}: {f}\n", .{ @intFromPtr(self.code), self.code.method });
+            log("PC_method:       {x:0>12}: {f}", .{ @intFromPtr(self.code), self.code.method });
         }
         return self.code.method;
     }
     pub inline //
     fn codeAddress(self: PC) *const Code {
-        if (logging) {
+        if (logging) |log| {
             @setRuntimeSafety(false);
-            std.log.err("PC_codeAddress:  {x:0>12}: {f}\n", .{ @intFromPtr(self.code), self.code.codePtr });
+            log("PC_codeAddress:  {x:0>12}: {f}", .{ @intFromPtr(self.code), self.code.codePtr });
         }
         return self.code.codePtr;
     }
@@ -172,49 +158,50 @@ pub const PC = packed struct {
     fn targetPC(self: PC) PC {
         return .{ .code = self.codeAddress() };
     }
-    pub inline //
+    pub // inline //
     fn asThreadedFn(self: PC) *const fn (PC, SP, *Process, *Context, Extra) Result {
-        if (logging) {
-            std.log.err("PC_asThreadedFn: {x:0>12}: {f}\n", .{ @intFromPtr(self.code), self });
-        }
-        return self.code.prim();
+        return primOf("PC_asThreadedFn: ", self.code);
     }
-    pub inline //
+    pub // inline //
     fn prim(self: PC) *const fn (PC, SP, *Process, *Context, Extra) Result {
-        return primOf(self.code);
+        return primOf("PC_prim:         ", self.code);
     }
-    inline fn primOf(code: *const Code) *const fn (PC, SP, *Process, *Context, Extra) Result {
-        if (logging) {
+    inline fn primOf(str: []const u8, code: *const Code) *const fn (PC, SP, *Process, *Context, Extra) Result {
+        if (logging) | log | {
+            // log("{s}{x:0>12}: ", .{ str, @intFromPtr(code) });
+            // for ((@as([*]const u64, @ptrCast(code))-10)[0..21]) |*word| {
+            //     log("{x:0>16}: {x:0>16}{s}", .{ @intFromPtr(word), word.*, if (@intFromPtr(word) == @intFromPtr(code)) " *" else "" });
+            // }
             @setRuntimeSafety(false);
             if (@import("threadedFn.zig").find(code.prim())) |name| {
-                std.log.err("PC_prim:         {x:0>12}: {}\n", .{ @intFromPtr(code), name });
+                log("{s}{x:0>12}: {}", .{ str, @intFromPtr(code), name });
             } else {
-                std.log.err("PC_prim:         {x:0>12}: {x}\n", .{ @intFromPtr(code), @intFromPtr(code.prim()) });
+                log("{s}{x:0>12}: {x}", .{ str, @intFromPtr(code), @intFromPtr(code.prim()) });
             }
         }
         return code.prim();
     }
     pub //inline
     fn object(self: PC) Object {
-        if (logging) {
+        if (logging) |log| {
             @setRuntimeSafety(false);
-            std.log.err("PC_object:       {x:0>12}: {f}\n", .{ @intFromPtr(self.code), self.code.object });
+            log("PC_object:       {x:0>12}: {f}", .{ @intFromPtr(self.code), self.code.object });
         }
         return self.code.object;
     }
     pub //inline
     fn variable(self: PC) Variable {
-        if (logging) {
+        if (logging) |log| {
             @setRuntimeSafety(false);
-            std.log.err("PC_variable:     {x:0>12}: {f}\n", .{ @intFromPtr(self.code), self.code.variable });
+            log("PC_variable:     {x:0>12}: {f}", .{ @intFromPtr(self.code), self.code.variable });
         }
         return self.code.variable;
     }
     pub inline //
     fn signature(self: PC) Signature {
-        if (logging) {
+        if (logging) |log| {
             @setRuntimeSafety(false);
-            std.log.err("PC_signature:    {x:0>12}: {f}\n", .{ @intFromPtr(self.code), self.code.signature });
+            log("PC_signature:    {x:0>12}: {f}", .{ @intFromPtr(self.code), self.code.signature });
         }
         return self.code.signature;
     }
@@ -232,17 +219,17 @@ pub const PC = packed struct {
     }
     pub inline //
     fn uint(self: PC) u64 {
-        if (logging) {
+        if (logging) |log| {
             @setRuntimeSafety(false);
-            std.log.err("PC_uint:         {x:0>12}: {f}\n", .{ @intFromPtr(self.code), self.code.object });
+            log("PC_uint:         {x:0>12}: {f}", .{ @intFromPtr(self.code), self.code.object });
         }
         return @bitCast(self.code.object.to(i64));
     }
     pub inline //
     fn int(self: PC) i64 {
-        if (logging) {
+        if (logging) |log| {
             @setRuntimeSafety(false);
-            std.log.err("PC_int:          {x:0>12}: {f}\n", .{ @intFromPtr(self.code), self.code.object });
+            log("PC_int:          {x:0>12}: {f}", .{ @intFromPtr(self.code), self.code.object });
         }
         return self.code.object.to(i64);
     }
@@ -253,7 +240,7 @@ pub const PC = packed struct {
         return asPC(self.array() - 1);
     }
     pub inline fn prim2(self: PC) *const fn (PC, SP, *Process, *Context, Extra) Result {
-        return primOf(&self.array()[1]);
+        return primOf("PC_prim2:        ", &self.array()[1]);
     }
     pub inline fn next2(self: PC) PC {
         return asPC(self.array() + 2);
@@ -287,6 +274,7 @@ pub const PC = packed struct {
     }
 };
 pub const Code = union(enum) {
+    none: u64,
     object: Object,
     variable: Variable,
     threadedFn: *const fn (PC, SP, *Process, *Context, Extra) Result,
@@ -372,6 +360,7 @@ pub const Code = union(enum) {
             //return;
         }
         switch (self.*) {
+            .none => try writer.print("none", .{}),
             .object => |obj| try writer.print("object({f})", .{obj}),
             .variable => |variable| try writer.print("variable   ({f})", .{variable}),
             .threadedFn => |tFn| {
@@ -409,7 +398,7 @@ pub const CompiledMethod = struct {
     jitted: ?*const fn (PC, SP, *Process, *Context, Extra) Result,
     code: [codeSize]Code, // the threaded version of the method
     const Self = @This();
-    const codeSize = 2;
+    const codeSize = 1;
     pub const codeOffset = @offsetOf(CompiledMethod, "code");
     comptime {
         std.debug.assert(@offsetOf(Self, "header") == 0);
@@ -428,7 +417,6 @@ pub const CompiledMethod = struct {
         std.debug.print("Execute Function: {}\n", .{self.executeFn});
         std.debug.print("Jitted Function:  {?}\n", .{self.jitted});
         const methodSize = self.header.length - codeOffsetInObjects;
-        std.debug.print("methodSize:       {}\n", .{methodSize});
         return methodSize;
     }
     pub fn dump(self: *const Self) void {
@@ -446,12 +434,12 @@ pub const CompiledMethod = struct {
             .signature = Signature.fromNameClass(name, .testClass),
             .executeFn = methodFn,
             .jitted = methodFn,
-            .code = .{ Code.primOf(methodFn), undefined },
+            .code = .{ Code.primOf(methodFn) },
         };
     }
     pub fn execute(self: *const Self, sp: SP, process: *Process, context: *Context) Result {
         const newExtra = Extra.forMethod(self, sp);
-        const pc = PC.init(&self.code[1]);
+        const pc = PC.init(&self.code[0]).next();
         return self.executeFn(pc, sp, process, context, newExtra);
     }
     inline fn asHeapObjectPtr(self: *const Self) HeapObjectConstPtr {
@@ -843,14 +831,14 @@ fn CompileTimeObject(comptime counts: usize) type {
                     } else {
                         const ob: u64 = @bitCast(o.*);
                         o.* = if (ob & 1 != 0) Object.fromAddress(&self.objects[ob >> 1]) else replacements[ob >> 1];
-                        if (o.isMemoryAllocated()) {
+                        if (o.hasMemoryReference()) {
                             if (lastHeader) |h| h.objectFormat = .notIndexableWithPointers;
                         }
                     }
                 }
             }
         }
-        pub inline fn asHeapObjectPtr(self: *Self) HeapObjectPtr {
+        pub inline fn asHeapObjectPtr(self: *Self) *HeapObject {
             return @ptrCast(&self.objects[0]);
         }
         pub inline fn asObjectArray(self: *Self) [*]Object {
@@ -1011,8 +999,9 @@ pub const Execution = struct {
             }
             pub fn execute(self: *Self, stackObjects: ?[]const Object) void {
                 self.init(stackObjects);
+//                self.resolve(Object.empty) catch @panic("Failed to resolve");
                 _ = self.method.execute(self.getSp(), self.getProcess(), self.getContext());
-                self.getSp().traceStack("return from execution");
+                self.getSp().traceStack("return from execution", self.getContext(), Extra.none);
             }
             pub fn matchStack(self: *Self, expected: []const Object) !void {
                 const result = self.stack();

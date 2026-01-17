@@ -88,13 +88,14 @@ pub const branch = struct {
             ":label",
         });
         assert(@alignOf(@TypeOf(exe)) > 50);
+        try exe.resolve(Object.empty);
         exe.execute(Object.empty);
         try exe.matchStack(Object.empty);
     }
 };
 pub const classCase = struct {
     pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
-        sp.traceStack("classCase");
+        sp.traceStack("classCase", context, extra);
         var newPc = pc;
         const top = sp.top;
         const match = @intFromEnum(top.get_class());
@@ -376,7 +377,7 @@ pub const pushAssociationValue = struct {
 };
 pub const pushLiteral = struct {
     pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
-        sp.traceStack("pushLiteral");
+        sp.traceStack("pushLiteral", context, extra);
         const value = pc.object();
         if (sp.push(value)) |newSp| {
             return @call(tailCall, process.check(pc.prim2()), .{ pc.next2(), newSp, process, context, extra });

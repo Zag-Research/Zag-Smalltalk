@@ -99,7 +99,7 @@ fn createMainExecutable(
             .imports = &.{
                 .{ .name = "zag", .module = zag },
             },
-            .omit_frame_pointer = true,
+            .omit_frame_pointer = build_options.omit_frame_pointer,
         }),
         .use_llvm = true,
     });
@@ -156,7 +156,7 @@ fn createExperimentExecutables(
             .imports = &.{
                 .{ .name = "zag", .module = zag },
             },
-            .omit_frame_pointer = true,
+            .omit_frame_pointer = build_options.omit_frame_pointer,
         }),
         .use_llvm = true,
     });
@@ -171,7 +171,7 @@ fn createExperimentExecutables(
             .imports = &.{
                 .{ .name = "zag", .module = zag },
             },
-            .omit_frame_pointer = true,
+            .omit_frame_pointer = build_options.omit_frame_pointer,
         }),
         .use_llvm = true,
     });
@@ -270,7 +270,7 @@ fn createBenchStep(
             .imports = &.{
                 .{ .name = "zag", .module = zag },
             },
-            .omit_frame_pointer = true,
+            .omit_frame_pointer = build_options.omit_frame_pointer,
         });
 
         const enc_benchs = b.addExecutable(.{

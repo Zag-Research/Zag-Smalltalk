@@ -10,7 +10,7 @@ OCVariableNode >> zagClosureArgClass: anObject [
 OCVariableNode >> zagClosureArgClass: argument assign: targetVariable [
 
 	argument = variable ifTrue: [ ^ targetVariable zagBlockAssign ].
-	^ #BlockClosure
+	^ #BlockClosure:
 ]
 
 { #category : '*Zag-Exporter-Tests' }

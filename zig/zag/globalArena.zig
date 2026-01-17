@@ -21,11 +21,10 @@ const False = object.False;
 const heap = zag.heap;
 const HeapObject = heap.HeapObject;
 const HeapHeader = heap.HeapHeader;
+const HeapObjectArray = heap.HeapObjectArray;
 const Format = heap.Format;
 const AllocationInfo = heap.AllocationInfo;
 const Age = heap.Age;
-const HeapObjectArray = heap.HeapObjectArray;
-const HeapObjectPtr = heap.HeapObjectPtr;
 const AllocErrors = heap.AllocErrors;
 const os = @import("os.zig");
 
@@ -35,12 +34,12 @@ pub const WeakObject = struct {
 pub const StructObject = struct {
     object: Object,
 };
-const nFreeLists: usize = bitsToRepresent(HeapHeader.maxLength + @as(usize, 1)) + 1;
+const nFreeLists: usize = @bitSizeOf(HeapHeader.Length) + 1;
 const heap_allocation_size = 128 * 1024;
 const heapStartAddress = 0x10000000000;
 pub const HeapAllocationPtr = *align(heap_allocation_size) HeapAllocation;
 comptime {
-    std.testing.expectEqual(13, nFreeLists) catch @panic("unreachable");
+    std.testing.expectEqual(12, nFreeLists) catch @panic("unreachable");
     std.testing.expectEqual(0x4000, HeapAllocation.size) catch @panic("unreachable");
     std.testing.expectEqual(heap_allocation_size, HeapAllocation.size * 8) catch @panic("unreachable");
     std.debug.assert(HeapAllocation.headerSize >= @sizeOf(HeapAllocation.HeapAllocationHeader) / @sizeOf(HeapObject));
@@ -146,13 +145,13 @@ pub const HeapAllocation = extern union {
         }
         return free;
     }
-    fn allocLarge(self: SelfPtr, arraySize: ?usize, aI: AllocationInfo) !HeapObjectPtr {
+    fn allocLarge(self: SelfPtr, arraySize: ?usize, aI: AllocationInfo) !*HeapObject {
         _ = self;
         _ = arraySize;
         _ = aI;
         return error.HeapFull;
     }
-    fn allocOfSize(self: SelfPtr, classIndex: ClassIndex, instVars: u11, arraySize: ?usize, comptime T: anytype) AllocErrors!HeapObjectPtr {
+    fn allocOfSize(self: SelfPtr, classIndex: ClassIndex, instVars: u11, arraySize: ?usize, comptime T: anytype) AllocErrors!*HeapObject {
         const ar = self.alloc(classIndex, instVars, arraySize, T, T == WeakObject);
         const result = ar.initAll();
         return result;
@@ -169,7 +168,7 @@ pub const HeapAllocation = extern union {
             @panic("unreachable"); // add a new HeapAllocation
         }
     }
-    fn allocBlock(self: SelfPtr, aI: AllocationInfo, classIndex: ClassIndex) ?HeapObjectPtr {
+    fn allocBlock(self: SelfPtr, aI: AllocationInfo, classIndex: ClassIndex) ?*HeapObject {
         self.header.mutex.lock();
         defer self.header.mutex.unlock();
         const words: usize = aI.objectHeapSize() + 1;
@@ -289,7 +288,7 @@ const FreeList = extern struct {
     fn init(comptime n: comptime_int) [n]FreeList {
         var initial_value: [n]FreeList = undefined;
         for (initial_value[0..], 0..) |*fl, index| {
-            fl.header = HeapHeader.freeHeader(@truncate((@as(u16, 1) << @as(u4, @intCast(index))) - 1));
+            fl.header = HeapHeader.freeHeader(@intCast((@as(u12, 1) << @as(u4, @intCast(index))) - 1));
             fl.list = null;
         }
         return initial_value;
@@ -303,7 +302,7 @@ const FreeList = extern struct {
 };
 test "freeList structure" {
     const ee = std.testing.expectEqual;
-    const fls = FreeList.init(13);
+    const fls = FreeList.init(12);
     try ee(fls[0].header.length, 0);
     try ee(fls[9].header.length, 511);
     try ee(fls.len, 13);
@@ -365,7 +364,7 @@ fn freeForAllocator(ctx: *anyopaque, buf: []u8, buf_align: mem.Alignment, ret_ad
     _ = .{ buf, buf_align, ret_addr, ctx };
     // @panic("unreachable");
 }
-fn rawAlloc(instVars: u11, arraySize: usize, hint: *?HeapAllocationPtr, comptime T: anytype) AllocErrors!HeapObjectPtr {
+fn rawAlloc(instVars: u11, arraySize: usize, hint: *?HeapAllocationPtr, comptime T: anytype) AllocErrors!*HeapObject {
     if (heapAllocations == null) _ = newHeapAllocation();
     const startingAllocation = hint.*;
     var workingAllocation = startingAllocation orelse @panic("unreachable");
@@ -392,7 +391,7 @@ fn rawAlloc(instVars: u11, arraySize: usize, hint: *?HeapAllocationPtr, comptime
 //     try ee(alloc0.len, 100);
 // }
 // fn allocIndirect(self: *Self, sp:[*]Object, fieldsSize: usize, arraySize: usize) AllocResult {
-//     const array = @ptrCast(HeapObjectPtr,std.heap.page_allocator.alloc(Object, arraySize) catch @panic("page allocator failed"));
+//     const array = @ptrCast(*HeapObject,std.heap.page_allocator.alloc(Object, arraySize) catch @panic("page allocator failed"));
 //     var result = try GlobalArena.alloc(self,sp,hp,context,heapSize,0);
 //     const offs = @ptrCast([*]u64,result.allocated)+heapSize-2;
 //     offs[1] = @intFromPtr(array);
@@ -402,7 +401,7 @@ fn collect() AllocErrors!void {
     @panic("incomplete");
 }
 pub fn promote(obj: Object) !Object {
-    if (!obj.isMemoryAllocated()) return obj;
+    if (!obj.hasMemoryReference()) return obj;
     if (obj.header().age == Age.static) return obj;
     @panic("unreachable");
     //       @memcpy(@ptrCast([*]u8,result),@ptrCast([*]const u8,ptr),totalSize*8);
@@ -421,7 +420,7 @@ pub fn promote(obj: Object) !Object {
 //     while (free.len>0) {
 //         const len = smallerPowerOf2(free.len);
 //         const end = free.len - len;
-//         FreeList.addToFree(self,@intCast(u12,len),@ptrCast(HeapObjectPtr,free.ptr+end));
+//         FreeList.addToFree(self,@intCast(u12,len),@ptrCast(*HeapObject,free.ptr+end));
 //         free = free[0..end];
 //     }
 // }
@@ -485,12 +484,12 @@ pub fn promote(obj: Object) !Object {
 //     defer ga.deinit();
 //     var test1 = ga.allocStruct(17,Test_S,0,Object);
 //     try ee(test1.superclass,Nil);
-//     const h1: HeapObjectPtr = &test1.header;
+//     const h1: *HeapObject = &test1.header;
 //     try ee(h1.inHeapSize(),4);
 //     try std.testing.expectError(error.NotIndexable,h1.arrayAsSlice(u8));
 //     var test2 = ga.allocStruct(17,Test_S,8,u8);
 //     try ee(test2.methodDict,Nil);
-//     const h2: HeapObjectPtr = &test2.header;
+//     const h2: *HeapObject = &test2.header;
 //     try ee(h2.inHeapSize(),7);
 //     const a2: []u8 = try h2.arrayAsSlice(u8);
 //     try ee(a2.len,8);

@@ -25,6 +25,12 @@ ASCCompiledBlock >> arguments [
 	^ astBlock arguments size
 ]
 
+{ #category : 'initialization' }
+ASCCompiledBlock >> astBlock [
+
+	^ astBlock
+]
+
 { #category : 'as yet unclassified' }
 ASCCompiledBlock >> deriveVariableReferences: referenced modifies: modified [
 
@@ -104,4 +110,9 @@ ASCCompiledBlock >> propagateContextFreeFor [
 ASCCompiledBlock >> setBlock: anASMethodNode [ 
 
 	astBlock := anASMethodNode
+]
+
+{ #category : 'testing' }
+ASCCompiledBlock >> withMethodOrBlock: aBasicBlock [
+ ^ astBlock = aBasicBlock astBlock 
 ]

@@ -21,12 +21,18 @@ ASClassNode >> = other [
 	^ name = other name
 ]
 
+{ #category : 'adding' }
+ASClassNode >> addMethod: anASMethodNode [ 
+
+	methods at: anASMethodNode selector put: anASMethodNode
+]
+
 { #category : 'initialization' }
 ASClassNode >> from: aClass [
 
 	name := aClass name.
-	methods := OrderedCollection new.
-	classVariables := aClass classPool keys.
+	methods := Dictionary new.
+	classVariables := aClass classPool keys
 ]
 
 { #category : 'comparing' }
@@ -35,8 +41,10 @@ ASClassNode >> hash [
 ]
 
 { #category : 'initialization' }
-ASClassNode >> initialize [ 
-	scope := Dictionary new
+ASClassNode >> initialize [
+
+	scope := Dictionary new.
+	methods := Dictionary new
 ]
 
 { #category : 'accessing' }

@@ -9,7 +9,7 @@ OCMessageNode >> zagClosureArgClass: anObject [
 { #category : '*Zag-Exporter-Tests' }
 OCMessageNode >> zagClosureArgClass: anArgumentVariable assign: anOCVectorTempVariable [
 
-	^ #BlockClosure
+	^ #BlockClosure:send
 ]
 
 { #category : '*Zag-Exporter-Tests' }

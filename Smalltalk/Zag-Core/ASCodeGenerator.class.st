@@ -175,7 +175,7 @@ ASCodeGenerator >> finalAnalysis [
 	self optimizeLocalVariableLocations.
 	self removeUnusedCode.
 	self inlineDependentPrimitives.
-	self createContextWhereRequired.
+	"self createContextWhereRequired."
 	self reifyLocals
 ]
 

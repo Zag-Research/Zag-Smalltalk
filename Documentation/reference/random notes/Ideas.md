@@ -1,5 +1,34 @@
 Indicate 👍 (thumbs up) or 👎 (thumbs down) for each
+- How do we do handle a tail-send when there are live block closures? e.g. `^ [:x :y | x + y] value: 2 value: 3`
+- 👍 allow a process to block. While a process is blocked, the global marker thread may seize the process to do the marking. When the process un-blocks it needs to busy-loop to re-acquire the process
+- 👍`FFI` like `primitive` - i.e. plug in a native function that marks the process as blocked, sets up a call based on the parameters and handles the return including reclaiming the process, cleaning up the stack, and returning the result or signalling an error. These would be interchangeable based on the parameters and the result, but they also have the code address, so they aren't. Initially these can be pre-defined/hard-coded, but eventually should  all be JIT'ed
+- 👍 remove the idea of IO processes, and just let the current process block... integrated with FFI above
+- ? have all heap addresses be the address of the start of the object. This might enhance inter-op with FFI and would simplify handling of large arrays (because extra fields could go before the header - but would require some way of flagging the start of the extended header so that linear scans know the structure) .
+- 👍 define `malloc` and `free` so that FFI code can allocate. If the allocated objects are small enough they can be allocated in the normal heap area. Else allocate in separate mmap area
+- 👍 extend `slots:` to allow an association with a type (including literal-sized arrays) so that we can represent FFI structs and compile access and setting appropriate to the type. Lets us fully implement system calls, etc. in Smalltalk.
+- 👍 support C/Zig structs and types to support FFI for example, consider the following extract from `zig translate-c` on `stdlib.h`
+```zig
+pub const struct_timeval = extern struct {
+    tv_sec: c_long,
+    tv_usec: c_int,
+};
+pub const struct_rusage = extern struct {
+    ru_utime: struct_timeval,
+    ru_stime: struct_timeval,
+    ru_maxrss: c_long,
+    ru_ixrss: c_long,
+    ... };
+pub extern fn getrusage(c_int, [*c]struct_rusage) c_int;
+```
+-  this get implemented in Smalltalk as:
+- ```smalltalk
+  getrusage: who into: struct
 
+	<ffi: 'getrusage' with: 'C_int,*struct_rusage' error: 'ec'>
+	self primitiveFailed
+	
+
+  ```
 - 👍`inlinePrimitive` followed by primitive number. Followed by a primitive number, and the primitive is looked up and swapped in place of the `inlinePrimitive`, so it essentially becomes a new threadedFn, and lets us extend those without changing the size of the `threadedFn.functions` array (making image dumps more portable).  There would be an extra function named `inlinePrimitive` in structs supporting this.
 	- **Must not fail.** (at least initial version or see below)
 	- could handle failure by 

@@ -28,21 +28,22 @@ ASemanticInterpreterTest >> setUp [
 
 { #category : 'tests' }
 ASemanticInterpreterTest >> testInstallContextIfNone [
-| x y |
-self halt.
+
+	| x y |
+	"simple test where a variable is pushed and then popped"
 	x := 6.
 	interpreter push: x.
 	y := interpreter pop.
 	self assert: x equals: y.
 	self assert: interpreter stackDepth equals: 0.
-	
+
+	"create a context and interact with it"
 	interpreter push: x.
 	interpreter installContextIfNone.
 	interpreter push: x.
 	y := interpreter pop.
 	self assert: x equals: y.
-	self assert: interpreter stackDepth equals: 0.
-	
+	self assert: interpreter stackDepth equals: 0
 ]
 
 { #category : 'tests' }

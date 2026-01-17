@@ -16,7 +16,7 @@ So this leaves us with the following encoding based on the **S**ign+**E**xponent
 | `7FF0`          | `0000` | `0000` | `0000` | +inf                      |
 | `7FF0`          | `aaaa` | `aaaa` | `aaaa` | `ThunkReturnLocal`        |
 | `7FF1`          | `aaaa` | `aaaa` | `aaaa` | `ThunkReturnInstance`     |
-| `7FF2`          | `aaaa` | `aaaa` | `aaaa` | `ThunkReturnSmallInteger` |
+| `7FF2`          | `aaaa` | `aaaa` | `aaaa` | `ThunkReturnObject` |
 | `7FF3`          | `aaaa` | `aaaa` | `aaaa` | `ThunkReturnImmediate`    |
 | `7FF4`          | `aaaa` | `aaaa` | `aaaa` | `ThunkLocal`              |
 | `7FF5`          | `aaaa` | `aaaa` | `aaaa` | `BlockAssignLocal`        |
@@ -40,27 +40,27 @@ So, interpreted as a u64, any value that is less than or equal to -inf is a doub
 Groups 0 through A have the low 48 bits being the address of an object.
 
 #### Class numbers
-1. `ThunkReturnLocal`: *There is no encoding for this class in NaN encoding*.
-2. `ThunkReturnInstance`: *There is no encoding for this class in NaN encoding - a limited version. is provided by `ThunkReturnImmediate`*.
-3.  `ThunkReturnSmallInteger`: *There is no encoding for this class in NaN encoding - a limited version. is provided by `ThunkReturnImmediate`.*
-4. `ThunkReturnImmediate`: non-local return of one of 8 constant values. The low 48 bits (with the low 3 bits forced to zero) are the address of the Context. The only possible values (encoded in the low 3 bits) are: `[^self]`, `[^true]`, `[^false]`, `[^nil]`, `[^-1]`, `[^0]`, `[^1]`, `[^ firstInstanceVariable]`.
-5. `ThunkReturnCharacter`: *There is no encoding for this class in NaN encoding.*
-6. `ThunkReturnFloat`: *There is no encoding for this class in NaN encoding.*
-7. `ThunkLocal`: *There is no encoding for this class in NaN encoding.*
-8. `BlockAssignLocal`: *There is no encoding for this class in NaN encoding.*
-9. `ThunkInstance`: *There is no encoding for this class in NaN encoding.*
-10. `BlockAssignInstance`: *There is no encoding for this class in NaN encoding.*
-11. `PICPointer`: *There is no encoding for this class in NaN encoding.*
-12. `ThunkHeap`: This encodes a thunk that evaluates to a heap object.
-13. `ThunkImmediate`: This encodes  a thunk that evaluates to an immediate value. NaN encoding encodes the type of the immediate in the top bit. If the top bit is set, this encodes 47-bit `SmallInteger`s. Otherwise it encodes all of the other immediate values.
-14. `ThunkFloat`: *There is no encoding for this class in NaN encoding.*
-15. `LLVM`: *There is no encoding for this class in NaN encoding.*
-16.  `SmallInteger` - this is reserved for the bit patterns that encode small integers. This isn't encoded in the tag. The low 50 bits of the "hash code" make up the value, so this provides 50-bit integers (-562,949,953,421,312 to 562,949,953,421,311).
-17. `Symbol`: See [Symbol](Symbol.md) for detailed information on the format.
-18. `False`: This encodes the singleton value `false`. The `False` and `True` classes only differ by 1 bit so they can be tested easily if that is appropriate (in code generation).
-19. `True`: This encodes the singleton value `true`.
-20. `Character`: The hash code contains the full Unicode value for the character. This allows orders of magnitude more possible character values than the 830,606 reserved code points as of [Unicode v13](https://www.unicode.org/versions/stats/charcountv13_0.html) and even the 1,112,064 possible Unicode code points.
-21. to 31 unused
+For NaN immediate encoding any address (`Context` or `ContextData`) is encoded in the bottom 48 bits with the low 3 bits forced to 0. The extra field is the low 3 bits, which limits the immediate form to 8 possible extra values. For non-immediate versions, the low 48 bits of the object form the address of an in-memory object, of which the first word is the address and the second word is the extra value.
+1. `ThunkReturnLocal`: non-local return of method values. The immediate version can only access 8 method values. The address is the address of the Context. The extra field references the first 8 local values (0 is unused, 1 is `self`, 2 is the first parameter or local, etc.)
+2. `ThunkReturnInstance`: non-local return of instance variables. The immediate version can only access 8 instance variables. The address is the address of the Context. The extra field references the first 8 instance variables of `self`.
+3.  `ThunkReturnObject`: non-local return of any object. The immediate version can only access 8 integer constant values. The address is the address of the Context. The low 3 bits are treated as an `i3` value, so supporting -4..3. The non-immediate version has a full object in the extra word.
+4. `ThunkReturnImmediate`: non-local return of immediate values. The immediate version can only access 3 particular objects. The low 48 bits (with the low 3 bits forced to zero) are the address of the Context. The only possible values (encoded in the low 3 bits) are: `true`, `false`, `nil`. This is never used for in-memory objects as it is subsumed by `ThunkReturnObject`.
+5. `ThunkLocal`: This evaluates to the value of a local variable in the `ContextData` referred to in the address. The variable index is encoded in the extra field - see `ThunkReturnLocal`.
+6. `BlockAssignLocal`: This takes 1 parameter and assigns the value to a local variable in the `ContextData`. That value is also the result. The local index is encoded in the extra field. If the local variable number is 0, no assignment is done, and it simply does a non-local return of the parameter - i.e. this is a continuation.
+7. `ThunkInstance`: *There is no encoding for this class in NaN encoding.*
+8. `BlockAssignInstance`: *There is no encoding for this class in NaN encoding.*
+9. `ThunkHeap`: This encodes a thunk that evaluates to a heap object.
+10. `ThunkImmediate`: This encodes  a thunk that evaluates to an immediate value. NaN encoding encodes the type of the immediate in the top bit. If the top bit is set, this encodes 47-bit `SmallInteger`s. Otherwise it encodes all of the other immediate values.
+11. `Symbol`: See [Symbol](Symbol.md) for detailed information on the format.
+12. `False`: This encodes the singleton value `false`. The `False` and `True` classes only differ by 1 bit so they can be tested easily if that is appropriate (in code generation).
+13. `True`: This encodes the singleton value `true`.
+14. `Character`: The hash code contains the full Unicode value for the character. This allows orders of magnitude more possible character values than the 830,606 reserved code points as of [Unicode v13](https://www.unicode.org/versions/stats/charcountv13_0.html) and even the 1,112,064 possible Unicode code points.
+15. `Signature`: This is a superset of [Symbol](Symbol.md) with a `ClassIndex` and a possible 8-bit primitive number.
+16. `ThunkReturnCharacter`: *There is no immediate encoding for this class in NaN encoding.*
+17. `ThunkReturnFloat`: *There is no immediate encoding for this class in NaN encoding.*
+18. `ThunkFloat`: *There is no immediate encoding for this class in NaN encoding.*
+19. `LLVM`: *There is no immediate encoding for this class in NaN encoding.*
+20.  `SmallInteger` - this is reserved for the bit patterns that encode small integers. This isn't encoded in the tag. The low 50 bits of the "hash code" make up the value, so this provides 50-bit integers (-562,949,953,421,312 to 562,949,953,421,311).
 
 ### Thunks and Closures
 Full block closures are relatively expensive. Even though many will typically be discarded quickly, they take dozens of instructions to create. They are allocated on the stack (because most have LIFO behaviour) which puts pressure on the stack which may force the stack to overflow more quickly and need to be spilled to the heap, and some will put pressure on the heap directly - both causing garbage collections to be more frequent. There are many common blocks that don't actually need access to method local variables, `self` or parameters. These can be encoded as immediate values with special subclasses of BlockClosure and obviate the need for heap allocation. 

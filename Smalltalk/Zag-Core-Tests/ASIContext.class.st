@@ -7,8 +7,8 @@ Class {
 	#instVars : [
 		'returnPC',
 		'sendingContext',
-		'extra',
-		'selfObject'
+		'contextData',
+		'method'
 	],
 	#category : 'Zag-Core-Tests-SemanticInterpreter',
 	#package : 'Zag-Core-Tests',
@@ -16,23 +16,37 @@ Class {
 }
 
 { #category : 'as yet unclassified' }
-ASIContext >> baseAddress [
-
-	isOnStack ifFalse: [ ^ nil ].
-	^ offset - extra
+ASIContext >> callersReturnPC [
+	sendingContext ifNotNil: [ ^ sendingContext returnPC ] ifNil:  [ self halt. "is this the topmost context and should I return an nullProgramCounter?" ^ASINullProgramCounter new ]
 ]
 
 { #category : 'accessing' }
-ASIContext >> extra: anInteger [
-
-	extra := anInteger
+ASIContext >> contextData [
+	^ contextData
 ]
 
-{ #category : 'initialization' }
-ASIContext >> initialize [
+{ #category : 'accessing' }
+ASIContext >> contextData: aContextData [
 
-	super initialize.
-	extra := 0
+	contextData := aContextData
+]
+
+{ #category : 'accessing' }
+ASIContext >> createContextData: anInterpreter [
+   method ifNil: [ ^nil ].
+	^anInterpreter createContextData: method
+]
+
+{ #category : 'accessing' }
+ASIContext >> method: aBasicBlock [ 
+	method := aBasicBlock 
+]
+
+{ #category : 'as yet unclassified' }
+ASIContext >> populateFrom: interpreter [ 
+	[sendingContext != interpreter top] do: [ 
+		
+	]
 ]
 
 { #category : 'accessing' }
@@ -48,18 +62,6 @@ ASIContext >> returnPC: aProgramCounter [
 ]
 
 { #category : 'accessing' }
-ASIContext >> selfObject [
-
-	^ selfObject
-]
-
-{ #category : 'accessing' }
-ASIContext >> selfObject: anObject [
-
-	selfObject := anObject
-]
-
-{ #category : 'accessing' }
 ASIContext >> sendingContext [
 
 	^ sendingContext
@@ -69,4 +71,12 @@ ASIContext >> sendingContext [
 ASIContext >> sendingContext: aSemanticContext [
 
 	sendingContext := aSemanticContext
+]
+
+{ #category : 'as yet unclassified' }
+ASIContext >> withMethodOrBlock: aBasicBlock [ 
+	
+	(method == nil) ifTrue: [ ^ false ].
+	^ method withMethodOrBlock: aBasicBlock
+	
 ]

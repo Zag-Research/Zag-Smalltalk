@@ -9,7 +9,7 @@ OCLiteralValueNode >> zagClosureArgClass: anObject [
 { #category : '*Zag-Exporter-Tests' }
 OCLiteralValueNode >> zagClosureArgClass: anArgumentVariable assign: anOCVectorTempVariable [
 
-	^ #BlockClosure
+	^ #BlockClosure:literal
 ]
 
 { #category : '*Zag-Exporter-Tests' }

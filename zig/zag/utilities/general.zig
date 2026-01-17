@@ -80,7 +80,7 @@ test "check largeEnoughType" {
 pub inline fn largerPowerOf2(value: anytype) u64 {
     if (value <= 1) return 1;
     const bits = bitsToRepresent(value - 1);
-    return @as(u64, 1) << @as(u6, @truncate(bits));
+    return @as(u64, 1) << @as(u6, @intCast(bits));
 }
 test "check largerPowerOf2" {
     const expectEqual = std.testing.expectEqual;
@@ -110,7 +110,7 @@ test "check smallerPowerOf2" {
 pub inline fn sqrtPowerOf2(value: anytype) u64 {
     if (value <= 1) return 1;
     const bits = @divTrunc(bitsToRepresent(value - 1) + 1, 2);
-    return @as(u64, 1) << @as(u6, @truncate(bits));
+    return @as(u64, 1) << @as(u6, @intCast(bits));
 }
 test "check sqrtPowerOf2" {
     const expectEqual = std.testing.expectEqual;

@@ -10,7 +10,7 @@ pub const ClassIndex = enum(u5) {
     ThunkHeap,
     ThunkReturnLocal,
     ThunkReturnInstance,
-    ThunkReturnSmallInteger,
+    ThunkReturnObject,
     ThunkReturnImmediate,
     ThunkReturnCharacter,
     BlockAssignLocal,

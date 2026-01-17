@@ -11,10 +11,10 @@ const Object = object.Object;
 const ClassIndex = object.ClassIndex;
 const heap = zag.heap;
 const HeapHeader = heap.HeapHeader;
-const HeapObjectPtr = heap.HeapObjectPtr;
+const HeapObject = heap.HeapObject;
 const HeapObjectConstPtr = heap.HeapObjectConstPtr;
 pub const TaggedPtrObject = packed struct(u64) {
-    ref: HeapObjectPtr,
+    ref: *HeapObject,
     const Self = @This();
     pub inline fn untaggedI(self: Object) i64 {
         _ = .{ self, unreachable };
@@ -51,7 +51,7 @@ pub const TaggedPtrObject = packed struct(u64) {
         switch (self.tag) {
             .heap => return @ptrFromInt(self.rawU()),
             .immediates => switch (self.class) {
-                .ThunkReturnLocal, .ThunkReturnInstance, .ThunkReturnSmallInteger, .ThunkReturnImmediate, .ThunkReturnCharacter, .ThunkReturnFloat, .ThunkHeap, .ThunkLocal, .ThunkInstance, .BlockAssignLocal, .BlockAssignInstance, .PICPointer => return self.highPointer(T),
+                .ThunkReturnLocal, .ThunkReturnInstance, .ThunkReturnObject, .ThunkReturnImmediate, .ThunkReturnCharacter, .ThunkReturnFloat, .ThunkHeap, .ThunkLocal, .ThunkInstance, .BlockAssignLocal, .BlockAssignInstance, .PICPointer => return self.highPointer(T),
                 else => {},
             },
             else => {},
@@ -150,7 +150,7 @@ pub const TaggedPtrObject = packed struct(u64) {
                         switch (@typeInfo(ptrInfo.child)) {
                             .@"fn" => {},
                             .@"struct" => {
-                                if (!check or (self.isMemoryAllocated() and (!@hasDecl(ptrInfo.child, "ClassIndex") or self.to(HeapObjectConstPtr).classIndex == ptrInfo.child.ClassIndex))) {
+                                if (!check or (self.hasMemoryReference() and (!@hasDecl(ptrInfo.child, "ClassIndex") or self.to(HeapObjectConstPtr).classIndex == ptrInfo.child.ClassIndex))) {
                                     if (@hasField(ptrInfo.child, "header") or (@hasDecl(ptrInfo.child, "includesHeader") and ptrInfo.child.includesHeader)) {
                                         return @as(T, @ptrFromInt(@as(usize, @bitCast(self))));
                                     } else {
@@ -169,12 +169,12 @@ pub const TaggedPtrObject = packed struct(u64) {
     }
     pub inline fn which_class(self: Object) ClassIndex {
         return switch (self.tag) {
-            .heap => if (self.rawU() == 0) .UndefinedObject else self.to(HeapObjectPtr).*.getClass(),
+            .heap => if (self.rawU() == 0) .UndefinedObject else self.to(*HeapObject).*.getClass(),
             .immediates => self.class.classIndex(),
             else => .Float,
         };
     }
-    pub inline fn isMemoryAllocated(self: Object) bool {
+    pub inline fn hasMemoryReference(self: Object) bool {
         return if (self.isHeapObject()) self != Object.Nil else @intFromEnum(self.class) <= @intFromEnum(ClassIndex.Compact.ThunkHeap);
     }
     pub const Scanner = struct {
@@ -198,7 +198,6 @@ pub const TaggedPtrObject = packed struct(u64) {
     }
     const OF = object.ObjectFunctions;
     pub const arrayAsSlice = OF.arrayAsSlice;
-    pub const asMemoryObject = OF.asMemoryObject;
     pub const asObjectArray = OF.asObjectArray;
     pub const asZeroTerminatedString = OF.asZeroTerminatedString;
     pub const compare = OF.compare;

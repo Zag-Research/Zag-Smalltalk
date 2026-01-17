@@ -211,7 +211,6 @@ const fibIntegerBr = struct {
             tf.returnSelf,            ":false",
             tf.push,                  self,
             tf.pushLiteral,           "0const",
-            tf.dup,                   tf.drop,
             tf.inlinePrimitive,       minus,
             tf.send,                  signature(.fibonacci, 0),
             &nullMethod,              tf.push,
@@ -266,9 +265,9 @@ const fibIntegerCl = struct {
     const signature = zag.symbol.signature;
     const nullMethod = zag.dispatch.nullMethod;
     const fromClassI8 = zag.execute.Signature.fromClassI8;
-    const TifTrue align(codeAlignment) =
+    var TifTrue align(codeAlignment) =
         compileMethod(Sym.@"ifTrue:", 0, .True, .{ tf.dup, tf.value, tf.returnTop });
-    const FifTrue align(codeAlignment) =
+    var FifTrue align(codeAlignment) =
         compileMethod(Sym.@"ifTrue:", 0, .False, .{ tf.returnSelf });
     var fib align(codeAlignment) =
         compileMethod(Sym.fibonacci, 0, .SmallInteger, .{
@@ -276,11 +275,11 @@ const fibIntegerCl = struct {
             tf.push,                  self,
             tf.pushLiteral,           "1const",
             tf.inlinePrimitive,       leq,
-            tf.createClosure, fromClassI8(.ThunkReturnSmallInteger, 1),
+            tf.createClosure, fromClassI8(.ThunkReturnObject, 1),
             tf.send,                  signature(.@"ifTrue:", 0),
+            &nullMethod,              tf.drop,
             tf.push,                  self,
             tf.pushLiteral,           "0const",
-            tf.dup,                   tf.drop,
             tf.inlinePrimitive,       minus,
             tf.send,                  signature(.fibonacci, 0),
             &nullMethod,              tf.push,
@@ -301,12 +300,20 @@ const fibIntegerCl = struct {
         const two = two_.init(2);
         fib.resolve(&[_]Object{ one, two }) catch @panic("Failed to resolve");
         fib.initExecute();
+        TifTrue.resolve(Object.empty) catch @panic("Failed to resolve");
+        TifTrue.initExecute();
+        FifTrue.resolve(Object.empty) catch @panic("Failed to resolve");
+        FifTrue.initExecute();
         zag.dispatch.addMethod(@ptrCast(&fib));
         zag.dispatch.addMethod(@ptrCast(&TifTrue));
         zag.dispatch.addMethod(@ptrCast(&FifTrue));
         if (zag.config.show_trace) {
             std.debug.print("\n", .{});
+            std.debug.print("address of one {*}\n", .{ &one });
             fib.dump();
+            TifTrue.dump();
+            FifTrue.dump();
+            zag.execute.endMethod.dump();
         } else {
             const threaded = runIt({}, 0);
             const native = fibCheck(fibN);
@@ -626,8 +633,9 @@ pub fn timing(args: []const []const u8, default: bool) !void {
             print("          Median   Mean   StdDev  SD/Mean ({} run{s}, {} warmup{s})\n", .{ stat.runs, if (stat.runs != 1) "s" else "", stat.warmups, if (stat.warmups != 1) "s" else "" });
         } else {
             var anyRun = false;
-            inline for (&.{ fibNative, fibNativeFloat, fibInteger, fibInteger0, fibIntegerBr, fibFloat, fibIntegerCnP, //fibIntegerCl
-                    }) |benchmark| {
+            inline for (&.{ fibNative, fibNativeFloat, fibInteger, fibInteger0, fibIntegerBr, fibFloat,
+                            fibIntegerCnP, fibIntegerCl
+                          }) |benchmark| {
                 if (includeFor(benchmark) and std.mem.eql(u8, name(arg), benchmark.info.name)) {
                     anyRun = true;
                     print("{s:>9}", .{benchmark.info.name});
@@ -652,10 +660,10 @@ pub fn main() !void {
         "Config",            "Header",
         "Native",            "NativeF",
         //"Integer",
-        "IntegerBr?Integer",
+        //"IntegerBr?Integer",
         //"Integer0?Integer",
         //"IntegerCnP",
-        "Float",
+        //"Float",
         "IntegerCl",
     };
     // var gpa = std.heap.GeneralPurposeAllocator(.{}){};
@@ -671,6 +679,6 @@ pub fn main() !void {
     try timing(if (default) @constCast(do_all[0..]) else args[1..], default);
 }
 const testRun = zag.config.testRun;
-const fibN = if (testRun) 5 else 40;
+const fibN = if (testRun) 3 else 10;
 const nRuns = if (testRun) 1 else 5;
 const warmups = if (testRun) 0 else null;

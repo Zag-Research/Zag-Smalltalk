@@ -1,0 +1,4 @@
+- [OpenSmalltalkVM threaded FFI](https://www.youtube.com/watch?v=-kDxpc_eQIE)
+- [[Multi-threaded_OpenSmalltalk_VM-Choosing_a_Strategy_for_Parallelization.pdf]]
+- see also [[Ideas]]
+- 

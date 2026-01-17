@@ -199,7 +199,7 @@ pub const Object = packed struct(u64) {
     fn which_class(_: Object) ClassIndex {
         return .SmallInteger;
     }
-    pub inline fn isMemoryAllocated(_: Object) bool {
+    pub inline fn hasMemoryReference(_: Object) bool {
         return false;
     }
     pub inline fn isHeapObject(_: Object) bool {
@@ -207,7 +207,6 @@ pub const Object = packed struct(u64) {
     }
     const OF = object.ObjectFunctions;
     pub const arrayAsSlice = OF.arrayAsSlice;
-    pub const asMemoryObject = OF.asMemoryObject;
     pub const asObjectArray = OF.asObjectArray;
     pub const asZeroTerminatedString = OF.asZeroTerminatedString;
     pub const compare = OF.compare;

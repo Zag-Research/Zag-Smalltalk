@@ -86,7 +86,7 @@ ASCompiler >> buildFromClassShallow: aClass selector: selector [
 { #category : 'accessing' }
 ASCompiler >> classes [
 
-	^ classes collect: #instanceSide
+	^ (classes collect: #instanceSide) asSet asArray
 ]
 
 { #category : 'compiling' }
@@ -169,9 +169,10 @@ ASCompiler >> inlineTraditionalMethods [
 	methods do: [ :aMethod | ASCheckTraditionalMethodVisitor new visit: aMethod ]
 ]
 
-{ #category : 'compiling' }
+{ #category : 'as yet unclassified' }
 ASCompiler >> lookup: aSymbol [
-	^ aSymbol
+
+	^ currentScope lookup: aSymbol
 ]
 
 { #category : 'accessing' }

@@ -206,7 +206,7 @@ ASImageExporter >> initClasses [
 	{
 		#ThunkReturnLocal.
 		#ThunkReturnInstance.
-		#ThunkReturnSmallInteger.
+		#ThunkReturnObject.
 		#ThunkReturnImmediate.
 		#ThunkReturnCharacter.
 		#ThunkReturnFloat.

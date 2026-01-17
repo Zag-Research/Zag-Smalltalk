@@ -33,6 +33,13 @@ ASemanticInterpreter >> addClasses: aCollection [
 		each isClass ifTrue: [ classes at: each put: lastClass ] ]
 ]
 
+{ #category : 'as yet unclassified' }
+ASemanticInterpreter >> afterTailSend [
+
+	tailSend := false.
+	contextData := nil
+]
+
 { #category : 'callgraph' }
 ASemanticInterpreter >> asDotString [
 
@@ -50,12 +57,20 @@ ASemanticInterpreter >> basicBlocks [
 	^ basicBlocks
 ]
 
+{ #category : 'as yet unclassified' }
+ASemanticInterpreter >> beforeTailSend [
+
+	context sendingContext ifNotNil: [ context := context sendingContext ]
+]
+
 { #category : 'primitive execution' }
 ASemanticInterpreter >> binary: aBlock [
 
 	primitiveSuccessStackPointer := stackPointer + 1.
-	^ (aBlock value: (stackArray at: stackPointer + 1) value: (stackArray at: stackPointer))
-		  processPrimitiveResult: self
+	^ (aBlock
+		   value: (stackArray at: stackPointer + 1)
+		   value: (stackArray at: stackPointer)) processPrimitiveResult:
+		  self
 ]
 
 { #category : 'interpreting' }
@@ -87,24 +102,46 @@ ASemanticInterpreter >> contextAt: anInteger [
 ]
 
 { #category : 'accessing' }
+ASemanticInterpreter >> contextDataAt: anInteger [ 
+	^ contextData at: 1+ anInteger 
+]
+
+{ #category : 'accessing' }
 ASemanticInterpreter >> copiledUnitAt: anInteger [ 
 	self shouldBeImplemented.
 ]
 
 { #category : 'interpreting' }
-ASemanticInterpreter >> createContext: aCompiledMethodOrBlock [
+ASemanticInterpreter >> createContext [
+	"A context will be dynamically created before every a pop of a local or a send operation occurs.
+Only one context will be created for every method.
+Reading of a local before a context is created will result in a nil.
+Locals do not need to be factored into the creation of a context."
 
-	| contextPtr size locals |
-	locals := aCompiledMethodOrBlock locals.
-	contextPtr := stackPointer - locals - 1.
-	size := aCompiledMethodOrBlock arguments + locals + 1.
+	| size aCompiledMethodOrBlock newStackArray |
+
+	aCompiledMethodOrBlock := pc basicBlock.
+	"calculate the size of the stack to copy over, locals should not be on the stack at this time"
+	size := aCompiledMethodOrBlock arguments + 1.
+
+	"copy the arguments to the call into a newStack"
+	newStackArray := Array new: 10.
+	size to: 1 by: -1 do: [ :idx |
+	newStackArray at: 11 - idx put: self pop ].
+
+	"copy the current calls data into a contextData"
 	context := ASIContext new
-		           array: stackArray offset: contextPtr size: size;
+		           contextData: (context createContextData: self);
+		           returnPC: pc;
+		           method: aCompiledMethodOrBlock;
 		           sendingContext: context.
-	stackPointer := contextPtr.
-	stackArray at: contextPtr put: context.
-	contextPtr + 1 to: contextPtr + locals do: [ :idx |
-	stackArray at: idx put: nil ]
+	"why nil out the stack? visual"
+	"contextPtr + 1 to: contextPtr + locals do: [ :idx |
+	stackArray at: idx put: nil ]"
+	stackArray := newStackArray.
+	stackPointer := 11 - size.
+
+
 ]
 
 { #category : 'interpreting' }
@@ -113,18 +150,34 @@ ASemanticInterpreter >> createContext: locals extra: extra [
 	| contextPtr size |
 	contextPtr := stackPointer - locals - 1.
 	size := BaseAddress - (contextPtr + 1).
+	
 	context := ASIContext new
-		           array: stackArray
-		           offset: contextPtr
-		           size: size;
+		           array: stackArray offset: contextPtr size: size;
 		           sendingContext: context;
-					  extra: extra.
+		           extra: extra.
+	
+	""
 	stackPointer := contextPtr - extra.
 	stackArray at: contextPtr put: context.
+	
+	""
 	stackPointer to: contextPtr - 1 do: [ :idx |
 		stackArray at: idx put: nil ].
 	contextPtr + 1 to: contextPtr + locals do: [ :idx |
 		stackArray at: idx put: nil ]
+]
+
+{ #category : 'interpreting' }
+ASemanticInterpreter >> createContextData: aMethod [
+	contextDataMethod == aMethod ifTrue: [ ^ contextData ].
+
+	contextDataMethod := aMethod.
+	contextData := Array new: aMethod arguments + aMethod locals + 1.
+	stackPointer to: 10 by: 1 do: [ :idx |
+			| element |
+			contextData at: 11 - idx put: (stackArray at: idx) ].
+
+	^ contextData
 ]
 
 { #category : 'private - testing' }
@@ -176,7 +229,26 @@ ASemanticInterpreter >> inlineDepth: anInteger [
 
 { #category : 'interpreting' }
 ASemanticInterpreter >> installContextIfNone [
-	self halt
+	""""
+	"| newContext |
+	newContext := ASIContext new.
+	newContext sendingContext: context.
+	newContext populateFrom: self.
+	context := newContext."
+	self createContext
+]
+
+{ #category : 'interpreting' }
+ASemanticInterpreter >> installContextIfNone: argsOnStack [
+	""""
+
+	"| newContext |
+	newContext := ASIContext new.
+	newContext sendingContext: context.
+	newContext populateFrom: self.
+	context := newContext."
+
+	self createContext
 ]
 
 { #category : 'interpreting' }
@@ -189,8 +261,8 @@ ASemanticInterpreter >> interpret [
 { #category : 'accessing' }
 ASemanticInterpreter >> pop [
 
-	stackPointer := stackPointer + 1.
-	^ stackArray at: stackPointer - 1
+	stackPointer := stackPointer + 1. "move the stack pointer one before current"
+	^ stackArray at: stackPointer - 1"return whatever the stack was pointing to"
 ]
 
 { #category : 'accessing' }
@@ -205,12 +277,15 @@ ASemanticInterpreter >> primitiveSuccess: anObject [
 
 	stackPointer := primitiveSuccessStackPointer.
 	stackArray at: stackPointer put: anObject.
-	pc := context returnPC
+
+	context sendingContext ifNotNil: [ context := context sendingContext ].
+	pc := context returnPC.
+
+	contextData := context contextData
 ]
 
 { #category : 'accessing' }
 ASemanticInterpreter >> push: anObject [
-
 	stackPointer := stackPointer - 1.
 	^ stackArray at: stackPointer put: anObject
 ]
@@ -232,7 +307,7 @@ ASemanticInterpreter >> reset [
 	self addClasses: {
 			#ThunkHeap.
 			#ThunkReturnLocal.
-			#ThunkReturnSmallInteger.
+			#ThunkReturnObject.
 			#ThunkReturnImmediate.
 			#ThunkReturnCharacter.
 			#ThunkImmediate.
@@ -276,6 +351,12 @@ ASemanticInterpreter >> reset [
 ]
 
 { #category : 'as yet unclassified' }
+ASemanticInterpreter >> resetBeforeCall [
+	context returnPC: context sendingContext returnPC.
+	contextData := nil
+]
+
+{ #category : 'as yet unclassified' }
 ASemanticInterpreter >> restructure: anInteger stack: selfPointer [
 
 	| old sources size |
@@ -293,7 +374,7 @@ ASemanticInterpreter >> restructure: anInteger stack: selfPointer [
 	sources := anInteger bitShift: -8.
 	[ sources isZero ] whileFalse: [
 		self push: (old at: (sources bitAnd: 16rff)).
-		sources := sources bitShift: -8 ]
+		sources := sources bitShift: -8 ].
 ]
 
 { #category : 'as yet unclassified' }
@@ -320,7 +401,9 @@ ASemanticInterpreter >> restructureContext: anInteger [
 { #category : 'as yet unclassified' }
 ASemanticInterpreter >> restructureStack: anInteger [
 
-	^ self restructure: anInteger stack: stackPointer + (anInteger bitAnd: 16rff) - 1
+	^ self
+		  restructure: anInteger
+		  stack: stackPointer + (anInteger bitAnd: 16rff) - 1
 ]
 
 { #category : 'handling' }
@@ -334,7 +417,7 @@ ASemanticInterpreter >> return: anObject selfContext: contextOffset [
 { #category : 'handling' }
 ASemanticInterpreter >> return: anObject selfOffset: selfOffset [
 
-	stackPointer := stackPointer + selfOffset.
+	stackPointer := stackPointer + selfOffset + 1.
 	stackArray at: stackPointer put: anObject.
 	pc := context returnPC
 ]
@@ -376,15 +459,18 @@ ASemanticInterpreter >> send: aSymbol with: arguments to: anObject [
 	self push: anObject.
 	arguments do: [ :arg | self push: arg ].
 	self send: aSymbol.
-	context := ASIContext new returnPC: ASINullProgramCounter new; selfObject: anObject.
+	context := ASIContext new returnPC: ASINullProgramCounter new.
 	self interpret.
 	^ self top
 ]
 
 { #category : 'accessing' }
-ASemanticInterpreter >> stackAt: anInteger [
-
-	^ stackArray at: stackPointer + anInteger
+ASemanticInterpreter >> stackAt: anOffset [
+	"(tailSend or: (contextData = nil)) ifTrue: [ 
+		^ stackArray at: stackPointer + anOffset ].
+	
+	^ contextData at: (anOffset + 1)"
+	^ stackArray at: stackPointer + anOffset
 ]
 
 { #category : 'private - testing' }
@@ -433,4 +519,13 @@ ASemanticInterpreter >> unary: aBlock [
 	primitiveSuccessStackPointer := stackPointer.
 	^ (aBlock value: (stackArray at: stackPointer))
 		  processPrimitiveResult: self
+]
+
+{ #category : 'accessing' }
+ASemanticInterpreter >> varAt: aStackElement [ 
+	contextData ifNotNil: [
+		self halt. 
+	 ^ self contextDataAt: aStackElement offset
+	].
+	^self stackAt: aStackElement offset.
 ]

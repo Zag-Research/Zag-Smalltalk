@@ -30,11 +30,11 @@ The nursery is collected using a copying collector. Copying collectors are very 
 If, for an allocation in the nursery, there is not enough free space in the current arena, then the nursery arena will be collected into the other nursery arena, keeping track of how much space is occupied by each age. If there still isn't enough extra space, then the arena will be copied back to the first one, promoting enough older objects to the global arena to make space. Copying into the shared GlobalArena, requires obtaining a lock, but until this point all activity is happening within a process, so no locks are required. The actual collection is done with a copying collector as much of the content is likely garbage.
 
 ### Stack of Contexts
-The execution stack is allocated in the stack area of each Process, and grows down.  If insufficient space is available then the contexts will be reified and copied to the heap. Since the stack area is at the beginning of the Process structure, it is very cheap to check for stack overflow.
+The execution stack is allocated in the stack area of each Process, and grows down.  If insufficient space is available then the contexts will be reified and copied to the heap. Since the stack area is at a power-of-2 boundary (at the beginning of the Process structure), it is very cheap to check for stack overflow.
 
-The stack pointer points to the top of the working stack. If the current context (which could be ours or a sender's) is on the stack (which can be determined from the age field in the header), the working stack area is from the stack pointer to the context (technically there may be some closures in front of the context - these aren't technically part of the working stack and will be spilled to the heap if the context is spilled). If the current context is not in the stack area, then the working stack area is from the stack pointer to the end of the stack area.
+The stack pointer points to the top of the working stack. If the current context (which could be ours or a sender's) is on the stack (which can be determined from the SP) then the working stack area is from the SP to the context (which may be preceded by closures). If the current context is not in the stack area, then the working stack area is from the stack pointer to the end of the stack area.
 
-On entry to a method, the working stack is that of the sender, and the contents will include `self` and the parameters to the current method (in reverse order as they are pushed in left-to-right order) and below that the remaining working stack of the sender. If the current method starts with a primitive, the primitive will work with those values; if successful, replacing `self` and the parameters with the result and then returning to the sender. Otherwise, if the current method sends any non-tail messages, creates any closures (except for a few immediate types), or captures `thisContext`, then a Context object is partially created, capturing the whole working stack of the sender, and setting the ContextPtr and stack pointer to the newly created context. See [[Execution]] for more details. This `Context` will be created as late as possible, because after inlining, there may be paths through the method that don't require the `Context`. The partial creation is because a) we create a lot of them, so we want it to be as cheap as possible; b) it is likely to go away, rather than be spilled; c) it's on the stack so we can calculate its structure if we have to reify it. It is partial in the sense that the size is not calculated.
+On entry to a method, the working stack is that of the sender, and the contents will include `self` and the parameters to the current method (in reverse order as they are pushed in left-to-right order) and below that the rest of the working stack of the sender. If the current method starts with a primitive, the primitive will work with those values; if successful, replacing `self` and the parameters with the result and then returning to the sender. Otherwise, if the current method sends any non-tail messages, creates any closures (except for a few immediate types), or captures `thisContext`, then a Context object is partially created, capturing the whole working stack of the sender, and setting the ContextPtr and stack pointer to the newly created context. See [[Execution]] for more details. This `Context` will be created as late as possible, because after inlining, there may be paths through the method that don't require the `Context`. The partial creation is because a) we create a lot of them, so we want it to be as cheap as possible; b) it is likely to go away, rather than be spilled; c) it's on the stack so we can calculate its structure if we have to reify it. It is partial in the sense that the size is not calculated.
 
 ### Block Closures
 Block closures are allocated "on top" of the `Context`. Each closure that does a non-local return, or references local variables stored in the `Context`, will have a reference to the `Context`. When a closure is created and the `Context` is on the stack, the resulting object will be created on the stack. But if the `Context` is on the heap, the closure will be allocated on the heap.
@@ -70,18 +70,19 @@ The age field for global objects is as follows:
 
 | Value | Meaning                     | Notes                         |
 | ----- | --------------------------- | ----------------------------- |
-| 0-6   | stack or per-process-heap   | see [[Mapping#Age]]           |
+| 0     | stack                       |                               |
+| 1-6   | per-process-heap            | see [[Mapping#Age]]           |
 | 7     | static                      | outside the stack or any heap |
 | 8     | global                      |                               |
 | 9     | global, marked as reachable |                               |
-| 10    | a Zig struct                | ignored by GC                 |
+| 10    | a Zig/FFI struct            | ignored by GC                 |
 | 11    | global, already scanned     |                               |
 | 12    | AoO                         |                               |
 | 13    | AoO, marked as reachable    |                               |
 | 14    | free                        | part of a free list           |
 | 15    | AoO, already scanned        |                               |
-The difference between static and struct is that static *is* an object, so has a proper object structure and is considered by the GC as a potential source of roots, whereas struct is just an arbitration Zig allocation. The global arena maintains a Zig Allocator structure so that any Zig allocations are handled within our space.
-pp
+The difference between static and struct is that static *is* an object, so has a proper object structure and is considered by the GC as a potential source of roots, whereas struct is just an arbitrary Zig/FFI allocation. The global arena maintains a Zig Allocator structure so that any Zig allocations are handled within our space.
+
 AoO objects are objects within [[Memory Management#Array of Objects]].
 Static objects are only scanned once per garbage collection.
 
@@ -121,12 +122,14 @@ There is a complex approach that we considered, but full `become:` is rare enoug
 4. otherwise, the larger is copied to a fresh location, the smaller is copied to the old location of the larger (with the rest becoming free space), and a forward to the fresh location replaces the header of the smaller, with the rest becoming free space
 5. if a forward points to a forward, replace the original forward - which means that there is never more than one forward that needs to be followed.
 
-This simpler approach is better because the previous approach would have slowed down every heap access with checking for an exchange table, even if `become:` was never used. With the approach above, the only check in heap access is to check for a forwarding pointer which is already required to support object promotion from process-local heaps to the global heap.
+This simpler approach is better because the previous approach would have slowed down every heap access with checking for an exchange table, even if `become:` was never used. With the approach above, the only check in heap access is to check for a forwarding pointer which is already used to support object promotion from process-local heaps to the global heap. (But this isn't that necessary... the promotion could immediately be followed by a nursery collect which is pretty cheap.)
 
 Because a `become:` can move the contents of an object, a `become:` must happen between blocks of native code. This means that `become:` must be a full send (and by implication, so must `perform:`). Therefore a global `become:` waits for all other processes to become quiescent before doing the operations. This makes `become:` a relatively expensive operation. (This is actually only critical if the rest of the smaller object in 4 above is free'd.)
 
-The following operations are affected (slowed down) by supporting `become:` 
+The following operations are affected (slowed down) by supporting global `become:` 
 1. accessing any instance variable or indexing
+
+We could support generalized `become:` without slowing everything down by doing a full collect after a global `become:`, but that would be very slow itself. Given how rare these are (there are no non-test uses in a current Pharo image), it might be worth doing.
 
 ### Array of Objects
 Normally a Smalltalk array contains objects, which in the case of memory objects is a pointer, and the actual objects may be scattered across memory. In this situation, iterating through the array imposes not only an extra level of indirection, but also very poor cache locality.^[Note that compacting collectors somewhat mitigate this.]

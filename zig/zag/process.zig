@@ -19,7 +19,6 @@ const checkEqual = zag.utilities.checkEqual;
 const heap = zag.heap;
 const HeapHeader = heap.HeapHeader;
 const HeapObject = heap.HeapObject;
-const HeapObjectPtr = heap.HeapObjectPtr;
 const HeapObjectArray = heap.HeapObjectArray;
 const footer = heap.footer;
 const Age = heap.Age;
@@ -37,7 +36,7 @@ const Result = execute.Result;
 const Self = @This();
 const process_total_size = config.process_total_size;
 m: [process_total_size]u8 align(1), // alignment explicitly stated to emphasize the difference from Process
-pub const alignment = @as(u64, @max(stack_mask_overflow, flagMask + 1)) * 2;
+pub const alignment = @max(stack_mask_overflow * 2, flagMask + 1);
 const alignment_mask = @as(u64, @bitCast(-@as(i64, alignment)));
 const stack_mask_overflow: usize = zag.utilities.largerPowerOf2(Process.stack_size * @sizeOf(Object));
 pub const stack_mask = stack_mask_overflow - @sizeOf(Object);
@@ -113,9 +112,9 @@ const Process = struct {
         var sp = originalSp;
         // find references from the stacked contexts
         while (true) {
-            const endSP = context.endOfStack(sp) orelse sp.endOfStack();
+            const endSP = context.endOfStack(sp);
             while (sp.lessThan(endSP)) {
-                if (sp.top.asMemoryObject()) |pointer| {
+                if (sp.top.ifHeapObject()) |pointer| {
                     if (pointer.isForwarded()) {
                         hp = pointer.copyTo(hp, &sp.top);
                     } else if (pointer.isLocal()) {
@@ -131,7 +130,7 @@ const Process = struct {
     }
     fn copyObject(self: *Process, obj: anytype) @TypeOf(obj) {
         const result = self.h.currHp;
-        const hp = @as(HeapObjectPtr, @ptrCast(result)).copyTo(result, null);
+        const hp = @as(*HeapObject, @ptrCast(result)).copyTo(result, null);
         var sizes = [_]usize{0} ** Age.lastNurseryAge;
         self.finishCollection(hp, result, &sizes, 0);
         return @ptrCast(result);
@@ -144,7 +143,7 @@ const Process = struct {
             if (scan[0].iterator()) |iter| {
                 var it = iter;
                 while (it.next()) |objPtr| {
-                    if (objPtr.asMemoryObject()) |pointer| {
+                    if (objPtr.ifHeapObject()) |pointer| {
                         if (pointer.isForwarded()) {
                             @panic("Forwarded object found in nursery");
                         } else if (pointer.isLocal())
@@ -336,14 +335,14 @@ pub inline fn getHeap(self: *align(1) const Self) []HeapObject {
     return self.header().currHeap[0..((@intFromPtr(self.header().currHp) - @intFromPtr(self.header().currHeap)) / @sizeOf(Object))];
 }
 pub fn allocArray(self: *align(1) Self, slice: []const Object, sp: SP, context: *Context) HeapObjectArray {
-    const len: u11 = @truncate(slice.len);
+    const len: u11 = @intCast(slice.len);
     const hop = self.allocSpace(len, sp, context);
     hop.header.objectInNursery(.Array, len);
     const target: HeapObjectArray = @ptrCast(hop);
     @memcpy(target + 1, @as([]const HeapObject, @ptrCast(slice)));
     return target;
 }
-fn allocSpace(self: *align(1) Self, size: u11, sp: SP, context: *Context) HeapObjectPtr {
+fn allocSpace(self: *align(1) Self, size: u11, sp: SP, context: *Context) *HeapObject {
     const head = self.header();
     const result = head.currHp;
     const newHp = result + size + 1;
@@ -356,24 +355,34 @@ fn allocSpace(self: *align(1) Self, size: u11, sp: SP, context: *Context) HeapOb
 pub fn resetForTest() void {
     allProcesses = null;
 }
+test "stack operations" {
+    const ee = std.testing.expectEqual;
+    var process: Self align(alignment) = undefined;
+    process.init();
+    const endSp = process.endOfStack();
+    try ee(120, @intFromPtr(endSp) & stack_mask);
+    try ee(endSp.endOfStack(), process.endOfStack());
+    try ee(endSp.reserve(1).?.endOfStack(), process.endOfStack());
+    try ee(endSp.reserve(10).?.endOfStack(), process.endOfStack());
+}
 test "nursery allocation" {
     const ee = std.testing.expectEqual;
     var process: Self align(alignment) = undefined;
     process.init();
     const emptySize = Process.nursery_size;
-    try ee(63, Process.stack_size);
+    try ee(15, Process.stack_size);
     try ee(emptySize, process.freeNursery());
     var sp = process.endOfStack();
     const initialContext = process.getContext();
     var ar = sp.alloc(initialContext, ClassIndex.Class, 4, null, void, false);
     _ = ar.initAll();
     const o1 = ar.allocated;
-    try ee(emptySize - 6, process.freeNursery());
+    try ee(emptySize - 5, process.freeNursery());
     ar = sp.alloc(initialContext, ClassIndex.Class, 5, null, void, false);
     _ = ar.initAll();
     ar = sp.alloc(initialContext, ClassIndex.Class, 6, null, void, false);
     const o2 = ar.initAll();
-    try ee(emptySize - 20, process.freeNursery());
+    try ee(emptySize - 19, process.freeNursery());
     try o1.instVarPut(0, o2.asObject());
     sp = sp.push(o1.asObject()).?;
     const news, const newContext, _ = sp.spillStack(initialContext, Extra.none);
@@ -486,8 +495,7 @@ const Stack = struct {
     }
     pub inline //
     fn sliceTo(self: SP, a_ptr: anytype) []Object {
-        const i_ptr = @intFromPtr(a_ptr);
-        return self.slice((i_ptr - @intFromPtr(self)) / @sizeOf(Object));
+        return self.slice((@intFromPtr(a_ptr) - @intFromPtr(self)) / @sizeOf(Object));
     }
     pub inline fn at(self: SP, n: usize) Object {
         return self.array()[n];
@@ -499,16 +507,29 @@ const Stack = struct {
     fn getStack(self: SP) []Object {
         return self.sliceTo(self.endOfStack());
     }
-    pub inline fn dumpStack(self: SP, why: []const u8) void {
+    pub inline fn dumpStack(self: SP, why: []const u8, context: *Context, extra: Extra) void {
         std.debug.print("dumpStack ({s})\n", .{why});
+        const selfAddr = extra.selfAddress(self) orelse context.selfAddress(self);
         for (self.getStack()) |*obj| {
-            std.debug.print("[{x:0>10}]: {f}\n", .{ @intFromPtr(obj), obj.* });
+            const addr = @intFromPtr(obj);
+            std.debug.print("[{x:0>10}]: {f}{s}{s}{s}\n",
+                .{ addr, obj.*,
+                   if (addr == @intFromPtr(self)) " <--sp" else "",
+                   if (addr == @intFromPtr(context)) " <--ctx" else "",
+                   if (addr == @intFromPtr(selfAddr)) " <--self" else "" });
         }
     }
-    pub inline fn traceStack(self: SP, why: []const u8) void {
+    pub inline fn traceStack(self: SP, why: []const u8, context: *Context, extra: Extra) void {
         trace("traceStack ({s})", .{why});
-        for (self.getStack()) |*obj|
-            trace("[{x:0>10}]: {f}", .{ @intFromPtr(obj), obj.* });
+        const selfAddr = extra.selfAddress(self) orelse context.selfAddress(self);
+        for (self.getStack()) |*obj| {
+            const addr = @intFromPtr(obj);
+            trace("[{x:0>10}]: {f}{s}{s}{s}",
+                .{ addr, obj.*,
+                   if (addr == @intFromPtr(self)) " <--sp" else "",
+                   if (addr == @intFromPtr(context)) " <--ctx" else "",
+                   if (addr == @intFromPtr(selfAddr)) " <--self" else "" });
+        }
     }
     inline fn theProcess(self: SP) *Process {
         return @ptrFromInt(@intFromPtr(self) & alignment_mask);
@@ -529,7 +550,7 @@ const Stack = struct {
                 const newHp = result + size + 1;
                 if (@intFromPtr(newHp) <= @intFromPtr(process.h.currEnd)) {
                     process.h.currHp = newHp;
-                    const obj: heap.HeapObjectPtr = @ptrCast(result);
+                    const obj: *HeapObject = @ptrCast(result);
                     aI.initObjectStructure(obj, classIndex, .nursery);
                     return .{
                         .age = .nursery,
@@ -560,7 +581,7 @@ const Stack = struct {
         process.collectNursery(sp, context, size);
         const stackToCopy = sp.sliceTo(context.endOfStack(sp));
         context.reify(sp);
-        sp.dumpStack("in spillStack");
+        sp.dumpStack("in spillStack", context, extra);
         const newContext = process.copyObject(context);
         var n = stackToCopy.len;
         const newSp = @as([*]Stack, @ptrCast(sp.endOfStack())) - n;
@@ -568,8 +589,7 @@ const Stack = struct {
         while (n > 0) : (n -= 1) {
             targetStack[n - 1] = stackToCopy[n - 1];
         }
-        sp.dumpStack("at end of spillStack");
-        _ = .{newContext};
+        sp.dumpStack("at end of spillStack", newContext, extra);
         @panic("spillStack unfinished");
     }
     pub fn format(
@@ -596,8 +616,11 @@ test "Stack" {
 pub const threadedFunctions = struct {
     pub const pushThisProcess = struct {
         pub fn threadedFn(pc: PC, sp: SP, process: *Self, context: *Context, extra: Extra) Result {
-            const newSp = sp.push(Object.fromAddress(process.ptr()));
-            return @call(tailCall, process.check(pc.prim()), .{ pc.next(), newSp.?, process, context, extra });
+            if (sp.push(Object.fromAddress(process.ptr()))) |newSp| {
+                return @call(tailCall, process.check(pc.prim()), .{ pc.next(), newSp, process, context, extra });
+            } else {
+                @panic("StackOverflow");
+            }
         }
     };
     pub const debug = struct {

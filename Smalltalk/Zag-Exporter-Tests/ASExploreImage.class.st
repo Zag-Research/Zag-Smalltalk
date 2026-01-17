@@ -43,6 +43,7 @@ ASExploreImage class >> argumentsPerMethod [
 ASExploreImage class >> blockClosureTypes [
 " self blockClosureTypes "
 	| closures |
+	<script>
 	closures := Bag new.
 	CompiledBlock allInstancesDo: [ :cb| closures add: cb ast zagClosureClass ].
 	self halt

@@ -14,6 +14,7 @@ There are a few significant changes:
 	2. BlockClosure - this is a full block closure as described in [[Mapping#Thunks and Closures]]
 2. We are using a pure generational copying collector for the nursery arenas. This means that we need forwarding pointers during collection. We encode this with a special value for the `length` field of the header word.
 3. `become:` will be implemented with similar forwarding.... When the objects are collected, the references will be updated.
+4. forwarding can be turned off for anything except the nursery arena copying collector, which speeds many object references up, but limits the kinds of `become:` that can be used.
 #### Object addresses
 All object addresses point to a HeapObject word.  Every object has a HeapHeader word at the beginning. This allows the global allocator to be used as a Zig Allocator, and can hence be used with any existing Zig code that requires an allocator. When Zig code frees an allocation, we could return it to the appropriate freelist(s) or simply mark it as unallocated, so it will be garbage collected. Note that pointers to objects on a stack or in nursery arenas should **not** be passed to Zig libraries, because the objects can move, whereas the global allocator never moves an object.
 
