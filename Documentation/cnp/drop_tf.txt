@@ -1,0 +1,13 @@
+fib:    file format elf64-x86-64
+
+Disassembly of section .text:
+
+0000000001039fb0 <controlWords.drop.threadedFn>:
+ 1039fb0: 48 83 c6 08                   addq    $0x8, %rsi
+ 1039fb4: b8 50 9d 03 01                movl    $0x1039d50, %eax        # imm = 0x1039D50
+ 1039fb9: f6 c2 60                      testb   $0x60, %dl
+ 1039fbc: 75 03                         jne     0x1039fc1 <controlWords.drop.threadedFn+0x11>
+ 1039fbe: 48 8b 07                      movq    (%rdi), %rax
+ 1039fc1: 48 83 c7 10                   addq    $0x10, %rdi
+ 1039fc5: ff e0                         jmpq    *%rax
+ 1039fc7: 66 0f 1f 84 00 00 00 00 00    nopw    (%rax,%rax)

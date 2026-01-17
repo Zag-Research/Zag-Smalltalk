@@ -18,7 +18,7 @@ pub fn build(b: *std.Build) void {
     createMainExecutable(b, target, optimize, zag, build_options, llvm_module);
 
     // Experiment executables
-    createExperimentExecutables(b, target, optimize, build_options, zag);
+    createExperimentExecutables(b, target, optimize, zag);
 
     // Test and benchmark steps
     createTestStep(b, target, optimize, build_options, llvm_module);
@@ -34,7 +34,6 @@ fn createBuildOptions(b: *std.Build) BuildOptions {
     const max_classes = b.option(u16, "maxClasses", "Maximum number of classes") orelse 255;
     const trace = b.option(bool, "trace", "trace execution") orelse false;
     const quit_on_first_failure = b.option(bool, "quitOnFirstFailure", "Stop after first error");
-    const omit_frame_pointer = false;
 
     return .{
         .include_llvm = include_llvm,
@@ -44,7 +43,6 @@ fn createBuildOptions(b: *std.Build) BuildOptions {
         .max_classes = max_classes,
         .trace = trace,
         .quit_on_first_failure = quit_on_first_failure,
-        .omit_frame_pointer = omit_frame_pointer,
     };
 }
 
@@ -124,10 +122,9 @@ fn createExperimentExecutables(
     b: *std.Build,
     target: std.Build.ResolvedTarget,
     optimize: std.builtin.OptimizeMode,
-    build_options: BuildOptions,
     zag: *std.Build.Module,
 ) void {
-    const fib = b.addExecutable(.{
+    const fib = b.addObject(.{
         .name = "fib",
         .root_module = b.createModule(.{
             .root_source_file = b.path("experiments/fib.zig"),
@@ -136,11 +133,19 @@ fn createExperimentExecutables(
             .imports = &.{
                 .{ .name = "zag", .module = zag },
             },
-            .omit_frame_pointer = build_options.omit_frame_pointer,
+            .omit_frame_pointer = true,
+            .no_builtin = true,
         }),
         .use_llvm = true,
     });
-    b.installArtifact(fib);
+    // Add assembly output
+    const asm_file = fib.getEmittedAsm();
+    b.getInstallStep().dependOn(&b.addInstallFile(asm_file, "fib.s").step);
+
+    const bin_file = fib.getEmittedBin();
+    b.getInstallStep().dependOn(&b.addInstallFile(bin_file, "fib.o").step);
+
+    // b.installArtifact(fib);
 
     const branchPrediction = b.addExecutable(.{
         .name = "branchPrediction",
@@ -329,5 +334,4 @@ const BuildOptions = struct {
     max_classes: u16,
     trace: bool,
     quit_on_first_failure: ?bool,
-    omit_frame_pointer: bool,
 };
