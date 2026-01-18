@@ -1,7 +1,7 @@
 Extension { #name : 'CompiledMethod' }
 
 { #category : '*Zag-Inspector' }
-CompiledMethod >> inspectionZagCode [
+CompiledMethod >> inspectionZagCode: aBuilder [
 
 	<inspectorPresentationOrder: 60 title: 'ZCode'>
 	| ast cg |
@@ -11,11 +11,17 @@ CompiledMethod >> inspectionZagCode [
 		      generateFrom: ast.
 	cg inline: true.
 	cg finalAnalysis.
-	^ cg inspectBasicBlocks
+	
+^ (aBuilder instantiate: SpTreeTablePresenter)
+		  roots:  cg inspectBasicBlocks;
+		  children: [ :aNode | aNode children ];
+		  addColumn:
+			  (SpStringTableColumn evaluated: #contents);
+		  yourself
 ]
 
 { #category : '*Zag-Inspector' }
-CompiledMethod >> inspectionZigAST [
+CompiledMethod >> inspectionZigAST: aBuilder [
 	<inspectorPresentationOrder: 61 title: 'ZAST'>
-	^ (ASPharoCompiler new astFor: self) inspectAST
+	^ (ASPharoCompiler new astFor: self) inspectAST: aBuilder 
 ]

@@ -353,10 +353,10 @@ ASCBasicBlock >> inspectionStart: aBuilder [
 ]
 
 { #category : 'writing' }
-ASCBasicBlock >> inspectionZagCode [
+ASCBasicBlock >> inspectionZagCode: aBuilder [
 
 	<inspectorPresentationOrder: 0 title: 'ZCode'>
-	^ SpTreeTablePresenter new
+	^ (aBuilder instance: SpTreeTablePresenter)
 		  roots: operations;
 		  children: [ :aNode | aNode children ];
 		  addColumn:
