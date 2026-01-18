@@ -2,10 +2,6 @@ Extension { #name : 'ASCPushVariable' }
 
 { #category : '*Zag-Core-Tests' }
 ASCPushVariable >> interpretFor: anInterpreter [
-
-	^ anInterpreter push:
-		  ((inContext and: [ variableLocation isInContext ])
-			   ifTrue: [ anInterpreter contextAt: variableLocation offset ]
-			   ifFalse: [
-			   anInterpreter stackAt: variableLocation offset negated ])
+self halt.
+	^ anInterpreter push: (anInterpreter varAt: variableLocation)
 ]

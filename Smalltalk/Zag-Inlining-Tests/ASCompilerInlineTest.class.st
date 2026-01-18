@@ -312,18 +312,7 @@ ASCompilerInlineTest >> testBlockReturnInline [
 blockReturn: p1
 	true ifTrue: [ ^ p1 ]
 "
-
-	| cg |
-	cg := ASCodeGenerator
-		      targetClass: ASCompileTestClass1
-		      selector: #blockReturn:.
-	cg
-		inspect;
-		halt.
-	cg
-		inline: true;
-		finalAnalysis;
-		inspect
+		self assertEquivalentSending: #blockReturn: arguments: #(4) to: ASCompileTestClass1 new
 ]
 
 { #category : 'tests' }
@@ -452,13 +441,12 @@ ASCompilerInlineTest >> testFoo [
 
 	"bar
 	^ 42"
-	self assertEquivalentSending: #foo to: ASCompileTestClass1 new.
+	self assertEquivalentSending: #foo arguments: #() to: ASCompileTestClass1 new inlineDepth: 0.
 	self assert: interpreter codeSize equals: 2.
-	interpreter inspect.
-	self
+	self 
 		assert:
 		(interpreter dispatchFor: ASCompileTestClass1 >> #foo) codeSize
-		equals: 3
+		equals: 2
 ]
 
 { #category : 'tests' }
@@ -493,20 +481,17 @@ ASCompilerInlineTest >> testFoo1Inlined [
 
 { #category : 'tests' }
 ASCompilerInlineTest >> testFoo2Inlined [
-	"foo
+	"foo2
 	^ self bar"
 
 	"bar
 	^ 42"
 
-	| cg |
-	cg := ASCodeGenerator
-		      targetClass: ASCompileTestClass1
-		      selector: #foo2.
-	cg
-		inline: true;
-		finalAnalysis;
-		inspect
+	self
+		assertEquivalentSending: #foo2
+		arguments: {  }
+		to: ASCompileTestClass1 new
+		inlineDepth: 1000
 ]
 
 { #category : 'tests' }
@@ -517,14 +502,21 @@ ASCompilerInlineTest >> testFoo3Inlined [
 	"bar
 	^ 42"
 
-	| cg |
-	cg := ASCodeGenerator
-		      targetClass: ASCompileTestClass1
-		      selector: #foo3.
-	cg
-		inline: true;
-		finalAnalysis;
-		inspect
+	self
+		assertEquivalentSending: #foo3
+		arguments: {  }
+		to: ASCompileTestClass1 new
+		inlineDepth: 1000
+]
+
+{ #category : 'tests' }
+ASCompilerInlineTest >> testFooCallsBarCallsBlat [
+
+
+	self assertEquivalentSending: #fooCallsBarCallsBlat to: ASCompileTestClass1 new.
+	self assert: interpreter basicBlocks size equals: 1.
+	interpreter inspect.
+	self assert: interpreter codeSize equals: 1
 ]
 
 { #category : 'tests' }
@@ -546,6 +538,24 @@ ASCompilerInlineTest >> testFooInlined [
 
 { #category : 'tests' }
 ASCompilerInlineTest >> testGives43 [
+	"gives43
+		| forty2 |
+		forty2 := self unaries * 2.
+		^ self plus1: forty2 - 4"
+
+	"unaries
+		^ 23 negated abs"
+
+	"negated
+		^ 0 - self"
+	
+	"abs
+		^ self < 0
+		  ifTrue: [ self negated ]
+		  ifFalse: [ self ]"
+
+	"plus1: aNumber
+		^ aNumber + 1"
 
 	self assertEquivalentSending: #gives43 to: ASCompileTestClass1 new
 ]
@@ -577,8 +587,22 @@ ASCompilerInlineTest >> testInsertionSort [
 ]
 
 { #category : 'tests' }
+ASCompilerInlineTest >> testLocalVarAccessing [
+"localVarAccessing
+
+	| forty2 |
+	forty2 := 34.
+	^ forty2 negated"
+	self assertEquivalentSending: #localVarAccessing to: ASCompileTestClass1 new
+]
+
+{ #category : 'tests' }
 ASCompilerInlineTest >> testNegatedInlined [
 
+"negated
+	""Answer a Number that is the negation of the receiver.""
+
+	^0 - self"
 	self assertEquivalentSending: #negated arguments: #(  ) to: 6
 ]
 
