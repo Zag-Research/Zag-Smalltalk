@@ -15,7 +15,10 @@ Class {
 		'lastClass',
 		'inlineDepth',
 		'executing',
-		'basicBlocks'
+		'basicBlocks',
+		'tailSend',
+		'contextData',
+		'contextDataMethod'
 	],
 	#pools : [
 		'ZagConstants'
