@@ -40,6 +40,20 @@ ASScanner >> binaryIdentifier [
 ]
 
 { #category : 'scanning' }
+ASScanner >> comment [
+
+	aStream next.
+	^ (String streamContents: [ :s |
+			   | char |
+			   [
+				   char := aStream next.
+				   char ~= $" or: [
+						   aStream peek = $" and: [
+								   aStream next.
+								   true ] ] ] whileTrue: [ s << char ] ])
+]
+
+{ #category : 'scanning' }
 ASScanner >> identifier [
 	^ self identifierString asASIdentifier
 ]
@@ -107,6 +121,7 @@ ASScanner >> symbol [
 	char = $( ifTrue: [ aStream next. ^ '#(' asASSyntax ].
 	char = $' ifTrue: [ ^ self string value asASSymbol].
 	char isDigit ifTrue: [ ^ self number ].
+	char = $_ ifTrue: [ ^ self identifierString asASSymbol ]. 
 ^ self error: 'invalid symbol'
 ]
 
@@ -114,22 +129,21 @@ ASScanner >> symbol [
 ASScanner >> token [
 
 	| char |
-	[ aStream atEnd ifTrue: [ ^ ASEnd new ].
-		aStream peek isSeparator ] whileTrue: [ aStream next ].
+	[
+		aStream atEnd ifTrue: [ ^ ASEnd new ].
+		aStream peek isSeparator or: [ aStream peek = $" and: [ self comment. true ] ] ] whileTrue: [ aStream next ].
 	char := aStream peek.
 	('^.[]{}();' includes: char) ifTrue: [ ^ aStream next asASSyntax ].
 	char isLetter ifTrue: [ ^ self identifier ].
 	char isDigit ifTrue: [ ^ self number ].
-	char = $" ifTrue: [ ^ self comment ].
 	char = $# ifTrue: [ ^ self symbol ].
 	char = $' ifTrue: [ ^ self string ].
 	char = $: ifTrue: [
-		aStream next.
-		('=>' includes: aStream peek) ifTrue: [
-			^ (':',aStream next asString) asASSyntax
-		] ifFalse: [
-			^ $: asASSyntax
-	]].
+			aStream next.
+			('=>' includes: aStream peek)
+				ifTrue: [ ^ (':' , aStream next asString) asASSyntax ]
+				ifFalse: [ ^ $: asASSyntax ] ].
 	char isSpecial ifTrue: [ ^ self binaryIdentifier ].
-	^ self error: 'Illegal character:',char asString
+	char = $_ ifTrue: [ ^ self identifier ].
+	^ self error: 'Illegal character:' , char asString
 ]
