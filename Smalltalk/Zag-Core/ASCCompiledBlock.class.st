@@ -42,6 +42,13 @@ ASCCompiledBlock >> hasNonLocalReturn [
 	^ false
 ]
 
+{ #category : 'API' }
+ASCCompiledBlock >> initParameterNamed: aSymbol [
+
+	stack := stack initParameterNamed: aSymbol.
+	^ stack data: (AStSubClass new dataClass: Object)
+]
+
 { #category : 'initialization' }
 ASCCompiledBlock >> initialize [
 

@@ -22,6 +22,11 @@ ZagInstvar >> index: anInteger [
 	index := anInteger
 ]
 
+{ #category : 'accessing' }
+ZagInstvar >> name [
+ ^ 'instanceVar index: ', index asString
+]
+
 { #category : 'as yet unclassified' }
 ZagInstvar >> pushOperation [
 

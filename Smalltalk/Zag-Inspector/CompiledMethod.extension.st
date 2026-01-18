@@ -11,9 +11,8 @@ CompiledMethod >> inspectionZagCode: aBuilder [
 		      generateFrom: ast.
 	cg inline: true.
 	cg finalAnalysis.
-	
 ^ (aBuilder instantiate: SpTreeTablePresenter)
-		  roots:  cg inspectBasicBlocks;
+		  roots:  cg zagBlocks;
 		  children: [ :aNode | aNode children ];
 		  addColumn:
 			  (SpStringTableColumn evaluated: #contents);
