@@ -43,3 +43,5 @@ There are a few places where processes have to recognize a common event. For the
 These are required for several reasons, described below.
 ### Global Garbage Collection
 When the global garbage collector starts a marking pass, it first goes through global, shared data structures like the dispatch table, the symbol table, and the class table, and marks objects accessible that way. Then it asks, via process synchronization, all execution processes to mark objects that are reachable by them. Once they have done that, they resume execution. When they have all done that, it resumes its collection process.
+
+[Mailbox for Zig](https://github.com/g41797/mailbox)

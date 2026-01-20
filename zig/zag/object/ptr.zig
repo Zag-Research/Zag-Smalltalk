@@ -163,10 +163,6 @@ pub const Object = packed struct(u64) {
     pub inline fn withPrimitive(self: object.Object, prim: u64) object.Object {
         return @bitCast(self.rawU() | prim << 40);
     }
-    pub inline fn withClass(self: Object, class: ClassIndex) Object {
-        if (!self.isSymbol()) unreachable;
-        return @bitCast((self.rawU() & 0xffffffffff) | (@as(u64, @intFromEnum(class)) << 40));
-    }
     inline fn toDoubleFromMemory(self: object.Object) f64 {
         return self.to(*InMemory.MemoryFloat).*.value;
     }

@@ -84,6 +84,9 @@ pub const Signature = packed struct {
     pub inline fn asSymbol(self: Signature) Object {
         return symbol.fromHash((self.asInt() & 0xffff_ffff) >> 8);
     }
+    pub inline fn asObject(self: Signature) Object {
+        return @bitCast(self);
+    }
     pub inline fn primitive(self: Signature) u8 {
         return self.prim;
     }
@@ -197,7 +200,7 @@ pub const PC = packed struct {
         }
         return self.code.variable;
     }
-    pub inline //
+    pub //inline //
     fn signature(self: PC) Signature {
         if (logging) |log| {
             @setRuntimeSafety(false);
@@ -217,7 +220,7 @@ pub const PC = packed struct {
     pub inline fn structure(self: PC) StackStructure {
         return self.code.structure;
     }
-    pub inline //
+    pub //inline //
     fn uint(self: PC) u64 {
         if (logging) |log| {
             @setRuntimeSafety(false);
@@ -652,7 +655,10 @@ fn CompileTimeMethod(comptime counts: usize) type {
                         const index: usize = @bitCast(c.offset);
                         if (resolution) |literals| {
                             if (index >= literals.len) return error.Unresolved;
-                            c.* = Code.objectOf(literals[index]);
+                            if (literals[index].signature()) |signature| {
+                                c.* = Code.signatureOf(signature);
+                            } else
+                                c.* = Code.objectOf(literals[index]);
                             offset.* = .none;
                         }
                     },
@@ -1001,11 +1007,11 @@ pub const Execution = struct {
                 self.init(stackObjects);
 //                self.resolve(Object.empty) catch @panic("Failed to resolve");
                 _ = self.method.execute(self.getSp(), self.getProcess(), self.getContext());
-                self.getSp().traceStack("return from execution", self.getContext(), Extra.none);
+//                self.getSp().traceStack("return from execution", self.getContext(), Extra.none);
             }
             pub fn matchStack(self: *Self, expected: []const Object) !void {
                 const result = self.stack();
-                try std.testing.expectEqualSlices(Object, expected, result);
+                try expectEqualSlices(expected, result);
             }
             pub fn runTest(self: *Self, source: []const Object, expected: []const Object) !void {
                 return self.runTestWithObjects(Object.empty, source, expected);
@@ -1065,7 +1071,7 @@ pub const Execution = struct {
         }
     };
 };
-fn expectEqualSlices(expected: []const Object, result: []const Object) !void {
+pub fn expectEqualSlices(expected: []const Object, result: []const Object) !void {
     const min = @min(expected.len, result.len);
     const index = blk: {
         for (0..min) |i| {

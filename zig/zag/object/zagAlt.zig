@@ -252,10 +252,6 @@ pub const Object = packed struct(u64) {
     pub inline fn toBoolNoCheck(self: Object) bool {
         return self.rawU() == Object.True().rawU();
     }
-    pub inline fn withClass(self: Object, class: ClassIndex) Object {
-        if (!self.isSymbol()) unreachable;
-        return @bitCast((self.rawU() & 0xffffffffff) | (@as(u64, @intFromEnum(class)) << 40));
-    }
     pub inline fn toDoubleNoCheck(self: Object) f64 {
         return decode(@bitCast(self));
     }

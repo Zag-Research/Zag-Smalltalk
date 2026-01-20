@@ -1,5 +1,5 @@
 const std = @import("std");
-const expectEqualSlices = std.testing.expectEqualSlices;
+const expectEqualSlices = execute.expectEqualSlices;
 const assert = std.debug.assert;
 const zag = @import("zag.zig");
 const config = zag.config;
@@ -392,7 +392,7 @@ pub const threadedFunctions = struct {
                 exe.object(42),
                 exe.object(17),
             });
-            try expectEqualSlices(Object, &[_]Object{
+            try expectEqualSlices(&[_]Object{
                 False(),
             }, exe.stack());
         }
@@ -409,7 +409,7 @@ pub const threadedFunctions = struct {
                 True(),
                 exe.object(17),
             });
-            try expectEqualSlices(Object, &[_]Object{
+            try expectEqualSlices(&[_]Object{
                 o0,
                 True(),
                 exe.object(17),
@@ -428,7 +428,7 @@ pub const threadedFunctions = struct {
                 exe.object(42),
                 exe.object(17),
             });
-            try expectEqualSlices(Object, &[_]Object{
+            try expectEqualSlices(&[_]Object{
                 o0,
                 exe.object(42),
                 exe.object(17),
@@ -474,7 +474,7 @@ pub const threadedFunctions = struct {
                 exe.object(42),
                 exe.object(17),
             });
-            try expectEqualSlices(Object, &[_]Object{
+            try expectEqualSlices(&[_]Object{
                 False(),
             }, exe.stack());
         }
@@ -491,7 +491,7 @@ pub const threadedFunctions = struct {
                 True(),
                 exe.object(17),
             });
-            try expectEqualSlices(Object, &[_]Object{
+            try expectEqualSlices(&[_]Object{
                 o0,
                 Sym.value.asObject(),
                 True(),
@@ -511,7 +511,7 @@ pub const threadedFunctions = struct {
                 exe.object(42),
                 exe.object(17),
             });
-            try expectEqualSlices(Object, &[_]Object{
+            try expectEqualSlices(&[_]Object{
                 o0,
                 Nil(),
                 exe.object(42),
@@ -552,7 +552,7 @@ pub const threadedFunctions = struct {
                 exe.object(17),
                 False(),
             });
-            try expectEqualSlices(Object, &[_]Object{
+            try expectEqualSlices(&[_]Object{
                 o0,
                 True(),
             }, exe.stack());
@@ -602,7 +602,7 @@ pub const threadedFunctions = struct {
                 exe.object(17),
                 False(),
             });
-            try expectEqualSlices(Object, &[_]Object{
+            try expectEqualSlices(&[_]Object{
                 o0,
                 True(),
             }, exe.stack());
