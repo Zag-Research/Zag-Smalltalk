@@ -327,7 +327,7 @@ pub const threadedFunctions = struct {
     fn getMethod(pc: PC, signature: Signature, receiver: Object) *const CompiledMethod {
         const class = receiver.get_class();
         const requiredSignature = signature.withClass(class);
-        std.debug.print("getMethod: {} {f} {f} {f}\n", .{ class, signature, receiver, requiredSignature });
+        // std.debug.print("getMethod: {} {f} {f} {f}\n", .{ class, signature, receiver, requiredSignature });
         if (signature == requiredSignature) {
             return pc.next().method();
         }
@@ -355,7 +355,7 @@ pub const threadedFunctions = struct {
                 return @call(tailCall, newPc.prim(), .{ newPc.next(), newSp, process, newContext, Extra.forMethod(method, newSp.unreserve(numArgs)) });
             }
             context.setReturn(pc.next2());
-            method.dump();
+            // method.dump();
             return @call(tailCall, newPc.prim(), .{ newPc.next(), sp, process, context, Extra.forMethod(method, selfAddr) });
         }
     };

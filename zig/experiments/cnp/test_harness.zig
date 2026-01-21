@@ -1,0 +1,117 @@
+const std = @import("std");
+const zag = @import("zag");
+const threadedFn = zag.threadedFn;
+const tf = threadedFn.Enum;
+const Process = zag.Process;
+const Context = zag.Context;
+const Extra = Context.Extra;
+const PC = zag.execute.PC;
+const SP = Process.SP;
+const Code = zag.execute.Code;
+const Object = zag.Object;
+const JitMethod = @import("jit_method.zig").JitMethod;
+
+pub fn initJitTest(method: anytype, process: *align(Process.alignment) Process, title: []const u8) !void {
+    const MethodType = @TypeOf(method.*);
+    method.* = try MethodType.init();
+    process.init();
+    std.debug.print("\n--- {s} ---\n", .{title});
+    method.dump();
+}
+
+pub fn runCompiled(
+    method: anytype,
+    compiled: anytype,
+    process: *align(Process.alignment) Process,
+    op_positions: []const usize,
+    sp_opt: ?SP,
+) i64 {
+    const context = process.getContext();
+    const sp = sp_opt orelse process.endOfStack();
+    const code = compiled.code[0..];
+    for (op_positions, 0..) |pos, i| {
+        method.patchOp(code, i, pos);
+    }
+
+    const pc = PC.init(&code[0]).next();
+    const extra = Extra.forMethod(compiled.asCompiledMethodPtr(), sp);
+    const entry = method.getEntryFor(0);
+    const result_sp = entry(pc, sp, process, context, extra);
+
+    return result_sp.at(0).to(i64);
+}
+
+pub fn setLiteral(code: []Code, index: usize, value: Object) void {
+    code[index] = Code.objectOf(value);
+}
+
+pub fn reportResult(label: []const u8, got: i64, expected: i64) !void {
+    std.debug.print("{s}: {}\n", .{ label, got });
+    std.debug.print("Expected: {}\n", .{expected});
+    if (got != expected) {
+        std.debug.print("FAILED!\n", .{});
+        return error.TestFailed;
+    }
+    std.debug.print("SUCCESS!\n", .{});
+}
+
+pub fn runTest(comptime T: type) !void {
+    try T.init();
+    defer T.deinit();
+    try T.run();
+}
+
+fn isLabelField(comptime field: anytype) bool {
+    switch (@typeInfo(@TypeOf(field))) {
+        .pointer => |ptr| switch (@typeInfo(ptr.child)) {
+            .array => return field[0] == ':',
+            else => return false,
+        },
+        else => return false,
+    }
+}
+
+/// Extracts threaded function ops and their code positions from a tuple.
+pub fn opsInfo(comptime tup: anytype) type {
+    comptime var count: usize = 0;
+    comptime var pos: usize = 0;
+    inline for (tup) |field| {
+        if (!isLabelField(field)) {
+            if (@TypeOf(field) == tf) count += 1;
+            pos += 1;
+        }
+    }
+
+    return struct {
+        pub const ops: [count]tf = blk: {
+            var arr: [count]tf = undefined;
+            var i: usize = 0;
+            var pos_local: usize = 0;
+            for (tup) |field| {
+                if (!isLabelField(field)) {
+                    if (@TypeOf(field) == tf) {
+                        arr[i] = field;
+                        i += 1;
+                    }
+                    pos_local += 1;
+                }
+            }
+            break :blk arr;
+        };
+        pub const positions: [count]usize = blk: {
+            var arr: [count]usize = undefined;
+            var i: usize = 0;
+            var pos_local: usize = 0;
+            for (tup) |field| {
+                if (!isLabelField(field)) {
+                    if (@TypeOf(field) == tf) {
+                        arr[i] = pos_local;
+                        i += 1;
+                    }
+                    pos_local += 1;
+                }
+            }
+            break :blk arr;
+        };
+    };
+}

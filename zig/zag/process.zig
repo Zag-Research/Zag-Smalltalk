@@ -520,6 +520,7 @@ const Stack = struct {
         }
     }
     pub inline fn traceStack(self: SP, why: []const u8, context: *Context, extra: Extra) void {
+        if (!config.show_trace) return;
         trace("traceStack ({s})", .{why});
         const selfAddr = extra.selfAddress(self) orelse context.selfAddress(self);
         for (self.getStack()) |*obj| {

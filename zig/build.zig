@@ -157,6 +157,24 @@ fn createExperimentExecutables(
     });
     _ = branchPrediction;
 
+    const cnp = b.addExecutable(.{
+        .name = "cnp",
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("experiments/cnp/cnp.zig"),
+            .target = target,
+            .optimize = optimize,
+            .imports = &.{
+                .{ .name = "zag", .module = zag },
+            },
+            .omit_frame_pointer = build_options.omit_frame_pointer,
+        }),
+        .use_llvm = true,
+    });
+    b.installArtifact(cnp);
+    const run_cnp = b.addRunArtifact(cnp);
+    const run_cnp_step = b.step("cnp-run", "Build and run cnp (copy-and-patch JIT)");
+    run_cnp_step.dependOn(&run_cnp.step);
+
     const fib_check = b.addExecutable(.{
         .name = "fib",
         .root_module = b.createModule(.{
