@@ -45,9 +45,8 @@ pub fn setLiteral(code: []Code, index: usize, value: Object) void {
     code[index] = Code.objectOf(value);
 }
 
-pub fn reportResult(label: []const u8, got: i64, expected: i64) !void {
-    std.debug.print("{s}: {}\n", .{ label, got });
-    std.debug.print("Expected: {}\n", .{expected});
+pub fn reportResult(got: i64, expected: i64) !void {
+    std.debug.print("Got: {}, Expected: {}\n", .{ got, expected });
     if (got != expected) {
         std.debug.print("FAILED!\n", .{});
         return error.TestFailed;

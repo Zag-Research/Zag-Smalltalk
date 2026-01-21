@@ -35,7 +35,7 @@ pub const PushTest = struct {
     var compiled align(64) = compileMethod(Sym.value, 0, .Object, tup);
 
     pub fn init() !void {
-        try initJitTest(&method, &process, "PushTest: push -> returnTop");
+        try initJitTest(&method, &process, "PushTest");
     }
 
     pub fn deinit() void {
@@ -56,7 +56,7 @@ pub const PushTest = struct {
 
     pub fn run() !void {
         const result = runWith(123);
-        try reportResult("Input: 123, Result", result, 123);
+        try reportResult(result, 123);
     }
 };
 
@@ -75,7 +75,7 @@ pub const PushLiteralTest = struct {
     var literal_: Object.StaticObject = undefined;
 
     pub fn init() !void {
-        try initJitTest(&method, &process, "PushLiteralTest: pushLiteral -> returnTop");
+        try initJitTest(&method, &process, "PushLiteralTest");
         const literal = literal_.init(7);
         compiled.resolve(&[_]Object{literal}) catch @panic("Failed to resolve");
     }
@@ -94,7 +94,7 @@ pub const PushLiteralTest = struct {
 
     pub fn run() !void {
         const result = runWith(7);
-        try reportResult("Input: 7, Result", result, 7);
+        try reportResult(result, 7);
     }
 };
 
@@ -115,7 +115,7 @@ pub const PushLiteralDupDropTest = struct {
     var literal_: Object.StaticObject = undefined;
 
     pub fn init() !void {
-        try initJitTest(&method, &process, "PushLiteralDupDropTest: pushLiteral -> dup -> drop -> returnTop");
+        try initJitTest(&method, &process, "PushLiteralDupDropTest");
         const literal = literal_.init(99);
         compiled.resolve(&[_]Object{literal}) catch @panic("Failed to resolve");
     }
@@ -134,7 +134,7 @@ pub const PushLiteralDupDropTest = struct {
 
     pub fn run() !void {
         const result = runWith(99);
-        try reportResult("Input: 99, Result", result, 99);
+        try reportResult(result, 99);
     }
 };
 
@@ -162,7 +162,7 @@ pub const TailCallPatchTest = struct {
     var third_: Object.StaticObject = undefined;
 
     pub fn init() !void {
-        try initJitTest(&method, &process, "TailCallPatchTest: linear chain with multiple ops");
+        try initJitTest(&method, &process, "TailCallPatchTest");
         const first = first_.init(11);
         const second = second_.init(22);
         const third = third_.init(33);
@@ -185,7 +185,7 @@ pub const TailCallPatchTest = struct {
 
     pub fn run() !void {
         const result = runWith(11, 22, 33);
-        try reportResult("Result", result, 33);
+        try reportResult(result, 33);
     }
 };
 
@@ -209,7 +209,7 @@ pub const MixedLinearTest = struct {
     var literal_: Object.StaticObject = undefined;
 
     pub fn init() !void {
-        try initJitTest(&method, &process, "MixedLinearTest: push -> pushLiteral -> dup -> drop -> returnTop");
+        try initJitTest(&method, &process, "MixedLinearTest");
         const literal = literal_.init(77);
         compiled.resolve(&[_]Object{literal}) catch @panic("Failed to resolve");
     }
@@ -235,7 +235,7 @@ pub const MixedLinearTest = struct {
 
     pub fn run() !void {
         const result = runWith(5, 77);
-        try reportResult("Result", result, 77);
+        try reportResult(result, 77);
     }
 };
 
@@ -261,7 +261,7 @@ pub const ReturnOpsTest = struct {
     var literal_: Object.StaticObject = undefined;
 
     pub fn init() !void {
-        try initJitTest(&method, &process, "ReturnOpsTest: returnSelf vs returnTop");
+        try initJitTest(&method, &process, "ReturnOpsTest");
         const literal = literal_.init(1);
         compiled.resolve(&[_]Object{literal}) catch @panic("Failed to resolve");
     }
@@ -287,10 +287,10 @@ pub const ReturnOpsTest = struct {
 
     pub fn run() !void {
         const result_true = runWith(42, True());
-        try reportResult("Result (True)", result_true, 42);
+        try reportResult(result_true, 42);
 
         const result_false = runWith(42, False());
-        try reportResult("Result (False)", result_false, 42);
+        try reportResult(result_false, 42);
     }
 };
 
@@ -306,7 +306,7 @@ pub const ReturnSelfTest = struct {
     var compiled align(64) = compileMethod(Sym.value, 0, .Object, tup);
 
     pub fn init() !void {
-        try initJitTest(&method, &process, "ReturnSelfTest: returnSelf");
+        try initJitTest(&method, &process, "ReturnSelfTest");
     }
 
     pub fn deinit() void {
@@ -327,7 +327,7 @@ pub const ReturnSelfTest = struct {
 
     pub fn run() !void {
         const result = runWith(55);
-        try reportResult("Result", result, 55);
+        try reportResult(result, 55);
     }
 };
 
@@ -352,7 +352,7 @@ pub const InlinePrimitiveAddTest = struct {
     var second_: Object.StaticObject = undefined;
 
     pub fn init() !void {
-        try initJitTest(&method, &process, "InlinePrimitiveAddTest: pushLiteral -> pushLiteral -> + -> returnTop");
+        try initJitTest(&method, &process, "InlinePrimitiveAddTest");
         const first = first_.init(40);
         const second = second_.init(2);
         compiled.resolve(&[_]Object{ first, second }) catch @panic("Failed to resolve");
@@ -373,6 +373,6 @@ pub const InlinePrimitiveAddTest = struct {
 
     pub fn run() !void {
         const result = runWith(40, 2);
-        try reportResult("Result", result, 42);
+        try reportResult(result, 42);
     }
 };
