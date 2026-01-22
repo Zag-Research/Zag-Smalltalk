@@ -55,3 +55,26 @@ The interesting thing about Zag is that the threaded code in the `CompiledMethod
 - [LLVM IR](https://llvm.org/docs/Reference.html#llvm-ir) [Reference Manual](https://llvm.org/docs/LangRef.html#syntax) [Turorials](https://llvm.org/docs/GettingStartedTutorials.html)
 - [LLVM getelementptr](https://llvm.org/docs/GetElementPtr.html)
 - [Oonta - OCaML to LLVM](https://github.com/fuad1502/oonta)
+
+## JIT on MacOs
+#### 1. `MAP_JIT`
+
+On macOS Hardened Runtime (and by default on iOS/Apple Silicon), `mmap` will fail or behave incorrectly if you ask for `PROT_WRITE | PROT_EXEC` without the `MAP_JIT` flag. This flag tells the kernel "I intend to switch this memory between writable and executable."
+#### 2. `pthread_jit_write_protect_np` (Apple Silicon only)
+
+On M1/M2/M3 chips, hardware does not allow a page to be RWX (Read-Write-Execute) simultaneously.
+
+- **Pass `0`:** Disables "Write Protection." The memory becomes **RW-** (Read-Write). You can copy your code here, but you cannot run it yet.
+- **Pass `1`:** Enables "Write Protection." The memory becomes **R-X** (Read-Execute). You can run it, but you cannot write to it.
+#### 3. `sys_icache_invalidate`
+
+Processors have separate caches for Data (D-Cache) and Instructions (I-Cache). When you write your machine code, it sits in the Data Cache. If you try to execute it immediately, the CPU might look in the Instruction Cache, see "nothing" (or old garbage), and crash. This function flushes the changes from Data to Instruction cache.
+
+### Important Note on Entitlements
+
+If you are building a full application (not just a command-line tool) and you sign it with the Hardened Runtime enabled, you must add the **JIT entitlement** to your `entitlements.plist` file:
+```xml
+<key>com.apple.security.cs.allow-jit</key>
+<true/>
+```
+If you do not add this, `mmap` with `MAP_JIT` will fail on signed applications.
