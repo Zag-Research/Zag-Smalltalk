@@ -1,0 +1,1 @@
+- John McIntosh has released a [MCP connector for CUIS and Claude](https://github.com/CorporateSmalltalkConsultingLtd/SmalltalkCuisMCP)
