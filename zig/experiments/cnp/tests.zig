@@ -46,9 +46,6 @@ pub const PushTest = struct {
         process.init();
         const context = process.getContext();
         var sp = process.endOfStack().safeReserve(1);
-        if ((@intFromPtr(sp) & 0xffff) == 0) {
-            sp = sp.safeReserve(1);
-        }
         sp.top = Object.from(value, sp, context);
         process.setSp(sp);
         return runCompiled(&method, &compiled, &process, info.positions[0..], sp);
@@ -222,9 +219,6 @@ pub const MixedLinearTest = struct {
         process.init();
         const context = process.getContext();
         var sp = process.endOfStack().safeReserve(1);
-        if ((@intFromPtr(sp) & 0xffff) == 0) {
-            sp = sp.safeReserve(1);
-        }
         sp.top = Object.from(self_value, sp, context);
         process.setSp(sp);
 
@@ -317,9 +311,6 @@ pub const ReturnSelfTest = struct {
         process.init();
         const context = process.getContext();
         var sp = process.endOfStack().safeReserve(1);
-        if ((@intFromPtr(sp) & 0xffff) == 0) {
-            sp = sp.safeReserve(1);
-        }
         sp.top = Object.from(self_value, sp, context);
         process.setSp(sp);
         return runCompiled(&method, &compiled, &process, info.positions[0..], sp);
