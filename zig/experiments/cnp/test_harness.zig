@@ -9,7 +9,6 @@ const PC = zag.execute.PC;
 const SP = Process.SP;
 const Code = zag.execute.Code;
 const Object = zag.Object;
-const JitMethod = @import("jit_method.zig").JitMethod;
 
 pub fn initJitTest(method: anytype, process: *align(Process.alignment) Process, title: []const u8) !void {
     const MethodType = @TypeOf(method.*);
@@ -60,39 +59,32 @@ pub fn runTest(comptime T: type) !void {
     try T.run();
 }
 
-fn isLabelField(comptime field: anytype) bool {
-    switch (@typeInfo(@TypeOf(field))) {
+fn isLabel(comptime field: anytype) bool {
+    return switch (@typeInfo(@TypeOf(field))) {
         .pointer => |ptr| switch (@typeInfo(ptr.child)) {
-            .array => return field[0] == ':',
-            else => return false,
+            .array => field[0] == ':',
+            else => false,
         },
-        else => return false,
-    }
+        else => false,
+    };
 }
 
 /// Extracts threaded function ops and their code positions from a tuple.
+/// Labels (strings starting with ':') are skipped.
 pub fn opsInfo(comptime tup: anytype) type {
     comptime var count: usize = 0;
-    comptime var pos: usize = 0;
     inline for (tup) |field| {
-        if (!isLabelField(field)) {
-            if (@TypeOf(field) == tf) count += 1;
-            pos += 1;
-        }
+        if (!isLabel(field) and @TypeOf(field) == tf) count += 1;
     }
 
     return struct {
         pub const ops: [count]tf = blk: {
             var arr: [count]tf = undefined;
             var i: usize = 0;
-            var pos_local: usize = 0;
             for (tup) |field| {
-                if (!isLabelField(field)) {
-                    if (@TypeOf(field) == tf) {
-                        arr[i] = field;
-                        i += 1;
-                    }
-                    pos_local += 1;
+                if (!isLabel(field) and @TypeOf(field) == tf) {
+                    arr[i] = field;
+                    i += 1;
                 }
             }
             break :blk arr;
@@ -100,14 +92,14 @@ pub fn opsInfo(comptime tup: anytype) type {
         pub const positions: [count]usize = blk: {
             var arr: [count]usize = undefined;
             var i: usize = 0;
-            var pos_local: usize = 0;
+            var pos: usize = 0;
             for (tup) |field| {
-                if (!isLabelField(field)) {
+                if (!isLabel(field)) {
                     if (@TypeOf(field) == tf) {
-                        arr[i] = pos_local;
+                        arr[i] = pos;
                         i += 1;
                     }
-                    pos_local += 1;
+                    pos += 1;
                 }
             }
             break :blk arr;

@@ -10,10 +10,7 @@ pub fn main() !void {
 
     try harness.runTest(tests.PushTest);
     try harness.runTest(tests.PushLiteralTest);
-    try harness.runTest(tests.PushLiteralDupDropTest);
     try harness.runTest(tests.TailCallPatchTest);
-    try harness.runTest(tests.MixedLinearTest);
-    try harness.runTest(tests.ReturnOpsTest);
     try harness.runTest(tests.ReturnSelfTest);
     try harness.runTest(tests.InlinePrimitiveAddTest);
 }

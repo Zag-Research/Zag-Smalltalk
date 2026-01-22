@@ -78,12 +78,10 @@ pub const PushLiteralTest = struct {
 pub const TailCallPatchTest = struct {
     const tup = .{
         tf.pushLiteral, "0const",
-        tf.dup,
-        tf.drop,
+        tf.dup,         tf.drop,
         tf.pushLiteral, "1const",
-        tf.drop,
-        tf.pushLiteral, "2const",
-        tf.returnTop,
+        tf.drop,        tf.pushLiteral,
+        "2const",       tf.returnTop,
     };
     const info = opsInfo(tup);
     const Method = JitMethod(&info.ops);
@@ -149,8 +147,8 @@ pub const ReturnSelfTest = struct {
 pub const InlinePrimitiveAddTest = struct {
     const plus = SmallInteger.@"+".inlined;
     const tup = .{
-        tf.pushLiteral, "0const",
-        tf.pushLiteral, "1const",
+        tf.pushLiteral,     "0const",
+        tf.pushLiteral,     "1const",
         tf.inlinePrimitive, plus,
         tf.returnTop,
     };
