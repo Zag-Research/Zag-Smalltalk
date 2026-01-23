@@ -79,7 +79,9 @@ ASSourceCompilerTest >> testLiterals [
 	self assertEquivalent: 42.
 	self assertEquivalent: #hello.
 	self assertEquivalent: #_hello.
+	self assertEquivalent: #nil.
 	self expectError: '#42'.
+	self expectError: '# hello'.
 	self assertEquivalent: 'abc'.
 	self assertEquivalent: nil.
 	self assertEquivalent: #( 1 2 3 ).

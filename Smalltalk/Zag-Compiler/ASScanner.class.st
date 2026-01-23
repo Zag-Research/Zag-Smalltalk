@@ -114,15 +114,17 @@ ASScanner >> string [
 
 { #category : 'scanning' }
 ASScanner >> symbol [
+
 	| char |
 	aStream next.
 	char := aStream peek.
 	char isLetter ifTrue: [ ^ self identifierString asASSymbol ].
-	char = $( ifTrue: [ aStream next. ^ '#(' asASSyntax ].
-	char = $' ifTrue: [ ^ self string value asASSymbol].
-	char isDigit ifTrue: [ ^ self number ].
-	char = $_ ifTrue: [ ^ self identifierString asASSymbol ]. 
-^ self error: 'invalid symbol'
+	char = $( ifTrue: [
+			aStream next.
+			^ '#(' asASSyntax ].
+	char = $' ifTrue: [ ^ self string value asASSymbol ].
+	char = $_ ifTrue: [ ^ self identifierString asASSymbol ].
+	^ self error: 'invalid symbol'
 ]
 
 { #category : 'scanning' }
