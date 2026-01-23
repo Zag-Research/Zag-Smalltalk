@@ -10,11 +10,14 @@ const assert = std.debug.assert;
 const debugError = false;
 const object = zag.object;
 const ClassIndex = object.ClassIndex;
+const Process = zag.Process;
+const SP = Process.SP;
+const Context = zag.Context;
+const Signature = zag.execute.Signature;
 const heap = zag.heap;
 const HeapObject = heap.HeapObject;
 const HeapObjectConstPtr = heap.HeapObjectConstPtr;
 const HeapHeader = heap.HeapHeader;
-const Process = zag.Process;
 
 const TagBaseType = u16;
 pub const Tag = enum(TagBaseType) {
@@ -42,7 +45,8 @@ pub const Tag = enum(TagBaseType) {
     inline fn g(cg: Tag) u64 {
         return @as(u64, cg.u()) << 48;
     }
-    inline fn from(c: ClassIndex) Tag {
+    // inline
+    fn from(c: ClassIndex) Tag {
         const cls = @intFromEnum(c);
         assert(cls <= 15);
         return @enumFromInt(cls + @intFromEnum(Tag.ThunkReturnLocal) - 1);
@@ -84,6 +88,7 @@ pub const Object = packed struct(u64) {
     comptime {
         assert(tagAndClassBits == @bitSizeOf(TagAndClassType));
     }
+    const extraMask = 7;
     const intTagBits = 13;
     const integerTag = @intFromEnum(Tag.smallInteger) >> 3;
     inline fn untagged(obj: Object) i64 {
@@ -116,13 +121,12 @@ pub const Object = packed struct(u64) {
     pub inline fn asObject(self: Object) Object {
         return self;
     }
-    pub inline fn extraI(self: Object) i3 {
-        return @bitCast(@as(u3, @truncate(self.rawU())));
-    }
-    pub inline fn isImmediateClass(self: Object, comptime class: ClassIndex) bool {
+    pub //inline
+    fn isImmediateClass(self: Object, comptime class: ClassIndex) bool {
         return self.tag == Tag.from(class);
     }
-    inline fn oImm(c: ClassIndex, h: u32) Object {
+    //inline
+    fn oImm(c: ClassIndex, h: u32) Object {
         return .{ .tag = Tag.from(c), .data = h };
     }
     pub inline fn isSymbol(self: Object) bool {
@@ -144,6 +148,28 @@ pub const Object = packed struct(u64) {
     pub inline fn hash32(self: Object) u32 {
         return @truncate(self.rawU());
     }
+    pub fn extraImmediateU(obj: Object) ?u8 {
+        if (obj.isImmediateClass(.ThunkReturnLocal) or
+            obj.isImmediateClass(.ThunkReturnInstance) or
+            obj.isImmediateClass(.ThunkReturnImmediate)) {
+            return obj.extraU();
+        }
+        return null;
+    }
+
+    pub fn extraImmediateI(obj: Object) ?i8 {
+        if (obj.isImmediateClass(.ThunkReturnObject)) {
+            return obj.extraI();
+        }
+        return null;
+    }
+    pub inline fn extraU(self: object.Object) u3 {
+        return @intCast(self.rawU() & extraMask);
+    }
+    pub inline fn extraI(self: object.Object) i3 {
+        return @bitCast(self.extraU());
+    }
+
     pub inline fn symbolDirectHash(self: Object) u32 {
         return @truncate(self.rawU());
     }
@@ -232,7 +258,7 @@ pub const Object = packed struct(u64) {
     }
 
     pub inline fn isDouble(self: Object) bool {
-        return self.isMemoryDouble();
+        return self.which_class() == .Float;
     }
     pub inline fn hasMemoryReference(self: Object) bool {
         return switch (self.tag) {
@@ -256,6 +282,19 @@ pub const Object = packed struct(u64) {
     pub inline fn toDoubleNoCheck(self: Object) f64 {
         return @bitCast(self);
     }
+    pub fn immediateClosure(sig: Signature, sp: SP, context: *Context) ?Object {
+        const class = sig.getClass();
+        _ = sp;
+        //FIX: check that the primitive value fits in 3 bits
+        return switch (class) {
+            .ThunkReturnObject,
+            .ThunkReturnLocal, .ThunkReturnInstance, .ThunkReturnImmediate,
+            .ThunkReturnCharacter, .ThunkReturnFloat =>
+                oImm(class, @intCast(@intFromPtr(context) | sig.primitive())),
+            else => null,
+        };
+    }
+
     pub inline fn fromAddress(value: anytype) Object {
         return .{ .tag = .heap, .data = @as(u48, @intCast(@intFromPtr(value)))};
     }
@@ -348,6 +387,10 @@ pub const Object = packed struct(u64) {
     }
     pub inline fn isHeapObject(self: Object) bool {
         return self.tag == .heap;
+    }
+    pub inline fn ifHeapObject(self: object.Object) ?*HeapObject {
+        if (self.tag == .heap) return self.highPointer(*HeapObject);
+        return null;
     }
     const OF = object.ObjectFunctions;
     pub const arrayAsSlice = OF.arrayAsSlice;

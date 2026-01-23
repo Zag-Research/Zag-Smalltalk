@@ -123,7 +123,7 @@ pub const threadedFns = struct {
         }
         fn validateInt(exe: anytype, _: []const Object) !void {
             switch (objectEncoding) {
-                .zag => try std.testing.expectEqualSlices(Object, &[_]Object{Object.makeImmediate(.ThunkImmediate, @truncate(exe.object(2).testU()))}, exe.stack()),
+                .zag => try execute.expectEqualSlices(&[_]Object{Object.makeImmediate(.ThunkImmediate, @truncate(exe.object(2).testU()))}, exe.stack()),
                 else => return error.TestAborted,
             }
         }
@@ -141,7 +141,7 @@ pub const threadedFns = struct {
         fn validatePtr(exe: anytype, expected: []const Object) !void {
             const obj = expected[0];
             switch (objectEncoding) {
-                .zag => try std.testing.expectEqualSlices(Object, &[_]Object{Object.makeImmediate(.ThunkHeap, @truncate(obj.testU() << 8))}, exe.stack()),
+                .zag => try execute.expectEqualSlices(&[_]Object{Object.makeImmediate(.ThunkHeap, @truncate(obj.testU() << 8))}, exe.stack()),
                 else => return error.TestAborted,
             }
         }
@@ -157,7 +157,7 @@ pub const threadedFns = struct {
         }
         fn validateTrue(exe: anytype, _: []const Object) !void {
             switch (objectEncoding) {
-                .zag => try std.testing.expectEqualSlices(Object, &[_]Object{Object.makeImmediate(.ThunkImmediate, @truncate(True().testU()))}, exe.stack()),
+                .zag => try execute.expectEqualSlices(&[_]Object{Object.makeImmediate(.ThunkImmediate, @truncate(True().testU()))}, exe.stack()),
                 else => return error.TestAborted,
             }
         }
@@ -173,7 +173,7 @@ pub const threadedFns = struct {
         }
         fn validateFloat(exe: anytype, _: []const Object) !void {
             switch (objectEncoding) {
-                .zag => try std.testing.expectEqualSlices(Object, &[_]Object{@bitCast(@as(u64, 0x0dffff0000000e69))}, exe.stack()),
+                .zag => try execute.expectEqualSlices(&[_]Object{@bitCast(@as(u64, 0x0dffff0000000e69))}, exe.stack()),
                 else => return error.TestAborted,
             }
         }

@@ -1,7 +1,7 @@
 const std = @import("std");
 const assert = std.debug.assert;
 const expectEqual = std.testing.expectEqual;
-const expectEqualSlices = std.testing.expectEqualSlices;
+const expectEqualSlices = execute.expectEqualSlices;
 const zag = @import("zag.zig");
 const config = zag.config;
 const trace = config.trace;
@@ -296,7 +296,7 @@ pub const push = struct {
             return @call(tailCall, process.check(pc.prim2()), .{ pc.next2(), newSp, process, newContext, newExtra });
         }
     }
-    test "push" {
+    test {
         if (true) return error.UnimplementedTest;
         var exe = Execution.initTest("push", .{ tf.pushLocal, 1, tf.pushLocal, 4 });
         try exe.runTest(
@@ -327,7 +327,7 @@ pub const pushAssociationValue = struct {
             return @call(tailCall, process.check(pc.prim2()), .{ pc.next2(), newSp, process, newContext, newExtra });
         }
     }
-    test "pushAssociationValue" {
+    test {
         var association = compileObject(.{
             ":def",
             c.Association,

@@ -1,0 +1,1 @@
+[Git Confused Me for Years Until I Found This Simple Guide](https://medium.com/lets-code-future/git-confused-me-for-years-until-i-found-this-simple-guide-a45223bebb40)with a [link to a manual - Master Git in Minutes](https://t3pacademy.gumroad.com/l/Master-git-in-minutes)

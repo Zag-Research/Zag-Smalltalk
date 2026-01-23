@@ -161,10 +161,6 @@ pub const Object = packed struct(u64) {
         return @bitCast(self.rawU() | prim << 40);
     }
 
-    pub inline fn withClass(self: Object, class: ClassIndex) Object {
-        return @bitCast((self.rawU() & 0xffffffffff) | (@as(u64, @intFromEnum(class)) << 40));
-    }
-
     inline fn toDoubleFromMemory(_: Object) f64 {
         @panic("Not implemented");
     }

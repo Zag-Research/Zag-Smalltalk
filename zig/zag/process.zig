@@ -519,7 +519,8 @@ const Stack = struct {
                    if (addr == @intFromPtr(selfAddr)) " <--self" else "" });
         }
     }
-    pub inline fn traceStack(self: SP, why: []const u8, context: *Context, extra: Extra) void {
+    pub //inline
+    fn traceStack(self: SP, why: []const u8, context: *Context, extra: Extra) void {
         trace("traceStack ({s})", .{why});
         const selfAddr = extra.selfAddress(self) orelse context.selfAddress(self);
         for (self.getStack()) |*obj| {

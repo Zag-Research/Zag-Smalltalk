@@ -339,10 +339,12 @@ pub inline fn callerStack(self: *const Context, sp: SP) ?SP {
         return contextOnStack.callerStack();
     return null;
 }
-pub inline fn selfAddress(self: *const Context, sp: SP) [*]Object {
+pub //inline
+fn selfAddress(self: *const Context, sp: SP) [*]Object {
     if (self.ifOnStack(sp)) |contextOnStack|
         return contextOnStack.selfAddress();
     const wordsToDiscard = self.header.hash16();
+    std.debug.print("wordsToDiscard: {} context: {*} contextData: {*}\n", .{wordsToDiscard, self, self.contextData});
     _ = .{ wordsToDiscard, @panic("not on stack") };
     //return @ptrCast(@constCast(&self.asObjectPtr()[wordsToDiscard]));
 }
