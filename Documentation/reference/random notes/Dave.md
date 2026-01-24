@@ -25,3 +25,5 @@ See [this blog](https://ziggit.dev/t/debugging-zig-with-a-debugger/7160) which [
 ## Zig <--> Rust interface
 [Calling rust from zig from rust from zig](https://www.youtube.com/watch?v=QQGRd_r12fw) watched first hour
 [Wiring Together the Rust and Zig Build Systems](https://www.youtube.com/watch?v=zRM_vOxbAx8)
+
+[Great pictures for slides](https://simonoya.com/drawings/)
