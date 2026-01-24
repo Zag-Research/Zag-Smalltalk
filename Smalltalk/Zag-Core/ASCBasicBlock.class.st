@@ -356,7 +356,7 @@ ASCBasicBlock >> inspectionStart: aBuilder [
 ASCBasicBlock >> inspectionZagCode: aBuilder [
 
 	<inspectorPresentationOrder: 0 title: 'ZCode'>
-	^ (aBuilder instance: SpTreeTablePresenter)
+		^ (aBuilder instantiate: SpTreeTablePresenter)
 		  roots: operations;
 		  children: [ :aNode | aNode children ];
 		  addColumn:
