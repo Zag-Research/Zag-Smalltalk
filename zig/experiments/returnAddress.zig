@@ -1,6 +1,7 @@
 // experiment to test adding a prefix to code blocks so that we could directly access them
 const std = @import("std");
 const builtin = @import("builtin");
+const native_endian = builtin.target.cpu.arch.endian();
 
 const common = struct {
     extern "c" fn pthread_jit_write_protect_np(enabled: c_int) void;
@@ -96,11 +97,11 @@ const aarch64 = struct {
 
     const call_prefix = [_]u8{ 0x50, 0x00, 0x00, 0x58, 0x00, 0x02, 0x3F, 0xD6 };
     pub const threaded_code_offset = 8;
-    const header_length = call_prefix.len + @sizeOf(*const fn_type);
-    pub fn write_call_code(mem: [*]align(@alignOf(fn_type)) u8, ptr: *const fn_type) *fn_type {
+    const header_length = call_prefix.len + @sizeOf(usize);
+    pub fn write_call_code(ptr: anytype, mem: [*]align(@alignOf(@TypeOf(ptr))) u8) @TypeOf(ptr) {
         @memcpy(mem[0..call_prefix.len], &call_prefix);
-        const addr: **const fn_type = @ptrFromInt(@intFromPtr(mem) + call_prefix.len);
-        addr.* = ptr;
+        const suffix_offset = call_prefix.len + @sizeOf(usize);
+        std.mem.writeInt(u64, mem[call_prefix.len..suffix_offset], @intFromPtr(ptr), native_endian);
         return @ptrCast(mem);
     }
 };
@@ -147,11 +148,11 @@ const x86_64 = struct {
     const call_prefix = [_]u8{ 0x49, 0xBB };
     const call_suffix = [_]u8{ 0x41, 0xFF, 0xD3 };
     pub const threaded_code_offset = 3;
-    const header_length = call_prefix.len + @sizeOf(*const fn_type) + call_suffix.len;
-    pub fn write_call_code(mem: [*]align(@alignOf(fn_type)) u8, ptr: *const fn_type) *fn_type {
+    const header_length = call_prefix.len + @sizeOf(usize) + call_suffix.len;
+    pub fn write_call_code(ptr: anytype, mem: [*]align(@alignOf(@TypeOf(ptr))) u8) @TypeOf(ptr) {
         @memcpy(mem[0..call_prefix.len], &call_prefix);
-        const suffix_offset = call_prefix.len + @sizeOf(*const fn_type);
-        std.mem.writeInt(u64, mem[call_prefix.len..suffix_offset], @intFromPtr(ptr), .little);
+        const suffix_offset = call_prefix.len + @sizeOf(usize);
+        std.mem.writeInt(u64, mem[call_prefix.len..suffix_offset], @intFromPtr(ptr), native_endian);
         @memcpy(mem[suffix_offset .. suffix_offset + call_suffix.len], &call_suffix);
         return @ptrCast(mem);
     }
@@ -166,7 +167,8 @@ pub const threaded_header_length = (@max(
     aarch64.header_length,
     x86_64.header_length,
 ) + 7) & ~@as(usize, 7);
-const fn_type = fn (sp: [*]u64) void;
+
+//* for testing purposes
 fn expect(sp: [*]u64) void {
     const fpc: [*]u8 = @ptrFromInt(@returnAddress() + arch.threaded_code_offset);
     std.debug.print("returnAddress: 0x{x} fpc: {*}\n", .{ @returnAddress(), fpc });
@@ -186,7 +188,7 @@ pub fn main() !void {
         m.* = @truncate(i);
     const size = threaded_header_length;
 
-    const funcCall = arch.write_call_code(mem.ptr, &expect);
+    const funcCall = arch.write_call_code(&expect, mem.ptr);
     arch.prepare_to_execute(mem);
 
     var stack = [_]u64{ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 };
