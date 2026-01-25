@@ -144,9 +144,9 @@ const x86_64 = struct {
         }
     }
 
-    const call_prefix = [_]u8{ 0x48, 0xB8 };
-    const call_suffix = [_]u8{ 0xFF, 0xD0 };
-    pub const threaded_code_offset = 4;
+    const call_prefix = [_]u8{ 0x49, 0xBB };
+    const call_suffix = [_]u8{ 0x41, 0xFF, 0xD3 };
+    pub const threaded_code_offset = 3;
     const header_length = call_prefix.len + @sizeOf(*const fn_type) + call_suffix.len;
     pub fn write_call_code(mem: [*]align(@alignOf(fn_type)) u8, ptr: *const fn_type) *fn_type {
         @memcpy(mem[0..call_prefix.len], &call_prefix);
