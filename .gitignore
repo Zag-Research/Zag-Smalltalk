@@ -57,3 +57,4 @@ zig-out/
 c/sacTest
 zig/experiments/jit
 zig/experiments/returnAddress
+*.dSYM

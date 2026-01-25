@@ -150,9 +150,8 @@ const x86_64 = struct {
     const header_length = call_prefix.len + @sizeOf(*const fn_type) + call_suffix.len;
     pub fn write_call_code(mem: [*]align(@alignOf(fn_type)) u8, ptr: *const fn_type) *fn_type {
         @memcpy(mem[0..call_prefix.len], &call_prefix);
-        const addr: **const fn_type = @ptrFromInt(@intFromPtr(mem) + call_prefix.len);
-        addr.* = ptr;
         const suffix_offset = call_prefix.len + @sizeOf(*const fn_type);
+        std.mem.writeInt(u64, mem[call_prefix.len..suffix_offset], @intFromPtr(ptr), .little);
         @memcpy(mem[suffix_offset .. suffix_offset + call_suffix.len], &call_suffix);
         return @ptrCast(mem);
     }
@@ -192,7 +191,7 @@ pub fn main() !void {
 
     var stack = [_]u64{ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 };
     std.debug.print("expect: {*}\n", .{&expect});
-    for (@as([*]u8, @constCast(@ptrCast(mem.ptr)))[0..size], 0..) |*u, index|
+    for (@as([*]u8, @ptrCast(@constCast(mem.ptr)))[0..size], 0..) |*u, index|
         std.debug.print("{x}: fpc[{}]: 0x{x:0>2}\n", .{ @intFromPtr(u), index, u.* });
     funcCall(&stack);
 }
