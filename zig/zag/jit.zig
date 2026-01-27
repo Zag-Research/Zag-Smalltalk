@@ -1,6 +1,8 @@
 // experiment to test adding a prefix to code blocks so that we could directly access them
 // to compile for lldb
 // zig build-exe jit.zig -O Debug -fomit-frame-pointer -fno-unwind-tables && ./jit
+// on x86_64 linux you have to add the -lc
+// zig build-exe jit.zig -lc -O Debug -fomit-frame-pointer -fno-unwind-tables && ./jit
 const std = @import("std");
 const builtin = @import("builtin");
 const native_endian = builtin.target.cpu.arch.endian();
@@ -82,7 +84,7 @@ const aarch64 = struct {
     extern "c" fn sys_icache_invalidate(start: ?*const anyopaque, size: usize) void;
     pub const enable_write_permission = common.enable_write_permission;
     extern "c" fn __clear_cache(start: [*]u8, end: [*]u8) void;
-    pub fn prepare_to_execute(mem: []u8) void {
+    pub fn prepare_to_execute(mem: []align(std.heap.page_size_min) u8) !void {
         switch (builtin.os.tag) {
             .macos => {
                 pthread_jit_write_protect_np(1);
@@ -101,8 +103,7 @@ const aarch64 = struct {
             },
             .linux => {
                 try std.posix.mprotect(mem, std.posix.PROT.READ | std.posix.PROT.EXEC);
-                const clear_cache = @extern(fn ([*]u8, [*]u8) void, .{ .name = "__clear_cache" });
-                clear_cache(mem.ptr, mem.ptr + mem.len);
+                __clear_cache(mem.ptr, mem.ptr + mem.len);
             },
             else => unreachable,
         }
