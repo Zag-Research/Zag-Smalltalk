@@ -55,6 +55,6 @@ zig-out/
 .zig-cache/
 *.ll
 c/sacTest
-zig/experiments/jit
-zig/experiments/returnAddress
 *.dSYM
+zig/zag/returnAddress
+zig/zag/jit

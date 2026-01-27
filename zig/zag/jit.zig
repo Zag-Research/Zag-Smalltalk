@@ -1,13 +1,17 @@
 // experiment to test adding a prefix to code blocks so that we could directly access them
+// to compile for lldb
+// zig build-exe jit.zig -O Debug -fomit-frame-pointer -fno-unwind-tables && ./jit
 const std = @import("std");
 const builtin = @import("builtin");
 const native_endian = builtin.target.cpu.arch.endian();
+const zag = @import("zag.zig");
 
 const common = struct {
     extern "c" fn pthread_jit_write_protect_np(enabled: c_int) void;
     fn mmap(size: usize) ![]align(std.heap.page_size_min) u8 {
         switch (builtin.os.tag) {
             .windows => {
+                zag.untested();
                 const MEM_COMMIT = std.os.windows.MEM_COMMIT;
                 const MEM_RESERVE = std.os.windows.MEM_RESERVE;
                 const PAGE_READWRITE = std.os.windows.PAGE_READWRITE;
@@ -29,7 +33,10 @@ const common = struct {
 
     fn munmap(mem: []align(std.heap.page_size_min) u8) void {
         switch (builtin.os.tag) {
-            .windows => _ = std.os.windows.VirtualFree(mem.ptr, 0, std.os.windows.MEM_RELEASE),
+            .windows => {
+                zag.untested();
+                _ = std.os.windows.VirtualFree(mem.ptr, 0, std.os.windows.MEM_RELEASE);
+            },
             .macos, .linux => std.posix.munmap(mem),
             else => unreachable,
         }
@@ -39,6 +46,7 @@ const common = struct {
         switch (builtin.os.tag) {
             .macos => pthread_jit_write_protect_np(0),
             .windows => {
+                zag.untested();
                 const PAGE_READ_WRITE = std.os.windows.PAGE_READ_WRITE;
                 var old_prot: u32 = undefined;
 
@@ -77,6 +85,7 @@ const aarch64 = struct {
                 sys_icache_invalidate(mem.ptr, mem.len);
             },
             .windows => {
+                zag.untested();
                 var old_protection: std.os.windows.PROTECTION_TYPE = undefined;
                 _ = std.os.windows.VirtualProtect(mem.ptr, mem.len, std.os.windows.PAGE_EXECUTE_READ, &old_protection);
                 const process = std.os.windows.GetCurrentProcess();
@@ -114,6 +123,7 @@ const x86_64 = struct {
         switch (builtin.os.tag) {
             .macos => pthread_jit_write_protect_np(1),
             .windows => {
+                zag.untested();
                 const PAGE_EXECUTE_READ = std.os.windows.PAGE_EXECUTE_READ;
                 var old_prot: u32 = undefined;
 
