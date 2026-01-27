@@ -23,9 +23,13 @@ const common = struct {
                 ) catch return error.OutOfMemory;
                 return @as([*]u8, @ptrCast(ptr))[0..size];
             },
-            .macos, .linux => {
+            .macos => {
                 const prot_rwx = std.posix.PROT.READ | std.posix.PROT.WRITE | std.posix.PROT.EXEC;
                 return std.posix.mmap(null, size, prot_rwx, .{ .TYPE = .PRIVATE, .ANONYMOUS = true, .JIT = true }, -1, 0);
+            },
+            .linux => {
+                const prot_rwx = std.posix.PROT.READ | std.posix.PROT.WRITE | std.posix.PROT.EXEC;
+                return std.posix.mmap(null, size, prot_rwx, .{ .TYPE = .PRIVATE, .ANONYMOUS = true }, -1, 0);
             },
             else => unreachable,
         }
@@ -42,7 +46,7 @@ const common = struct {
         }
     }
 
-    fn enable_write_permission(mem: []u8) void {
+    fn enable_write_permission(mem: []align(std.heap.page_size_min) u8) !void {
         switch (builtin.os.tag) {
             .macos => pthread_jit_write_protect_np(0),
             .windows => {
@@ -64,7 +68,7 @@ const common = struct {
             .linux => {
                 // We must remove execute permission to satisfy W^X
                 const prot_rw = std.posix.PROT.READ | std.posix.PROT.WRITE;
-                return std.posix.mprotect(mem.ptr, prot_rw);
+                return std.posix.mprotect(mem, prot_rw);
             },
             else => unreachable,
         }
@@ -119,7 +123,7 @@ const x86_64 = struct {
     const munmap = common.munmap;
     pub const enable_write_permission = common.enable_write_permission;
     extern "c" fn pthread_jit_write_protect_np(enabled: c_int) void;
-    pub fn prepare_to_execute(mem: []u8) void {
+    pub fn prepare_to_execute(mem: []align(std.heap.page_size_min) u8) !void {
         switch (builtin.os.tag) {
             .macos => pthread_jit_write_protect_np(1),
             .windows => {
@@ -149,7 +153,7 @@ const x86_64 = struct {
             .linux => {
                 // We must remove Write permission to satisfy W^X
                 const prot_rx = std.posix.PROT.READ | std.posix.PROT.EXEC;
-                return std.posix.mprotect(mem.ptr, prot_rx);
+                return std.posix.mprotect(mem, prot_rx);
             },
             else => unreachable,
         }
@@ -193,13 +197,13 @@ pub fn main() !void {
     const mem = try arch.mmap(std.heap.page_size_min);
     defer arch.munmap(mem);
 
-    arch.enable_write_permission(mem);
+    try arch.enable_write_permission(mem);
     for (mem, 0..) |*m, i|
         m.* = @truncate(i);
     const size = threaded_header_length;
 
     const funcCall = arch.write_call_code(&expect, mem.ptr);
-    arch.prepare_to_execute(mem);
+    try arch.prepare_to_execute(mem);
 
     var stack = [_]u64{ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 };
     std.debug.print("expect: {*}\n", .{&expect});
