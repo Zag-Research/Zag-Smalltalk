@@ -5,7 +5,8 @@ Class {
 	#name : 'ASToken',
 	#superclass : 'Object',
 	#instVars : [
-		'value'
+		'value',
+		'suffix'
 	],
 	#category : 'Zag-Compiler-Tokens',
 	#package : 'Zag-Compiler',
@@ -54,8 +55,26 @@ ASToken >> processKeyword: anASCompiler target: anASLiteral [
 ]
 
 { #category : 'accessing' }
+ASToken >> suffix [
+
+	^ suffix
+]
+
+{ #category : 'accessing' }
+ASToken >> suffix: aString [
+
+	suffix := (suffix ifNil: ['']), aString
+]
+
+{ #category : 'accessing' }
 ASToken >> symbol [
 	^ value asSymbol
+]
+
+{ #category : 'accessing' }
+ASToken >> trim [
+
+	^ suffix := suffix ifNil: [ '' ] ifNotNil: [ suffix trimRight ]
 ]
 
 { #category : 'accessing' }

@@ -8,12 +8,19 @@ Class {
 	#superclass : 'Object',
 	#instVars : [
 		'aStream',
-		'peek'
+		'peek',
+		'separator'
 	],
 	#category : 'Zag-Compiler-Core',
 	#package : 'Zag-Compiler',
 	#tag : 'Core'
 }
+
+{ #category : 'public api' }
+ASScanner class >> scan: aStringOrStream [
+
+	^ self new scanCode: aStringOrStream
+]
 
 { #category : 'conversion' }
 ASScanner >> asArray [
@@ -29,7 +36,7 @@ ASScanner >> atEnd [
 	^ self peek atEnd
 ]
 
-{ #category : 'scanning' }
+{ #category : 'private' }
 ASScanner >> binaryIdentifier [ 
 	^ (String streamContents: [: s | | char |
 			[
@@ -39,7 +46,7 @@ ASScanner >> binaryIdentifier [
 		]) asASIdentifier
 ]
 
-{ #category : 'scanning' }
+{ #category : 'private' }
 ASScanner >> comment [
 
 	aStream next.
@@ -53,12 +60,12 @@ ASScanner >> comment [
 								   true ] ] ] whileTrue: [ s << char ] ])
 ]
 
-{ #category : 'scanning' }
+{ #category : 'private' }
 ASScanner >> identifier [
 	^ self identifierString asASIdentifier
 ]
 
-{ #category : 'scanning' }
+{ #category : 'private' }
 ASScanner >> identifierString [
 	^ (String streamContents: [: s | | char prevWasColon |
 			prevWasColon := false.
@@ -72,13 +79,20 @@ ASScanner >> identifierString [
 		])
 ]
 
-{ #category : 'scanning' }
+{ #category : 'initialization' }
+ASScanner >> initialize [
+
+	super initialize.
+	separator := ''
+]
+
+{ #category : 'private' }
 ASScanner >> next [
 	^ self peek ifNotNil: [: t | peek := nil. t ].
 
 ]
 
-{ #category : 'scanning' }
+{ #category : 'private' }
 ASScanner >> number [ 
 	^ (String streamContents: [: s |
 			[
@@ -90,8 +104,32 @@ ASScanner >> number [
 
 { #category : 'scanning' }
 ASScanner >> peek [
+
 	peek ifNotNil: [ ^ peek ].
 	^ peek := self token
+]
+
+{ #category : 'private' }
+ASScanner >> possibleSeparator [
+
+	| whitespace |
+	whitespace := ''.
+	[ aStream atEnd ] whileFalse: [
+			| in |
+			in := aStream peek asInteger.
+			34 = in
+				ifTrue: [
+						separator := separator , whitespace , '"' , self comment , '"'.
+						whitespace := '' ]
+				ifFalse: [
+						(in = 13 or: [ in = 10 or: [ in = 12 ] ])
+							ifTrue: [
+									separator := separator , aStream next asString.
+									whitespace := '' ]
+							ifFalse: [
+									(in = 32 or: [ in = 9 ])
+										ifTrue: [ whitespace := whitespace , aStream next asString ]
+										ifFalse: [ ^ self ] ] ] ]
 ]
 
 { #category : 'scanning' }
@@ -100,7 +138,12 @@ ASScanner >> scanCode: aStringOrStream [
 
 ]
 
-{ #category : 'scanning' }
+{ #category : 'accessing' }
+ASScanner >> separator [
+	^ separator
+]
+
+{ #category : 'private' }
 ASScanner >> string [
 	aStream next.
 	^ (String streamContents: [: s | | char |
@@ -112,7 +155,7 @@ ASScanner >> string [
 		]) asASString
 ]
 
-{ #category : 'scanning' }
+{ #category : 'private' }
 ASScanner >> symbol [
 
 	| char |
@@ -127,13 +170,12 @@ ASScanner >> symbol [
 	^ self error: 'invalid symbol'
 ]
 
-{ #category : 'scanning' }
+{ #category : 'private' }
 ASScanner >> token [
 
 	| char |
-	[
-		aStream atEnd ifTrue: [ ^ ASEnd new ].
-		aStream peek isSeparator or: [ aStream peek = $" and: [ self comment. true ] ] ] whileTrue: [ aStream next ].
+	self possibleSeparator.
+	aStream atEnd ifTrue: [ ^ ASEnd new ].
 	char := aStream peek.
 	('^.[]{}();' includes: char) ifTrue: [ ^ aStream next asASSyntax ].
 	char isLetter ifTrue: [ ^ self identifier ].

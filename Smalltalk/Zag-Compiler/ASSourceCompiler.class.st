@@ -43,7 +43,7 @@ ASSourceCompiler >> compileMethod: aMethod [
 { #category : 'compilation' }
 ASSourceCompiler >> compileMethod: sourceCode inClass: aClass [
 
-	aScanner := ASScanner new scanCode: sourceCode readStream.
+	aScanner := ASScanner scan: sourceCode.
 	^ self compileInClass: aClass
 ]
 

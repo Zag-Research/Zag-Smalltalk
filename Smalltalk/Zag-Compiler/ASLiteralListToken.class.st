@@ -7,6 +7,15 @@ Class {
 }
 
 { #category : 'parsing' }
+ASLiteralListToken >> keywordExpression: anASCompiler [
+
+	anASCompiler nextToken.
+	^ anASCompiler peek
+		  literalExpressionList: anASCompiler
+		  into: OrderedCollection new
+]
+
+{ #category : 'parsing' }
 ASLiteralListToken >> parseWith: anASCompiler [
 
 ]
