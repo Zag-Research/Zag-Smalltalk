@@ -4,7 +4,7 @@ I am the scanner used by the ASCompile compiler
 I accept Unicode and will treat many special characters as binary message name characters, and most letters in various scripts as unary or keyword message names.
 "
 Class {
-	#name : 'ASScanner',
+	#name : 'ZagSmalltalkScanner',
 	#superclass : 'Object',
 	#instVars : [
 		'aStream',
@@ -17,13 +17,13 @@ Class {
 }
 
 { #category : 'public api' }
-ASScanner class >> scan: aStringOrStream [
+ZagSmalltalkScanner class >> scan: aStringOrStream [
 
 	^ self new scanCode: aStringOrStream
 ]
 
 { #category : 'conversion' }
-ASScanner >> asArray [
+ZagSmalltalkScanner >> asArray [
 	^ Array streamContents: [: s |
 		[ self atEnd ] whileFalse: [
 			s << self next
@@ -32,12 +32,12 @@ ASScanner >> asArray [
 ]
 
 { #category : 'conversion' }
-ASScanner >> atEnd [
+ZagSmalltalkScanner >> atEnd [
 	^ self peek atEnd
 ]
 
 { #category : 'private' }
-ASScanner >> binaryIdentifier [ 
+ZagSmalltalkScanner >> binaryIdentifier [ 
 	^ (String streamContents: [: s | | char |
 			[
 				s << aStream next.
@@ -47,7 +47,7 @@ ASScanner >> binaryIdentifier [
 ]
 
 { #category : 'private' }
-ASScanner >> comment [
+ZagSmalltalkScanner >> comment [
 
 	aStream next.
 	^ (String streamContents: [ :s |
@@ -61,12 +61,12 @@ ASScanner >> comment [
 ]
 
 { #category : 'private' }
-ASScanner >> identifier [
+ZagSmalltalkScanner >> identifier [
 	^ self identifierString asASIdentifier
 ]
 
 { #category : 'private' }
-ASScanner >> identifierString [
+ZagSmalltalkScanner >> identifierString [
 	^ (String streamContents: [: s | | char prevWasColon |
 			prevWasColon := false.
 			[
@@ -80,20 +80,20 @@ ASScanner >> identifierString [
 ]
 
 { #category : 'initialization' }
-ASScanner >> initialize [
+ZagSmalltalkScanner >> initialize [
 
 	super initialize.
 	separator := ''
 ]
 
 { #category : 'private' }
-ASScanner >> next [
+ZagSmalltalkScanner >> next [
 	^ self peek ifNotNil: [: t | peek := nil. t ].
 
 ]
 
 { #category : 'private' }
-ASScanner >> number [ 
+ZagSmalltalkScanner >> number [ 
 	^ (String streamContents: [: s |
 			[
 				s << aStream next.
@@ -103,14 +103,14 @@ ASScanner >> number [
 ]
 
 { #category : 'scanning' }
-ASScanner >> peek [
+ZagSmalltalkScanner >> peek [
 
 	peek ifNotNil: [ ^ peek ].
 	^ peek := self token
 ]
 
 { #category : 'private' }
-ASScanner >> possibleSeparator [
+ZagSmalltalkScanner >> possibleSeparator [
 
 	| whitespace |
 	whitespace := ''.
@@ -133,18 +133,18 @@ ASScanner >> possibleSeparator [
 ]
 
 { #category : 'scanning' }
-ASScanner >> scanCode: aStringOrStream [
+ZagSmalltalkScanner >> scanCode: aStringOrStream [
 	aStream := aStringOrStream readStream.
 
 ]
 
 { #category : 'accessing' }
-ASScanner >> separator [
+ZagSmalltalkScanner >> separator [
 	^ separator
 ]
 
 { #category : 'private' }
-ASScanner >> string [
+ZagSmalltalkScanner >> string [
 	aStream next.
 	^ (String streamContents: [: s | | char |
 			[
@@ -156,7 +156,7 @@ ASScanner >> string [
 ]
 
 { #category : 'private' }
-ASScanner >> symbol [
+ZagSmalltalkScanner >> symbol [
 
 	| char |
 	aStream next.
@@ -171,7 +171,7 @@ ASScanner >> symbol [
 ]
 
 { #category : 'private' }
-ASScanner >> token [
+ZagSmalltalkScanner >> token [
 
 	| char |
 	self possibleSeparator.

@@ -2,19 +2,32 @@
 I compile Smalltalk source from a Tonel file into a class with methods expressed as ASTs
 "
 Class {
-	#name : 'ASSourceCompiler',
+	#name : 'ZagSmalltalk',
 	#superclass : 'ASCompiler',
 	#instVars : [
 		'class',
-		'aScanner'
+		'aScanner',
+		'stream'
 	],
 	#category : 'Zag-Compiler-Core',
 	#package : 'Zag-Compiler',
 	#tag : 'Core'
 }
 
+{ #category : 'visiting' }
+ZagSmalltalk >> acceptLiteral: anObject [
+
+	stream print: anObject
+]
+
+{ #category : 'visiting' }
+ZagSmalltalk >> acceptMethod: aMethodNode [
+
+	self shouldBeImplemented.
+]
+
 { #category : 'parsing' }
-ASSourceCompiler >> compileInClass: aClass [
+ZagSmalltalk >> compileInClass: aClass [
 
 	| selector args method savedScope |
 	args := OrderedCollection new.
@@ -33,7 +46,7 @@ ASSourceCompiler >> compileInClass: aClass [
 ]
 
 { #category : 'compiling' }
-ASSourceCompiler >> compileMethod: aMethod [
+ZagSmalltalk >> compileMethod: aMethod [
 
 	^ self
 		  compileMethod: aMethod sourceCode
@@ -41,20 +54,20 @@ ASSourceCompiler >> compileMethod: aMethod [
 ]
 
 { #category : 'compilation' }
-ASSourceCompiler >> compileMethod: sourceCode inClass: aClass [
+ZagSmalltalk >> compileMethod: sourceCode inClass: aClass [
 
-	aScanner := ASScanner scan: sourceCode.
+	aScanner := ZagSmalltalkScanner scan: sourceCode.
 	^ self compileInClass: aClass
 ]
 
 { #category : 'parsing' }
-ASSourceCompiler >> localDefs [
+ZagSmalltalk >> localDefs [
 
 	aScanner peek defs: self scope: currentScope
 ]
 
 { #category : 'parsing' }
-ASSourceCompiler >> methodBody [
+ZagSmalltalk >> methodBody [
 	| statements |
 	self localDefs.
 	statements := OrderedCollection new.
@@ -67,18 +80,24 @@ ASSourceCompiler >> methodBody [
 ]
 
 { #category : 'scanning' }
-ASSourceCompiler >> nextToken [
+ZagSmalltalk >> nextToken [
 	^ aScanner next
 ]
 
 { #category : 'scanning' }
-ASSourceCompiler >> peek [
+ZagSmalltalk >> peek [
 	^ aScanner peek
 ]
 
 { #category : 'parsing' }
-ASSourceCompiler >> statements: statements [ 
+ZagSmalltalk >> statements: statements [ 
 	| statement |
 	[ statement := aScanner peek statement: self ] whileNotNil: [ statements add: statement ].
 
+]
+
+{ #category : 'accessing' }
+ZagSmalltalk >> stream: aWriteStream [
+
+	stream := aWriteStream
 ]

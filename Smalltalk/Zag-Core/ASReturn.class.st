@@ -65,14 +65,6 @@ ASReturn >> newInlineMethodBlock: anInlineMethodBlock [
 	^ anInlineMethodBlock newInlineMethodBlockNonLocalReturn
 ]
 
-{ #category : 'printing' }
-ASReturn >> printOn: s [
-
-	s << self className << ' expression: ('.
-	expression printOn: s.
-	s << ')'
-]
-
 { #category : 'accessing' }
 ASReturn >> tell: aCompiler youAreSent: aSymbol [
 

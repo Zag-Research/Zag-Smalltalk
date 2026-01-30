@@ -3,7 +3,7 @@ I have subclasses for all the statments that can exist in the body of a method o
 "
 Class {
 	#name : 'ASStatement',
-	#superclass : 'Object',
+	#superclass : 'AST',
 	#classInstVars : [
 		'index'
 	],

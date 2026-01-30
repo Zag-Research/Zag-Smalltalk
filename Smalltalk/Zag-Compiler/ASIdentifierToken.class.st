@@ -1,5 +1,5 @@
 Class {
-	#name : 'ASIdentifier',
+	#name : 'ASIdentifierToken',
 	#superclass : 'ASSimple',
 	#category : 'Zag-Compiler-Tokens',
 	#package : 'Zag-Compiler',
@@ -7,7 +7,7 @@ Class {
 }
 
 { #category : 'scanning' }
-ASIdentifier class >> with: aString [
+ASIdentifierToken class >> with: aString [
 	| specials alphas colons last size |
 	specials := alphas := colons := size :=0.
 	last := $..
@@ -24,16 +24,16 @@ ASIdentifier class >> with: aString [
 ]
 
 { #category : 'parsing' }
-ASIdentifier >> possibleAssign: anASCompiler target: target [ 
+ASIdentifierToken >> possibleAssign: anASCompiler target: target [ 
 	self keywordExpression: anASCompiler target: target
 ]
 
 { #category : 'parsing' }
-ASIdentifier >> unaryExpression: anASCompiler target: target [ 
+ASIdentifierToken >> unaryExpression: anASCompiler target: target [ 
 	^ target
 ]
 
 { #category : 'accessing' }
-ASIdentifier >> value: aString [
+ASIdentifierToken >> value: aString [
 	value := aString asSymbol
 ]

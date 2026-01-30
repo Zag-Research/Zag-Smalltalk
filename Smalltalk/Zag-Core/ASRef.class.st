@@ -39,14 +39,6 @@ ASRef >> isImmediateThunk [
 ^ variable isImmediateThunk
 ]
 
-{ #category : 'printing' }
-ASRef >> printOn: s [
-
-	s << self className << ' variable: ('.
-	variable printOn: s.
-	s << ')'
-]
-
 { #category : 'comparing' }
 ASRef >> variable [
 

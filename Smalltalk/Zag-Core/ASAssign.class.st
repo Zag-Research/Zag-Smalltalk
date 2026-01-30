@@ -60,16 +60,6 @@ ASAssign >> maxDepth [
 	^expression maxDepth
 ]
 
-{ #category : 'printing' }
-ASAssign >> printOn: s [
-
-	s << self className << ' variable: '.
-	variable printOn: s.
-	s << ' expression: ('.
-	expression printOn: s.
-	s << ')'
-]
-
 { #category : 'compiling' }
 ASAssign >> tell: aCompiler youAreSent: aSymbol [
 

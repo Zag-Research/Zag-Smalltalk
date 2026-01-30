@@ -3,7 +3,7 @@ I represent a Class that contains a number of methods and has super-classes.
 "
 Class {
 	#name : 'ASClassNode',
-	#superclass : 'Object',
+	#superclass : 'AST',
 	#instVars : [
 		'name',
 		'classVariables',

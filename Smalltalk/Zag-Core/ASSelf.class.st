@@ -7,7 +7,7 @@ If I represent ""super"" then the reference to superclass will point to the clas
 "
 Class {
 	#name : 'ASSelf',
-	#superclass : 'ASExpression',
+	#superclass : 'ASParameter',
 	#instVars : [
 		'method'
 	],
@@ -51,12 +51,6 @@ ASSelf >> isImmediateThunk [
 { #category : 'accessing' }
 ASSelf >> method: aMethod [
 	method := aMethod
-]
-
-{ #category : 'printing' }
-ASSelf >> printOn: s [
-
-	s << self className 
 ]
 
 { #category : 'compiling' }

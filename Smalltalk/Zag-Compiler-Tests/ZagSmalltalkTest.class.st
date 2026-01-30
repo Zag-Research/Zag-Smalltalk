@@ -1,5 +1,5 @@
 Class {
-	#name : 'ASSourceCompilerTest',
+	#name : 'ZagSmalltalkTest',
 	#superclass : 'TestCase',
 	#instVars : [
 		'method'
@@ -10,35 +10,35 @@ Class {
 }
 
 { #category : 'asserting' }
-ASSourceCompilerTest >> assertEquivalent: anObject [ 
+ZagSmalltalkTest >> assertEquivalent: anObject [ 
 	| result |
-	result := ASSourceCompiler new statementForTest: anObject printString.
+	result := ZagSmalltalk new statementForTest: anObject printString.
 	self assert: result baseValue equals: anObject.
 
 ]
 
 { #category : 'asserting' }
-ASSourceCompilerTest >> expectError: aString [
+ZagSmalltalkTest >> expectError: aString [
 
-	self should: [ ASSourceCompiler new statementForTest: aString ] raise: Error
+	self should: [ ZagSmalltalk new statementForTest: aString ] raise: Error
 ]
 
 { #category : 'tests' }
-ASSourceCompilerTest >> methodFrom: aString [
+ZagSmalltalkTest >> methodFrom: aString [
 
-	method := ASSourceCompiler new
+	method := ZagSmalltalk new
 		  compileMethod: aString
 		  inClass: (ASClassNode new from: self class)
 ]
 
 { #category : 'asserting' }
-ASSourceCompilerTest >> scan: aString [
+ZagSmalltalkTest >> scan: aString [
 
-	^ ASSourceCompiler new statementForTest: aString
+	^ ZagSmalltalk new statementForTest: aString
 ]
 
 { #category : 'tests' }
-ASSourceCompilerTest >> testCascade [
+ZagSmalltalkTest >> testCascade [
 
 	self methodFrom: 'cascade
 
@@ -60,7 +60,7 @@ ASSourceCompilerTest >> testCascade [
 ]
 
 { #category : 'tests' }
-ASSourceCompilerTest >> testGives43 [
+ZagSmalltalkTest >> testGives43 [
 
 	self methodFrom: 'gives43
 	| forty2 |
@@ -73,7 +73,7 @@ ASSourceCompilerTest >> testGives43 [
 ]
 
 { #category : 'tests' }
-ASSourceCompilerTest >> testLiterals [
+ZagSmalltalkTest >> testLiterals [
 
 	self assert: (self scan: '"foo" nil') baseValue equals: nil.
 	self assertEquivalent: 42.
@@ -89,7 +89,7 @@ ASSourceCompilerTest >> testLiterals [
 ]
 
 { #category : 'tests' }
-ASSourceCompilerTest >> testOr [
+ZagSmalltalkTest >> testOr [
 
 	self methodFrom: '| n1
 	| temp |
@@ -102,7 +102,7 @@ ASSourceCompilerTest >> testOr [
 ]
 
 { #category : 'tests' }
-ASSourceCompilerTest >> testOrOr [
+ZagSmalltalkTest >> testOrOr [
 
 	self methodFrom: '|| n1
 	| temp temp2 |
@@ -113,7 +113,7 @@ ASSourceCompilerTest >> testOrOr [
 ]
 
 { #category : 'tests' }
-ASSourceCompilerTest >> testPlus [
+ZagSmalltalkTest >> testPlus [
 
 	self methodFrom: '+ n1
 	| temp |
@@ -124,7 +124,7 @@ ASSourceCompilerTest >> testPlus [
 ]
 
 { #category : 'tests' }
-ASSourceCompilerTest >> testPlus1 [
+ZagSmalltalkTest >> testPlus1 [
 
 	self methodFrom: 'plus1: _Number ^ _Number + 1'.
 	self assert: method arguments equals: #( _Number ).
@@ -132,7 +132,7 @@ ASSourceCompilerTest >> testPlus1 [
 ]
 
 { #category : 'tests' }
-ASSourceCompilerTest >> testPlusAndAnd [
+ZagSmalltalkTest >> testPlusAndAnd [
 
 	self methodFrom: 'plus: n1 and: n2 and: n3
 
@@ -142,17 +142,26 @@ ASSourceCompilerTest >> testPlusAndAnd [
 ]
 
 { #category : 'tests' }
-ASSourceCompilerTest >> testSimple1 [
+ZagSmalltalkTest >> testPrint [
+
+	self assert: 42 asZagLiteral printString equals: '42'
+]
+
+{ #category : 'tests' }
+ZagSmalltalkTest >> testSimple1 [
 
 	self methodFrom: 'simple1
 	..
 	^ 42..'.
 	self assert: method arguments equals: #(  ).
-	self assert: method selector equals: #simple1
+	self assert: method selector equals: #simple1.
+	self assert: method printString equals: 'simple1
+
+	^ 42'
 ]
 
 { #category : 'tests' }
-ASSourceCompilerTest >> testUnaries [
+ZagSmalltalkTest >> testUnaries [
 
 	self methodFrom: 'unaries ^ 23 negated "test comment" abs'.
 	self assert: method arguments equals: #(  ).

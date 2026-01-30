@@ -1,5 +1,5 @@
 Class {
-	#name : 'ASScannerTest',
+	#name : 'ZagSmalltalkScannerTest',
 	#superclass : 'TestCase',
 	#category : 'Zag-Compiler-Tests-Tests',
 	#package : 'Zag-Compiler-Tests',
@@ -7,27 +7,27 @@ Class {
 }
 
 { #category : 'tests' }
-ASScannerTest >> testAsArray [
+ZagSmalltalkScannerTest >> testAsArray [
 
 	self
-		assert: (ASScanner scan: ' simple') asArray
+		assert: (ZagSmalltalkScanner scan: ' simple') asArray
 		equals: { 'simple' asASIdentifier }.
 	self
-		assert: (ASScanner scan: ' simple 
+		assert: (ZagSmalltalkScanner scan: ' simple 
 	^ 42 ') asArray
 		equals: {
 				'simple' asASIdentifier.
 				$^ asASSyntax.
 				42 asASLiteral }.
 	self
-		assert: (ASScanner scan: ' simple
+		assert: (ZagSmalltalkScanner scan: ' simple
 	^ 42') asArray
 		equals: {
 				'simple' asASIdentifier.
 				$^ asASSyntax.
 				42 asASLiteral }.
 	self
-		assert: (ASScanner scan: '== simple
+		assert: (ZagSmalltalkScanner scan: '== simple
 	^ 42') asArray
 		equals: {
 				'==' asASIdentifier.
@@ -37,10 +37,10 @@ ASScannerTest >> testAsArray [
 ]
 
 { #category : 'tests' }
-ASScannerTest >> testAsStream [
+ZagSmalltalkScannerTest >> testAsStream [
 
 	| scanner |
-	scanner := ASScanner scan: ' simple 
+	scanner := ZagSmalltalkScanner scan: ' simple 
 	^ 42 '.
 	self assert: scanner peek equals: 'simple' asASIdentifier.
 	self deny: scanner atEnd.
@@ -49,7 +49,7 @@ ASScannerTest >> testAsStream [
 			$^ asASSyntax.
 			42 asASLiteral }.
 	self assert: scanner atEnd.
-	scanner := ASScanner scan: ' simple 
+	scanner := ZagSmalltalkScanner scan: ' simple 
 	^ 42 '.
 	self deny: scanner atEnd.
 	self assert: scanner next equals: 'simple' asASIdentifier.
@@ -60,27 +60,27 @@ ASScannerTest >> testAsStream [
 ]
 
 { #category : 'tests' }
-ASScannerTest >> testIDs [
+ZagSmalltalkScannerTest >> testIDs [
 
 	self
-		assert: (ASScanner scan: ' abc ') token
+		assert: (ZagSmalltalkScanner scan: ' abc ') token
 		equals: 'abc' asASIdentifier.
-	self assert: (ASScanner scan: ' * ') token equals: $* asASIdentifier.
+	self assert: (ZagSmalltalkScanner scan: ' * ') token equals: $* asASIdentifier.
 	self
-		assert: (ASScanner scan: ' abc:= ') token
+		assert: (ZagSmalltalkScanner scan: ' abc:= ') token
 		equals: 'abc' asASIdentifier.
 	self
-		assert: (ASScanner scan: ' abc: ') token
+		assert: (ZagSmalltalkScanner scan: ' abc: ') token
 		equals: 'abc:' asASIdentifier.
 	self
-		assert: (ASScanner scan: ' abc:def: ') token class
+		assert: (ZagSmalltalkScanner scan: ' abc:def: ') token class
 		equals: ASImproperId.
 	self
-		assert: (ASScanner scan: ' abc:def ') token class
+		assert: (ZagSmalltalkScanner scan: ' abc:def ') token class
 		equals: ASImproperId.
-	self assert: (ASScanner scan: ' abc ') token arity equals: 1.
-	self assert: (ASScanner scan: ' * ') token arity equals: 2.
-	self assert: (ASScanner scan: ' abc: ') token arity equals: 2
+	self assert: (ZagSmalltalkScanner scan: ' abc ') token arity equals: 1.
+	self assert: (ZagSmalltalkScanner scan: ' * ') token arity equals: 2.
+	self assert: (ZagSmalltalkScanner scan: ' abc: ') token arity equals: 2
 	"self assert: (ASScanner scan: ' abc ') token isSelector.
 	self assert: (ASScanner scan: ' * ') token isSelector.
 	self assert: (ASScanner scan: ' abc: ') token isSelector.
@@ -90,10 +90,10 @@ ASScannerTest >> testIDs [
 ]
 
 { #category : 'tests' }
-ASScannerTest >> testPlus1 [
+ZagSmalltalkScannerTest >> testPlus1 [
 
 	| scanner |
-	scanner := ASScanner scan:
+	scanner := ZagSmalltalkScanner scan:
 		           (ASCompileTestClass1 >> #plus1:) sourceCode.
 	self assert: scanner peek equals: 'plus1:' asASIdentifier.
 	self deny: scanner atEnd.
@@ -108,98 +108,98 @@ ASScannerTest >> testPlus1 [
 ]
 
 { #category : 'tests' }
-ASScannerTest >> testSimple [
+ZagSmalltalkScannerTest >> testSimple [
 
 	self
-		assert: (ASScanner scan: ' ''''''^'''''' ') token
+		assert: (ZagSmalltalkScanner scan: ' ''''''^'''''' ') token
 		equals: '''^''' asASString.
 	self
-		assert: (ASScanner scan: ' ''^'' ') token
+		assert: (ZagSmalltalkScanner scan: ' ''^'' ') token
 		equals: '^' asASString.
 	self
-		assert: (ASScanner scan: ' #''^'' ') token
+		assert: (ZagSmalltalkScanner scan: ' #''^'' ') token
 		equals: #'^' asASSymbol.
 	self
-		assert: (ASScanner scan: ' #simple ') token
+		assert: (ZagSmalltalkScanner scan: ' #simple ') token
 		equals: #simple asASSymbol.
 	self
-		assert: (ASScanner scan: ' #self ') token
+		assert: (ZagSmalltalkScanner scan: ' #self ') token
 		equals: #self asASSymbol.
 	self
-		assert: (ASScanner scan: ' #abc:def: ') token
+		assert: (ZagSmalltalkScanner scan: ' #abc:def: ') token
 		equals: #abc:def: asASSymbol.
 	self
-		assert: (ASScanner scan: ' #abc:def ') token
+		assert: (ZagSmalltalkScanner scan: ' #abc:def ') token
 		equals: #'abc:def' asASSymbol.
 	self
-		assert: (ASScanner scan: ' #abc:def: ') token arity
+		assert: (ZagSmalltalkScanner scan: ' #abc:def: ') token arity
 		equals: 3.
 	self
-		assert: (ASScanner scan: ' #abc:def ') token arity
+		assert: (ZagSmalltalkScanner scan: ' #abc:def ') token arity
 		equals: 0.
 	self
-		assert: (ASScanner scan: ' ''hello'' ') token
+		assert: (ZagSmalltalkScanner scan: ' ''hello'' ') token
 		equals: 'hello' asASString.
 	self
-		assert: (ASScanner scan: ' ''can''''t'' ') token
+		assert: (ZagSmalltalkScanner scan: ' ''can''''t'' ') token
 		equals: 'can''t' asASString.
 	self
-		assert: (ASScanner scan: ' 42 ') token
+		assert: (ZagSmalltalkScanner scan: ' 42 ') token
 		equals: 42 asASLiteral.
 	self
-		assert: (ASScanner scan: ' true') token
+		assert: (ZagSmalltalkScanner scan: ' true') token
 		equals: 'true' asASSpecial.
 	self
-		assert: (ASScanner scan: ' false') token
+		assert: (ZagSmalltalkScanner scan: ' false') token
 		equals: 'false' asASSpecial.
 	self
-		assert: (ASScanner scan: ' nil') token
+		assert: (ZagSmalltalkScanner scan: ' nil') token
 		equals: 'nil' asASSpecial.
 	self
-		assert: (ASScanner scan: ' #nil') token
+		assert: (ZagSmalltalkScanner scan: ' #nil') token
 		equals: 'nil' asASSymbol.
 	self
-		assert: (ASScanner scan: ' self') token
+		assert: (ZagSmalltalkScanner scan: ' self') token
 		equals: #self asASSelf.
 	self
-		assert: (ASScanner scan: ' super') token
+		assert: (ZagSmalltalkScanner scan: ' super') token
 		equals: #super asASSelf.
 	self
-		assert: (ASScanner scan: ' thisContext') token
+		assert: (ZagSmalltalkScanner scan: ' thisContext') token
 		equals: #thisContext asASSpecial
 ]
 
 { #category : 'tests' }
-ASScannerTest >> testSyntax [
+ZagSmalltalkScannerTest >> testSyntax [
 
 	self
-		assert: (ASScanner scan: ' ^ ') token
+		assert: (ZagSmalltalkScanner scan: ' ^ ') token
 		equals: $^ asASSyntax.
-	self should: [ (ASScanner scan: ' #+ ') token ] raise: Error.
-	self should: [ (ASScanner scan: ' # ') token ] raise: Error.
+	self should: [ (ZagSmalltalkScanner scan: ' #+ ') token ] raise: Error.
+	self should: [ (ZagSmalltalkScanner scan: ' # ') token ] raise: Error.
 	self
-		assert: (ASScanner scan: ' #( ') token
+		assert: (ZagSmalltalkScanner scan: ' #( ') token
 		equals: '#(' asASSyntax.
 	self
-		assert: (ASScanner scan: ' . ') token
+		assert: (ZagSmalltalkScanner scan: ' . ') token
 		equals: $. asASSyntax.
 	self
-		assert: (ASScanner scan: ' : ') token
+		assert: (ZagSmalltalkScanner scan: ' : ') token
 		equals: $: asASSyntax.
 	self
-		assert: (ASScanner scan: ' := ') token
+		assert: (ZagSmalltalkScanner scan: ' := ') token
 		equals: ':=' asASSyntax.
 	self
-		assert: (ASScanner scan: ' | ') token
+		assert: (ZagSmalltalkScanner scan: ' | ') token
 		equals: $| asASSyntax.
 	self
-		assert: (ASScanner scan: ' |: ') token
+		assert: (ZagSmalltalkScanner scan: ' |: ') token
 		equals: $| asASSyntax.
 	self
-		assert: (ASScanner scan: ' || ') token
+		assert: (ZagSmalltalkScanner scan: ' || ') token
 		equals: '||' asASIdentifier.
 	self
-		assert: (ASScanner scan: ' |+ ') token
+		assert: (ZagSmalltalkScanner scan: ' |+ ') token
 		equals: '|+' asASIdentifier
 	"self assert: (ASScanner scan: ' ^ ') token isReturn.
 	self assert: (ASScanner scan: ' . ') token isSeparator.
@@ -213,15 +213,15 @@ ASScannerTest >> testSyntax [
 ]
 
 { #category : 'tests' }
-ASScannerTest >> testWhitespace [
+ZagSmalltalkScannerTest >> testWhitespace [
 
 	| sc |
-	sc := ASScanner scan: ' 
+	sc := ZagSmalltalkScanner scan: ' 
 	'.
 	self assert: sc atEnd.
 	self assert: sc separator equals: '
 '.
-	sc := ASScanner scan: ' 	
+	sc := ZagSmalltalkScanner scan: ' 	
 	"this is a comment"
 	
 	'.

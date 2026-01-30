@@ -3,7 +3,7 @@ I contain a sequence of statements that make up, among other things, the body of
 "
 Class {
 	#name : 'ASSequence',
-	#superclass : 'Array',
+	#superclass : 'AST',
 	#type : 'variable',
 	#category : 'Zag-Core-AST',
 	#package : 'Zag-Core',
@@ -20,11 +20,6 @@ ASSequence >> asASSequence [
 ASSequence >> isImmediateThunk [
 
 	^ self size == 1 and: [ self first isImmediateThunk ]
-]
-
-{ #category : 'printing' }
-ASSequence >> printOn: aStream [
-	^ self printAsSelfEvaluatingFormOn: aStream
 ]
 
 { #category : 'codegen' }

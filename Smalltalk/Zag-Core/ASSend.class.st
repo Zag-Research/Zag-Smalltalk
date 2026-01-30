@@ -84,20 +84,6 @@ ASSend >> maxDepth [
 	^selector numArgs
 ]
 
-{ #category : 'printing' }
-ASSend >> printOn: s [
-	s << self className.
-	target ifNotNil: [ 
-		s << ' target: ('.
-		target printOn: s.
-		s << ')' ].
-	s << ' selector: '.
-	selector printOn: s.
-	s << ' args: {'.
-	args do: [ :arg | arg printOn: s ] separatedBy: [ s << ' . ' ].
-	s << '}'
-]
-
 { #category : 'parsing' }
 ASSend >> selector [
 	^ selector

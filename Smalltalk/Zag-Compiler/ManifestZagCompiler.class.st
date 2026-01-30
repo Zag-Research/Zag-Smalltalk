@@ -13,26 +13,26 @@ Class {
 ManifestZagCompiler class >> ruleLongMethodsRuleV1FalsePositive [
 
 	<ignoreForCoverage>
-	^ #(#(#(#RGMethodDefinition #(#ASScanner #token #false)) #'2026-01-18T10:38:45.458102-05:00') #(#(#RGMethodDefinition #(#ASScanner #possibleSeparator #false)) #'2026-01-29T08:13:17.604452-05:00') )
+	^ #(#(#(#RGMethodDefinition #(#ZagSmalltalkScanner #token #false)) #'2026-01-18T10:38:45.458102-05:00') #(#(#RGMethodDefinition #(#ZagSmalltalkScanner #possibleSeparator #false)) #'2026-01-29T08:13:17.604452-05:00') )
 ]
 
 { #category : 'code-critics' }
 ManifestZagCompiler class >> ruleReCyclomaticComplexityRuleV1FalsePositive [
 
 	<ignoreForCoverage>
-	^ #(#(#(#RGMethodDefinition #(#ASScanner #token #false)) #'2026-01-18T10:38:40.515933-05:00') #(#(#RGMethodDefinition #(#ASScanner #possibleSeparator #false)) #'2026-01-29T08:00:34.211457-05:00') )
+	^ #(#(#(#RGMethodDefinition #(#ZagSmalltalkScanner #token #false)) #'2026-01-18T10:38:40.515933-05:00') #(#(#RGMethodDefinition #(#ZagSmalltalkScanner #possibleSeparator #false)) #'2026-01-29T08:00:34.211457-05:00') )
 ]
 
 { #category : 'code-critics' }
 ManifestZagCompiler class >> ruleReStatementsAfterReturnConditionalRuleV1FalsePositive [
 
 	<ignoreForCoverage>
-	^ #(#(#(#RGMethodDefinition #(#ASScanner #token #false)) #'2026-01-18T10:40:02.556338-05:00') )
+	^ #(#(#(#RGMethodDefinition #(#ZagSmalltalkScanner #token #false)) #'2026-01-18T10:40:02.556338-05:00') )
 ]
 
 { #category : 'code-critics' }
 ManifestZagCompiler class >> ruleSearchingLiteralRuleV1FalsePositive [
 
 	<ignoreForCoverage>
-	^ #(#(#(#RGMethodDefinition #(#ASScanner #possibleSeparator #false)) #'2026-01-29T08:00:30.597867-05:00') )
+	^ #(#(#(#RGMethodDefinition #(#ZagSmalltalkScanner #possibleSeparator #false)) #'2026-01-29T08:00:30.597867-05:00') )
 ]

@@ -1,6 +1,6 @@
 Class {
 	#name : 'ASImproperId',
-	#superclass : 'ASIdentifier',
+	#superclass : 'ASIdentifierToken',
 	#category : 'Zag-Compiler-Tokens',
 	#package : 'Zag-Compiler',
 	#tag : 'Tokens'

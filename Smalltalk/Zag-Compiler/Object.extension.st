@@ -5,7 +5,7 @@ Object >> asASIdentifier [
 	(#('true' 'false' 'nil' 'thisContext') includes: self) ifTrue: [ ^ self asASSpecial ].
 	(#('self' 'super') includes: self) ifTrue: [ ^ self asASSelf ].
 	'|' = self ifTrue: [ ^ self asASSyntax ].
-	^ ASIdentifier with: self asString
+	^ ASIdentifierToken with: self asString
 ]
 
 { #category : '*Zag-Compiler' }

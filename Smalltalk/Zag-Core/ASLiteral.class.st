@@ -65,17 +65,22 @@ ASLiteral >> literal: aLiteralObject [
 	literal := aLiteralObject
 ]
 
-{ #category : 'printing' }
-ASLiteral >> printOn: s [
-
-	s << self className << ' literal: '.
-	literal printOn: s
-]
-
 { #category : 'compiling' }
 ASLiteral >> tell: aCompiler youAreSent: aSymbol [
 
 	^ aCompiler sent: aSymbol toLiteral: literal
+]
+
+{ #category : 'visiting' }
+ASLiteral >> visit: aVisitor [
+
+	^ aVisitor acceptLiteral: literal
+]
+
+{ #category : 'accessing' }
+ASLiteral >> with: anObject [ 
+
+	literal := anObject
 ]
 
 { #category : 'compiling' }

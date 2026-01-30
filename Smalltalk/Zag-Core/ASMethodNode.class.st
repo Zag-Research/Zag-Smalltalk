@@ -133,16 +133,6 @@ ASMethodNode >> pragmas: somePragmas [
 	pragmas := somePragmas 
 ]
 
-{ #category : 'printing' }
-ASMethodNode >> printOn: s [
-
-	s
-		nextPutAll: self class name;
-		nextPutAll: ' selector: ';
-		print: selector.
-	super printOn: s
-]
-
 { #category : 'accessing' }
 ASMethodNode >> selector [
 	^ selector
@@ -168,6 +158,12 @@ ASMethodNode >> selectorWithArgs [
 { #category : 'utilities' }
 ASMethodNode >> stackSize [
 	^0
+]
+
+{ #category : 'visiting' }
+ASMethodNode >> visit: aVisitor [
+
+	^ aVisitor acceptMethod: self
 ]
 
 { #category : 'codegen' }
