@@ -142,6 +142,18 @@ ZagSmalltalkTest >> testPlusAndAnd [
 ]
 
 { #category : 'tests' }
+ZagSmalltalkTest >> testPlusStar [
+
+	self methodFrom: '+ n1
+	^ n1'.
+	self assert: method arguments size equals: 1.
+	self assert: method selector equals: #+.
+	self assert: method printString equals: '* n1
+
+	^ n1'
+]
+
+{ #category : 'tests' }
 ZagSmalltalkTest >> testPrint [
 
 	self assert: 42 asZagLiteral printString equals: '42'
@@ -156,6 +168,19 @@ ZagSmalltalkTest >> testSimple1 [
 	self assert: method arguments equals: #(  ).
 	self assert: method selector equals: #simple1.
 	self assert: method printString equals: 'simple1
+
+	^ 42'
+]
+
+{ #category : 'tests' }
+ZagSmalltalkTest >> testSimple2 [
+
+	self methodFrom: 'simple2: foo
+	^ 42'.
+	self assert: method arguments size equals: 1.
+	self assert: method arguments first id equals: #foo.
+	self assert: method selector equals: #simple2:.
+	self assert: method printString equals: 'simple2: foo
 
 	^ 42'
 ]

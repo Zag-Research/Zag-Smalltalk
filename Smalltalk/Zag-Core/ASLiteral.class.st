@@ -23,6 +23,12 @@ ASLiteral >> = other [
 	^ self class = other class and: [ self literal = other literal ]
 ]
 
+{ #category : 'visiting' }
+ASLiteral >> accept: aVisitor [
+
+	^ aVisitor visitLiteral: literal
+]
+
 { #category : 'accessing' }
 ASLiteral >> inferType: aClass [
 
@@ -69,12 +75,6 @@ ASLiteral >> literal: aLiteralObject [
 ASLiteral >> tell: aCompiler youAreSent: aSymbol [
 
 	^ aCompiler sent: aSymbol toLiteral: literal
-]
-
-{ #category : 'visiting' }
-ASLiteral >> visit: aVisitor [
-
-	^ aVisitor acceptLiteral: literal
 ]
 
 { #category : 'accessing' }

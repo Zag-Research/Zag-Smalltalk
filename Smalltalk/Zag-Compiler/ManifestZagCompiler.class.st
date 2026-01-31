@@ -13,14 +13,14 @@ Class {
 ManifestZagCompiler class >> ruleLongMethodsRuleV1FalsePositive [
 
 	<ignoreForCoverage>
-	^ #(#(#(#RGMethodDefinition #(#ZagSmalltalkScanner #token #false)) #'2026-01-18T10:38:45.458102-05:00') #(#(#RGMethodDefinition #(#ZagSmalltalkScanner #possibleSeparator #false)) #'2026-01-29T08:13:17.604452-05:00') )
+	^ #(#(#(#RGMethodDefinition #(#ZagSmalltalkScanner #token #false)) #'2026-01-18T10:38:45.458102-05:00') #(#(#RGMethodDefinition #(#ZagSmalltalkScanner #possibleSeparator #false)) #'2026-01-29T08:13:17.604452-05:00') #(#(#RGMethodDefinition #(#'ASIdentifierToken class' #with: #true)) #'2026-01-31T09:06:16.852831-05:00') )
 ]
 
 { #category : 'code-critics' }
 ManifestZagCompiler class >> ruleReCyclomaticComplexityRuleV1FalsePositive [
 
 	<ignoreForCoverage>
-	^ #(#(#(#RGMethodDefinition #(#ZagSmalltalkScanner #token #false)) #'2026-01-18T10:38:40.515933-05:00') #(#(#RGMethodDefinition #(#ZagSmalltalkScanner #possibleSeparator #false)) #'2026-01-29T08:00:34.211457-05:00') )
+	^ #(#(#(#RGMethodDefinition #(#ZagSmalltalkScanner #token #false)) #'2026-01-18T10:38:40.515933-05:00') #(#(#RGMethodDefinition #(#ZagSmalltalkScanner #possibleSeparator #false)) #'2026-01-29T08:00:34.211457-05:00') #(#(#RGMethodDefinition #(#'ASIdentifierToken class' #with: #true)) #'2026-01-31T09:06:20.642559-05:00') )
 ]
 
 { #category : 'code-critics' }

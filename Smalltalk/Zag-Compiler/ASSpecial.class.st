@@ -6,6 +6,12 @@ Class {
 	#tag : 'Tokens'
 }
 
+{ #category : 'instance creation' }
+ASSpecial class >> with: anObject [
+
+	^ self new value: anObject
+]
+
 { #category : 'testing' }
 ASSpecial >> isSpecial [
 	^ true

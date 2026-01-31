@@ -37,13 +37,14 @@ ZagSmalltalkScanner >> atEnd [
 ]
 
 { #category : 'private' }
-ZagSmalltalkScanner >> binaryIdentifier [ 
-	^ (String streamContents: [: s | | char |
-			[
-				s << aStream next.
-				char := aStream peek.
-				aStream atEnd not and: [ char isSpecial ]] whileTrue
-		]) asASIdentifier
+ZagSmalltalkScanner >> binaryIdentifier [
+
+	^ ASIdentifierToken with: (String streamContents: [ :s |
+			   | char |
+			   [
+				   s << aStream next.
+				   char := aStream peek.
+				   aStream atEnd not and: [ char isSpecial ] ] whileTrue ])
 ]
 
 { #category : 'private' }
@@ -62,7 +63,8 @@ ZagSmalltalkScanner >> comment [
 
 { #category : 'private' }
 ZagSmalltalkScanner >> identifier [
-	^ self identifierString asASIdentifier
+
+	^ ASIdentifierToken with: self identifierString
 ]
 
 { #category : 'private' }
@@ -161,12 +163,12 @@ ZagSmalltalkScanner >> symbol [
 	| char |
 	aStream next.
 	char := aStream peek.
-	char isLetter ifTrue: [ ^ self identifierString asASSymbol ].
+	char isLetter ifTrue: [ ^ ASSymbol with: self identifierString ].
 	char = $( ifTrue: [
 			aStream next.
-			^ '#(' asASSyntax ].
-	char = $' ifTrue: [ ^ self string value asASSymbol ].
-	char = $_ ifTrue: [ ^ self identifierString asASSymbol ].
+			^ ASSyntax with: '#(' ].
+	char = $' ifTrue: [ ^ ASSymbol with: self string value ].
+	char = $_ ifTrue: [ ^ ASSymbol with: self identifierString ].
 	^ self error: 'invalid symbol'
 ]
 
@@ -177,7 +179,7 @@ ZagSmalltalkScanner >> token [
 	self possibleSeparator.
 	aStream atEnd ifTrue: [ ^ ASEnd new ].
 	char := aStream peek.
-	('^.[]{}();' includes: char) ifTrue: [ ^ aStream next asASSyntax ].
+	('^.[]{}();' includes: char) ifTrue: [ ^ ASSyntax with: aStream next asString ].
 	char isLetter ifTrue: [ ^ self identifier ].
 	char isDigit ifTrue: [ ^ self number ].
 	char = $# ifTrue: [ ^ self symbol ].
@@ -185,8 +187,8 @@ ZagSmalltalkScanner >> token [
 	char = $: ifTrue: [
 			aStream next.
 			('=>' includes: aStream peek)
-				ifTrue: [ ^ (':' , aStream next asString) asASSyntax ]
-				ifFalse: [ ^ $: asASSyntax ] ].
+				ifTrue: [ ^ ASSyntax with: ':' , aStream next asString ]
+				ifFalse: [ ^ ASSyntax with: ':' ] ].
 	char isSpecial ifTrue: [ ^ self binaryIdentifier ].
 	char = $_ ifTrue: [ ^ self identifier ].
 	^ self error: 'Illegal character:' , char asString

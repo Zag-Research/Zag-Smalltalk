@@ -23,9 +23,11 @@ ASBinaryId >> binaryExpression: anASCompiler target: target [
 ]
 
 { #category : 'parsing' }
-ASBinaryId >> classSelector: anASCompiler args: args [ 
+ASBinaryId >> classSelector: anASCompiler args: args [
+
 	anASCompiler nextToken.
-	args add: (anASCompiler peek parameterFrom: anASCompiler).
+	args add:
+		(anASCompiler peek parameterFrom: anASCompiler).
 	^ value
 ]
 

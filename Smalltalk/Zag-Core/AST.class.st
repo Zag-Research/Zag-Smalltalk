@@ -21,11 +21,13 @@ AST >> accept: aVisitor [
 	^ self subclassResponsibility
 ]
 
+{ #category : 'converting' }
+AST >> asAST [
+]
+
 { #category : 'printing' }
 AST >> printOn: aStream [
 
-	| visitor |
-	visitor := ZagSmalltalk new stream: aStream.
-	self visit: visitor.
-	^ visitor contents
+	ZagSmalltalk new stream: aStream; visit: self
+	
 ]

@@ -5,3 +5,9 @@ Class {
 	#package : 'Zag-Core',
 	#tag : 'AST'
 }
+
+{ #category : 'accessing' }
+ASParameter >> accept: aVisitor [
+
+	^ aVisitor visitParameter: self
+]

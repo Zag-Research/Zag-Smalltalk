@@ -13,6 +13,12 @@ Class {
 	#tag : 'Tokens'
 }
 
+{ #category : 'instance creation' }
+ASToken class >> with: anObject [
+
+	^ self new value: anObject
+]
+
 { #category : 'comparing' }
 ASToken >> = other [
 	^ self class = other class and: [value = other value]

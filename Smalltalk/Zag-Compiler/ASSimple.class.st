@@ -26,7 +26,7 @@ ASSimple >> keywordExpression: anASCompiler [
 	anASCompiler nextToken.
 	^ anASCompiler peek
 		  keywordExpression: anASCompiler
-		  target: (self parseWith: anASCompiler)
+		  target: (self parseWith: anASCompiler) asAST
 ]
 
 { #category : 'parsing' }

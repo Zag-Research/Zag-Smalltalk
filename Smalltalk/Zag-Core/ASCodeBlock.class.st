@@ -77,7 +77,7 @@ ASCodeBlock >> initialize [
 
 	super initialize.
 	locals := #(  ).
-	body := ASSequence new.
+	body := #( ).
 	arguments := #(  ).
 	scope := OrderedCollection new
 ]

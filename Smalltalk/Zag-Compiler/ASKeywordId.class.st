@@ -12,17 +12,26 @@ ASKeywordId >> arity [
 ]
 
 { #category : 'parsing' }
-ASKeywordId >> classSelector: anASCompiler args: args [ 
+ASKeywordId >> classSelector: anASCompiler args: args [
+
 	anASCompiler nextToken.
 	args add: (anASCompiler peek parameterFrom: anASCompiler).
-	^ anASCompiler peek classSelector: anASCompiler args: args selector: self value
+	^ anASCompiler peek
+		  classSelector: anASCompiler
+		  args: args
+		  selector: self value
 ]
 
 { #category : 'parsing' }
-ASKeywordId >> classSelector: anASCompiler args: args selector: selector [ 
+ASKeywordId >> classSelector: anASCompiler args: args selector: selector [
+
 	anASCompiler nextToken.
-	args add: (anASCompiler peek parameterFrom: anASCompiler).
-	^ anASCompiler peek classSelector: anASCompiler args: args selector: selector,self value
+	args add:
+		(anASCompiler peek parameterFrom: anASCompiler).
+	^ anASCompiler peek
+		  classSelector: anASCompiler
+		  args: args
+		  selector: selector , self value
 ]
 
 { #category : 'parsing' }
