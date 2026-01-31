@@ -6,7 +6,7 @@ At runtime they are accessed simply by referencing the `value` field of the `Ass
 "
 Class {
 	#name : 'ASGlobalVariable',
-	#superclass : 'ASVariable',
+	#superclass : 'ASStackVariable',
 	#category : 'Zag-Core-Stack',
 	#package : 'Zag-Core',
 	#tag : 'Stack'

@@ -1,6 +1,6 @@
 Class {
 	#name : 'ASParameter',
-	#superclass : 'ASIdentifier',
+	#superclass : 'ASLocalVar',
 	#category : 'Zag-Core-AST',
 	#package : 'Zag-Core',
 	#tag : 'AST'

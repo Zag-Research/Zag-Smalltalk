@@ -1,6 +1,6 @@
 Class {
 	#name : 'ASSharedVar',
-	#superclass : 'ASIdentifier',
+	#superclass : 'ASVariable',
 	#category : 'Zag-Core-AST',
 	#package : 'Zag-Core',
 	#tag : 'AST'

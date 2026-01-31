@@ -38,13 +38,13 @@ ASPharoCompilerTest >> testASTNodesEqual [
 		instancesEqualAfter: [ :obj | obj expression: 42 ]
 		printsAs: 'ASReturn expression: (42)'.
 	self
-		assert: ASLocal
+		assert: ASLocalVar
 		instancesEqualAfter: [ :obj | obj name: #a ]
 		printsAs: 'ASLocal a'.
 	self
 		assert: ASAssign
 		instancesEqualAfter: [ :obj |
-		obj variable: ASLocal a expression: 42 ]
+		obj variable: ASLocalVar a expression: 42 ]
 		printsAs: 'ASAssign variable: ASLocal a expression: (42)'.
 	self
 		assert: ASMethodNode
@@ -113,13 +113,13 @@ ASPharoCompilerTest >> testCascade [
 				 selector: #cascade
 				 locals: #( #foo )
 				 body: {
-						 (ASAssign variable: ASLocal foo expression: (ASSend
+						 (ASAssign variable: ASLocalVar foo expression: (ASSend
 								   target: (ASLiteral literal: #( #abc nil 3 ))
 								   selector: #asOrderedCollection
 								   args: {  })).
 						 (ASCascade
 							  target:
-								  (ASCascade target: (ASRef variable: ASLocal foo) sends: {
+								  (ASCascade target: (ASRef variable: ASLocalVar foo) sends: {
 										   (ASSend
 											    selector: #add:
 											    args:
@@ -175,7 +175,7 @@ ASPharoCompilerTest >> testGives43 [
 				 selector: #gives43
 				 locals: #( #forty2 )
 				 body: {
-						 (ASAssign variable: ASLocal forty2 expression: (ASSend
+						 (ASAssign variable: ASLocalVar forty2 expression: (ASSend
 								   target: (ASSend
 										    target: (ASSelf method: #gives43)
 										    selector: #unaries
@@ -186,7 +186,7 @@ ASPharoCompilerTest >> testGives43 [
 								   target: (ASSelf method: #gives43)
 								   selector: #plus1:
 								   args: { (ASSend
-										    target: (ASRef variable: ASLocal forty2)
+										    target: (ASRef variable: ASLocalVar forty2)
 										    selector: #-
 										    args: { (ASLiteral literal: 4) }) })) } asASSequence)
 ]
@@ -224,11 +224,11 @@ ASPharoCompilerTest >> testOr [
 			 arguments: #( #n1 )
 			 locals: #( #temp )
 			 body: {
-					 (ASAssign variable: ASLocal temp expression: (ASSend
+					 (ASAssign variable: ASLocalVar temp expression: (ASSend
 							   target: (ASSelf method: #|)
 							   selector: #|
 							   args: { (ASRef variable:  #n1) })).
-					 (ASReturn expression: (ASRef variable: ASLocal temp)) }
+					 (ASReturn expression: (ASRef variable: ASLocalVar temp)) }
 					 asASSequence)
 ]
 
@@ -241,13 +241,13 @@ ASPharoCompilerTest >> testOrOr [
 			 locals: #( #temp #temp2 )
 			 body: {
 					 (ASAssign
-						  variable: ASLocal temp
+						  variable: ASLocalVar temp
 						  expression:
-							  (ASAssign variable: ASLocal temp2 expression: (ASSend
+							  (ASAssign variable: ASLocalVar temp2 expression: (ASSend
 									    target: (ASSelf method: #'||')
 									    selector: #'||'
 									    args: { (ASRef variable: #n1) }))).
-					 (ASReturn expression: (ASRef variable: ASLocal temp)) }
+					 (ASReturn expression: (ASRef variable: ASLocalVar temp)) }
 					 asASSequence)
 ]
 
@@ -259,11 +259,11 @@ ASPharoCompilerTest >> testPlus [
 			 arguments: #( n1 )
 			 locals: #( temp )
 			 body: {
-					 (ASAssign variable: ASLocal temp expression: (ASSend
+					 (ASAssign variable: ASLocalVar temp expression: (ASSend
 							   target: (ASSelf method: #+)
 							   selector: #+
 							   args: { (ASRef variable: #n1) })).
-					 (ASReturn expression: (ASRef variable: ASLocal temp)) }
+					 (ASReturn expression: (ASRef variable: ASLocalVar temp)) }
 					 asASSequence)
 ]
 

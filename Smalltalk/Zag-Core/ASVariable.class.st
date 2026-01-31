@@ -1,12 +1,22 @@
-"
-I represent a variable that can be pushed and popped.
-
-My subclasses represent the 4 different ways to access such variables.
-"
 Class {
 	#name : 'ASVariable',
-	#superclass : 'Collection',
-	#category : 'Zag-Core-Stack',
+	#superclass : 'ASExpression',
+	#instVars : [
+		'id'
+	],
+	#category : 'Zag-Core-AST',
 	#package : 'Zag-Core',
-	#tag : 'Stack'
+	#tag : 'AST'
 }
+
+{ #category : 'accessing' }
+ASVariable >> id [
+
+	^ id 
+]
+
+{ #category : 'instance creation' }
+ASVariable >> with: aString [
+
+	id := aString
+]

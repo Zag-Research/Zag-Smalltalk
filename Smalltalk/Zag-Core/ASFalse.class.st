@@ -1,6 +1,6 @@
 Class {
-	#name : 'ASInstanceVar',
-	#superclass : 'ASVariable',
+	#name : 'ASFalse',
+	#superclass : 'ASConstant',
 	#category : 'Zag-Core-AST',
 	#package : 'Zag-Core',
 	#tag : 'AST'

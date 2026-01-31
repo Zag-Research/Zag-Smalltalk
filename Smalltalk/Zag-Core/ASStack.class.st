@@ -3,7 +3,7 @@ I reperesent an empty stack of values within a method.
 "
 Class {
 	#name : 'ASStack',
-	#superclass : 'ASVariable',
+	#superclass : 'ASStackVariable',
 	#instVars : [
 		'next'
 	],

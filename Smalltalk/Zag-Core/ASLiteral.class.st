@@ -3,7 +3,7 @@ I represent any literal value.
 "
 Class {
 	#name : 'ASLiteral',
-	#superclass : 'ASExpression',
+	#superclass : 'ASConstant',
 	#instVars : [
 		'literal'
 	],

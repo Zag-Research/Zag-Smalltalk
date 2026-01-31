@@ -3,7 +3,7 @@ I represent a reference to `thisContext`
 "
 Class {
 	#name : 'ASThisContext',
-	#superclass : 'ASIdentifier',
+	#superclass : 'ASConstant',
 	#category : 'Zag-Core-AST',
 	#package : 'Zag-Core',
 	#tag : 'AST'
