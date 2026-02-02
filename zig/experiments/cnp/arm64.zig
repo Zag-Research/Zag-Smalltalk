@@ -81,4 +81,15 @@ pub const Arm64 = struct {
     pub fn isRet(inst: u32) bool {
         return inst == 0xD65F03C0;
     }
+
+    /// Check if instruction looks like a function prologue.
+    /// Detects common ARM64 prologue patterns:
+    pub fn isLikelyPrologue(inst: u32) bool {
+        // stp x29, x30, [sp, #-0x10]!
+        if ((inst & 0xFFC07FFF) == 0xA9807BFD) return true;
+        // sub sp, sp, #imm (allocate stack space)
+        if ((inst & 0xFFC003FF) == 0xD10003FF) return true;
+
+        return false;
+    }
 };

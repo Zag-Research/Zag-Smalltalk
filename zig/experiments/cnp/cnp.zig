@@ -12,5 +12,6 @@ pub fn main() !void {
     try harness.runTest(tests.PushLiteralTest);
     try harness.runTest(tests.TailCallPatchTest);
     try harness.runTest(tests.ReturnSelfTest);
+    try harness.runTest(tests.BranchFalseTest);
     try harness.runTest(tests.InlinePrimitiveAddTest);
 }

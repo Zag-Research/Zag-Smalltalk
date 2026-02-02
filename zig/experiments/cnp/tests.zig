@@ -22,7 +22,7 @@ pub const PushTest = struct {
     const self = Context.makeVariable(0, 1, .Parameter, &.{});
     const tup = .{ tf.push, self, tf.returnTop };
     const info = opsInfo(tup);
-    const Method = JitMethod(&info.ops);
+    const Method = JitMethod(&info.ops, &info.branch_targets);
 
     var method: Method = undefined;
     var process: Process align(Process.alignment) = undefined;
@@ -50,7 +50,7 @@ pub const PushTest = struct {
 pub const PushLiteralTest = struct {
     const tup = .{ tf.pushLiteral, "0const", tf.returnTop };
     const info = opsInfo(tup);
-    const Method = JitMethod(&info.ops);
+    const Method = JitMethod(&info.ops, &info.branch_targets);
 
     var method: Method = undefined;
     var process: Process align(Process.alignment) = undefined;
@@ -84,7 +84,7 @@ pub const TailCallPatchTest = struct {
         "2const",       tf.returnTop,
     };
     const info = opsInfo(tup);
-    const Method = JitMethod(&info.ops);
+    const Method = JitMethod(&info.ops, &info.branch_targets);
 
     var method: Method = undefined;
     var process: Process align(Process.alignment) = undefined;
@@ -119,7 +119,7 @@ pub const TailCallPatchTest = struct {
 pub const ReturnSelfTest = struct {
     const tup = .{tf.returnSelf};
     const info = opsInfo(tup);
-    const Method = JitMethod(&info.ops);
+    const Method = JitMethod(&info.ops, &info.branch_targets);
 
     var method: Method = undefined;
     var process: Process align(Process.alignment) = undefined;
@@ -144,6 +144,58 @@ pub const ReturnSelfTest = struct {
     }
 };
 
+pub const BranchFalseTest = struct {
+    const Boolean = zag.primitives.primitives.Boolean;
+    const tup = .{
+        tf.pushLiteral,  "0const",    // push test value (True or False)
+        tf.branchFalse,  "taken",     // if False, jump to taken
+        tf.pushLiteral,  "1const",    // not-taken: push 111
+        tf.returnTop,    ":taken",    // label definition
+        tf.pushLiteral,  "2const",    // taken: push 222
+        tf.returnTop,
+    };
+    const info = opsInfo(tup);
+    const Method = JitMethod(&info.ops, &info.branch_targets);
+
+    var method: Method = undefined;
+    var process: Process align(Process.alignment) = undefined;
+    var compiled align(64) = compileMethod(Sym.value, 0, .Object, tup);
+    var literals_: [3]Object.StaticObject = undefined;
+
+    pub fn init() !void {
+        try initJitTest(&method, &process, "BranchFalseTest");
+        compiled.resolve(&[_]Object{
+            literals_[0].init(0),
+            literals_[1].init(0),
+            literals_[2].init(0),
+        }) catch @panic("Failed to resolve");
+    }
+
+    pub fn deinit() void {
+        method.deinit();
+    }
+
+    pub fn runWithValue(value: Object, expected: i64) !void {
+        process.init();
+        const sp = process.endOfStack();
+        const code = compiled.code[0..];
+        setLiteral(code, 1, value);
+        setLiteral(code, 5, Object.from(111, sp, process.getContext()));
+        setLiteral(code, 8, Object.from(222, sp, process.getContext()));
+        
+        const result = runCompiled(&method, &compiled, &process, info.positions[0..], null);
+        try reportResult(result, expected);
+    }
+
+    pub fn run() !void {
+        std.debug.print("  Test with False:\n", .{});
+        try runWithValue(Object.False(), 222);
+
+        std.debug.print("  Test with True:\n", .{});
+        try runWithValue(Object.True(), 111);
+    }
+};
+
 pub const InlinePrimitiveAddTest = struct {
     const plus = SmallInteger.@"+".inlined;
     const tup = .{
@@ -153,7 +205,7 @@ pub const InlinePrimitiveAddTest = struct {
         tf.returnTop,
     };
     const info = opsInfo(tup);
-    const Method = JitMethod(&info.ops);
+    const Method = JitMethod(&info.ops, &info.branch_targets);
 
     var method: Method = undefined;
     var process: Process align(Process.alignment) = undefined;

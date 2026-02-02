@@ -19,7 +19,9 @@ pub const TemplateInfo = struct {
     last_branch_offset: ?usize,
 
     /// Scans native code to find template boundaries and branch locations.
-    /// Looks for BR/BLR (indirect branches) and RET instructions.
+    /// Detects function end by looking for:
+    /// 1. RET instruction
+    /// 2. Next function's prologue (after seeing at least one branch)
     pub fn analyze(func: ThreadedFn) TemplateInfo {
         const ptr: [*]const u8 = @ptrCast(func);
         var info = TemplateInfo{
@@ -32,17 +34,22 @@ pub const TemplateInfo = struct {
 
         var i: usize = 0;
         const maxBytes: usize = 2048;
-        var last_branch: ?usize = null;
 
         while (i < maxBytes) : (i += 4) {
             const inst = std.mem.readInt(u32, ptr[i..][0..4], .little);
+
+            // If we've seen at least one branch and hit a prologue,
+            // we've entered the next function - stop here
+            if (info.br_count > 0 and Arm64.isLikelyPrologue(inst)) {
+                info.size = i;
+                break;
+            }
 
             if (Arm64.isBranchRegister(inst)) {
                 if (info.br_count < info.br_offsets.len) {
                     info.br_offsets[info.br_count] = i;
                     info.br_count += 1;
                 }
-                last_branch = i;
                 info.last_branch_offset = i;
             }
 
@@ -52,8 +59,9 @@ pub const TemplateInfo = struct {
             }
         }
 
+        // Fallback if no clear boundary found
         if (info.size == 0) {
-            if (last_branch) |offset| {
+            if (info.last_branch_offset) |offset| {
                 info.size = offset + 4;
             } else {
                 info.size = maxBytes;

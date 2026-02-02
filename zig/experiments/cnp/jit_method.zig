@@ -18,12 +18,24 @@ pub const ThreadedFn = *const fn (PC, SP, *Process, *Context, Extra) Result;
 pub fn isSupportedOp(op: tf) bool {
     return switch (op) {
         .push, .pushLiteral, .dup, .drop, .returnSelf, .returnTop => true,
+        .branchFalse, .branchTrue, .branch => true,
         else => false,
     };
 }
 
+/// Check if an operation is a conditional branch (has two exit paths)
+fn isConditionalBranch(op: tf) bool {
+    return op == .branchFalse or op == .branchTrue;
+}
+
+/// Check if an operation is an unconditional branch (has one exit to target)
+fn isUnconditionalBranch(op: tf) bool {
+    return op == .branch;
+}
+
 /// JIT-compiled method that copies and patches threaded function templates.
-pub fn JitMethod(comptime ops: []const tf) type {
+/// branch_targets[i] = target op index for branch ops, 0 for non-branch ops
+pub fn JitMethod(comptime ops: []const tf, comptime branch_targets: []const usize) type {
     return struct {
         const Self = @This();
         const num_ops = ops.len;
@@ -59,15 +71,45 @@ pub fn JitMethod(comptime ops: []const tf) type {
 
             if (patch_tail_calls) {
                 for (0..num_ops) |i| {
-                    if (!isSupportedOp(ops[i]) or (i + 1 < num_ops and !isSupportedOp(ops[i + 1]))) {
-                        continue;
-                    }
+                    const op = ops[i];
                     const info = &template_infos[i];
                     const curr_offset = offsets[i];
-                    const next_offset = offsets[i + 1];
-                    if (info.last_branch_offset) |br_offset| {
-                        jit.patchBranch(curr_offset, br_offset, next_offset);
-                        patched_branches += 1;
+
+                    if (isConditionalBranch(op)) {
+                        // Conditional branch: two exits
+                        // br_offsets[0] = taken path (when condition is true)
+                        // br_offsets[1] = not-taken path (fall through)
+                        const target_op_idx = branch_targets[i];
+                        const taken_target = offsets[target_op_idx];
+                        const not_taken_target = offsets[i + 1];
+
+                        if (info.br_count >= 1) {
+                            jit.patchBranch(curr_offset, info.br_offsets[0], taken_target);
+                            patched_branches += 1;
+                        }
+                        if (info.br_count >= 2) {
+                            jit.patchBranch(curr_offset, info.br_offsets[1], not_taken_target);
+                            patched_branches += 1;
+                        }
+                    } else if (isUnconditionalBranch(op)) {
+                        // Unconditional branch: one exit to target
+                        const target_op_idx = branch_targets[i];
+                        const target_offset = offsets[target_op_idx];
+
+                        if (info.last_branch_offset) |br_offset| {
+                            jit.patchBranch(curr_offset, br_offset, target_offset);
+                            patched_branches += 1;
+                        }
+                    } else if (isSupportedOp(op)) {
+                        // Regular op: patch to next instruction
+                        if (i + 1 < num_ops and !isSupportedOp(ops[i + 1])) {
+                            continue;
+                        }
+                        const next_offset = offsets[i + 1];
+                        if (info.last_branch_offset) |br_offset| {
+                            jit.patchBranch(curr_offset, br_offset, next_offset);
+                            patched_branches += 1;
+                        }
                     }
                 }
             }
