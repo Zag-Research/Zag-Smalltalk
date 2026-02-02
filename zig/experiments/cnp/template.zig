@@ -10,7 +10,6 @@ const Arm64 = @import("arm64.zig").Arm64;
 
 pub const ThreadedFn = *const fn (PC, SP, *Process, *Context, Extra) Result;
 
-/// Analyzed information about a threaded function template.
 pub const TemplateInfo = struct {
     start: [*]const u8,
     size: usize,
@@ -40,6 +39,7 @@ pub const TemplateInfo = struct {
 
             // If we've seen at least one branch and hit a prologue,
             // we've entered the next function - stop here
+            // subject to change 
             if (info.br_count > 0 and Arm64.isLikelyPrologue(inst)) {
                 info.size = i;
                 break;
@@ -59,14 +59,6 @@ pub const TemplateInfo = struct {
             }
         }
 
-        // Fallback if no clear boundary found
-        if (info.size == 0) {
-            if (info.last_branch_offset) |offset| {
-                info.size = offset + 4;
-            } else {
-                info.size = maxBytes;
-            }
-        }
         return info;
     }
 

@@ -12,7 +12,6 @@ const TemplateInfo = @import("template.zig").TemplateInfo;
 
 pub const ThreadedFn = *const fn (PC, SP, *Process, *Context, Extra) Result;
 
-/// Executable memory buffer with W^X support for macOS ARM64.
 pub const JitBuffer = struct {
     const PAGE_SIZE = std.heap.page_size_min;
     memory: []align(PAGE_SIZE) u8,
