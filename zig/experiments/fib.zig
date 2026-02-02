@@ -660,11 +660,11 @@ pub fn main() !void {
         "Config",            "Header",
         "Native",            "NativeF",
         //"Integer",
-        //"IntegerBr?Integer",
+        "IntegerBr?Integer",
         //"Integer0?Integer",
         //"IntegerCnP",
         //"Float",
-        "IntegerCl",
+        // "IntegerCl",
     };
     // var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     // const allocator = gpa.allocator();
