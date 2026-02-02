@@ -148,13 +148,13 @@ ASCompiler >> initialize [
 	super initialize.
 	classes := Set new.
 	selectors := Set new.
-	freeSelectors := Set new."why include initialize?? with: #initialize."
+	freeSelectors := Set new.
 	methods := Set new.
 	methodsAlreadyProcessed := Set new.
 	methodsToProcess := Set new.
 	self addClass: True.
 	self addClass: False.
-	visitMessages := true.
+	visitMessages := true
 ]
 
 { #category : 'inlining' }

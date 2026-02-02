@@ -154,7 +154,7 @@ ASSourceCompilerTest >> testSimple1 [
 { #category : 'tests' }
 ASSourceCompilerTest >> testUnaries [
 
-	self methodFrom: 'unaries ^ 23 negated abs'.
+	self methodFrom: 'unaries ^ 23 negated "test comment" abs'.
 	self assert: method arguments equals: #(  ).
 	self assert: method selector equals: #unaries
 ]
