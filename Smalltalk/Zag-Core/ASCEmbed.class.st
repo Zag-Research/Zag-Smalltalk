@@ -62,7 +62,7 @@ ASCEmbed >> inspectZagASTOn: aStream [
 ASCEmbed >> interpretFor: anASemanticInterpreter [ 
 		
 	| numArgs args target |
-	self halt.
+
 	"consume the num args off the stack"
 	numArgs := selector numArgs.
 	args := OrderedCollection new.

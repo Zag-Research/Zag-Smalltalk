@@ -241,10 +241,6 @@ pub const Object = packed struct(u64) {
     pub inline fn toBoolNoCheck(self: object.Object) bool {
         return self.rawU() == object.Object.True().rawU();
     }
-    pub inline fn withClass(self: object.Object, class: ClassIndex) object.Object {
-        if (!self.isSymbol()) unreachable;
-        return @bitCast((self.rawU() & 0xffffffffff) | (@as(u64, @intFromEnum(class)) << 40));
-    }
     pub inline fn toDoubleNoCheck(self: object.Object) f64 {
         return decode(@bitCast(self));
     }
@@ -261,26 +257,32 @@ pub const Object = packed struct(u64) {
         return @truncate(self.hash);
     }
 
-    pub fn extraImmediateU(obj: Object) bool {
-        return obj.isImmediateClass(.ThunkReturnLocal) or
+    pub fn extraImmediateU(obj: Object) ?u8 {
+        if (obj.isImmediateClass(.ThunkReturnLocal) or
             obj.isImmediateClass(.ThunkReturnInstance) or
             obj.isImmediateClass(.ThunkReturnImmediate) or
             obj.isImmediateClass(.ThunkReturnCharacter) or
-            obj.isImmediateClass(.ThunkReturnFloat);
+            obj.isImmediateClass(.ThunkReturnFloat)) {
+            return obj.extraU();
+        }
+        return null;
     }
 
-    pub fn extraImmediateI(obj: Object) bool {
-        return obj.isImmediateClass(.ThunkReturnObject);
+    pub fn extraImmediateI(obj: Object) ?i8 {
+        if (obj.isImmediateClass(.ThunkReturnObject)) {
+            return obj.extraI();
+        }
+        return null;
     }
 
     pub fn immediateClosure(sig: Signature, sp: SP, context: *Context) ?Object {
-        const class: ClassIndex.Compact = @enumFromInt(@intFromEnum(sig.getClass()));
+        const class = sig.getClass();
         _ = sp;
         return switch (class) {
             .ThunkReturnObject,
             .ThunkReturnLocal, .ThunkReturnInstance, .ThunkReturnImmediate,
             .ThunkReturnCharacter, .ThunkReturnFloat =>
-                oImm(class, @intCast(@intFromPtr(context) << 8 | sig.primitive())),
+                oImm(class.compact(), @intCast(@intFromPtr(context) << 8 | sig.primitive())),
             else => null,
         };
     }
@@ -570,6 +572,9 @@ pub const Object = packed struct(u64) {
     }
     pub inline fn isImmediateWhenNotDouble(self: object.Object) bool {
         return self.rawU() & 1 != 0;
+    }
+    pub inline fn isHeapObject(self: Object) bool {
+        return self.tag == .heap;
     }
     pub inline fn ifHeapObject(self: object.Object) ?*HeapObject {
         if (self.tag == .heap) return @ptrFromInt(@as(u64,@bitCast(self)));

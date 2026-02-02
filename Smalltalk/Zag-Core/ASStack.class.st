@@ -85,7 +85,7 @@ ASStack >> context [
 { #category : 'displaying' }
 ASStack >> displayStringOn: stream [
 
-	^ self subclassResponsibility
+^ stream nextPutAll: '<stack>'
 ]
 
 { #category : 'enumerating' }

@@ -67,10 +67,6 @@ pub const TaggedPtrObject = packed struct(u64) {
     pub inline fn toNatNoCheck(self: Object) u64 {
         return self.hash;
     }
-    pub inline fn withClass(self: Object, class: ClassIndex) Object {
-        if (!self.isSymbol()) unreachable;
-        return @bitCast((self.rawU() & 0xffffffffff) | (@as(u64, @intFromEnum(class)) << 40));
-    }
     pub inline fn toDoubleNoCheck(self: Object) f64 {
         return decode(self);
     }

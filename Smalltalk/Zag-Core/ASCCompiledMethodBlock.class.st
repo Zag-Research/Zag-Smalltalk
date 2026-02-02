@@ -40,13 +40,6 @@ ASCCompiledMethodBlock >> copyStackFrom: aBasicBlock [
 ]
 
 { #category : 'API' }
-ASCCompiledMethodBlock >> initParameterNamed: aSymbol [
-
-	stack := stack initParameterNamed: aSymbol.
-	^ stack data: (AStSubClass new dataClass: Object)
-]
-
-{ #category : 'API' }
 ASCCompiledMethodBlock >> initSelf: targetClass [
 
 	stack := stack initSelf.

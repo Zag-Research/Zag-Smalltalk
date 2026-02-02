@@ -90,10 +90,10 @@ ASMethodNode >> initialize [
 ]
 
 { #category : 'accessing' }
-ASMethodNode >> inspectAST [
+ASMethodNode >> inspectAST: aBuilder [
 
 	<inspectorPresentationOrder: 33 title: 'ZAST'>
-	^ SpTreeTablePresenter new
+	^ (aBuilder instantiate: SpTreeTablePresenter)
 		  roots: self roots;
 		  children: [ :aNode | aNode children ];
 		  addColumn:

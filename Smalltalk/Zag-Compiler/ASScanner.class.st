@@ -8,12 +8,19 @@ Class {
 	#superclass : 'Object',
 	#instVars : [
 		'aStream',
-		'peek'
+		'peek',
+		'separator'
 	],
 	#category : 'Zag-Compiler-Core',
 	#package : 'Zag-Compiler',
 	#tag : 'Core'
 }
+
+{ #category : 'public api' }
+ASScanner class >> scan: aStringOrStream [
+
+	^ self new scanCode: aStringOrStream
+]
 
 { #category : 'conversion' }
 ASScanner >> asArray [
@@ -29,7 +36,7 @@ ASScanner >> atEnd [
 	^ self peek atEnd
 ]
 
-{ #category : 'scanning' }
+{ #category : 'private' }
 ASScanner >> binaryIdentifier [ 
 	^ (String streamContents: [: s | | char |
 			[
@@ -39,12 +46,26 @@ ASScanner >> binaryIdentifier [
 		]) asASIdentifier
 ]
 
-{ #category : 'scanning' }
+{ #category : 'private' }
+ASScanner >> comment [
+
+	aStream next.
+	^ (String streamContents: [ :s |
+			   | char |
+			   [
+				   char := aStream next.
+				   char ~= $" or: [
+						   aStream peek = $" and: [
+								   aStream next.
+								   true ] ] ] whileTrue: [ s << char ] ])
+]
+
+{ #category : 'private' }
 ASScanner >> identifier [
 	^ self identifierString asASIdentifier
 ]
 
-{ #category : 'scanning' }
+{ #category : 'private' }
 ASScanner >> identifierString [
 	^ (String streamContents: [: s | | char prevWasColon |
 			prevWasColon := false.
@@ -58,13 +79,20 @@ ASScanner >> identifierString [
 		])
 ]
 
-{ #category : 'scanning' }
+{ #category : 'initialization' }
+ASScanner >> initialize [
+
+	super initialize.
+	separator := ''
+]
+
+{ #category : 'private' }
 ASScanner >> next [
 	^ self peek ifNotNil: [: t | peek := nil. t ].
 
 ]
 
-{ #category : 'scanning' }
+{ #category : 'private' }
 ASScanner >> number [ 
 	^ (String streamContents: [: s |
 			[
@@ -76,8 +104,32 @@ ASScanner >> number [
 
 { #category : 'scanning' }
 ASScanner >> peek [
+
 	peek ifNotNil: [ ^ peek ].
 	^ peek := self token
+]
+
+{ #category : 'private' }
+ASScanner >> possibleSeparator [
+
+	| whitespace |
+	whitespace := ''.
+	[ aStream atEnd ] whileFalse: [
+			| in |
+			in := aStream peek asInteger.
+			34 = in
+				ifTrue: [
+						separator := separator , whitespace , '"' , self comment , '"'.
+						whitespace := '' ]
+				ifFalse: [
+						(in = 13 or: [ in = 10 or: [ in = 12 ] ])
+							ifTrue: [
+									separator := separator , aStream next asString.
+									whitespace := '' ]
+							ifFalse: [
+									(in = 32 or: [ in = 9 ])
+										ifTrue: [ whitespace := whitespace , aStream next asString ]
+										ifFalse: [ ^ self ] ] ] ]
 ]
 
 { #category : 'scanning' }
@@ -86,7 +138,12 @@ ASScanner >> scanCode: aStringOrStream [
 
 ]
 
-{ #category : 'scanning' }
+{ #category : 'accessing' }
+ASScanner >> separator [
+	^ separator
+]
+
+{ #category : 'private' }
 ASScanner >> string [
 	aStream next.
 	^ (String streamContents: [: s | | char |
@@ -98,38 +155,39 @@ ASScanner >> string [
 		]) asASString
 ]
 
-{ #category : 'scanning' }
+{ #category : 'private' }
 ASScanner >> symbol [
+
 	| char |
 	aStream next.
 	char := aStream peek.
 	char isLetter ifTrue: [ ^ self identifierString asASSymbol ].
-	char = $( ifTrue: [ aStream next. ^ '#(' asASSyntax ].
-	char = $' ifTrue: [ ^ self string value asASSymbol].
-	char isDigit ifTrue: [ ^ self number ].
-^ self error: 'invalid symbol'
+	char = $( ifTrue: [
+			aStream next.
+			^ '#(' asASSyntax ].
+	char = $' ifTrue: [ ^ self string value asASSymbol ].
+	char = $_ ifTrue: [ ^ self identifierString asASSymbol ].
+	^ self error: 'invalid symbol'
 ]
 
-{ #category : 'scanning' }
+{ #category : 'private' }
 ASScanner >> token [
 
 	| char |
-	[ aStream atEnd ifTrue: [ ^ ASEnd new ].
-		aStream peek isSeparator ] whileTrue: [ aStream next ].
+	self possibleSeparator.
+	aStream atEnd ifTrue: [ ^ ASEnd new ].
 	char := aStream peek.
 	('^.[]{}();' includes: char) ifTrue: [ ^ aStream next asASSyntax ].
 	char isLetter ifTrue: [ ^ self identifier ].
 	char isDigit ifTrue: [ ^ self number ].
-	char = $" ifTrue: [ ^ self comment ].
 	char = $# ifTrue: [ ^ self symbol ].
 	char = $' ifTrue: [ ^ self string ].
 	char = $: ifTrue: [
-		aStream next.
-		('=>' includes: aStream peek) ifTrue: [
-			^ (':',aStream next asString) asASSyntax
-		] ifFalse: [
-			^ $: asASSyntax
-	]].
+			aStream next.
+			('=>' includes: aStream peek)
+				ifTrue: [ ^ (':' , aStream next asString) asASSyntax ]
+				ifFalse: [ ^ $: asASSyntax ] ].
 	char isSpecial ifTrue: [ ^ self binaryIdentifier ].
-	^ self error: 'Illegal character:',char asString
+	char = $_ ifTrue: [ ^ self identifier ].
+	^ self error: 'Illegal character:' , char asString
 ]

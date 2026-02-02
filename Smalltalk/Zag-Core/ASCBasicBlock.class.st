@@ -308,15 +308,8 @@ ASCBasicBlock >> insertContext [
 	contextStartsAt ifNotNil: [
 		contextStartsAt = NoContext ifFalse: [ ^ self ] ].
 	operations withIndexDo: [ :operation :index |
-		operation shrinksStack ifFalse: [
-			operations
-				add: (ASCCreateContext new
-						 method: self methodBlock;
-						 resultStack: operation stack;
-						 yourself)
-				beforeIndex: index.
-			contextStartsAt := index.
-			^ self ] ]
+			operation shrinksStack ifFalse: [
+					^ self ] ]
 ]
 
 { #category : 'printing' }
@@ -360,10 +353,10 @@ ASCBasicBlock >> inspectionStart: aBuilder [
 ]
 
 { #category : 'writing' }
-ASCBasicBlock >> inspectionZagCode [
+ASCBasicBlock >> inspectionZagCode: aBuilder [
 
 	<inspectorPresentationOrder: 0 title: 'ZCode'>
-	^ SpTreeTablePresenter new
+		^ (aBuilder instantiate: SpTreeTablePresenter)
 		  roots: operations;
 		  children: [ :aNode | aNode children ];
 		  addColumn:

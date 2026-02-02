@@ -29,7 +29,7 @@ ManifestZagCore class >> ruleBadMessageRule2V1FalsePositive [
 ManifestZagCore class >> ruleCollectionProtocolRuleV1FalsePositive [
 
 	<ignoreForCoverage>
-	^ #( #( #( #RGMethodDefinition #( #ASSourceCompiler #compileMethodInClass:
+	^ #( #( #( #RGMethodDefinition #( #ASSourceCompiler #compileInClass:
 	              #false ) )
 	        #'2021-10-09T09:13:12.016388-04:00' )
 	     #( #( #RGMethodDefinition #( #ASArray #baseValue #false ) )

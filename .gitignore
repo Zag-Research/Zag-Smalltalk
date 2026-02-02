@@ -56,3 +56,6 @@ zig-out/
 *.ll
 c/sacTest
 .claude
+*.dSYM
+zig/zag/returnAddress
+zig/zag/jit

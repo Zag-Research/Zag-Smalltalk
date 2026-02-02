@@ -25,6 +25,12 @@ ASCCompiledBlock >> arguments [
 	^ astBlock arguments size
 ]
 
+{ #category : 'initialization' }
+ASCCompiledBlock >> astBlock [
+
+	^ astBlock
+]
+
 { #category : 'as yet unclassified' }
 ASCCompiledBlock >> deriveVariableReferences: referenced modifies: modified [
 
@@ -34,6 +40,13 @@ ASCCompiledBlock >> deriveVariableReferences: referenced modifies: modified [
 { #category : 'as yet unclassified' }
 ASCCompiledBlock >> hasNonLocalReturn [
 	^ false
+]
+
+{ #category : 'API' }
+ASCCompiledBlock >> initParameterNamed: aSymbol [
+
+	stack := stack initParameterNamed: aSymbol.
+	^ stack data: (AStSubClass new dataClass: Object)
 ]
 
 { #category : 'initialization' }
@@ -104,4 +117,9 @@ ASCCompiledBlock >> propagateContextFreeFor [
 ASCCompiledBlock >> setBlock: anASMethodNode [ 
 
 	astBlock := anASMethodNode
+]
+
+{ #category : 'testing' }
+ASCCompiledBlock >> withMethodOrBlock: aBasicBlock [
+ ^ astBlock = aBasicBlock astBlock 
 ]

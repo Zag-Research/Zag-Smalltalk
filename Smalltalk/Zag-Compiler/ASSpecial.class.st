@@ -1,6 +1,6 @@
 Class {
 	#name : 'ASSpecial',
-	#superclass : 'ASLiteralToken',
+	#superclass : 'ASIdentifier',
 	#category : 'Zag-Compiler-Tokens',
 	#package : 'Zag-Compiler',
 	#tag : 'Tokens'

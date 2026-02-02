@@ -139,11 +139,11 @@ pub const HeapAllocation = extern union {
         return self.header.freeLists[freeList].freeCount();
     }
     fn freeSpace(self: SelfPtr) usize {
-        var free: usize = 0;
+        var freeWords: usize = 0;
         for (self.header.freeLists[0..]) |fl| {
-            free += fl.freeCount() * (@as(usize, fl.header.length) + 1);
+            freeWords += fl.freeCount() * (@as(usize, fl.header.length) + 1);
         }
-        return free;
+        return freeWords;
     }
     fn allocLarge(self: SelfPtr, arraySize: ?usize, aI: AllocationInfo) !*HeapObject {
         _ = self;
@@ -541,4 +541,25 @@ inline fn log2a(x: anytype) switch (@typeInfo(@TypeOf(x))) {
         .ComptimeInt => return math.log2(x),
         else => @compileError("bad"),
     }
+}
+export fn free(__ptr: ?*anyopaque) void {
+    _ = .{ __ptr, @panic("free not implemented") };
+}
+export fn malloc(__size: c_ulong) ?*anyopaque {
+    _ = .{ __size, @panic("malloc not implemented") };
+}
+export fn calloc(__count: c_ulong, __size: c_ulong) ?*anyopaque {
+    _ = .{ __count, __size, @panic("calloc not implemented") };
+}
+export fn realloc(__ptr: ?*anyopaque, __size: c_ulong) ?*anyopaque {
+    _ = .{ __ptr, __size, @panic("realloc not implemented") };
+}
+export fn reallocf(__ptr: ?*anyopaque, __size: usize) ?*anyopaque {
+    _ = .{ __ptr, __size, @panic("reallocf not implemented") };
+}
+export fn valloc(__size: usize) ?*anyopaque {
+    _ = .{ __size, @panic("valloc not implemented") };
+}
+export fn aligned_alloc(__alignment: c_ulong, __size: c_ulong) ?*anyopaque {
+    _ = .{ __alignment, __size, @panic("aligned_alloc not implemented") };
 }

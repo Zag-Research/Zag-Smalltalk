@@ -13,14 +13,8 @@ Class {
 	#tag : 'Core'
 }
 
-{ #category : 'compilation' }
-ASSourceCompiler >> compileMethod: aMethod [
-	aScanner := ASScanner new scanCode: aMethod sourceCode readStream.
-	^ self compileMethodInClass: (ASClassNode new from: aMethod methodClass)
-]
-
 { #category : 'parsing' }
-ASSourceCompiler >> compileMethodInClass: aClass [
+ASSourceCompiler >> compileInClass: aClass [
 
 	| selector args method savedScope |
 	args := OrderedCollection new.
@@ -36,6 +30,21 @@ ASSourceCompiler >> compileMethodInClass: aClass [
 		currentScope := method nestedScopeOf: aClass.
 		method body: self methodBody ] ensure: [ currentScope := savedScope ].
 	^ method
+]
+
+{ #category : 'compiling' }
+ASSourceCompiler >> compileMethod: aMethod [
+
+	^ self
+		  compileMethod: aMethod sourceCode
+		  inClass: (ASClassNode new from: aMethod methodClass)
+]
+
+{ #category : 'compilation' }
+ASSourceCompiler >> compileMethod: sourceCode inClass: aClass [
+
+	aScanner := ASScanner scan: sourceCode.
+	^ self compileInClass: aClass
 ]
 
 { #category : 'parsing' }

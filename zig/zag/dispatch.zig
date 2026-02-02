@@ -267,7 +267,7 @@ pub const threadedFunctions = struct {
             newSp.traceStack("returnSelf after pop", context, extra);
             return @call(tailCall, process.branchCheck(callerContext.getNPc()), .{ callerContext.getTPc(), newSp, process, callerContext, Extra.fromContextData(callerContext.contextData) });
         }
-        test "returnSelf" {
+        test {
             if (true) return error.NotImplemented;
             var exe = Execution.initTest("returnSelf", .{
                 tf.pushLiteral,
@@ -300,7 +300,7 @@ pub const threadedFunctions = struct {
             newSp.traceStack("returnTop after pop", context, extra);
             return @call(tailCall, process.branchCheck(callerContext.npc), .{ callerContext.tpc, newSp, process, callerContext, Extra.fromContextData(callerContext.contextDataPtr(sp)) });
         }
-        test "returnTopNoContext" {
+        test {
             if (true) return error.NotImplemented;
             var exe = Execution.initTest("returnTopNoContext", .{
                 tf.pushLiteral,
