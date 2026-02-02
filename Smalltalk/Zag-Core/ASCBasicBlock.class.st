@@ -537,7 +537,7 @@ ASCBasicBlock >> reference: anIntegerOrSymbol [
 
 { #category : 'removing' }
 ASCBasicBlock >> removeLastOperation [
-
+	
 	stack := operations removeLast stack
 ]
 
