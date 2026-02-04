@@ -67,8 +67,7 @@ ASCCompiledBlock >> locals [
 ASCCompiledBlock >> locals: locals parameters: arguments [
 
 	arguments do: [ :each | self initParameterNamed: each ].
-	locals do: [ :each | self initLocalNamed: each ].
-	stack := sourceElements := ASStackContext fromStack: stack
+	locals do: [ :each | self initLocalNamed: each ]
 ]
 
 { #category : 'accessing' }

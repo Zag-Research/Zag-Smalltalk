@@ -1,4 +1,9 @@
 Indicate 👍 (thumbs up) or 👎 (thumbs down) for each
+- dispatch can be tail called with the `extra` field a signature, because the current extra field isn't used during a send (it will be re-created on the return)
+- we don't need to check the signature of a method
+	- we are either verifying a send cache, in which case we know that the selector is correct, we're just verifying the class
+	- or we are doing dispatch, in which case we're just verifying the selector
+	- this could simplify/speed-up dispatch
 - an image directory will have files with a JIT type
 - an image directory could be stored as a ZIP file
 - ? could break Signatures up so that when using a mini-PIC we just have to check the class, and when using a dispatch we just have to check the selector, so we save constructing the full signature except when filling in the mini-PIC - create a branch to experiment (after encoding paper is in) - might be a small speedup

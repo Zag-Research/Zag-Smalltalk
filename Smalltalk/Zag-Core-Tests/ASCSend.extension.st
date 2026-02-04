@@ -6,6 +6,5 @@ ASCSend >> interpretFor: anInterpreter [
 	^ anInterpreter
 		  returnTo: blockToReturnTo;
 		  send: selector;
-		  installContextIfNone;
-		  resetBeforeCall
+		  installContextIfNone
 ]
