@@ -116,6 +116,7 @@ ASStatement >> newInlineMethodBlock: anInlineMethodBlock [
 
 { #category : 'compiling' }
 ASStatement >> zigWalk: aGenerator [
+	"Walks through my subtree, according to which element I am.  The argument should be an ASCodeGenerator."
 
 	self subclassResponsibility 
 ]

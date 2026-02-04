@@ -1,5 +1,10 @@
 "
 I represent an expression that is a message send.
+
+My arguments are:
+- the target object that the message is being sent to (subtree)
+- the selector of the message being sent, as a symbol
+- the arguments passed to this message, besides the target.
 "
 Class {
 	#name : 'ASSend',
