@@ -1,5 +1,5 @@
 "
-I represent a reference to a variable (local, parameters, inherited local/parameters, instance, class, shared).
+I represent a reference to a variable. This pushes the value of a variable (local, parameters, inherited local/parameters, , instance, class, shared).
 "
 Class {
 	#name : 'ASRef',

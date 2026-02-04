@@ -1,5 +1,5 @@
 "
-I represent an assignment expression. This stores the value of an expression in a variable (local, inherited local, instance, class, shared).
+I represent an assignment expression. This stores the value of an expression in a variable (local, parameters, inherited local/parameters, , instance, class, shared).
 "
 Class {
 	#name : 'ASAssign',

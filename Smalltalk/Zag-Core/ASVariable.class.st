@@ -1,6 +1,15 @@
+"
+I represent some kind of ""variable"" (even though some may be immutable).
+
+I am referenced by AST elements:
+ - `ASClassNode` for instance and class variables
+ - `ASCodeBlock` for locals and parameters
+ - `ASRef` to access (push) a variable
+ - `ASAssign` to store (pop) a value to a variable
+"
 Class {
 	#name : 'ASVariable',
-	#superclass : 'ASExpression',
+	#superclass : 'Object',
 	#instVars : [
 		'id'
 	],
