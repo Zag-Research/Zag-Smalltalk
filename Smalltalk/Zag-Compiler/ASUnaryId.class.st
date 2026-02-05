@@ -52,7 +52,7 @@ ASUnaryId >> keywordExpression: anASCompiler target: target [
 ASUnaryId >> parameterFrom: anASCompiler [
 
 	anASCompiler nextToken.
-	^ ASParameter with: value
+	^ ASParameter new with: value
 ]
 
 { #category : 'parsing' }
