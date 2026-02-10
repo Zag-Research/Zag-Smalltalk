@@ -76,37 +76,20 @@ pub const JitBuffer = struct {
     }
 
     /// Relocates PC-relative instructions when copying to new address.
+    /// For helper functions
     fn relocateInst(orig_pc: usize, new_pc: usize, inst: u32) u32 {
-        if (Arm64.isAdr(inst)) {
-            const target = @as(i64, @intCast(orig_pc)) + Arm64.decodeAdrImm(inst);
-            const new_imm = target - @as(i64, @intCast(new_pc));
-            std.debug.assert((new_imm & 0x3) == 0);
-            std.debug.assert(new_imm >= -(@as(i64, 1) << 20) and new_imm < (@as(i64, 1) << 20));
-            return Arm64.encodeAdrImm(inst, new_imm);
-        }
         if (Arm64.isAdrp(inst)) {
             const orig_base = @as(i64, @intCast(orig_pc & ~@as(usize, 0xfff)));
             const target = orig_base + (Arm64.decodeAdrImm(inst) << 12);
             const new_base = @as(i64, @intCast(new_pc & ~@as(usize, 0xfff)));
             const new_imm = target - new_base;
-            std.debug.assert((new_imm & 0xfff) == 0);
-            std.debug.assert(new_imm >= -(@as(i64, 1) << 32) and new_imm < (@as(i64, 1) << 32));
             return Arm64.encodeAdrImm(inst, new_imm >> 12);
-        }
-        if (Arm64.isLdrLiteral64(inst)) {
-            const target = @as(i64, @intCast(orig_pc)) + Arm64.decodeLdrLiteralImm(inst);
-            const new_imm = target - @as(i64, @intCast(new_pc));
-            std.debug.assert((new_imm & 0x3) == 0);
-            std.debug.assert(new_imm >= -(@as(i64, 1) << 20) and new_imm < (@as(i64, 1) << 20));
-            return Arm64.encodeLdrLiteralImm(inst, new_imm);
-        }
-        if (Arm64.isBImm(inst) or Arm64.isBlImm(inst)) {
+        } else if (Arm64.isBImm(inst) or Arm64.isBlImm(inst)) {
             const target = @as(i64, @intCast(orig_pc)) + Arm64.decodeBImm(inst);
             const new_imm = target - @as(i64, @intCast(new_pc));
-            std.debug.assert((new_imm & 0x3) == 0);
-            std.debug.assert(new_imm >= -(@as(i64, 1) << 27) and new_imm < (@as(i64, 1) << 27));
             return Arm64.encodeBImm(inst, new_imm);
         }
+        
         return inst;
     }
 

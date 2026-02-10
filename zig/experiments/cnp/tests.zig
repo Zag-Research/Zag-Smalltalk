@@ -6,6 +6,7 @@ const Process = zag.Process;
 const Context = zag.Context;
 const Object = zag.Object;
 const Code = zag.execute.Code;
+const PC = zag.execute.PC;
 const compileMethod = zag.execute.compileMethod;
 const Sym = zag.symbol.symbols;
 const SmallInteger = zag.primitives.primitives.SmallInteger;
@@ -232,5 +233,49 @@ pub const InlinePrimitiveAddTest = struct {
         setLiteral(code, 3, Object.from(2, sp, context));
         const result = runCompiled(&method, &compiled, &process, info.positions[0..], null);
         try reportResult(result, 42);
+    }
+};
+
+pub const InlinePrimitiveChainedTest = struct {
+    const plus = SmallInteger.@"+".inlined;
+    const minus = SmallInteger.@"-".inlined;
+    const tup = .{
+        tf.pushLiteral,     "0const",  // push a
+        tf.pushLiteral,     "1const",  // push b
+        tf.inlinePrimitive, plus,      // a + b
+        tf.pushLiteral,     "2const",  // push c
+        tf.inlinePrimitive, minus,     // (a + b) - c
+        tf.returnTop,
+    };
+    const info = opsInfo(tup);
+    const Method = JitMethod(&info.ops, &info.branch_targets);
+
+    var method: Method = undefined;
+    var process: Process align(Process.alignment) = undefined;
+    var compiled align(64) = compileMethod(Sym.value, 0, .Object, tup);
+    var literals_: [3]Object.StaticObject = undefined;
+
+    pub fn init() !void {
+        try initJitTest(&method, &process, "InlinePrimitiveChainedTest");
+        compiled.resolve(&[_]Object{
+            literals_[0].init(0),
+            literals_[1].init(0),
+            literals_[2].init(0),
+        }) catch @panic("Failed to resolve");
+    }
+
+    pub fn deinit() void {
+        method.deinit();
+    }
+
+    pub fn run() !void {
+        const context = process.getContext();
+        const sp = process.endOfStack();
+        const code = compiled.code[0..];
+        setLiteral(code, 1, Object.from(40, sp, context));   // a = 40 at code[1]
+        setLiteral(code, 3, Object.from(50, sp, context));   // b = 50 at code[3]
+        setLiteral(code, 7, Object.from(48, sp, context));   // c = 48 at code[7]
+        const result = runCompiled(&method, &compiled, &process, info.positions[0..], null);
+        try reportResult(result, 42);  // 40 + 50 - 48 = 42
     }
 };

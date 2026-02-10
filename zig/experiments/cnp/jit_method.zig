@@ -19,8 +19,14 @@ pub fn isSupportedOp(op: tf) bool {
     return switch (op) {
         .push, .pushLiteral, .dup, .drop, .returnSelf, .returnTop => true,
         .branchFalse, .branchTrue, .branch => true,
+        .inlinePrimitive => true,
         else => false,
     };
+}
+
+/// Check if an operation is an inline primitive (has multiple exit paths)
+fn isInlinePrimitive(op: tf) bool {
+    return op == .inlinePrimitive;
 }
 
 /// Check if an operation is a conditional branch (has two exit paths)
