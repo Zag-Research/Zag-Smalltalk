@@ -1,0 +1,4 @@
+#! /bin/sh
+echo bench.fib
+echo bench.fib stderror >&2
+#exec ../zig-out/bin/fib

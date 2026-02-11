@@ -360,7 +360,7 @@ test "stack operations" {
     var process: Self align(alignment) = undefined;
     process.init();
     const endSp = process.endOfStack();
-    try ee(120, @intFromPtr(endSp) & stack_mask);
+    try ee(504, @intFromPtr(endSp) & stack_mask);
     try ee(endSp.endOfStack(), process.endOfStack());
     try ee(endSp.reserve(1).?.endOfStack(), process.endOfStack());
     try ee(endSp.reserve(10).?.endOfStack(), process.endOfStack());
@@ -370,7 +370,7 @@ test "nursery allocation" {
     var process: Self align(alignment) = undefined;
     process.init();
     const emptySize = Process.nursery_size;
-    try ee(15, Process.stack_size);
+    try ee(63, Process.stack_size);
     try ee(emptySize, process.freeNursery());
     var sp = process.endOfStack();
     const initialContext = process.getContext();

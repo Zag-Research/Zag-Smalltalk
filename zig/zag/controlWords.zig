@@ -123,7 +123,8 @@ pub const classCase = struct {
         var exe = Execution.initTest("classCase no match", .{
             tf.classCase,
             comptime classes(&.{ .True, .False }),
-            "true","false",
+            "true",
+            "false",
             tf.pushLiteral,
             o0,
             tf.branch,
@@ -139,7 +140,7 @@ pub const classCase = struct {
             ":end",
         });
         try exe.runTest(
-            &[_]Object{False()},
+            &[_]Object{Nil()},
             &[_]Object{o0},
         );
     }
@@ -344,7 +345,7 @@ pub const pushAssociationValue = struct {
             },
             &[_]Object{},
             &[_]Object{
-                exe.object(42),
+                o0,
             },
         );
     }

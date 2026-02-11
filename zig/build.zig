@@ -142,6 +142,21 @@ fn createExperimentExecutables(
     });
     b.installArtifact(fib);
 
+    const cnp = b.addExecutable(.{
+        .name = "cnp",
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("experiments/cnp.zig"),
+            .target = target,
+            .optimize = optimize,
+            .imports = &.{
+                .{ .name = "zag", .module = zag },
+            },
+            .omit_frame_pointer = build_options.omit_frame_pointer,
+        }),
+        .use_llvm = true,
+    });
+    b.installArtifact(cnp);
+
     const branchPrediction = b.addExecutable(.{
         .name = "branchPrediction",
         .root_module = b.createModule(.{
