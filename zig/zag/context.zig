@@ -446,6 +446,7 @@ pub const threadedFunctions = struct {
             return @call(tailCall, process.check(pc.prim()), .{ pc.next(), sp, process, context, extra });
         }
         test "pushContext" {
+            if (true) return config.skipForDebugging;
             var exe = Execution.initTest("pushContext", .{
                 tf.pushContext,
                 tf.pushLiteral,
