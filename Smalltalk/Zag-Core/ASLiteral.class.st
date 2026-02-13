@@ -3,7 +3,7 @@ I represent any literal value.
 "
 Class {
 	#name : 'ASLiteral',
-	#superclass : 'ASExpression',
+	#superclass : 'ASConstant',
 	#instVars : [
 		'literal'
 	],
@@ -21,6 +21,12 @@ ASLiteral class >> literal: aLiteralObject [
 ASLiteral >> = other [
 
 	^ self class = other class and: [ self literal = other literal ]
+]
+
+{ #category : 'visiting' }
+ASLiteral >> accept: aVisitor [
+
+	^ aVisitor visitLiteral: literal
 ]
 
 { #category : 'accessing' }
@@ -65,17 +71,16 @@ ASLiteral >> literal: aLiteralObject [
 	literal := aLiteralObject
 ]
 
-{ #category : 'printing' }
-ASLiteral >> printOn: s [
-
-	s << self className << ' literal: '.
-	literal printOn: s
-]
-
 { #category : 'compiling' }
 ASLiteral >> tell: aCompiler youAreSent: aSymbol [
 
 	^ aCompiler sent: aSymbol toLiteral: literal
+]
+
+{ #category : 'accessing' }
+ASLiteral >> with: anObject [ 
+
+	literal := anObject
 ]
 
 { #category : 'compiling' }

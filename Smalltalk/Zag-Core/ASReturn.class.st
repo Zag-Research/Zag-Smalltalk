@@ -23,6 +23,12 @@ ASReturn >> = other [
 	^ self class = other class and: [ self expression = other expression ]
 ]
 
+{ #category : 'visiting' }
+ASReturn >> accept: aVisitor [
+
+	^ aVisitor visitReturn: self
+]
+
 { #category : 'accessing' }
 ASReturn >> blocks [
 	^expression blocks
@@ -63,14 +69,6 @@ ASReturn >> newInlineBlock: aDispatchableBlock [
 { #category : 'compiling' }
 ASReturn >> newInlineMethodBlock: anInlineMethodBlock [
 	^ anInlineMethodBlock newInlineMethodBlockNonLocalReturn
-]
-
-{ #category : 'printing' }
-ASReturn >> printOn: s [
-
-	s << self className << ' expression: ('.
-	expression printOn: s.
-	s << ')'
 ]
 
 { #category : 'accessing' }

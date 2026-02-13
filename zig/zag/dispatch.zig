@@ -52,8 +52,7 @@ const DispatchHandler = struct {
     }
     fn addMethod(method: *const CompiledMethod) void {
         const index = method.signature.getClassIndex();
-        trace("addMethod({b} {f} {}) {} {*}\n",
-            .{ @as(u64, @bitCast(method.signature)), method.signature, method.signature.fullHash(), index, dispatches[index] });
+        trace("addMethod({b} {f} {}) {} {*}\n", .{ @as(u64, @bitCast(method.signature)), method.signature, method.signature.fullHash(), index, dispatches[index] });
         if (dispatches[index].addIfAllocated(method)) return;
         while (true) {
             if (dispatches[index].lock()) |dispatch| {
@@ -257,7 +256,7 @@ pub const threadedFunctions = struct {
     pub const returnSelf = struct {
         pub fn threadedFn(_: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
             sp.traceStack("returnSelf", context, extra);
-            trace("returnSelf extra=0x{x:0>16}", .{ @as(u64, @bitCast(extra)) });
+            trace("returnSelf extra=0x{x:0>16}", .{@as(u64, @bitCast(extra))});
             if (extra.selfAddress(sp)) |address| {
                 const newSp: SP = @ptrCast(address);
                 newSp.traceStack("returnSelf after", context, extra);
@@ -268,7 +267,7 @@ pub const threadedFunctions = struct {
             return @call(tailCall, process.branchCheck(callerContext.getNPc()), .{ callerContext.getTPc(), newSp, process, callerContext, Extra.fromContextData(callerContext.contextData) });
         }
         test {
-            if (true) return error.NotImplemented;
+            if (true) return config.skipForDebugging;
             var exe = Execution.initTest("returnSelf", .{
                 tf.pushLiteral,
                 91,
@@ -301,7 +300,7 @@ pub const threadedFunctions = struct {
             return @call(tailCall, process.branchCheck(callerContext.npc), .{ callerContext.tpc, newSp, process, callerContext, Extra.fromContextData(callerContext.contextDataPtr(sp)) });
         }
         test {
-            if (true) return error.NotImplemented;
+            if (true) return config.skipForDebugging;
             var exe = Execution.initTest("returnTopNoContext", .{
                 tf.pushLiteral,
                 91,
@@ -323,8 +322,7 @@ pub const threadedFunctions = struct {
             @panic("unreachable");
         }
     };
-    inline
-    fn getMethod(pc: PC, signature: Signature, receiver: Object) *const CompiledMethod {
+    inline fn getMethod(pc: PC, signature: Signature, receiver: Object) *const CompiledMethod {
         const class = receiver.get_class();
         const requiredSignature = signature.withClass(class);
         // std.debug.print("getMethod: {} {f} {f} {f}\n", .{ class, signature, receiver, requiredSignature });
@@ -352,7 +350,8 @@ pub const threadedFunctions = struct {
                 const newSp = new.sp;
                 const newContext = new.context;
                 newContext.setReturn(pc.next2());
-                return @call(tailCall, newPc.prim(), .{ newPc.next(), newSp, process, newContext, Extra.forMethod(method, newSp.unreserve(numArgs)) });
+                return @call(tailCall, newPc.prim(), // TODO should use executFn
+                .{ newPc.next(), newSp, process, newContext, Extra.forMethod(method, newSp.unreserve(numArgs)) });
             }
             context.setReturn(pc.next2());
             // method.dump();

@@ -4,7 +4,7 @@ I am the scanner used by the ASCompile compiler
 I accept Unicode and will treat many special characters as binary message name characters, and most letters in various scripts as unary or keyword message names.
 "
 Class {
-	#name : 'ASScanner',
+	#name : 'ZagSmalltalkScanner',
 	#superclass : 'Object',
 	#instVars : [
 		'aStream',
@@ -17,13 +17,13 @@ Class {
 }
 
 { #category : 'public api' }
-ASScanner class >> scan: aStringOrStream [
+ZagSmalltalkScanner class >> scan: aStringOrStream [
 
 	^ self new scanCode: aStringOrStream
 ]
 
 { #category : 'conversion' }
-ASScanner >> asArray [
+ZagSmalltalkScanner >> asArray [
 	^ Array streamContents: [: s |
 		[ self atEnd ] whileFalse: [
 			s << self next
@@ -32,22 +32,23 @@ ASScanner >> asArray [
 ]
 
 { #category : 'conversion' }
-ASScanner >> atEnd [
+ZagSmalltalkScanner >> atEnd [
 	^ self peek atEnd
 ]
 
 { #category : 'private' }
-ASScanner >> binaryIdentifier [ 
-	^ (String streamContents: [: s | | char |
-			[
-				s << aStream next.
-				char := aStream peek.
-				aStream atEnd not and: [ char isSpecial ]] whileTrue
-		]) asASIdentifier
+ZagSmalltalkScanner >> binaryIdentifier [
+
+	^ ASIdentifierToken with: (String streamContents: [ :s |
+			   | char |
+			   [
+				   s << aStream next.
+				   char := aStream peek.
+				   aStream atEnd not and: [ char isSpecial ] ] whileTrue ])
 ]
 
 { #category : 'private' }
-ASScanner >> comment [
+ZagSmalltalkScanner >> comment [
 
 	aStream next.
 	^ (String streamContents: [ :s |
@@ -61,12 +62,13 @@ ASScanner >> comment [
 ]
 
 { #category : 'private' }
-ASScanner >> identifier [
-	^ self identifierString asASIdentifier
+ZagSmalltalkScanner >> identifier [
+
+	^ ASIdentifierToken with: self identifierString
 ]
 
 { #category : 'private' }
-ASScanner >> identifierString [
+ZagSmalltalkScanner >> identifierString [
 	^ (String streamContents: [: s | | char prevWasColon |
 			prevWasColon := false.
 			[
@@ -80,20 +82,20 @@ ASScanner >> identifierString [
 ]
 
 { #category : 'initialization' }
-ASScanner >> initialize [
+ZagSmalltalkScanner >> initialize [
 
 	super initialize.
 	separator := ''
 ]
 
 { #category : 'private' }
-ASScanner >> next [
+ZagSmalltalkScanner >> next [
 	^ self peek ifNotNil: [: t | peek := nil. t ].
 
 ]
 
 { #category : 'private' }
-ASScanner >> number [ 
+ZagSmalltalkScanner >> number [ 
 	^ (String streamContents: [: s |
 			[
 				s << aStream next.
@@ -103,14 +105,14 @@ ASScanner >> number [
 ]
 
 { #category : 'scanning' }
-ASScanner >> peek [
+ZagSmalltalkScanner >> peek [
 
 	peek ifNotNil: [ ^ peek ].
 	^ peek := self token
 ]
 
 { #category : 'private' }
-ASScanner >> possibleSeparator [
+ZagSmalltalkScanner >> possibleSeparator [
 
 	| whitespace |
 	whitespace := ''.
@@ -133,18 +135,18 @@ ASScanner >> possibleSeparator [
 ]
 
 { #category : 'scanning' }
-ASScanner >> scanCode: aStringOrStream [
+ZagSmalltalkScanner >> scanCode: aStringOrStream [
 	aStream := aStringOrStream readStream.
 
 ]
 
 { #category : 'accessing' }
-ASScanner >> separator [
+ZagSmalltalkScanner >> separator [
 	^ separator
 ]
 
 { #category : 'private' }
-ASScanner >> string [
+ZagSmalltalkScanner >> string [
 	aStream next.
 	^ (String streamContents: [: s | | char |
 			[
@@ -156,28 +158,28 @@ ASScanner >> string [
 ]
 
 { #category : 'private' }
-ASScanner >> symbol [
+ZagSmalltalkScanner >> symbol [
 
 	| char |
 	aStream next.
 	char := aStream peek.
-	char isLetter ifTrue: [ ^ self identifierString asASSymbol ].
+	char isLetter ifTrue: [ ^ ASSymbol with: self identifierString ].
 	char = $( ifTrue: [
 			aStream next.
-			^ '#(' asASSyntax ].
-	char = $' ifTrue: [ ^ self string value asASSymbol ].
-	char = $_ ifTrue: [ ^ self identifierString asASSymbol ].
+			^ ASSyntax with: '#(' ].
+	char = $' ifTrue: [ ^ ASSymbol with: self string value ].
+	char = $_ ifTrue: [ ^ ASSymbol with: self identifierString ].
 	^ self error: 'invalid symbol'
 ]
 
 { #category : 'private' }
-ASScanner >> token [
+ZagSmalltalkScanner >> token [
 
 	| char |
 	self possibleSeparator.
 	aStream atEnd ifTrue: [ ^ ASEnd new ].
 	char := aStream peek.
-	('^.[]{}();' includes: char) ifTrue: [ ^ aStream next asASSyntax ].
+	('^.[]{}();' includes: char) ifTrue: [ ^ ASSyntax with: aStream next asString ].
 	char isLetter ifTrue: [ ^ self identifier ].
 	char isDigit ifTrue: [ ^ self number ].
 	char = $# ifTrue: [ ^ self symbol ].
@@ -185,8 +187,8 @@ ASScanner >> token [
 	char = $: ifTrue: [
 			aStream next.
 			('=>' includes: aStream peek)
-				ifTrue: [ ^ (':' , aStream next asString) asASSyntax ]
-				ifFalse: [ ^ $: asASSyntax ] ].
+				ifTrue: [ ^ ASSyntax with: ':' , aStream next asString ]
+				ifFalse: [ ^ ASSyntax with: ':' ] ].
 	char isSpecial ifTrue: [ ^ self binaryIdentifier ].
 	char = $_ ifTrue: [ ^ self identifier ].
 	^ self error: 'Illegal character:' , char asString

@@ -1,5 +1,5 @@
 "
-I represent an assignment expression. This stores the value of an expression in a variable (local, inherited local, instance, class, shared).
+I represent an assignment expression. This stores the value of an expression in a variable (local, parameters, inherited local/parameters, , instance, class, shared).
 "
 Class {
 	#name : 'ASAssign',
@@ -58,16 +58,6 @@ ASAssign >> isASAssign [
 { #category : 'comparing' }
 ASAssign >> maxDepth [
 	^expression maxDepth
-]
-
-{ #category : 'printing' }
-ASAssign >> printOn: s [
-
-	s << self className << ' variable: '.
-	variable printOn: s.
-	s << ' expression: ('.
-	expression printOn: s.
-	s << ')'
 ]
 
 { #category : 'compiling' }

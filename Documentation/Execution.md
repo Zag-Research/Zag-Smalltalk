@@ -3,15 +3,15 @@
 This system uses a dual execution model.  For each method, there is a threaded implementation and possibly a native implementation. There is no classical "interpreter". The closest is the threaded implementation.
 
 ### Semantic Interpreter
-There *is* an interpreter that runs in Smalltalk as part of the Zag-Core-Test package. It allow execution of method sends in the compiled code to verify that the Zag code executes the same as the host Smalltalk system (Pharo, Cuis, etc.). It is slow, and is not a complete implementation. In particular it uses host arrays to emulate objects, and doesn't do real memory allocation or garbage collection, but it does dispatch, on-demand compilation, program counter, stack, contexts, and closures in an analogous manner.
+There *is* an interpreter that runs in Smalltalk as part of the Zag-Core-Test package. It allows execution of method sends in the compiled code to verify that the Zag code executes the same as the host Smalltalk system (Pharo, Cuis, etc.). It is slow, and is not a complete implementation. In particular it uses host arrays to emulate objects, and doesn't do real memory allocation or garbage collection, but it does dispatch, on-demand compilation, program counter, stack, contexts, and closures in an analogous manner.
 ##### Execution details currently having their semantics clarified
-- restructure operation for branch-returns and inlined methods
+- restructure operation for branch-returns and inlined methods #todo
 
 ### Threaded Method Implementation
 The threaded implementation is a sequence of addresses of functions implementing embedded primitives  and control operations. Every `CompiledMethod` has a threaded implementation. One of the "registers" that is passed through the thread is a flag indicating whether the current thread needs to check for interruptions. Every threaded operation checks this flag before passing control along to the next function. This allows the threaded implementation to single step through the method. Control is passed using an indirect tail-call.
 
 ### Native Method Implementation
-The native implementation is a sequence of functions implementing everything between actual message sends. After inlining, this can be a significant amount of code. Each function passes control to the next code via a tail-call, passing the same registers as the threaded implementation. This means that native code implements continuation-passing style, and no native activation records are created. One of the registers that is passed is the program counter... that is, the next threaded code to be executed. Because one native function can implement several threaded equivalents, these may be non-sequential.
+The native implementation is a sequence of functions implementing everything between actual message sends. After inlining, this can be a significant amount of code. Each function passes control to the next code via a tail-call, passing the same registers as the threaded implementation. This means that native code implements continuation-passing style, and no native activation records are created. One of the registers that is passed is the program counter... that is, the next threaded code to be executed. Because one native function can implement several threaded equivalents, these may be non-sequential, but whenever control leaves a native function (such as for a send or a branch to another basic block) these will be calculated to be correct so that, if necessary, we can switch to debugging/single-stepping.
 
 ### Common features
 All functions that are part of the normal execution flow (threaded words, primitives, jitted native code) have a common signature. As an example, here is the code for the threaded word `drop` which discards the object on top of the stack:
@@ -40,7 +40,7 @@ The parameters (presumably all in registers on modern architectures) are:
 | process   | pointer to the current process            |
 | context   | pointer to the current/caller context     |
 | extra     | multi-purpose value                       |
-The result type is mostly irrelevant, because none of these functions ever return; they always exit via a tail-call. Usually this is to the next threaded word unless the current threaded word is a return or a call/send. When going to the next threaded word, we also need to bump the `pc` past that address. Note that in the example, the `sp` parameter that we pass is the `newSp` value because we just pushed something onto the stack. The `process.check` is an inline function that checks if we are in single-step mode, otherwise continuing to the next word. The `extra` parameter has several uses, but the primary one is indicating if the `context` refers to our context or the caller's context.
+The result type is mostly irrelevant, because none of these functions ever return; they always exit via a tail-call. Usually this is to the next threaded word unless the current threaded word is a return or a call/send. When going to the next threaded word, we also need to bump the `pc` past that address. Note that in the example, the `sp` parameter that we pass is the `newSp` value because we just removed something from the stack. The `process.check` is an inline function that checks if we are in single-step mode, otherwise continuing to the next word. The `extra` parameter has several uses, but the primary one is indicating if the `context` refers to our context or the caller's context.
 
 ### Threaded Functions
 
@@ -53,7 +53,7 @@ There are several reasons for this decision, but the primary reasons are that: a
 
 `self`, parameters, and locals are initially on the stack, and are accessed via offsets from `sp`. This means in a method that doesn't create a `Context` all references to these values will use stack offsets. Even in a method that does push a `Context`, there may be access to these values before the `Context` is created that will use stack offsets.
 
-A `Context` must be created if a method sends any messages or calls any methods or if a block closure is created that either does a non-local return or references a shared local.
+A `Context` must be created if a method sends any messages or calls any methods or if a block closure is created that either does a non-local return or references a shared local. Currently ia `Context` is also created if any locals are assigned to.
 
 Once a `Context` has been created, `self`, parameters, and locals (and the caller's stack) are encapsulated in the `Context` (or, more accurately, `ContextData`) and must be accessed via the `Context`.
 
@@ -159,7 +159,7 @@ and would translate to the threaded code:
  PIC
  tf.returnSelf
 ```
-Just after the `createContext`, the stack would look like:
+Currently (because of #autoContext) the `pushContext` isn't required because all the operations that might require a `Context` create one on the fly if one doesn't already exist (this should eventually change because this creates several extra instructions that have to be executed to check, and the compiler could figure this out). Just after the `pushContext`, the stack would look like:
 
 | Stack               | Comment                         |
 | ------------------- | ------------------------------- |
@@ -203,7 +203,7 @@ A method will only create a Context if `thisContext` is referenced, or if a non-
 Non-local return does a return from the target (creating) Context, making all the intervening Contexts inaccessible (and hence garbage unless they were otherwise captured). In most cases this is within a couple of instructions of as efficient as a normal return.
 The complication is if there is an `on:do:` or an `ensure:` between the target Context and the current Context. If all the Contexts were on a stack, this could be checked with a simple range check. However Contexts can migrate to the heap, at which point there is no longer any guaranteed ordering of addresses. The solution is that every time a trapping context is created, a thread-local counter is incremented. The good news is that if the target and current trap-context number is equal, all further checking is avoided. If the trap-context number is different for the target and current Contexts then a trapping context has been created between them. That context may no longer be active, but a more expensive check will have to be performed. The first check is if the top trapping context on the queue has a trap-context smaller than the target, in which case it is not a problem for this non-local return. in this case, any intervening `on:do:` contexts need to be removed from the queue, and the first intervening `ensure:` context needs to be returned to.
 
-### ???
+### Relationship of threaded to native code on call/return
 When sending a message, the current `Context` will be updated with the return PC, and the address of the CPS next function. When that method returns to the CPS next function, we will continue in native execution mode. In threaded mode, it will point to the next threaded function. If we need to switch execution to threaded mode (for debugging or single-stepping), we simply replace the return CPS address with the address of the next threaded function.
 
 When we dispatch to a method, we execute the `executeFn` function, with the `pc` parameter set to the address of the second word of the threaded implementation and the `extra` parameter set to the address of the method and the low bits of the address of `self`. There are several cases of what `executeFn` could point to:
@@ -223,16 +223,16 @@ send/tailSend/tailSendContext
 selector
 initialDispatch
 ```
-- The `send` looks at the arity of the selector, gets the class from the appropriate object on the stack (offset by the arity) and combines the class and the selector to create a `Signature`. (There are also unary, binary, and ternary versions that can load the receiver at a fixed offset on the stack without having to wait for the selector to load to get the arity.)
+- The `send` looks at the arity of the selector, gets the class from the appropriate object on the stack (offset by the arity) and combines the class and the selector to create a target `Signature`. (There are also unary, binary, and ternary versions that can load the receiver at a fixed offset on the stack without having to wait for the selector to load to get the arity.)
 - For `send`, but not `tailSend` or `tailSendContext`, save the return `tpc` and `npc`.
-- then load the next word, which will be a `CompiledMethod` and and compares its signature with the current one.
+- then load the next word, which will be a `CompiledMethod` and and compares its signature with the target one.
 	1. if they match, it's the monomorphic case, so this is the correct `CompiledMethod`
 	2. otherwise if the `CompiledMethod` has a zero signature, then it is the initialDispatch, so we need to look up the `Compiled Method` for this signature and replace the `initialDispatch` reference with the address of the found `CompiledMethod`. The next time this send is executed, we will match that method, which handles the monomorphic case. Note that this replacement doesn't have to be multi-processor safe (even though, theoretically, another process could be executing this send at the same time with a different object as receiver), because any match we find is valid.
 	3. otherwise this is a polymorphic send, so look up the `CompiledMethod` for the current signature
 		- other implementations would use a PIC in this case with a list of possible alternate methods
 		- our lookup is so fast that's what we simply do. This requires 2 memory accesses more than accessing a PIC would, but is actually faster if the PIC would have more than 2 or 3 entries
 		- one possible variant would be to always replace the pointer with the discovered `CompiledMethod` (like in case 2) so that methods that have phases would perform better (and case 2 and 3 would become the same), however this would do cache invalidations on every change, which might not be advantageous
-- transfer to the `executeFn` for the method with the `extra` parameter set to the `CompiledMethod` pointer, and the `pc` set to the second `Code` word.
+	4. transfer to the `executeFn` for the method with the `extra` parameter set to the `CompiledMethod` pointer, and the `pc` set to the second `Code` word.
 #### Possible enhancement
 The pointer to the `CompiledMethod` is preceded by the address of the execute function. So we jump directly to the execute function and all the testing happens in the function. This way, the JITted case could be reduced to 1 memory access, plus use of immediate values - which may or may not be faster. The threaded case would remain at 3.
 
@@ -263,13 +263,13 @@ The signature is an augmented [[Symbol]] that has the class number in the top 24
 
 Each `Dispatch` object has an array of pointers to `CompiledMethod`s.
 
-We then calculate a 'random' offset into the array. That is calculated as follows. The low 32 bits of the signature are the 24-bit hashed index of the symbol number and the 8-bit tag for `Symbol`. Because of the way this hash is created, this can be considered a fairly uniformly distributed number between 0 and 2^32 which means that dividing it by 2^32 will give a number between 0 and 1. If we multiply that by the number of elements in the array, we end up with a number between 0 and the size of the array-1. So if we label the hash as h and the size of the array as n. we have `h/2^32*n` which we can reorder as `h*n/2^32` and we can do that division via a shift. So we take the low 32 bits, do a 64-bit multiplication by the size of the array and shift right 32 bits, ending up with the equivalent of a mod operation (an integer between 0 and the size of the array-1) using only a multiply and a shift - significantly faster than a `mod` operation.
+We then calculate a 'random' offset into the array. That is calculated as follows. The low 32 bits of the signature are the 24-bit hashed index of the symbol number and the 8-bit tag for `Symbol`. Because of the way this hash is created, this can be considered a fairly uniformly distributed number between 0 and 2^32 which means that dividing it by 2^32 will give a number between 0 and 1. If we multiply that by the number of elements in the array, we end up with a number between 0 and the size of the array-1. So if we label the hash as h and the size of the array as n. we have `h/2^32*n` which we can reorder as `h*n/2^32` and we can do that division via a shift. So we take the low 32 bits, do a 64-bit multiplication by the size of the array and shift right 32 bits, ending up with the equivalent of a mod operation (an integer between 0 and the size of the array-1) using only a multiply and a shift - significantly faster than a hardware `mod` operation.
 
-Starting from that position we check each object as either a `nil` or a `CompiledMethod`. If it is a `CompiledMethod` we compare its signature for a match with the signature we are looking for. If we find a match, we execute the referenced method. If not, we look at the next one, etc. If the object is `nil`, the method isn't in the table. We look at up to 7 objects. If we don't find either a `nil` or a matching method, we will create a larger table where all objects are matched within 7 objects of the starting position. This number 7 is somewhat arbitrarily chosen to be the same as the PIC object size.
+Starting from that position we check each object as either a dummy method or a `CompiledMethod`. We compare its signature for a match with the signature we are looking for. If we find a match, we execute the referenced method. If not, we look at the next one, etc. If the object is the dummy method, the method isn't in the table. We look at up to 7 objects. If we don't find either a `nil` or a matching method, we will create a larger table where all objects are matched within 7 objects of the starting position. This number 7 is somewhat arbitrarily chosen and should be #tuned.
 
 If there is no match, then there is no `CompiledMethod` for that selector, so we need to install one. To do this we lock the `Dispatch` object (in case another process is trying to add to this `Dispatch`) and then either install a place-holder if we found a gap, or create a replacement `Dispatch` object with a larger array and then install the place-holder.
 
-The place-holder method will block if another process is compiling the target signature, or call Smalltalk code to find and compile the method (or a `DoesNotUnderstand` if there isn't one) and install it in the `Dispatch` table.  Then it will dispatch to the target `CompiledMethod`.
+The place-holder method will block if another process is compiling the target signature, or call Smalltalk code to find and compile the method (or a `DoesNotUnderstand` if there isn't one) and install it in the `Dispatch` table.  Then it will dispatch to the target `CompiledMethod`. At the possible risk of a wasted compilation, we don't lokc the dispatch table while compiling, so once done we may find that somebody else already compiled and installed the method, in which case we discard the method we just created and use the one already in the table
 
 ## Method dispatch
 One of the defining aspects of object-oriented programming is that methods are customized to the object (or class). This requires dispatching to various code, dependent on the class of the object^[This is for class-based OOP like Smalltalk, Java, C++, Python, Ruby, etc.; for the much less common prototype-based OOP like Javascript or Self, there is still dispatch, but based on the object, not its class.]. Since this happens so frequently, optimizing the message dispatch is critical to performance.
@@ -306,21 +306,21 @@ Even if we somehow knew the class of the object, the tables would still be exces
 #### Our approach
 We lazily build a single dispatch table for each class, which includes not just the methods of the class, but also all the inherited methods that have been invoked.
 
-| Dispatch table entry for a class |                        |
-| -------------------------------- | ---------------------- |
-| Hash multiplier                  | a u32                  |
-| method pointers                  | an array of pointers to threads |
+| Dispatch table entry for a class |                                           |
+| -------------------------------- | ----------------------------------------- |
+| Hash multiplier                  | a u32                                     |
+| method pointers                  | an array of pointers to `CompiledMethod`s |
 
 The sequence to look up a method is:
 1. use the selector hash (symbol id (prehashed by multiplying by 24 bit inverse Phi) and arity - 32 bits)
 2. convert to a u64 and then multiply by the hash multiplier
-3. shift right 32 bits(the multiply and shift replace a modulo)
+3. shift right 32 bits (the multiply and shift replace a modulo)
 4. use that as the index into the array
 5. start searching at that point (an earlier approach jumped directly to the method
 
 This dispatch is near-optimal. The method will check that the selector matches, else call DNU
 
-The tables are built and sized for low conflict for prime-sized tables, so there will be very few conflicts, but where there are conflicts the method pointer will point to a second-level lookup, so there is no check - just the jump.
+The tables are built and sized for low conflict for prime-sized tables, so there will be very few conflicts.
 
 The methods listed are from anywhere in the hierarchy, but only methods that have actually been sent to any instance of this class. Super methods will never appear, because they will all be inlined or called directly (without dispatch).
 

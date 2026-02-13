@@ -17,7 +17,7 @@ ASCCompilableUnitBlock >> blockClosureClass [
 	^ self subclassResponsibility
 ]
 
-{ #category : 'API' }
+{ #category : 'accessing' }
 ASCCompilableUnitBlock >> locals: locals parameters: arguments [
 
 	^ self subclassResponsibility

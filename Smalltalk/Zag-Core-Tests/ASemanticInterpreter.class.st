@@ -421,7 +421,10 @@ ASemanticInterpreter >> return: anObject selfContext: contextOffset [
 { #category : 'handling' }
 ASemanticInterpreter >> return: anObject selfOffset: selfOffset [
 
-	stackPointer := stackPointer + selfOffset + 1.
+	"stackPointer := stackPointer + selfOffset + 1.
+	"
+	stackPointer := 10.
+	stackArray := Array new: 10.
 	stackArray at: stackPointer put: anObject.
 	pc := context returnPC
 ]

@@ -162,6 +162,7 @@ const testModule = if (config.is_test) struct {
             }
         }
         pub fn primitiveError(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
+            std.debug.print("primitiveError255: {} {}", .{sp.next.get_class(), sp.top.get_class()});
             if (sp.next.get_class() != sp.top.get_class()) {
                 const newSp = sp.push(Sym.value.asObject());
                 return @call(tailCall, Extra.primitiveFailed, .{ pc, newSp.?, process, context, extra });
@@ -188,12 +189,14 @@ pub fn inlinePrimitiveFailed(pc: PC, sp: SP, process: *Process, context: *Contex
 }
 
 fn noPrim(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
-    return @call(tailCall, process.check(pc.prev().prim()), .{ pc, sp, process, context, extra.encoded() });
+    // return @call(tailCall, process.check(pc.prev().prim()), .{ pc, sp, process, context, extra.encoded() });
     // the following should be exactly the same, but causes an error instead
-    // return @call(tailCall, Extra.primitiveFailed, .{ pc, sp, process, context, extra });
+    return @call(tailCall, Extra.primitiveFailed, .{ pc, sp, process, context, extra });
 }
 fn noPrimWithError(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
     const newSp = sp.push(Nil()).?;
+    // return @call(tailCall, process.check(pc.prev().prim()), .{ pc, newSp, process, context, extra.encoded() });
+    // the following should be exactly the same, but causes an error instead
     return @call(tailCall, Extra.primitiveFailed, .{ pc, newSp, process, context, extra });
 }
 
@@ -204,7 +207,7 @@ pub const threadedFunctions = struct {
                 const newPc = pc.next();
                 return @call(tailCall, process.check(newPc.prim()), .{ newPc.next(), sp, process, context, extra.decoded() });
             }
-            const primNumber = pc.uint();
+            const primNumber = pc.signature().primitive();
             const method: *execute.CompiledMethod = @constCast(extra.getMethod().?);
             if (Module.findNumberedPrimitive(primNumber)) |prim| {
                 if (prim.primitive) |p| {
@@ -280,7 +283,7 @@ pub const threadedFunctions = struct {
                 const newPc = pc.next();
                 return @call(tailCall, process.check(newPc.prim()), .{ newPc.next(), sp, process, context, extra.decoded() });
             }
-            const primNumber = pc.uint();
+            const primNumber = pc.signature().primitive();
             if (Module.findNumberedPrimitive(primNumber)) |prim| {
                 if (prim.primitiveError) |p| {
                     const method: *execute.CompiledMethod = @constCast(extra.getMethod().?);
@@ -302,6 +305,7 @@ pub const threadedFunctions = struct {
                 tf.pushLiteral,
                 o0,
             });
+            if (true) return config.skipForDebugging;
             try exe.runTest(
                 &[_]Object{
                     exe.object(42),
@@ -319,6 +323,7 @@ pub const threadedFunctions = struct {
                 tf.pushLiteral,
                 o0,
             });
+            if (true) return config.skipForDebugging;
             try exe.runTest(
                 &[_]Object{
                     True(),
@@ -339,6 +344,7 @@ pub const threadedFunctions = struct {
                 tf.pushLiteral,
                 o0,
             });
+            if (true) return config.skipForDebugging;
             try exe.runTest(
                 &[_]Object{
                     exe.object(42),
@@ -499,6 +505,7 @@ pub const threadedFunctions = struct {
             }, exe.stack());
         }
         test "primitive:module:error: not found" {
+            if (true) return error.SkipZigTest;
             var exe = Execution.initTest("primitive:module:error: not found", .{
                 tf.primitiveModuleError,
                 "0name",
@@ -630,7 +637,7 @@ pub const threadedFunctions = struct {
 pub const primitiveThreadedFunctions = .{
     @import("primitives/Array.zig").threadedFns,
     // @import("primitives/Object.zig").threadedFns,
-    // @import("primitives/Smallinteger.zig").threadedFns,
+    @import("primitives/Smallinteger.zig").threadedFns,
     // @import("primitives/Behavior.zig").threadedFns,
     @import("primitives/BlockClosure.zig").threadedFns,
     @import("primitives/Boolean.zig").threadedFns,

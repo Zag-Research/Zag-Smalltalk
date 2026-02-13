@@ -39,16 +39,6 @@ ASArray >> fillFrom: aCollection with: aBlock [
 		self at: (index := index + 1) put: (aBlock value: each) ]
 ]
 
-{ #category : 'printing' }
-ASArray >> printOn: s [
-
-	s << self class name << ' {'.
-	self
-		do: [ :statement | statement printOn: s ]
-		separatedBy: [ s << ' . ' ].
-	s << '}'
-]
-
 { #category : 'compiling' }
 ASArray >> zigWalk: aGenerator [
 

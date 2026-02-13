@@ -7,7 +7,9 @@ Class {
 	#instVars : [
 		'selector',
 		'pragmas',
-		'methodClass'
+		'methodClass',
+		'preComment',
+		'postComment'
 	],
 	#category : 'Zag-Core-AST',
 	#package : 'Zag-Core',
@@ -55,6 +57,12 @@ ASMethodNode >> = other [
 				  self className = other className ] ]
 ]
 
+{ #category : 'visiting' }
+ASMethodNode >> accept: aVisitor [
+
+	^ aVisitor visitMethod: self
+]
+
 { #category : 'accessing' }
 ASMethodNode >> children [
 
@@ -85,8 +93,13 @@ ASMethodNode >> hash [
 
 { #category : 'initialization' }
 ASMethodNode >> initialize [
-	super initialize .
-	pragmas := OrderedCollection new
+
+	super initialize.
+	pragmas := OrderedCollection new.
+	preComment := ''.
+	postComment := '
+
+'
 ]
 
 { #category : 'accessing' }
@@ -123,6 +136,12 @@ ASMethodNode >> methodClass: aClass [
 	methodClass := aClass
 ]
 
+{ #category : 'as yet unclassified' }
+ASMethodNode >> postComment [
+
+	^ postComment
+]
+
 { #category : 'accessing' }
 ASMethodNode >> pragmas [
 	^ pragmas 
@@ -133,14 +152,10 @@ ASMethodNode >> pragmas: somePragmas [
 	pragmas := somePragmas 
 ]
 
-{ #category : 'printing' }
-ASMethodNode >> printOn: s [
+{ #category : 'as yet unclassified' }
+ASMethodNode >> preComment [
 
-	s
-		nextPutAll: self class name;
-		nextPutAll: ' selector: ';
-		print: selector.
-	super printOn: s
+	^ preComment
 ]
 
 { #category : 'accessing' }

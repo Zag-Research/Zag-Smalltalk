@@ -4,7 +4,7 @@ I represent a block of code.
 "
 Class {
 	#name : 'ASCodeBlock',
-	#superclass : 'Object',
+	#superclass : 'AST',
 	#instVars : [
 		'body',
 		'locals',
@@ -77,7 +77,7 @@ ASCodeBlock >> initialize [
 
 	super initialize.
 	locals := #(  ).
-	body := ASSequence new.
+	body := #( ).
 	arguments := #(  ).
 	scope := OrderedCollection new
 ]
@@ -127,22 +127,6 @@ ASCodeBlock >> locals: aCollection [
 ASCodeBlock >> nestedScopeOf: anASClassNode [ 
 
 	enclosingScope := anASClassNode
-]
-
-{ #category : 'printing' }
-ASCodeBlock >> printOn: s [
-
-	arguments isEmpty ifFalse: [
-		s << ' arguments: #('.
-		arguments do: [ :arg | s << arg ] separatedBy: [ s << ' ' ].
-		s << ')' ].
-	locals isEmpty ifFalse: [
-		s << ' locals: #('.
-		locals do: [ :local | s << local ] separatedBy: [ s << ' ' ].
-		s << ')' ].
-	s << ' body: {'.
-	body printOn: s.
-	s << '}'
 ]
 
 { #category : 'accessing' }

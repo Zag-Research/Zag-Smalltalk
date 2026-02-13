@@ -1,11 +1,6 @@
 Extension { #name : 'SmallInteger' }
 
 { #category : '*Zag-Core' }
-SmallInteger >> asZagLiteral [
-	^ 'Object.from(', self asString, ')'
-]
-
-{ #category : '*Zag-Core' }
 SmallInteger >> asZigLiteral [
 
 	^ 'Object.from(' , self asString , ')'

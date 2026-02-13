@@ -1,5 +1,40 @@
 #!/bin/sh
-for encoding in onlyInt onlyFloat taggedInt nan zag zagAlt spur ptr
+Commit=false
+Log=true
+Host=`hostname|sed 's/\..*//'`
+cd ~/git/Zag-Smalltalk/zig/experiments
+case "$1" in
+    -log) Log=true;;
+    -git)
+        # Fetch the latest remote-tracking branches
+        git fetch
+
+        # Count commits where local HEAD is behind origin/main
+        COMMITS_BEHIND=`git rev-list --count HEAD..origin/main`
+        case "$COMMITS_BEHIND" in
+            0) exit 0;;
+        esac
+        Commit=true
+        Log=true;;
+    *) Log=false;;
+esac
+Now=`date -u +%Y-%m-%d_%H-%M-%S`
+for encoding in nan #zag #onlyInt onlyFloat taggedInt zagAlt spur ptr
 do
-    zig build -Dencoding=$encoding -Doptimize=ReleaseFast && ./zig-out/bin/fib
+    zig build -Dencoding=$encoding -Doptimize=ReleaseFast
+    for benchFile in bench.*
+    do
+        bench=`expr "$benchFile" : 'bench\.\(.*\)'`
+        if $Log; then
+            mkdir -p $Host/$encoding/$bench
+            ./$benchFile >$Host/$encoding/$bench/$Now.log 2>&1
+        else
+            ./$benchFile
+        fi
+    done
 done
+if $Commit; then
+    git add $Host
+    git commit -m "Experiment results for $Now for $Host"
+    git push
+fi

@@ -3,7 +3,7 @@ I represent an instance or `self`/parameter/local variable referenced from withi
 "
 Class {
 	#name : 'ASEnclosedVariable',
-	#superclass : 'ASVariable',
+	#superclass : 'ASStackVariable',
 	#category : 'Zag-Core-Stack',
 	#package : 'Zag-Core',
 	#tag : 'Stack'

@@ -1,5 +1,10 @@
 "
 I represent an expression that is a message send.
+
+My arguments are:
+- the target object that the message is being sent to (subtree)
+- the selector of the message being sent, as a symbol
+- the arguments passed to this message, besides the target.
 "
 Class {
 	#name : 'ASSend',
@@ -82,20 +87,6 @@ ASSend >> isASSend [
 { #category : 'parsing' }
 ASSend >> maxDepth [
 	^selector numArgs
-]
-
-{ #category : 'printing' }
-ASSend >> printOn: s [
-	s << self className.
-	target ifNotNil: [ 
-		s << ' target: ('.
-		target printOn: s.
-		s << ')' ].
-	s << ' selector: '.
-	selector printOn: s.
-	s << ' args: {'.
-	args do: [ :arg | arg printOn: s ] separatedBy: [ s << ' . ' ].
-	s << '}'
 ]
 
 { #category : 'parsing' }

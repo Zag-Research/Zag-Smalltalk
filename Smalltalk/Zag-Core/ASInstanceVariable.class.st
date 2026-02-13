@@ -5,7 +5,7 @@ I am access as a field in the object pointed to by `self`
 "
 Class {
 	#name : 'ASInstanceVariable',
-	#superclass : 'ASVariable',
+	#superclass : 'ASStackVariable',
 	#category : 'Zag-Core-Stack',
 	#package : 'Zag-Core',
 	#tag : 'Stack'

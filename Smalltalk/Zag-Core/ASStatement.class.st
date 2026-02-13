@@ -3,7 +3,7 @@ I have subclasses for all the statments that can exist in the body of a method o
 "
 Class {
 	#name : 'ASStatement',
-	#superclass : 'Object',
+	#superclass : 'AST',
 	#classInstVars : [
 		'index'
 	],
@@ -116,6 +116,7 @@ ASStatement >> newInlineMethodBlock: anInlineMethodBlock [
 
 { #category : 'compiling' }
 ASStatement >> zigWalk: aGenerator [
+	"Walks through my subtree, according to which element I am.  The argument should be an ASCodeGenerator."
 
 	self subclassResponsibility 
 ]

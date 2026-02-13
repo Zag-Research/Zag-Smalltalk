@@ -40,16 +40,6 @@ ASCascade >> maxDepth [
 	^sends ifEmpty: [ 0 ] ifNotEmpty:  [sends max: [ :send |  send maxDepth ]]
 ]
 
-{ #category : 'printing' }
-ASCascade >> printOn: s [
-
-	s << self className << ' target: ('.
-	target printOn: s.
-	s << ') sends: {'.
-	sends do: [ :send | send printOn: s ] separatedBy: [ s << '.' ].
-	s << '}'
-]
-
 { #category : 'parsing' }
 ASCascade >> sends [
 

@@ -1,10 +1,16 @@
 Class {
 	#name : 'ASSpecial',
-	#superclass : 'ASIdentifier',
+	#superclass : 'ASIdentifierToken',
 	#category : 'Zag-Compiler-Tokens',
 	#package : 'Zag-Compiler',
 	#tag : 'Tokens'
 }
+
+{ #category : 'instance creation' }
+ASSpecial class >> with: anObject [
+
+	^ self new value: anObject
+]
 
 { #category : 'testing' }
 ASSpecial >> isSpecial [

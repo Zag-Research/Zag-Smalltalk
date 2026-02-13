@@ -4,5 +4,5 @@ Extension { #name : 'ASCReturnTop' }
 ASCReturnTop >> interpretFor: anInterpreter [
 	^ anInterpreter
 		  return: anInterpreter top
-		  selfOffset: stack offset - stackElement offset
+		  selfOffset: stack offset + stackElement offset
 ]

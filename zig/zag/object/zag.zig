@@ -138,6 +138,12 @@ pub const Object = packed struct(u64) {
         if (self.isImmediateDouble()) return self.toDoubleNoCheck();
         return self.toDoubleFromMemory();
     }
+    pub inline fn asUntaggedI(t: i56) i64 {
+        return oImm(.none, @as(u56, @bitCast(t))).untaggedI().?;
+    }
+    pub inline fn fromNativeI(t: i56, _: anytype, _: anytype) Object {
+        return oImm(.SmallInteger, @as(u56, @bitCast(t)));
+    }
     pub inline fn fromNativeF(t: f64, sp: SP, context: *Context) object.Object {
         return @bitCast(encode(t) catch {
             return InMemory.float(t, sp, context);
@@ -214,8 +220,9 @@ pub const Object = packed struct(u64) {
     }
     pub inline fn isMemoryDouble(self: object.Object) bool {
         return if (self.ifHeapObject()) |ptr|
-                ptr.getClass() == .Float
-            else false;
+            ptr.getClass() == .Float
+        else
+            false;
     }
     inline fn oImm(c: ClassIndex.Compact, h: u56) Self {
         return Self{ .tag = .immediates, .class = c, .hash = h };
@@ -262,7 +269,8 @@ pub const Object = packed struct(u64) {
             obj.isImmediateClass(.ThunkReturnInstance) or
             obj.isImmediateClass(.ThunkReturnImmediate) or
             obj.isImmediateClass(.ThunkReturnCharacter) or
-            obj.isImmediateClass(.ThunkReturnFloat)) {
+            obj.isImmediateClass(.ThunkReturnFloat))
+        {
             return obj.extraU();
         }
         return null;
@@ -279,10 +287,7 @@ pub const Object = packed struct(u64) {
         const class = sig.getClass();
         _ = sp;
         return switch (class) {
-            .ThunkReturnObject,
-            .ThunkReturnLocal, .ThunkReturnInstance, .ThunkReturnImmediate,
-            .ThunkReturnCharacter, .ThunkReturnFloat =>
-                oImm(class.compact(), @intCast(@intFromPtr(context) << 8 | sig.primitive())),
+            .ThunkReturnObject, .ThunkReturnLocal, .ThunkReturnInstance, .ThunkReturnImmediate, .ThunkReturnCharacter, .ThunkReturnFloat => oImm(class.compact(), @intCast(@intFromPtr(context) << 8 | sig.primitive())),
             else => null,
         };
     }
@@ -310,7 +315,7 @@ pub const Object = packed struct(u64) {
         const T = @TypeOf(value);
         if (T == object.Object) return value;
         switch (@typeInfo(T)) {
-            .int, .comptime_int => return oImm(.SmallInteger, @as(u56, @bitCast(@as(i56, value)))),
+            .int, .comptime_int => return fromNativeI(value, null, null),
             .float, .comptime_float => return fromNativeF(value, sp, context),
             .bool => return if (value) object.Object.True() else object.Object.False(),
             .null => return object.Object.Nil(),
@@ -577,26 +582,16 @@ pub const Object = packed struct(u64) {
         return self.tag == .heap;
     }
     pub inline fn ifHeapObject(self: object.Object) ?*HeapObject {
-        if (self.tag == .heap) return @ptrFromInt(@as(u64,@bitCast(self)));
+        if (self.tag == .heap) return @ptrFromInt(@as(u64, @bitCast(self)));
         return null;
     }
     pub inline fn hasMemoryReference(self: Object) bool {
         return if (self.ifHeapObject()) |_|
-                true
-            else switch (self.class) {
-                .ThunkReturnLocal,
-                .ThunkReturnInstance,
-                .ThunkReturnObject,
-                .ThunkReturnImmediate,
-                .ThunkLocal,
-                .BlockAssignLocal,
-                .ThunkInstance,
-                .BlockAssignInstance,
-                .ThunkHeap,
-                .ThunkReturnCharacter,
-                .ThunkReturnFloat => true,
-                else => false, // catches the nil case
-            };
+            true
+        else switch (self.class) {
+            .ThunkReturnLocal, .ThunkReturnInstance, .ThunkReturnObject, .ThunkReturnImmediate, .ThunkLocal, .BlockAssignLocal, .ThunkInstance, .BlockAssignInstance, .ThunkHeap, .ThunkReturnCharacter, .ThunkReturnFloat => true,
+            else => false, // catches the nil case
+        };
     }
     const OF = object.ObjectFunctions;
     pub const arrayAsSlice = OF.arrayAsSlice;

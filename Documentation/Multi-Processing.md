@@ -6,6 +6,9 @@ There are several places in the runtime where values need to be updated in proce
 ## Execution Data Structures
 
 The complication comes when there are references to 2 adjacent values through normal references, where the hardware doesn't guarantee that a store from another processor didn't intervene (in fact, the operating system might have suspended this process between accesses). Here we have to make sure that we can detect that the second value isn't consistent with the first one and handle it appropriately.
+
+## The following isn't correct 
+- #todo clean up the statements about dispatch and sends
 #### Dispatch
 
 *Dispatch Tables* are arrays of *Dispatch Elements* (described below). There is a dispatch table for each class. Dispatch involves accessing the dispatch table for the particular class, indexing a dispatch element based on the hash of the selector (a `Symbol`), and jumping to the code referenced by that dispatch element. Normally that code is the method for that selector and class. However the indexing (selector hash modulo the (prime) size of the table) is not guaranteed to be conflict free, so if that might be the method for a different selector. The method will verify, and if it doesn't match, it will branch indirectly through the next Dispatch Element, then the next, etc. This implements a linear probing hash table with no wrap-around. Either we will get to the correct method, or will hit some form of DNU
@@ -33,6 +36,7 @@ The code address in the dispatch element is for either a `validateSelector` or a
 However, on that first call from a particular call site we know exactly which class the receiver belongs to, so we could go directly to that code, and all it would need to do is verify that the class of the sender is correct, and if so, execute the code for the method (after saving the return address in the calling context). This bypasses looking up in the dispatch table, and several memory stalls. It is quite frequent that a given call site always has the same target type (the cited number is 90% of call sites). So the `send` or `sendTail` word does a CAS to swap in the `validateClass` (or `validateClassForTail`) value and the address of the `CompiledMethod` object, expecting the previous value to be the `send` or `sendTail` followed by the selector. Regardless of the outcome of the CAS (either we were successful or again some other process must have swapped in something) it now has the code we should be executing, so we re-load and re-execute the word now there.
 
 If the `validateClass` (or `validateClassForTail`) finds the wrong class, or the second word is a symbol, then this is no longer a monomorphic call site, so we want to replace the 2 words at the call site with a `send0`, `send1`, etc. (or `send0Tail`, `send1Tail`, etc.) followed by the selector again (this is the symbol that the `vaidateClass` might have seen). These sends do the appropriate dispatch, and the call sire will no longer be changed.
+## The preceding is incorrect
 
 ## Dispatch Table swap
 As mentioned above, sometimes dispatch tables need to be replaced because of a selector conflict. This is a single word and is handled with a compare and swap. It is quite a rare event.

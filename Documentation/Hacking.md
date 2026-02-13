@@ -66,11 +66,17 @@ The file [`config.zig`](../zig/zag/config.zig) contains debugging parameters. Se
 
 You need to disable `debugging` for full valid program execution, because any real program will blow the stack with tail-call turned off.
 
-Many functions are `inline` for performance reasons. When debugging, this can obscure tracebacks, so it may be useful to remove the `inline`. When you do this, please add the string ` // INLINE` to the end of the line so it can be found easily later. So, for example:
+Many functions are `inline` for performance reasons. When debugging, this can obscure tracebacks, so it may be useful to remove the `inline`. When you do this, please comment the inline and break the line so it can be found easily later. So, for example:
 ```
-inline fn foo(self: *Self) void {
+pub inline fn foo(self: *Self) void {
 ```
 would become:
 ```
-fn foo(self: *Self) void { // INLINE
+pub // inline
+fn foo(self: *Self) void {
+```
+which can be reenabled (while minimizing diff noise in case you might want to go back) as:
+```
+pub inline //
+fn foo(self: *Self) void {
 ```

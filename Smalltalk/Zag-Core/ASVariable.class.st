@@ -1,12 +1,31 @@
 "
-I represent a variable that can be pushed and popped.
+I represent some kind of ""variable"" (even though some may be immutable).
 
-My subclasses represent the 4 different ways to access such variables.
+I am referenced by AST elements:
+ - `ASClassNode` for instance and class variables
+ - `ASCodeBlock` for locals and parameters
+ - `ASRef` to access (push) a variable
+ - `ASAssign` to store (pop) a value to a variable
 "
 Class {
 	#name : 'ASVariable',
-	#superclass : 'Collection',
-	#category : 'Zag-Core-Stack',
+	#superclass : 'Object',
+	#instVars : [
+		'id'
+	],
+	#category : 'Zag-Core-AST',
 	#package : 'Zag-Core',
-	#tag : 'Stack'
+	#tag : 'AST'
 }
+
+{ #category : 'accessing' }
+ASVariable >> id [
+
+	^ id 
+]
+
+{ #category : 'instance creation' }
+ASVariable >> with: aString [
+
+	id := aString
+]

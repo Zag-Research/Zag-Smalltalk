@@ -47,13 +47,6 @@ ASBlockNode >> pragmas [
 	^ #()
 ]
 
-{ #category : 'printing' }
-ASBlockNode >> printOn: s [
-
-	s << self className.
-	super printOn: s
-]
-
 { #category : 'compiling' }
 ASBlockNode >> scope [
 "what are we returning here?"

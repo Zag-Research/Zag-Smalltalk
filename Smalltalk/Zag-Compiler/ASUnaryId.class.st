@@ -1,6 +1,6 @@
 Class {
 	#name : 'ASUnaryId',
-	#superclass : 'ASIdentifier',
+	#superclass : 'ASIdentifierToken',
 	#category : 'Zag-Compiler-Tokens',
 	#package : 'Zag-Compiler',
 	#tag : 'Tokens'
@@ -49,9 +49,10 @@ ASUnaryId >> keywordExpression: anASCompiler target: target [
 ]
 
 { #category : 'parsing' }
-ASUnaryId >> parameterFrom: anASCompiler [ 
+ASUnaryId >> parameterFrom: anASCompiler [
+
 	anASCompiler nextToken.
-	^ value
+	^ ASParameter new with: value
 ]
 
 { #category : 'parsing' }

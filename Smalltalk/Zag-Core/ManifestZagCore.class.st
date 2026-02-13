@@ -29,7 +29,7 @@ ManifestZagCore class >> ruleBadMessageRule2V1FalsePositive [
 ManifestZagCore class >> ruleCollectionProtocolRuleV1FalsePositive [
 
 	<ignoreForCoverage>
-	^ #( #( #( #RGMethodDefinition #( #ASSourceCompiler #compileInClass:
+	^ #( #( #( #RGMethodDefinition #( #ZagSmalltalk #compileInClass:
 	              #false ) )
 	        #'2021-10-09T09:13:12.016388-04:00' )
 	     #( #( #RGMethodDefinition #( #ASArray #baseValue #false ) )
@@ -82,10 +82,10 @@ ManifestZagCore class >> ruleInstVarInSubclassesRuleV1FalsePositive [
 ManifestZagCore class >> ruleLongMethodsRuleV1FalsePositive [
 
 	<ignoreForCoverage>
-	^ #( #( #( #RGMethodDefinition #( #ASSourceCompiler #sequenceTo:then:withReturn:
+	^ #( #( #( #RGMethodDefinition #( #ZagSmalltalk #sequenceTo:then:withReturn:
 	              #false ) )
 	        #'2021-10-04T23:01:49.526703-04:00' )
-	     #( #( #RGMethodDefinition #( #ASScanner #token #false ) )
+	     #( #( #RGMethodDefinition #( #ZagSmalltalkScanner #token #false ) )
 	        #'2021-10-09T08:06:50.250593-04:00' )
 	     #( #( #RGMethodDefinition #( #AStExactClass #value: #false ) )
 	        #'2023-10-06T17:33:21.190789-04:00' )

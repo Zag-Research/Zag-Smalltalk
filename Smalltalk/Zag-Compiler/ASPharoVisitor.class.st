@@ -63,14 +63,14 @@ ASPharoVisitor >> visitAssignmentNode: aRBAssignmentNode [
 ASPharoVisitor >> visitBlockNode: aRBBlockNode [
 
 	| block body |
-	body := ASSequence new: aRBBlockNode statements size.
+	body := Array new: aRBBlockNode statements size.
 	block := ASBlockNode
 		         arguments: aRBBlockNode argumentNames
 		         locals: aRBBlockNode temporaryNames
 		         body: body.
 	compiler inScope: block do: [
-		aRBBlockNode statements doWithIndex: [ :statement :index |
-			body at: index put: (self visit: statement) ] ].
+			aRBBlockNode statements doWithIndex: [ :statement :index |
+				body at: index put: (self visit: statement) ] ].
 	^ block
 ]
 
@@ -145,11 +145,11 @@ ASPharoVisitor >> visitMethodNode: aRBMethodNode [
 			           self visit: pragma ])
 		          arguments: aRBMethodNode argumentNames
 		          locals: aRBMethodNode temporaryNames
-		          body: (ASSequence new: aRBMethodNode statements size).
+		          body: (Array new: aRBMethodNode statements size).
 	compiler definingMethod: method.
 	compiler inScope: method do: [
-		aRBMethodNode statements doWithIndex: [ :statement :index |
-			method body at: index put: (self visit: statement) ] ].
+			aRBMethodNode statements doWithIndex: [ :statement :index |
+				method body at: index put: (self visit: statement) ] ].
 	^ method
 ]
 
