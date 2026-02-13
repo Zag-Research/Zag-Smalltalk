@@ -20,6 +20,7 @@ pub fn isSupportedOp(op: tf) bool {
         .push, .pushLiteral, .dup, .drop, .returnSelf, .returnTop => true,
         .branchFalse, .branchTrue, .branch => true,
         .inlinePrimitive => true,
+        .send, .send0 => true,
         else => false,
     };
 }
@@ -37,6 +38,11 @@ fn isConditionalBranch(op: tf) bool {
 /// Check if an operation is an unconditional branch (has one exit to target)
 fn isUnconditionalBranch(op: tf) bool {
     return op == .branch;
+}
+
+/// Check if an operation is a message send (exits the JIT region)
+fn isSendOp(op: tf) bool {
+    return op == .send or op == .send0;
 }
 
 /// JIT-compiled method that copies and patches threaded function templates.
@@ -104,6 +110,13 @@ pub fn JitMethod(comptime ops: []const tf, comptime branch_targets: []const usiz
                         jit.patchBranch(curr_offset, br_offset, target_offset);
                         patched_branches += 1;
                     }
+                } else if (isSendOp(op)) {
+                    // do not patch send's tail-call branches.
+                    // Send's BR Xn jumps to the callee method, not the next JIT op.
+                    // The return path re-enters the JIT via patched code stream
+                    // (patchOp writes JIT'd fn ptrs into the code array, so
+                    // context.setReturn(pc.next2()) picks up the JIT'd address).
+                    continue;
                 } else if (isSupportedOp(op)) {
                     // Regular op: patch to next instruction
                     if (i + 1 < num_ops and !isSupportedOp(ops[i + 1])) {

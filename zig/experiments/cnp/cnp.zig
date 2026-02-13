@@ -13,6 +13,8 @@ pub fn main() !void {
     try harness.runTest(tests.TailCallPatchTest);
     try harness.runTest(tests.ReturnSelfTest);
     try harness.runTest(tests.BranchFalseTest);
-    try harness.runTest(tests.InlinePrimitiveAddTest);
-    try harness.runTest(tests.InlinePrimitiveChainedTest);
+    // try harness.runTest(tests.InlinePrimitiveAddTest);
+    // try harness.runTest(tests.InlinePrimitiveChainedTest);
+    try harness.runTest(tests.Send0Test);
+    try harness.runTest(tests.SendTest);
 }

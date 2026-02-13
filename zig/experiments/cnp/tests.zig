@@ -7,7 +7,9 @@ const Context = zag.Context;
 const Object = zag.Object;
 const Code = zag.execute.Code;
 const PC = zag.execute.PC;
+const Signature = zag.execute.Signature;
 const compileMethod = zag.execute.compileMethod;
+const dispatch = zag.dispatch;
 const Sym = zag.symbol.symbols;
 const SmallInteger = zag.primitives.primitives.SmallInteger;
 
@@ -233,6 +235,91 @@ pub const InlinePrimitiveAddTest = struct {
         setLiteral(code, 3, Object.from(2, sp, context));
         const result = runCompiled(&method, &compiled, &process, info.positions[0..], null);
         try reportResult(result, 42);
+    }
+};
+
+pub const Send0Test = struct {
+    const callee_sig = Signature.fromNameClass(Sym.yourself, .SmallInteger);
+    var callee align(64) = compileMethod(Sym.yourself, 0, .SmallInteger, .{tf.returnSelf});
+
+    const send_sig = Signature.fromNameClass(Sym.yourself, .none);
+    const tup = .{
+        tf.pushLiteral, "0const",
+        tf.send0,       send_sig,
+        null,           tf.returnTop,
+    };
+    const info = opsInfo(tup);
+    const Method = JitMethod(&info.ops, &info.branch_targets);
+
+    var method: Method = undefined;
+    var process: Process align(Process.alignment) = undefined;
+    var compiled align(64) = compileMethod(Sym.value, 0, .Object, tup);
+    var literal_: Object.StaticObject = undefined;
+
+    pub fn init() !void {
+        dispatch.addMethod(callee.asCompiledMethodPtr());
+
+        try initJitTest(&method, &process, "Send0Test");
+        compiled.resolve(&[_]Object{literal_.init(0)}) catch @panic("Failed to resolve");
+    }
+
+    pub fn deinit() void {
+        method.deinit();
+    }
+
+    pub fn run() !void {
+        process.init();
+        const context = process.getContext();
+        const sp = process.endOfStack();
+        const code = compiled.code[0..];
+        setLiteral(code, 1, Object.from(10, sp, context));
+
+        const result = runCompiled(&method, &compiled, &process, info.positions[0..], null);
+        try reportResult(result, 10); 
+    }
+};
+
+pub const SendTest = struct {
+    var callee align(64) = compileMethod(Sym.@"value:", 0, .SmallInteger, .{tf.returnTop});
+
+    const send_sig = Signature.fromNameClass(Sym.@"value:", .none);
+    const tup = .{
+        tf.pushLiteral, "0const", 
+        tf.pushLiteral, "1const", 
+        tf.send,        send_sig,
+        null,           tf.returnTop,
+    };
+    const info = opsInfo(tup);
+    const Method = JitMethod(&info.ops, &info.branch_targets);
+
+    var method: Method = undefined;
+    var process: Process align(Process.alignment) = undefined;
+    var compiled align(64) = compileMethod(Sym.value, 0, .Object, tup);
+    var literals_: [2]Object.StaticObject = undefined;
+
+    pub fn init() !void {
+        dispatch.addMethod(callee.asCompiledMethodPtr());
+
+        try initJitTest(&method, &process, "SendTest");
+        compiled.resolve(&[_]Object{
+            literals_[0].init(0),
+            literals_[1].init(0),
+        }) catch @panic("Failed to resolve");
+    }
+
+    pub fn deinit() void {
+        method.deinit();
+    }
+
+    pub fn run() !void {
+        process.init();
+        const context = process.getContext();
+        const sp = process.endOfStack();
+        const code = compiled.code[0..];
+        setLiteral(code, 1, Object.from(10, sp, context));
+        setLiteral(code, 3, Object.from(99, sp, context));
+        const result = runCompiled(&method, &compiled, &process, info.positions[0..], null);
+        try reportResult(result, 99);
     }
 };
 
