@@ -354,7 +354,7 @@ pub const threadedFunctions = struct {
                 .{ newPc.next(), newSp, process, newContext, Extra.forMethod(method, newSp.unreserve(numArgs)) });
             }
             context.setReturn(pc.next2());
-            // method.dump();
+            //method.dump();
             return @call(tailCall, newPc.prim(), // TODO should use executFn
             .{ newPc.next(), sp, process, context, Extra.forMethod(method, selfAddr) });
         }
