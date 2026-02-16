@@ -189,6 +189,7 @@ The name is escaping me....something like Micro Systems....
 - [Custom Test Runner Blog Post: Karl Seguin](https://www.openmymind.net/Using-A-Custom-Test-Runner-In-Zig/)
 - [std.log](https://gist.github.com/kassane/a81d1ae2fa2e8c656b91afee8b949426)
 - [Zio](https://lalinsky.com/2025/10/26/zio-async-io-for-zig.html) [on github](https://github.com/lalinsky/zio)
+- [more on Zig functions](https://gencmurat.com/en/posts/mastering-functions-in-zig/)
 
 ## Miscellaneous
 - [Hidden Heroes](https://hiddenheroes.netguru.com/)

@@ -142,10 +142,10 @@ fn createExperimentExecutables(
     });
     b.installArtifact(fib);
 
-    const cnp = b.addExecutable(.{
-        .name = "cnp",
+    const cnpFib = b.addExecutable(.{
+        .name = "cnpFib",
         .root_module = b.createModule(.{
-            .root_source_file = b.path("experiments/cnp.zig"),
+            .root_source_file = b.path("experiments/cnpFib.zig"),
             .target = target,
             .optimize = optimize,
             .imports = &.{
@@ -155,7 +155,7 @@ fn createExperimentExecutables(
         }),
         .use_llvm = true,
     });
-    b.installArtifact(cnp);
+    b.installArtifact(cnpFib);
 
     const branchPrediction = b.addExecutable(.{
         .name = "branchPrediction",
