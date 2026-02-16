@@ -298,7 +298,7 @@ pub const push = struct {
         }
     }
     test {
-        if (true) return error.UnimplementedTest;
+        if (true) return config.skipForDebugging;
         var exe = Execution.initTest("push", .{ tf.pushLocal, 1, tf.pushLocal, 4 });
         try exe.runTest(
             &[_]Object{
