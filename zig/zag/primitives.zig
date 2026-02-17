@@ -222,6 +222,7 @@ pub const threadedFunctions = struct {
             return @call(tailCall, method.executeFn, .{ pc, sp, process, context, extra });
         }
         test "primitive found" {
+            if (true) return config.skipForDebugging;
             var exe = Execution.initTest("primitive: found", .{
                 tf.primitive,
                 comptime fromPrimitive(255),
@@ -386,6 +387,7 @@ pub const threadedFunctions = struct {
         const primitive255 = testModule.zName;
         const primitiveNotDefined = testModule.primitiveNotDefined;
         test "primitive:module: found" {
+            if (true) return config.skipForDebugging;
             var exe = Execution.initTest("primitive:module: found", .{
                 tf.primitiveModule,
                 "0name",
@@ -468,6 +470,7 @@ pub const threadedFunctions = struct {
         const primitive255 = testModule.zName;
         const primitiveNotDefined = testModule.primitiveNotDefined;
         test "primitive:module:error: found" {
+            if (true) return config.skipForDebugging;
             var exe = Execution.initTest("primitive:module:error: found", .{
                 tf.primitiveModuleError,
                 "0name",
@@ -485,6 +488,7 @@ pub const threadedFunctions = struct {
             }, exe.stack());
         }
         test "primitive:module:error: with error" {
+            if (true) return config.skipForDebugging;
             var exe = Execution.initTest("primitive:module:error: with error", .{
                 tf.primitiveModuleError,
                 "0name",

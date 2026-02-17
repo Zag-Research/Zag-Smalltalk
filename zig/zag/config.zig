@@ -19,7 +19,7 @@ pub const singleSteppable = true; //options.singleSteppable;
 // must be more than HeapObject.maxLength*8 so externally allocated
 pub const process_total_size: usize = if (is_test or testRun) 2048 * 4 else 64 * 1024;
 
-pub const debugging = true;
+pub const debugging = false;
 pub const logThreadExecution: ?fn (comptime []const u8, anytype) void = if (options.trace) std.log.debug else null;
 const show_error_stack = debugging;
 pub const show_trace = debugging or options.trace;

@@ -1,5 +1,5 @@
 ## Daniel Franklin
-- PhD started in 2018 - targ3et graduation Fall 2026
+- PhD started in 2018 - target graduation Fall 2026
 - paper at IWST2024, [Creating Context In ZagSmalltalk](papers/Creating-Context-In-ZagSmalltalk.pdf)([CDP2025](https://cdp-workshop.github.io/CDP/program/#ZAGSMALLTALK))
 - AST compilation and inlining, Type inference
 

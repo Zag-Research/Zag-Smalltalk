@@ -25,8 +25,9 @@ $ make install
 - [Graph Neural Networks](https://www.analyticsvidhya.com/blog/2022/03/what-are-graph-neural-networks-and-how-do-they-work/)
 - [YC thread on Smalltalk bare-metal on Raspberry PI](https://news.ycombinator.com/item?id=34208753)
 - [Hidden Heroes on Alan Kay and the Dynabook](https://hiddenheroes.netguru.com/alan-kay)
-- [Dynabook - the laptop manufacturer (name inspired by Kay) - previously Toshiba](https://ca.dynabook.com/company/about-dynabook/) [Wikipedia](https://en.wikipedia.org/wiki/Dynabook_Inc.#The_first_Dynabook)
+- [Dynabook - the manufacturer (name inspired by Kay) - previously Toshiba](https://ca.dynabook.com/company/about-dynabook/) [Wikipedia](https://en.wikipedia.org/wiki/Dynabook_Inc.#The_first_Dynabook)
 - [Bee Smalltalk](https://github.com/aucerna/bee-dmr) [video tour 2018](https://www.youtube.com/watch?v=WGalg2CZ_Ps)
+- [Tektronic 4404](https://wirfs-brock.com/allen/files/tek/4404-Flyer.pdf)
 ### Programming Languages
 - [Lenient evaluation is neither strict nor lazy](https://www.sciencedirect.com/science/article/abs/pii/S0096055101000066)
 - [Ken Dickey's Crosstalk](https://github.com/KenDickey/Crosstalk/blob/master/DispatchNotes.md)
@@ -188,6 +189,7 @@ The name is escaping me....something like Micro Systems....
 - [Custom Test Runner Blog Post: Karl Seguin](https://www.openmymind.net/Using-A-Custom-Test-Runner-In-Zig/)
 - [std.log](https://gist.github.com/kassane/a81d1ae2fa2e8c656b91afee8b949426)
 - [Zio](https://lalinsky.com/2025/10/26/zio-async-io-for-zig.html) [on github](https://github.com/lalinsky/zio)
+- [more on Zig functions](https://gencmurat.com/en/posts/mastering-functions-in-zig/)
 
 ## Miscellaneous
 - [Hidden Heroes](https://hiddenheroes.netguru.com/)

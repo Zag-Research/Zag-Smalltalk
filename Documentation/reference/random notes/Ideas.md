@@ -1,12 +1,24 @@
 Indicate 👍 (thumbs up) or 👎 (thumbs down) for each
-- dispatch can be tail called with the `extra` field a signature, because the current extra field isn't used during a send (it will be re-created on the return)
-- we don't need to check the signature of a method
+- ? remove `Extra` parameter from ThreadedFn
+	- x86-64 only has 4 register parameters, so habing 5 parameters appears to slow things a lot
+	- would require explicit `pushClosure` - so significant addition to compiler
+	- would make all `send`, `pushLocal` etc. faster because wouldn't check for existing closure
+	- `inlinePrimitive` couldn't fall back to send without new mechanism or limiting to known-safe (which could make it faster)
+- `inlinePrimitive` followed by `nocache...` then the signature and does a threaded call in case of an error, else skips an extra word
+	- maybe not use the `inlinePrimitive` word, but just the actual inline-word
+	- maybe only do an inline primitive if we are certain that the receiver is `SmallInteger`
+	- `nocacheSend` just does a dispatch because there is no PIC
+		- but we need to have a context
+	- `nocacheNocontextSend` does the same, but creates a context ?how?
+		- it could have an offset to the start of the method encoded with the selector, but I can't think of a way to know that one has been created or not for subsequent code
+- ? dispatch can be tail called with the `extra` field a signature, because the current extra field isn't used during a send (it will be re-created on the return)
+- 👍 we don't need to check the signature of a method
 	- we are either verifying a send cache, in which case we know that the selector is correct, we're just verifying the class
 	- or we are doing dispatch, in which case we're just verifying the selector
 	- this could simplify/speed-up dispatch
-- an image directory will have files with a JIT type
-- an image directory could be stored as a ZIP file
 - ? could break Signatures up so that when using a mini-PIC we just have to check the class, and when using a dispatch we just have to check the selector, so we save constructing the full signature except when filling in the mini-PIC - create a branch to experiment (after encoding paper is in) - might be a small speedup
+- 👍 an image directory will have files with a JIT type
+- ? an image directory could be stored as a ZIP file
 - ? could have sends replace themselves with the address of a prefix to the threaded words that handles the checking and return addresses. See experiments/returnAddress.zig - create a branch to experiment (after encoding paper is in) - might be a noticeable speedup
 - 👎 (this doesn't work because we can't determine easily at runtime whether there are block closures (because we would miss immediate closures) so instead, any method that (directly or indirectly) creates closures that have references to local, instance, class, or shared variables or does non-local returns must avoid using tailSend) How do we do handle a tail-send when there are live block closures? e.g. `^ [:x :y | x + y] value: 2 value: 3` - Answer: in a method (or block) that creates a block closure (initially any, but really only need to be closures that might be allocated on the stack) a `tailSend` will be followed by a `returnTop`. The the `tailSend` code will dynamically check if any closure is allocated on the stack, and if so, convert to a normal `send`... which will return to the `returnTop`. This will rarely be a problem if there is inlining, because very few blocks will be created.
 - 👍 a method that contains any block with non-local returns that cannot be themselves inlined (in other words, after inlining would contain a `returnNonLocal` threaded word) cannot be inlined

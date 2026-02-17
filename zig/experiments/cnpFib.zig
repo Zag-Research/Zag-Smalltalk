@@ -64,6 +64,7 @@ const cnpThreaded = struct {
             cnp.dump();
         } else {
             const threaded = runIt({}, 0);
+            _ = threaded;
         }
     }
     fn runIt(comptime _: void, proof: usize) usize {

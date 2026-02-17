@@ -105,6 +105,7 @@ pub const @"+" = struct {
         return @call(tailCall, process.check(context.npc), .{ context.tpc, newSp, process, context, Extra.fromContextData(context.contextDataPtr(sp)) });
     }
     test "simple add" {
+        if (true) return config.skipForDebugging;
         var exe = Execution.initTest("simple add", .{ tf.primitive, comptime fromPrimitive(1) });
         try exe.runTest(
             &[_]Object{

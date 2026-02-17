@@ -257,7 +257,7 @@ pub fn push(self: *Context, sp: SP, process: *Process, method: *const CompiledMe
         const selfAddr = extra.selfAddress(sp).?;
         const sizeToMove = selfOffset - locals;
         const contextAddr = selfAddr - selfOffset - (sizeOnStack - 1);
-        std.debug.print("pushContext: selfAddr={*}, contextAddr={*}, newSp.array = {*}, sizeToMove={}\n",
+        trace("pushContext: selfAddr={*}, contextAddr={*}, newSp.array = {*}, sizeToMove={}\n",
             .{ selfAddr, contextAddr, newSp.array(), sizeToMove });
         if (contextAddr != newSp.array() + sizeToMove) @panic("pushContext: contextAddr != newSp.array() + sizeToMove");
         for (newSp.array()[0..sizeToMove], sp.array()[0..sizeToMove]) |*target, *source| {
@@ -346,7 +346,7 @@ fn selfAddress(self: *const Context, sp: SP) [*]Object {
     if (self.ifOnStack(sp)) |contextOnStack|
         return contextOnStack.selfAddress();
     const wordsToDiscard = self.header.hash16();
-    std.debug.print("wordsToDiscard: {} context: {*} contextData: {*}\n", .{wordsToDiscard, self, self.contextData});
+    trace("wordsToDiscard: {} context: {*} contextData: {*}\n", .{wordsToDiscard, self, self.contextData});
     _ = .{ wordsToDiscard, @panic("not on stack") };
     //return @ptrCast(@constCast(&self.asObjectPtr()[wordsToDiscard]));
 }
