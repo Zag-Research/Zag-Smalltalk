@@ -95,7 +95,7 @@ fn bench50() !void {
 
 fn runBench(name: []const u8, comptime tup: anytype, comptime lit_pos: []const usize) !void {
     const info = opsInfo(tup);
-    const Method = JitMethod(&info.ops, &info.branch_targets);
+    const Method = JitMethod(&info.ops, &info.branch_targets, &info.prim_fns);
 
     var method = try Method.init();
     defer method.deinit();
