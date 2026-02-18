@@ -40,8 +40,6 @@ fn isReturnOp(op: tf) bool {
     return op == .returnSelf or op == .returnTop;
 }
 
-/// JIT-compiled method that copies and patches threaded function templates.
-/// branch_targets[i] = target op index for branch ops, 0 for non-branch ops
 pub fn JitMethod(comptime ops: []const tf, comptime branch_targets: []const usize, comptime prim_fns: []const ?ThreadedFn) type {
     return struct {
         const Self = @This();
@@ -102,12 +100,10 @@ pub fn JitMethod(comptime ops: []const tf, comptime branch_targets: []const usiz
                         jit.patchBranch(curr_offset, br_offset, target_offset);
                         patched_branches += 1;
                     }
-                } else if (isSendOp(op)) {
-                    // do not patch send's tail-call branches.
-                    // Send's BR Xn jumps to the callee method, not the next JIT op.
-                    // The return path re-enters the JIT via patched code stream
-                    // (patchOp writes JIT'd fn ptrs into the code array, so
-                    // context.setReturn(pc.next2()) picks up the JIT'd address).
+                } else if (isSendOp(op) or isReturnOp(op)) {
+                    // Do not patch send or return tail-call branches.
+                    // Send jumps to the callee method via BR Xn.
+                    // Return jumps to context.npc (caller's return address) via BR Xn.
                     continue;
                 } else if (isSupportedOp(op)) {
                     const next_offset = offsets[i + 1];
