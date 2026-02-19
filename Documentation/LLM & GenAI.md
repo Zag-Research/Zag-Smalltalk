@@ -7,3 +7,6 @@
 ## Model Context Protocol (MCP)
 [What Is MCP, and Why Is Everyone – Suddenly!– Talking About It?](https://huggingface.co/blog/Kseniase/mcp)
 
+## GNNs
+- [Integrating Large Language Models and Graph Neural Networks](https://www.youtube.com/watch?v=reFeFpdzFaI)
+- 

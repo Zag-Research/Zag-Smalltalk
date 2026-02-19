@@ -235,7 +235,7 @@ pub const threadedFns = struct {
         if (sp.top.untaggedI()) |value| {
             const sum, const overflow = @addWithOverflow(Object.asUntaggedI(-1), value);
             if (overflow == 0) {
-                sp.top = Object.fromUnTaggedI(sum, sp, context);
+                sp.top = Object.fromUntaggedI(sum, sp, context);
                 if (sum > 0) result = False();
             }
         }

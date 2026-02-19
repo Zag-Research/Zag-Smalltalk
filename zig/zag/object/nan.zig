@@ -48,7 +48,7 @@ pub const Tag = enum(TagBaseType) {
     // inline
     fn from(c: ClassIndex) Tag {
         const cls = @intFromEnum(c);
-        assert(cls <= 15);
+        assert(cls <= 31);
         return @enumFromInt(cls + @intFromEnum(Tag.ThunkReturnLocal) - 1);
     }
     inline fn class(t: Tag) ClassIndex {
@@ -201,6 +201,9 @@ pub const Object = packed struct(u64) {
     }
     inline fn nativeI_noCheck(self: Object) i64 {
         return self.asI64();
+    }
+    pub inline fn asUntaggedI(t: i51) i64 {
+        return t << 13;
     }
     pub inline fn fromNativeI(t: i51, _: anytype, _: anytype) Object {
         return toObjectFromNative(t);
