@@ -350,12 +350,12 @@ pub const threadedFunctions = struct {
                 const newSp = new.sp;
                 const newContext = new.context;
                 newContext.setReturn(pc.next2());
-                return @call(tailCall, newPc.prim(), // TODO should use executFn
+                return @call(tailCall, method.executeFn,
                 .{ newPc.next(), newSp, process, newContext, Extra.forMethod(method, newSp.unreserve(numArgs)) });
             }
             context.setReturn(pc.next2());
             //method.dump();
-            return @call(tailCall, newPc.prim(), // TODO should use executFn
+            return @call(tailCall, method.executeFn,
             .{ newPc.next(), sp, process, context, Extra.forMethod(method, selfAddr) });
         }
     };
@@ -369,10 +369,10 @@ pub const threadedFunctions = struct {
                 const newSp = new.sp;
                 const newContext = new.context;
                 newContext.setReturn(pc.next2());
-                return @call(tailCall, newPc.prim(), .{ newPc.next(), newSp, process, newContext, Extra.forMethod(method, newSp) });
+                return @call(tailCall, method.executeFn, .{ newPc.next(), newSp, process, newContext, Extra.forMethod(method, newSp) });
             }
             context.setReturn(pc.next2());
-            return @call(tailCall, newPc.prim(), .{ newPc.next(), sp, process, context, Extra.forMethod(method, sp) });
+            return @call(tailCall, method.executeFn, .{ newPc.next(), sp, process, context, Extra.forMethod(method, sp) });
         }
     };
     pub const tailSend = struct {

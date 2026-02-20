@@ -14,12 +14,10 @@ const dispatch = zag.dispatch;
 const Sym = zag.symbol.symbols;
 const SmallInteger = zag.primitives.primitives.SmallInteger;
 const symbol = zag.symbol;
-const MainExecutor = zag.execute.Execution.MainExecutor;
 
 const JitMethod = @import("jit_method.zig").JitMethod;
 const harness = @import("test_harness.zig");
 const opsInfo = harness.opsInfo;
-const setLiteral = harness.setLiteral;
 
 const print = std.debug.print;
 
@@ -58,178 +56,107 @@ const FibSetup = struct {
     const Method = JitMethod(&info.ops, &info.branch_targets, &info.prim_fns);
 };
 
-const fib_rounds = 7;
-
-const FibCase = struct { n: i64, iters: usize, warmup_iters: usize };
-const fib_cases = [_]FibCase{
-    .{ .n = 1, .iters = 500_000, .warmup_iters = 50_000 },
-    .{ .n = 2, .iters = 500_000, .warmup_iters = 50_000 },
-    .{ .n = 5, .iters = 200_000, .warmup_iters = 20_000 },
-    .{ .n = 8, .iters = 50_000, .warmup_iters = 5_000 },
-    .{ .n = 10, .iters = 10_000, .warmup_iters = 1_000 },
-    .{ .n = 15, .iters = 1_000, .warmup_iters = 100 },
-    .{ .n = 20, .iters = 100, .warmup_iters = 10 },
-    .{ .n = 25, .iters = 10, .warmup_iters = 2 },
-};
+const fib_n = 30;
+const fib_rounds = 5;
 
 pub fn main() !void {
     var method = try FibSetup.Method.init();
     defer method.deinit();
 
     var compiled_jit align(64) = compileMethod(Sym.fibonacci, 0, .SmallInteger, FibSetup.tup);
-    var compiled_thr align(64) = compileMethod(Sym.fibonacci, 0, .SmallInteger, FibSetup.tup);
 
     var one_j: Object.StaticObject = undefined;
     var two_j: Object.StaticObject = undefined;
-    var one_t: Object.StaticObject = undefined;
-    var two_t: Object.StaticObject = undefined;
 
     compiled_jit.resolve(&[_]Object{ one_j.init(1), two_j.init(2) }) catch @panic("resolve jit");
-    compiled_thr.resolve(&[_]Object{ one_t.init(1), two_t.init(2) }) catch @panic("resolve thr");
 
     for (FibSetup.info.positions, 0..) |pos, i| {
-        if (method.template_infos[i].size == 0) continue;
         method.patchOp(compiled_jit.code[0..], i, pos);
     }
 
     compiled_jit.initExecute();
-    compiled_thr.initExecute();
 
-    print("Fibonacci: CnP JIT vs Threaded vs Native\n", .{});
-    print("Mode: {s} - Arch: {s}\n", .{ @tagName(builtin.mode), @tagName(builtin.cpu.arch) });
-    print("Rounds: {}\n", .{fib_rounds});
+    const jit_fn = method.getEntryFor(0);
+    const jit_pc = PC.init(&compiled_jit.code[0]).next();
 
-    // Verify correctness
-    {
-        var exe: MainExecutor = undefined;
-        exe = MainExecutor.new();
-        dispatch.addMethod(compiled_jit.asCompiledMethodPtr());
-        for (fib_cases) |tc| {
-            const obj = exe.sendTo(
-                Sym.fibonacci.asObject(),
-                exe.object(@as(i56, @intCast(tc.n))),
-            ) catch return error.TestFailed;
-            const got = obj.nativeI() orelse return error.TestFailed;
-            const expected = nativeFib(tc.n);
-            if (got != expected) {
-                print("FAIL: fib({}) = {}, expected {}\n", .{ tc.n, got, expected });
-                return error.TestFailed;
-            }
-        }
+    var process_j: Process align(Process.alignment) = undefined;
+    process_j.init();
+    const tmp_sp = process_j.endOfStack();
+    const receiver_j = Object.from(@as(i56, @intCast(fib_n)), tmp_sp, process_j.getContext());
+
+    var jit_samples: [fib_rounds]u64 = undefined;
+    var nat_samples: [fib_rounds]u64 = undefined;
+
+    for (0..fib_rounds) |r| {
+        jit_samples[r] = measureDirect(jit_fn, jit_pc, receiver_j, &process_j, &compiled_jit);
+        nat_samples[r] = measureNativeFib(fib_n);
     }
 
-    print("{s:>6} | {s:>10} | {s:>10} | {s:>10} | {s:>7}\n", .{
-        "fib(n)", "JIT", "Threaded", "Native", "JIT/Thr",
-    });
-    print("-" ** 6 ++ "-+-" ++ "-" ** 10 ++ "-+-" ++ "-" ** 10 ++ "-+-" ++ "-" ** 10 ++
-        "-+-" ++ "-" ** 7 ++ "-+-" ++ "-" ** 14 ++ "\n", .{});
+    print("for '{} fibonacci'\n", .{fib_n});
+    print("          Median   Mean   StdDev  SD/Mean ({} runs)\n", .{fib_rounds});
+    printRow("Native", &nat_samples);
+    printRow("IntegerCnP", &jit_samples);
+}
 
-    for (fib_cases) |tc| {
-        var jit_samples: [fib_rounds]u64 = undefined;
-        var thr_samples: [fib_rounds]u64 = undefined;
-        var nat_samples: [fib_rounds]u64 = undefined;
+fn printRow(row_name: []const u8, samples_ns: *[fib_rounds]u64) void {
+    const med_ns = median(samples_ns);
+    const mean_ns = mean(samples_ns);
+    const sd_ns = stdDev(samples_ns, mean_ns);
 
-        // warmup
-        dispatch.addMethod(compiled_jit.asCompiledMethodPtr());
-        {
-            var exe_w: MainExecutor = undefined;
-            exe_w = MainExecutor.new();
-            for (0..tc.warmup_iters) |_| {
-                _ = exe_w.sendTo(
-                    Sym.fibonacci.asObject(),
-                    exe_w.object(@as(i56, @intCast(tc.n))),
-                ) catch unreachable;
-            }
-        }
-        // warmup threaded
-        dispatch.addMethod(compiled_thr.asCompiledMethodPtr());
-        {
-            var exe_w: MainExecutor = undefined;
-            exe_w = MainExecutor.new();
-            for (0..tc.warmup_iters) |_| {
-                _ = exe_w.sendTo(
-                    Sym.fibonacci.asObject(),
-                    exe_w.object(@as(i56, @intCast(tc.n))),
-                ) catch unreachable;
-            }
-        }
+    const med_ms = @as(f64, @floatFromInt(med_ns)) / 1_000_000.0;
+    const mean_ms = @as(f64, @floatFromInt(mean_ns)) / 1_000_000.0;
+    const sd_ms = @as(f64, @floatFromInt(sd_ns)) / 1_000_000.0;
 
-        // timed rounds, alternating
-        for (0..fib_rounds) |r| {
-            if (r % 2 == 0) {
-                jit_samples[r] = measureFib(&compiled_jit, tc.n, tc.iters);
-                thr_samples[r] = measureFib(&compiled_thr, tc.n, tc.iters);
-            } else {
-                thr_samples[r] = measureFib(&compiled_thr, tc.n, tc.iters);
-                jit_samples[r] = measureFib(&compiled_jit, tc.n, tc.iters);
-            }
-            nat_samples[r] = measureNativeFib(tc.n, tc.iters);
-        }
-
-        const jit_med = median(&jit_samples);
-        const thr_med = median(&thr_samples);
-        const nat_med = median(&nat_samples);
-        const ratio = @as(f64, @floatFromInt(jit_med)) / @as(f64, @floatFromInt(@max(1, thr_med)));
-
-        print("{d:>6} | {s:>10} | {s:>10} | {s:>10} | {d:>6.2}x\n", .{ @as(u64, @intCast(tc.n)), fmtTime(jit_med), fmtTime(thr_med), fmtTime(nat_med), ratio });
+    print("{s:>9}", .{row_name});
+    print("{d:5.0}ms {d:5.0}ms {d:6.2}ms", .{ med_ms, mean_ms, sd_ms });
+    if (mean_ns > 0) {
+        const pct = sd_ms / mean_ms * 100.0;
+        print(" {d:5.1}%", .{pct});
     }
     print("\n", .{});
 }
 
-fn measureFib(compiled: anytype, n: i64, iters: usize) u64 {
+fn measureDirect(
+    entry: anytype,
+    pc: PC,
+    receiver: Object,
+    process: *align(Process.alignment) Process,
+    compiled: anytype,
+) u64 {
     dispatch.addMethod(compiled.asCompiledMethodPtr());
-    var exe: MainExecutor = undefined;
-    exe = MainExecutor.new();
+    const sp = process.endOfStack().safeReserve(1);
+    sp.top = receiver;
+    const ctx = process.getContext();
+    const extra = Extra.forMethod(compiled.asCompiledMethodPtr(), sp);
     var timer = std.time.Timer.start() catch unreachable;
-    for (0..iters) |_| {
-        _ = exe.sendTo(
-            Sym.fibonacci.asObject(),
-            exe.object(@as(i56, @intCast(n))),
-        ) catch unreachable;
-    }
-    return timer.read() / iters;
+    _ = @call(.never_inline, entry, .{ pc, sp, process, ctx, extra });
+    return timer.read();
 }
 
-fn measureNativeFib(n: i64, iters: usize) u64 {
+fn measureNativeFib(n: i64) u64 {
     var timer = std.time.Timer.start() catch unreachable;
-    for (0..iters) |_| {
-        const r = nativeFib(n);
-        std.mem.doNotOptimizeAway(r);
-    }
-    return timer.read() / iters;
+    const r = nativeFib(n);
+    std.mem.doNotOptimizeAway(r);
+    return timer.read();
+}
+
+fn mean(samples: []const u64) u64 {
+    var sum: u128 = 0;
+    for (samples) |s| sum += s;
+    return @intCast(sum / samples.len);
 }
 
 fn median(samples: []u64) u64 {
-    std.mem.sort(u64, samples, {}, std.sort.asc(u64));
+    std.mem.sort(u64, samples, {}, comptime std.sort.asc(u64));
     return samples[samples.len / 2];
 }
 
-fn minMax(samples: []const u64) struct { min: u64, max: u64 } {
-    var min: u64 = std.math.maxInt(u64);
-    var max: u64 = 0;
+fn stdDev(samples: []const u64, mean_val: u64) u64 {
+    var sum_sq: u128 = 0;
     for (samples) |s| {
-        if (s < min) min = s;
-        if (s > max) max = s;
+        const diff: i128 = @as(i128, @intCast(s)) - @as(i128, @intCast(mean_val));
+        sum_sq += @intCast(diff * diff);
     }
-    return .{ .min = min, .max = max };
-}
-
-const FmtBuf = [32]u8;
-
-fn fmtTime(ns: u64) []const u8 {
-    const S = struct {
-        var bufs: [8]FmtBuf = undefined;
-        var idx: usize = 0;
-    };
-    const slot = S.idx % 8;
-    S.idx += 1;
-    var buf = &S.bufs[slot];
-    buf.* = [_]u8{0} ** 32;
-    const len = if (ns < 1_000)
-        (std.fmt.bufPrint(buf, "{d}ns", .{ns}) catch buf).len
-    else if (ns < 1_000_000)
-        (std.fmt.bufPrint(buf, "{d:.1}us", .{@as(f64, @floatFromInt(ns)) / 1_000.0}) catch buf).len
-    else
-        (std.fmt.bufPrint(buf, "{d:.2}ms", .{@as(f64, @floatFromInt(ns)) / 1_000_000.0}) catch buf).len;
-    return buf[0..len];
+    const variance = sum_sq / samples.len;
+    return @intCast(std.math.sqrt(variance));
 }

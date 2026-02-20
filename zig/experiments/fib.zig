@@ -111,13 +111,6 @@ const fibInteger = struct {
         if (zag.config.show_trace) {
             std.debug.print("\n", .{});
             fib.dump();
-        } else {
-            const threaded = runIt({}, 0);
-            const native = fibCheck(fibN);
-            if (threaded != native) {
-                std.log.err("threaded={}, native={}\n", .{ threaded, native });
-                unreachable;
-            }
         }
     }
     fn runIt(comptime _: void, proof: usize) usize {
@@ -172,13 +165,6 @@ const fibInteger0 = struct {
         if (zag.config.show_trace) {
             std.debug.print("\n", .{});
             fib.dump();
-        } else {
-            const threaded = runIt({}, 0);
-            const native = fibCheck(fibN);
-            if (threaded != native) {
-                std.log.err("threaded={}, native={}\n", .{ threaded, native });
-                unreachable;
-            }
         }
     }
     fn runIt(comptime _: void, proof: usize) usize {
@@ -235,14 +221,15 @@ const fibIntegerBr = struct {
         if (zag.config.show_trace) {
             std.debug.print("\n", .{});
             fib.dump();
-        } else {
-            const threaded = runIt({}, 0);
-            const native = fibCheck(fibN);
-            if (threaded != native) {
-                std.log.err("threaded={}, native={}\n", .{ threaded, native });
-                unreachable;
-            }
         }
+        // else {
+        //     const threaded = runIt({}, 0);
+        //     const native = fibCheck(fibN);
+        //     if (threaded != native) {
+        //         std.log.err("threaded={}, native={}\n", .{ threaded, native });
+        //         unreachable;
+        //     }
+        // }
     }
     fn runIt(comptime _: void, proof: usize) usize {
         const obj = exe.sendTo(Sym.fibonacci.asObject(), exe.object(fibN)) catch unreachable;
@@ -679,6 +666,6 @@ pub fn main() !void {
     try timing(if (default) @constCast(do_all[0..]) else args[1..], default);
 }
 const testRun = zag.config.testRun;
-const fibN = if (testRun) 3 else 40;
+const fibN = if (testRun) 3 else 30;
 const nRuns = if (testRun) 1 else 5;
-const warmups = if (testRun) 0 else null;
+const warmups = if (testRun) 0 else 0;

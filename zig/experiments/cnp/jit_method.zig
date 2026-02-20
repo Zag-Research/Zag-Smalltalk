@@ -142,6 +142,13 @@ pub fn JitMethod(comptime ops: []const tf, comptime branch_targets: []const usiz
             code[op_position] = Code.primOf(self.getEntryFor(op_index));
         }
 
+        /// Returns true if the given function pointer lies within this JIT buffer.
+        pub fn inJit(self: *const Self, fn_ptr: anytype) bool {
+            const addr = @intFromPtr(fn_ptr);
+            const base = @intFromPtr(self.jit.memory.ptr);
+            return addr >= base and addr < base + self.jit.memory.len;
+        }
+
         pub fn dump(self: *const Self) void {
             std.debug.print("JitMethod with {} ops:\n", .{num_ops});
             inline for (ops, 0..) |op, i| {
