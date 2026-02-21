@@ -1,9 +1,11 @@
 const std = @import("std");
+const builtin = @import("builtin");
 const zag = @import("zag");
 const threadedFn = zag.threadedFn;
 const tf = threadedFn.Enum;
 const Process = zag.Process;
 const Context = zag.Context;
+const Extra = Context.Extra;
 const Object = zag.Object;
 const Code = zag.execute.Code;
 const PC = zag.execute.PC;
@@ -12,6 +14,7 @@ const compileMethod = zag.execute.compileMethod;
 const dispatch = zag.dispatch;
 const Sym = zag.symbol.symbols;
 const SmallInteger = zag.primitives.primitives.SmallInteger;
+const symbol = zag.symbol;
 
 const JitMethod = @import("jit_method.zig").JitMethod;
 const harness = @import("test_harness.zig");
@@ -25,7 +28,7 @@ pub const PushTest = struct {
     const self = Context.makeVariable(0, 1, .Parameter, &.{});
     const tup = .{ tf.push, self, tf.returnTop };
     const info = opsInfo(tup);
-    const Method = JitMethod(&info.ops, &info.branch_targets);
+    const Method = JitMethod(&info.ops, &info.branch_targets, &info.prim_fns);
 
     var method: Method = undefined;
     var process: Process align(Process.alignment) = undefined;
@@ -53,7 +56,7 @@ pub const PushTest = struct {
 pub const PushLiteralTest = struct {
     const tup = .{ tf.pushLiteral, "0const", tf.returnTop };
     const info = opsInfo(tup);
-    const Method = JitMethod(&info.ops, &info.branch_targets);
+    const Method = JitMethod(&info.ops, &info.branch_targets, &info.prim_fns);
 
     var method: Method = undefined;
     var process: Process align(Process.alignment) = undefined;
@@ -87,7 +90,7 @@ pub const TailCallPatchTest = struct {
         "2const",       tf.returnTop,
     };
     const info = opsInfo(tup);
-    const Method = JitMethod(&info.ops, &info.branch_targets);
+    const Method = JitMethod(&info.ops, &info.branch_targets, &info.prim_fns);
 
     var method: Method = undefined;
     var process: Process align(Process.alignment) = undefined;
@@ -122,7 +125,7 @@ pub const TailCallPatchTest = struct {
 pub const ReturnSelfTest = struct {
     const tup = .{tf.returnSelf};
     const info = opsInfo(tup);
-    const Method = JitMethod(&info.ops, &info.branch_targets);
+    const Method = JitMethod(&info.ops, &info.branch_targets, &info.prim_fns);
 
     var method: Method = undefined;
     var process: Process align(Process.alignment) = undefined;
@@ -158,7 +161,7 @@ pub const BranchFalseTest = struct {
         tf.returnTop,
     };
     const info = opsInfo(tup);
-    const Method = JitMethod(&info.ops, &info.branch_targets);
+    const Method = JitMethod(&info.ops, &info.branch_targets, &info.prim_fns);
 
     var method: Method = undefined;
     var process: Process align(Process.alignment) = undefined;
@@ -208,7 +211,7 @@ pub const InlinePrimitiveAddTest = struct {
         tf.returnTop,
     };
     const info = opsInfo(tup);
-    const Method = JitMethod(&info.ops, &info.branch_targets);
+    const Method = JitMethod(&info.ops, &info.branch_targets, &info.prim_fns);
 
     var method: Method = undefined;
     var process: Process align(Process.alignment) = undefined;
@@ -249,7 +252,7 @@ pub const Send0Test = struct {
         null,           tf.returnTop,
     };
     const info = opsInfo(tup);
-    const Method = JitMethod(&info.ops, &info.branch_targets);
+    const Method = JitMethod(&info.ops, &info.branch_targets, &info.prim_fns);
 
     var method: Method = undefined;
     var process: Process align(Process.alignment) = undefined;
@@ -290,7 +293,7 @@ pub const SendTest = struct {
         null,           tf.returnTop,
     };
     const info = opsInfo(tup);
-    const Method = JitMethod(&info.ops, &info.branch_targets);
+    const Method = JitMethod(&info.ops, &info.branch_targets, &info.prim_fns);
 
     var method: Method = undefined;
     var process: Process align(Process.alignment) = undefined;
@@ -335,7 +338,7 @@ pub const InlinePrimitiveChainedTest = struct {
         tf.returnTop,
     };
     const info = opsInfo(tup);
-    const Method = JitMethod(&info.ops, &info.branch_targets);
+    const Method = JitMethod(&info.ops, &info.branch_targets, &info.prim_fns);
 
     var method: Method = undefined;
     var process: Process align(Process.alignment) = undefined;

@@ -208,6 +208,24 @@ fn createExperimentExecutables(
     const run_cnp_bench_step = b.step("cnp-bench", "Run CNP JIT benchmarks");
     run_cnp_bench_step.dependOn(&run_cnp_bench.step);
 
+    const cnp_fib_bench = b.addExecutable(.{
+        .name = "cnp-fib-bench",
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("experiments/cnp/fib_bench.zig"),
+            .target = target,
+            .optimize = optimize,
+            .imports = &.{
+                .{ .name = "zag", .module = zag },
+            },
+            .omit_frame_pointer = build_options.omit_frame_pointer,
+        }),
+        .use_llvm = true,
+    });
+    b.installArtifact(cnp_fib_bench);
+    const run_cnp_fib_bench = b.addRunArtifact(cnp_fib_bench);
+    const run_cnp_fib_bench_step = b.step("cnp-fib-bench", "Run CNP JIT fibonacci benchmarks");
+    run_cnp_fib_bench_step.dependOn(&run_cnp_fib_bench.step);
+
     const fib_check = b.addExecutable(.{
         .name = "fib",
         .root_module = b.createModule(.{
