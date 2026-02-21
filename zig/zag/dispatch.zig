@@ -350,7 +350,7 @@ pub const threadedFunctions = struct {
                 const newSp = new.sp;
                 const newContext = new.context;
                 newContext.setReturn(pc.next2());
-                return @call(tailCall, method.executeFn, // TODO should use executFn
+                return @call(tailCall, method.executeFn,
                 .{ newPc.next(), newSp, process, newContext, Extra.forMethod(method, newSp.unreserve(numArgs)) });
             }
             context.setReturn(pc.next2());
