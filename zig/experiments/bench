@@ -5,6 +5,9 @@ Host=`hostname|sed 's/\..*//'`
 cd ~/git/Zag-Smalltalk/zig/experiments
 case "$1" in
     -log) Log=true;;
+    -commit)
+        Commit=true
+        Log=true;;
     -git)
         # Fetch the latest remote-tracking branches
         git fetch
