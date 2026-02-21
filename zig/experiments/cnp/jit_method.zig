@@ -14,7 +14,6 @@ const TemplateInfo = @import("template.zig").TemplateInfo;
 
 pub const ThreadedFn = *const fn (PC, SP, *Process, *Context, Extra) Result;
 
-/// Operations that can have their tail-calls patched to direct branches.
 pub fn isSupportedOp(op: tf) bool {
     return switch (op) {
         .push, .pushLiteral, .dup, .drop, .returnSelf, .returnTop => true,
@@ -25,29 +24,23 @@ pub fn isSupportedOp(op: tf) bool {
     };
 }
 
-/// Check if an operation is an inline primitive (has multiple exit paths)
-fn isInlinePrimitive(op: tf) bool {
-    return op == .inlinePrimitive;
-}
-
-/// Check if an operation is a conditional branch (has two exit paths)
 fn isConditionalBranch(op: tf) bool {
     return op == .branchFalse or op == .branchTrue;
 }
 
-/// Check if an operation is an unconditional branch (has one exit to target)
 fn isUnconditionalBranch(op: tf) bool {
     return op == .branch;
 }
 
-/// Check if an operation is a message send (exits the JIT region)
 fn isSendOp(op: tf) bool {
     return op == .send or op == .send0;
 }
 
-/// JIT-compiled method that copies and patches threaded function templates.
-/// branch_targets[i] = target op index for branch ops, 0 for non-branch ops
-pub fn JitMethod(comptime ops: []const tf, comptime branch_targets: []const usize) type {
+fn isReturnOp(op: tf) bool {
+    return op == .returnSelf or op == .returnTop;
+}
+
+pub fn JitMethod(comptime ops: []const tf, comptime branch_targets: []const usize, comptime prim_fns: []const ?ThreadedFn) type {
     return struct {
         const Self = @This();
         const num_ops = ops.len;
@@ -63,7 +56,11 @@ pub fn JitMethod(comptime ops: []const tf, comptime branch_targets: []const usiz
             var patched_branches: usize = 0;
             var template_infos: [num_ops]TemplateInfo = undefined;
             inline for (ops, 0..) |op, i| {
-                template_infos[i] = TemplateInfo.analyze(threadedFn.threadedFn(op));
+                if (op == .inlinePrimitive and prim_fns[i] != null) {
+                    template_infos[i] = TemplateInfo.analyze(prim_fns[i].?);
+                } else {
+                    template_infos[i] = TemplateInfo.analyze(threadedFn.threadedFn(op));
+                }
             }
             const end_info = TemplateInfo.analyze(Code.end);
 
@@ -86,23 +83,16 @@ pub fn JitMethod(comptime ops: []const tf, comptime branch_targets: []const usiz
                 const curr_offset = offsets[i];
 
                 if (isConditionalBranch(op)) {
-                    // Conditional branch: two exits
-                    // br_offsets[0] = taken path (when condition is true)
-                    // br_offsets[1] = not-taken path (fall through)
                     const target_op_idx = branch_targets[i];
                     const taken_target = offsets[target_op_idx];
                     const not_taken_target = offsets[i + 1];
 
-                    if (info.br_count >= 1) {
-                        jit.patchBranch(curr_offset, info.br_offsets[0], taken_target);
-                        patched_branches += 1;
-                    }
                     if (info.br_count >= 2) {
+                        jit.patchBranch(curr_offset, info.br_offsets[0], taken_target);
                         jit.patchBranch(curr_offset, info.br_offsets[1], not_taken_target);
-                        patched_branches += 1;
+                        patched_branches += 2;
                     }
                 } else if (isUnconditionalBranch(op)) {
-                    // Unconditional branch: one exit to target
                     const target_op_idx = branch_targets[i];
                     const target_offset = offsets[target_op_idx];
 
@@ -110,18 +100,12 @@ pub fn JitMethod(comptime ops: []const tf, comptime branch_targets: []const usiz
                         jit.patchBranch(curr_offset, br_offset, target_offset);
                         patched_branches += 1;
                     }
-                } else if (isSendOp(op)) {
-                    // do not patch send's tail-call branches.
-                    // Send's BR Xn jumps to the callee method, not the next JIT op.
-                    // The return path re-enters the JIT via patched code stream
-                    // (patchOp writes JIT'd fn ptrs into the code array, so
-                    // context.setReturn(pc.next2()) picks up the JIT'd address).
+                } else if (isSendOp(op) or isReturnOp(op)) {
+                    // Do not patch send or return tail-call branches.
+                    // Send jumps to the callee method via BR Xn.
+                    // Return jumps to context.npc (caller's return address) via BR Xn.
                     continue;
                 } else if (isSupportedOp(op)) {
-                    // Regular op: patch to next instruction
-                    if (i + 1 < num_ops and !isSupportedOp(ops[i + 1])) {
-                        continue;
-                    }
                     const next_offset = offsets[i + 1];
                     if (info.last_branch_offset) |br_offset| {
                         jit.patchBranch(curr_offset, br_offset, next_offset);
@@ -156,6 +140,13 @@ pub fn JitMethod(comptime ops: []const tf, comptime branch_targets: []const usiz
 
         pub fn patchOp(self: *Self, code: []Code, op_index: usize, op_position: usize) void {
             code[op_position] = Code.primOf(self.getEntryFor(op_index));
+        }
+
+        /// Returns true if the given function pointer lies within this JIT buffer.
+        pub fn inJit(self: *const Self, fn_ptr: anytype) bool {
+            const addr = @intFromPtr(fn_ptr);
+            const base = @intFromPtr(self.jit.memory.ptr);
+            return addr >= base and addr < base + self.jit.memory.len;
         }
 
         pub fn dump(self: *const Self) void {

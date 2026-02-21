@@ -9,6 +9,22 @@ const PC = zag.execute.PC;
 const SP = Process.SP;
 const Code = zag.execute.Code;
 const Object = zag.Object;
+const Signature = zag.execute.Signature;
+const SmallInteger = zag.primitives.primitives.SmallInteger;
+
+pub const ThreadedFn = *const fn (PC, SP, *Process, *Context, Extra) zag.execute.Result;
+
+fn findInlinePrimFn(comptime sig: Signature) ?ThreadedFn {
+    inline for (.{
+        .{ SmallInteger.@"+".inlined, &SmallInteger.@"+".inlinePrimitive },
+        .{ SmallInteger.@"-".inlined, &SmallInteger.@"-".inlinePrimitive },
+        .{ SmallInteger.@"<=".inlined, &SmallInteger.@"<=".inlinePrimitive },
+        .{ SmallInteger.@"*".inlined, &SmallInteger.@"*".inlinePrimitive },
+    }) |entry| {
+        if (sig.prim == entry[0].prim) return entry[1];
+    }
+    return null;
+}
 
 // Benchmark configuration
 pub const bench_runs: usize = 1000;
@@ -145,6 +161,29 @@ pub fn opsInfo(comptime tup: anytype) type {
                         }
                     }
                     op_idx += 1;
+                }
+            }
+            break :blk arr;
+        };
+
+        pub const prim_fns: [count]?ThreadedFn = blk: {
+            var arr: [count]?ThreadedFn = [_]?ThreadedFn{null} ** count;
+            var op_idx: usize = 0;
+            var prev_was_inline_prim = false;
+            const fields = std.meta.fields(@TypeOf(tup));
+
+            for (fields) |fld| {
+                const field = @field(tup, fld.name);
+                if (isLabelDef(field)) continue;
+
+                if (@TypeOf(field) == tf) {
+                    prev_was_inline_prim = (field == .inlinePrimitive);
+                    op_idx += 1;
+                } else if (prev_was_inline_prim and @TypeOf(field) == Signature) {
+                    arr[op_idx - 1] = findInlinePrimFn(field);
+                    prev_was_inline_prim = false;
+                } else {
+                    prev_was_inline_prim = false;
                 }
             }
             break :blk arr;

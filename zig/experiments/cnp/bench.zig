@@ -10,6 +10,7 @@ const PC = zag.execute.PC;
 const Code = zag.execute.Code;
 const compileMethod = zag.execute.compileMethod;
 const Sym = zag.symbol.symbols;
+const SmallInteger = zag.primitives.primitives.SmallInteger;
 
 const JitMethod = @import("jit_method.zig").JitMethod;
 const harness = @import("test_harness.zig");
@@ -33,10 +34,12 @@ pub fn main() !void {
     });
     print("-" ** 6 ++ "-+-" ++ "-" ** 8 ++ "-+-" ++ "-" ** 8 ++ "-+-" ++ "-" ** 7 ++ "-+-" ++ "-" ** 14 ++ "\n", .{});
 
-    try bench2();
-    try bench10();
-    try bench20();
-    try bench50();
+    // try bench2();
+    // try bench10();
+    // try bench20();
+    // try bench50();
+    try benchArith();
+    // try benchLoop();
 }
 
 fn bench2() !void {
@@ -76,26 +79,104 @@ fn bench20() !void {
 fn bench50() !void {
     const tup = .{
         tf.pushLiteral, "0const",
-        tf.dup,         tf.dup,        tf.drop,        tf.drop,
-        tf.dup,         tf.dup,        tf.drop,        tf.drop,
-        tf.dup,         tf.dup,        tf.drop,        tf.drop,
-        tf.dup,         tf.dup,        tf.drop,        tf.drop,
-        tf.dup,         tf.dup,        tf.drop,        tf.drop,
-        tf.dup,         tf.dup,        tf.drop,        tf.drop,
-        tf.dup,         tf.dup,        tf.drop,        tf.drop,
-        tf.dup,         tf.dup,        tf.drop,        tf.drop,
-        tf.dup,         tf.dup,        tf.drop,        tf.drop,
-        tf.dup,         tf.dup,        tf.drop,        tf.drop,
-        tf.dup,         tf.dup,        tf.drop,        tf.drop,
-        tf.dup,         tf.dup,        tf.drop,        tf.drop,
+        tf.dup,         tf.dup,
+        tf.drop,        tf.drop,
+        tf.dup,         tf.dup,
+        tf.drop,        tf.drop,
+        tf.dup,         tf.dup,
+        tf.drop,        tf.drop,
+        tf.dup,         tf.dup,
+        tf.drop,        tf.drop,
+        tf.dup,         tf.dup,
+        tf.drop,        tf.drop,
+        tf.dup,         tf.dup,
+        tf.drop,        tf.drop,
+        tf.dup,         tf.dup,
+        tf.drop,        tf.drop,
+        tf.dup,         tf.dup,
+        tf.drop,        tf.drop,
+        tf.dup,         tf.dup,
+        tf.drop,        tf.drop,
+        tf.dup,         tf.dup,
+        tf.drop,        tf.drop,
+        tf.dup,         tf.dup,
+        tf.drop,        tf.drop,
+        tf.dup,         tf.dup,
+        tf.drop,        tf.drop,
         tf.dup,         tf.returnTop,
     };
     try runBench("50", tup, &[_]usize{1});
 }
 
+fn benchArith() !void {
+    const plus = SmallInteger.@"+".inlined;
+    const tup = .{
+        tf.pushLiteral, "0const", // base = 0
+        tf.pushLiteral, "1const", tf.inlinePrimitive, plus, // + 1
+        tf.pushLiteral, "2const", tf.inlinePrimitive, plus, // + 2
+        tf.pushLiteral, "3const", tf.inlinePrimitive, plus, // + 3
+        tf.pushLiteral, "4const", tf.inlinePrimitive, plus, // + 4
+        tf.pushLiteral, "5const", tf.inlinePrimitive, plus, // + 5
+        tf.pushLiteral, "6const", tf.inlinePrimitive, plus, // + 6
+        tf.pushLiteral, "7const", tf.inlinePrimitive, plus, // + 7
+        tf.pushLiteral, "8const", tf.inlinePrimitive, plus, // + 8
+        tf.pushLiteral, "9const", tf.inlinePrimitive, plus, // + 8
+        tf.pushLiteral, "0const", // base = 0
+        tf.pushLiteral, "1const", tf.inlinePrimitive, plus, // + 1
+        tf.pushLiteral, "2const", tf.inlinePrimitive, plus, // + 2
+        tf.pushLiteral, "3const", tf.inlinePrimitive, plus, // + 3
+        tf.pushLiteral, "4const", tf.inlinePrimitive, plus, // + 4
+        tf.pushLiteral, "5const", tf.inlinePrimitive, plus, // + 5
+        tf.pushLiteral, "6const", tf.inlinePrimitive, plus, // + 6
+        tf.pushLiteral, "7const", tf.inlinePrimitive, plus, // + 7
+        tf.pushLiteral, "8const", tf.inlinePrimitive, plus, // + 8
+        tf.pushLiteral, "9const", tf.inlinePrimitive, plus, // + 8a
+        tf.pushLiteral, "0const", // base = 0
+        tf.pushLiteral, "1const", tf.inlinePrimitive, plus, // + 1
+        tf.pushLiteral, "2const", tf.inlinePrimitive, plus, // + 2
+        tf.pushLiteral, "3const", tf.inlinePrimitive, plus, // + 3
+        tf.pushLiteral, "4const", tf.inlinePrimitive, plus, // + 4
+        tf.pushLiteral, "5const", tf.inlinePrimitive, plus, // + 5
+        tf.pushLiteral, "6const", tf.inlinePrimitive, plus, // + 6
+        tf.pushLiteral, "7const", tf.inlinePrimitive, plus, // + 7
+        tf.pushLiteral, "8const", tf.inlinePrimitive, plus, // + 8
+        tf.pushLiteral, "9const", tf.inlinePrimitive, plus, // + 8
+        tf.pushLiteral, "0const", // base = 0
+        tf.pushLiteral, "1const", tf.inlinePrimitive, plus, // + 1
+        tf.pushLiteral, "2const", tf.inlinePrimitive, plus, // + 2
+        tf.pushLiteral, "3const", tf.inlinePrimitive, plus, // + 3
+        tf.pushLiteral, "4const", tf.inlinePrimitive, plus, // + 4
+        tf.pushLiteral, "5const", tf.inlinePrimitive, plus, // + 5
+        tf.pushLiteral, "6const", tf.inlinePrimitive, plus, // + 6
+        tf.pushLiteral, "7const", tf.inlinePrimitive, plus, // + 7
+        tf.pushLiteral, "8const", tf.inlinePrimitive, plus, // + 8
+        tf.pushLiteral, "9const", tf.inlinePrimitive, plus, // + 8
+        tf.returnTop,
+    };
+    try runBench("arith", tup, &[_]usize{ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 });
+}
+
+fn benchLoop() !void {
+    const minus = SmallInteger.@"-".inlined;
+    const leq = SmallInteger.@"<=".inlined;
+    const tup = .{
+        tf.pushLiteral, "0const", 
+        ":loop",
+        tf.dup, 
+        tf.pushLiteral, "1const", 
+        tf.inlinePrimitive, leq, 
+        tf.branchFalse, "done", 
+        tf.returnTop, ":done", 
+        tf.pushLiteral, "2const", 
+        tf.inlinePrimitive, minus, 
+        tf.branch, "loop", 
+    };
+    try runBench("loop", tup, &[_]usize{ 1, 4, 12 });
+}
+
 fn runBench(name: []const u8, comptime tup: anytype, comptime lit_pos: []const usize) !void {
     const info = opsInfo(tup);
-    const Method = JitMethod(&info.ops, &info.branch_targets);
+    const Method = JitMethod(&info.ops, &info.branch_targets, &info.prim_fns);
 
     var method = try Method.init();
     defer method.deinit();
@@ -112,8 +193,8 @@ fn runBench(name: []const u8, comptime tup: anytype, comptime lit_pos: []const u
     var resolve_thr: [lit_pos.len]Object = undefined;
 
     inline for (0..lit_pos.len) |i| {
-        resolve_jit[i] = lits_jit[i].init(0);
-        resolve_thr[i] = lits_thr[i].init(0);
+        resolve_jit[i] = lits_jit[i].init(lit_pos[i]);
+        resolve_thr[i] = lits_thr[i].init(lit_pos[i]);
     }
 
     compiled_jit.resolve(&resolve_jit) catch unreachable;
@@ -122,13 +203,9 @@ fn runBench(name: []const u8, comptime tup: anytype, comptime lit_pos: []const u
     const ctx = process.getContext();
     const sp = process.endOfStack();
 
-    inline for (lit_pos) |pos| {
-        setLiteral(compiled_jit.code[0..], pos, Object.from(42, sp, ctx));
-        setLiteral(compiled_thr.code[0..], pos, Object.from(42, sp, ctx));
-    }
-
     for (info.positions, 0..) |pos, i| method.patchOp(compiled_jit.code[0..], i, pos);
     compiled_thr.initExecute();
+    compiled_jit.initExecute();
 
     const jit_fn = method.getEntryFor(0);
     const thr_fn = compiled_thr.executeFn;
@@ -139,12 +216,6 @@ fn runBench(name: []const u8, comptime tup: anytype, comptime lit_pos: []const u
 
     var jit_samples: [rounds]u64 = undefined;
     var thr_samples: [rounds]u64 = undefined;
-
-    // warmup
-    for (0..warmup) |_| {
-        _ = @call(.never_inline, jit_fn, .{ jit_pc, sp, &process, ctx, jit_extra });
-        _ = @call(.never_inline, thr_fn, .{ thr_pc, sp, &process, ctx, thr_extra });
-    }
 
     // alternating order
     for (0..rounds) |r| {
@@ -164,7 +235,7 @@ fn runBench(name: []const u8, comptime tup: anytype, comptime lit_pos: []const u
     const ratio = @as(f64, @floatFromInt(jit_med)) / @as(f64, @floatFromInt(@max(1, thr_med)));
 
     print("{s:>6} | {d:>5}ns | {d:>5}ns | {d:>6.2}x | {d}-{d}/{d}-{d}\n", .{
-        name, jit_med, thr_med, ratio,
+        name,       jit_med,    thr_med,    ratio,
         jit_mm.min, jit_mm.max, thr_mm.min, thr_mm.max,
     });
 }
@@ -173,13 +244,21 @@ fn measure(entry: anytype, pc: PC, sp: Process.SP, process: *Process, ctx: *Cont
     var timer = std.time.Timer.start() catch unreachable;
     for (0..iterations) |_| {
         _ = @call(.never_inline, entry, .{ pc, sp, process, ctx, extra });
+        // print("{any} , ", .{v.at(0).to(i64)});
     }
+    // print("\n", .{});
     return timer.read() / iterations;
 }
 
 fn median(samples: []u64) u64 {
     std.mem.sort(u64, samples, {}, std.sort.asc(u64));
     return samples[samples.len / 2];
+}
+
+fn mean(samples: []u64) u64 {
+    var sum: u64 = 0;
+    for (samples) |s| sum += s;
+    return sum / samples.len;
 }
 
 fn minMax(samples: []const u64) struct { min: u64, max: u64 } {
