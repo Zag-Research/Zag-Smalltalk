@@ -663,7 +663,7 @@ pub fn main() !void {
         "IntegerBr?Integer",
         //"Integer0?Integer",
         //"IntegerCnP",
-        //"Float",
+        "Float",
         // "IntegerCl",
     };
     // var gpa = std.heap.GeneralPurposeAllocator(.{}){};
