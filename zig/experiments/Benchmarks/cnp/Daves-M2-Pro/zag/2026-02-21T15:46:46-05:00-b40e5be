@@ -1,0 +1,5 @@
+cnp-fib-bench
+for '40 fibonacci'
+          Median   Mean   StdDev  SD/Mean (5 runs)
+   Native  176ms   177ms   0.86ms   0.5%
+IntegerCnP 3289ms  3295ms  21.51ms   0.7%

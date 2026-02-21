@@ -98,7 +98,11 @@ pub const Object = packed struct(u64) {
         return @as(i64, @bitCast(self.rawU() << intTagBits)) >> intTagBits;
     }
     pub inline fn isInt(self: Object) bool {
-        return self.rawU() >> 48 >= Tag.u(.smallInteger);
+        if (true) {
+            return self.rawU() >> 48 >= Tag.u(.smallInteger);
+        } else {
+            return self.rawU() >= Tag.g(.smallInteger);
+        }
     }
     inline fn toObject(int: i64) Object {
         return @bitCast(std.math.rotr(u64, @as(u64, @bitCast(int)) + integerTag, intTagBits));

@@ -56,7 +56,7 @@ const FibSetup = struct {
     const Method = JitMethod(&info.ops, &info.branch_targets, &info.prim_fns);
 };
 
-const fib_n = 30;
+const fib_n = 40;
 const fib_rounds = 5;
 
 pub fn main() !void {
