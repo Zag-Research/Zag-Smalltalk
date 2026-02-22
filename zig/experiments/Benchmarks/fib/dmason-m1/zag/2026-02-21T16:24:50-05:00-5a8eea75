@@ -1,0 +1,14 @@
+
+Config:
+  compile_date   = 2026-02-21T16:48:13-0500
+  git_version    = 2026-02-21T16:24:50-05:00-5a8eea75
+  cpu            = apple_m1 (.aarch64)
+  objectEncoding = .zag
+  max_classes    = 255
+  stack/nursery  = 511w/3830w (8192w)
+for '40 fibonacci'
+          Median   Mean   StdDev  SD/Mean (5 runs, 0 warmups)
+   Native  199ms   204ms  10.80ms   5.3%
+  NativeF  305ms   305ms   0.00ms   0.0%
+IntegerBr 3689ms  3688ms   0.49ms   0.0%
+    Float 3897ms  3896ms   0.75ms   0.0%
