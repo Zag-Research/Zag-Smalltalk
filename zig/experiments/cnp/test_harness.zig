@@ -26,10 +26,6 @@ fn findInlinePrimFn(comptime sig: Signature) ?ThreadedFn {
     return null;
 }
 
-// Benchmark configuration
-pub const bench_runs: usize = 1000;
-pub const bench_warmups: usize = 100;
-
 pub fn initJitTest(method: anytype, process: *align(Process.alignment) Process, title: []const u8) !void {
     const MethodType = @TypeOf(method.*);
     method.* = try MethodType.init();
@@ -80,6 +76,64 @@ pub fn runTest(comptime T: type) !void {
     try T.init();
     defer T.deinit();
     try T.run();
+}
+
+pub fn mean(samples: []const u64) u64 {
+    var sum: u128 = 0;
+    for (samples) |s| sum += s;
+    return @intCast(sum / samples.len);
+}
+
+pub fn median(samples: []u64) u64 {
+    std.mem.sort(u64, samples, {}, comptime std.sort.asc(u64));
+    return samples[samples.len / 2];
+}
+
+pub fn stdDev(samples: []const u64, mean_val: u64) u64 {
+    var sum_sq: u128 = 0;
+    for (samples) |s| {
+        const diff: i128 = @as(i128, @intCast(s)) - @as(i128, @intCast(mean_val));
+        sum_sq += @intCast(diff * diff);
+    }
+    return @intCast(std.math.sqrt(sum_sq / samples.len));
+}
+
+pub fn minMax(samples: []const u64) struct { min: u64, max: u64 } {
+    var min: u64 = std.math.maxInt(u64);
+    var max: u64 = 0;
+    for (samples) |s| {
+        if (s < min) min = s;
+        if (s > max) max = s;
+    }
+    return .{ .min = min, .max = max };
+}
+
+pub fn printRow(comptime N: usize, row_name: []const u8, samples: *[N]u64) void {
+    const med_ns = median(samples);
+    const mean_ns = mean(samples);
+    const sd_ns = stdDev(samples, mean_ns);
+    const med_ms = @as(f64, @floatFromInt(med_ns)) / 1_000_000.0;
+    const mean_ms = @as(f64, @floatFromInt(mean_ns)) / 1_000_000.0;
+    const sd_ms = @as(f64, @floatFromInt(sd_ns)) / 1_000_000.0;
+    std.debug.print("{s:>9}{d:5.0}ms {d:5.0}ms {d:6.2}ms", .{ row_name, med_ms, mean_ms, sd_ms });
+    std.debug.print(" {d:5.1}%", .{sd_ms / mean_ms * 100.0});
+    std.debug.print("\n", .{});
+}
+
+pub fn measureIter(
+    comptime N: usize,
+    entry: anytype,
+    pc: PC,
+    sp: SP,
+    process: *Process,
+    ctx: *Context,
+    extra: Extra,
+) u64 {
+    var timer = std.time.Timer.start() catch unreachable;
+    for (0..N) |_| {
+        _ = @call(.never_inline, entry, .{ pc, sp, process, ctx, extra });
+    }
+    return timer.read() / N;
 }
 
 fn isLabelDef(comptime field: anytype) bool {

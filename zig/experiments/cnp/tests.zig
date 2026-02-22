@@ -202,6 +202,48 @@ pub const BranchFalseTest = struct {
     }
 };
 
+pub const BackedgeSingleTest = struct {
+    const minus = SmallInteger.@"-".inlined;
+    const leq = SmallInteger.@"<=".inlined;
+    const tup = .{
+        tf.pushLiteral,     "0const", // n = 1
+        ":loop",            tf.dup,
+        tf.pushLiteral,     "1const", // 0
+        tf.inlinePrimitive, leq, // n <= 0
+        tf.branchFalse,     "cont",
+        tf.returnTop,       ":cont",
+        tf.pushLiteral,     "2const", // step = 1
+        tf.inlinePrimitive, minus, // n = n - 1
+        tf.branch,          "loop",
+    };
+    const info = opsInfo(tup);
+    const Method = JitMethod(&info.ops, &info.branch_targets, &info.prim_fns);
+
+    var method: Method = undefined;
+    var process: Process align(Process.alignment) = undefined;
+    var compiled align(64) = compileMethod(Sym.value, 0, .Object, tup);
+    var literals_: [3]Object.StaticObject = undefined;
+
+    pub fn init() !void {
+        try initJitTest(&method, &process, "BackedgeSingleTest");
+        compiled.resolve(&[_]Object{
+            literals_[0].init(0),
+            literals_[1].init(0),
+            literals_[2].init(0),
+        }) catch @panic("Failed to resolve");
+    }
+
+    pub fn deinit() void {
+        method.deinit();
+    }
+
+    pub fn run() !void {
+        process.init();
+        const result = runCompiled(&method, &compiled, &process, info.positions[0..], null);
+        try reportResult(result, 0);
+    }
+};
+
 pub const InlinePrimitiveAddTest = struct {
     const plus = SmallInteger.@"+".inlined;
     const tup = .{
