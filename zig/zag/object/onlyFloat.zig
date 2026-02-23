@@ -6,6 +6,7 @@ const zag = @import("../zag.zig");
 const config = zag.config;
 const assert = std.debug.assert;
 const object = zag.object;
+const HeapObject = zag.heap.HeapObject;
 const ClassIndex = object.ClassIndex;
 
 pub const Object = packed struct(u64) {
@@ -168,6 +169,9 @@ pub const Object = packed struct(u64) {
     pub inline fn toDoubleNoCheck(self: Object) f64 {
         return @bitCast(self);
     }
+    pub fn immediateClosure(_: anytype, _: anytype, _: anytype) ?Object {
+        @panic("Not implemented");
+    }
 
     pub inline fn makeImmediate(_: ClassIndex.Compact, hash: u64) Object {
         return @bitCast(hash);
@@ -235,6 +239,9 @@ pub const Object = packed struct(u64) {
 
     pub inline fn isHeapObject(_: Object) bool {
         return false;
+    }
+    pub inline fn ifHeapObject(_: object.Object) ?*HeapObject {
+        return null;
     }
 
     const OF = object.ObjectFunctions;
