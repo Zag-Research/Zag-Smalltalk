@@ -11,9 +11,10 @@ const compileMethod = zag.execute.compileMethod;
 const Sym = zag.symbol.symbols;
 const SmallInteger = zag.primitives.primitives.SmallInteger;
 
-const JitMethod = @import("jit_method.zig").JitMethod;
+const jitmethod = @import("jit_method.zig");
+const JitMethod = jitmethod.JitMethod;
+const opsInfo = jitmethod.opsInfo;
 const harness = @import("test_harness.zig");
-const opsInfo = harness.opsInfo;
 
 const print = std.debug.print;
 
@@ -117,43 +118,40 @@ fn bench50(mode: Mode) !void {
 }
 
 fn benchArith(mode: Mode) !void {
-    const plus = SmallInteger.@"+".inlined;
     const tup = .{
         tf.pushLiteral, "0const", // base = 0
-        tf.pushLiteral, "1const", tf.inlinePrimitive, plus, // + 1
-        tf.pushLiteral, "2const", tf.inlinePrimitive, plus, // + 2
-        tf.pushLiteral, "3const", tf.inlinePrimitive, plus, // + 3
-        tf.pushLiteral, "4const", tf.inlinePrimitive, plus, // + 4
-        tf.pushLiteral, "5const", tf.inlinePrimitive, plus, // + 5
-        tf.pushLiteral, "6const", tf.inlinePrimitive, plus, // + 6
-        tf.pushLiteral, "7const", tf.inlinePrimitive, plus, // + 7
-        tf.pushLiteral, "8const", tf.inlinePrimitive, plus, // + 8
-        tf.pushLiteral, "9const", tf.inlinePrimitive, plus, // + 9
+        tf.pushLiteral, "1const", tf.@"inline+I", tf.fail,tf.fail, // + 1
+        tf.pushLiteral, "2const", tf.@"inline+I", tf.fail,tf.fail, // + 2
+        tf.pushLiteral, "3const", tf.@"inline+I", tf.fail,tf.fail, // + 3
+        tf.pushLiteral, "4const", tf.@"inline+I", tf.fail,tf.fail, // + 4
+        tf.pushLiteral, "5const", tf.@"inline+I", tf.fail,tf.fail, // + 5
+        tf.pushLiteral, "6const", tf.@"inline+I", tf.fail,tf.fail, // + 6
+        tf.pushLiteral, "7const", tf.@"inline+I", tf.fail,tf.fail, // + 7
+        tf.pushLiteral, "8const", tf.@"inline+I", tf.fail,tf.fail, // + 8
+        tf.pushLiteral, "9const", tf.@"inline+I", tf.fail,tf.fail, // + 9
         tf.returnTop,
     };
     try runBench("arith", tup, &[_]usize{ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 }, mode);
 }
 
 fn benchLoop(mode: Mode) !void {
-    const minus = SmallInteger.@"-".inlined;
-    const leq = SmallInteger.@"<=".inlined;
     const tup = .{
-        tf.pushLiteral,     "0const",
-        ":loop",            tf.dup,
-        tf.pushLiteral,     "1const",
-        tf.inlinePrimitive, leq,
-        tf.branchFalse,     "cont",
-        tf.returnTop,       ":cont",
-        tf.pushLiteral,     "2const",
-        tf.inlinePrimitive, minus,
-        tf.branch,          "loop",
+        tf.pushLiteral,  "0const",
+        ":loop",         tf.dup,
+        tf.pushLiteral,  "1const",
+        tf.@"inline<=I", tf.fail,tf.fail,
+        tf.branchFalse,  "cont",
+        tf.returnTop,    ":cont",
+        tf.pushLiteral,  "2const",
+        tf.@"inline-I",  tf.fail,tf.fail,
+        tf.branch,       "loop",
     };
     try runBench("loop", tup, &[_]usize{ 50000, 0, 1 }, mode);
 }
 
 fn runBench(name: []const u8, comptime tup: anytype, comptime lit_pos: []const usize, mode: Mode) !void {
     const info = opsInfo(tup);
-    const Method = JitMethod(&info.ops, &info.branch_targets, &info.prim_fns);
+    const Method = JitMethod(&info.ops, &info.branch_targets);
 
     var method = try Method.init();
     defer method.deinit();

@@ -7,14 +7,14 @@ const PC = zag.execute.PC;
 const MainExecutor = zag.execute.Execution.MainExecutor;
 const compileMethod = zag.execute.compileMethod;
 const Context = zag.Context;
-const SmallInteger = zag.primitives.primitives.SmallInteger;
 const symbol = zag.symbol;
 const Sym = zag.symbol.symbols;
 const dispatch = zag.dispatch;
 
-const JitMethod = @import("jit_method.zig").JitMethod;
+const jitmethod = @import("jit_method.zig");
+const JitMethod = jitmethod.JitMethod;
+const opsInfo = jitmethod.opsInfo;
 const harness = @import("test_harness.zig");
-const opsInfo = harness.opsInfo;
 const print = std.debug.print;
 
 const fib_n = 40;
@@ -35,32 +35,30 @@ fn measureNativeFib(n: i64) u64 {
 
 const FibSetup = struct {
     const self = Context.makeVariable(0, 1, .Parameter, &.{});
-    const leq = SmallInteger.@"<=".inlined;
-    const plus = SmallInteger.@"+".inlined;
-    const minus = SmallInteger.@"-".inlined;
     const nullMethod = dispatch.nullMethod;
     const sig = symbol.signature;
 
     const tup = .{
-        tf.push,            self,
-        tf.pushLiteral,     "1const",
-        tf.inlinePrimitive, leq,
-        tf.branchFalse,     "false",
-        tf.returnSelf,      ":false",
-        tf.push,            self,
-        tf.pushLiteral,     "0const",
-        tf.inlinePrimitive, minus,
-        tf.send,            sig(.fibonacci, 0),
-        &nullMethod,        tf.push,
-        self,               tf.pushLiteral,
-        "1const",           tf.inlinePrimitive,
-        minus,              tf.send,
-        sig(.fibonacci, 0), &nullMethod,
-        tf.inlinePrimitive, plus,
+        tf.push,             self,
+        tf.pushLiteral,      "1const",
+        tf.@"inline<=I",     tf.fail, tf.fail,
+        tf.branchFalse,      "false",
+        tf.returnSelf,       ":false",
+        tf.push,             self,
+        tf.pushLiteral,      "0const",
+        tf.@"inline-I",      tf.fail, tf.fail,
+        tf.send,             sig(.fibonacci, 0),
+        &nullMethod,         tf.push,
+        self,                tf.pushLiteral,
+        "1const",
+        tf.@"inline-I",      tf.fail, tf.fail,
+        tf.send,             sig(.fibonacci, 0),
+        &nullMethod,
+        tf.@"inline+I",      tf.fail, tf.fail,
         tf.returnTop,
     };
     const info = opsInfo(tup);
-    const Method = JitMethod(&info.ops, &info.branch_targets, &info.prim_fns);
+    const Method = JitMethod(&info.ops, &info.branch_targets);
 };
 
 fn measureSendTo(exe: *MainExecutor, compiled: anytype) u64 {
@@ -85,6 +83,12 @@ pub fn main() !void {
 
     var exe = MainExecutor.new();
 
+    print("for '{} fibonacci'\n", .{fib_n});
+    print("          Median   Mean   StdDev  SD/Mean ({} run{s}, {} warmup{s})\n", .{
+        fib_rounds,    if (fib_rounds != 1) "s" else "",
+        warmup_rounds, if (warmup_rounds != 1) "s" else "",
+    });
+    
     for (0..warmup_rounds) |_| {
         _ = measureSendTo(&exe, &compiled_jit);
         _ = measureNativeFib(fib_n);
@@ -98,11 +102,6 @@ pub fn main() !void {
         nat_samples[r] = measureNativeFib(fib_n);
     }
 
-    print("for '{} fibonacci'\n", .{fib_n});
-    print("          Median   Mean   StdDev  SD/Mean ({} run{s}, {} warmup{s})\n", .{
-        fib_rounds,    if (fib_rounds != 1) "s" else "",
-        warmup_rounds, if (warmup_rounds != 1) "s" else "",
-    });
     harness.printRow(fib_rounds, "Native", &nat_samples);
     harness.printRow(fib_rounds, "IntegerCnP", &jit_samples);
 }

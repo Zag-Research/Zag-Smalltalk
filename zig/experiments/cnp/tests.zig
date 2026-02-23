@@ -22,13 +22,13 @@ const initJitTest = harness.initJitTest;
 const runCompiled = harness.runCompiled;
 const setLiteral = harness.setLiteral;
 const reportResult = harness.reportResult;
-const opsInfo = harness.opsInfo;
+const opsInfo = @import("jit_method.zig").opsInfo;
 
 pub const PushTest = struct {
     const self = Context.makeVariable(0, 1, .Parameter, &.{});
     const tup = .{ tf.push, self, tf.returnTop };
     const info = opsInfo(tup);
-    const Method = JitMethod(&info.ops, &info.branch_targets, &info.prim_fns);
+    const Method = JitMethod(&info.ops, &info.branch_targets);
 
     var method: Method = undefined;
     var process: Process align(Process.alignment) = undefined;
@@ -56,7 +56,7 @@ pub const PushTest = struct {
 pub const PushLiteralTest = struct {
     const tup = .{ tf.pushLiteral, "0const", tf.returnTop };
     const info = opsInfo(tup);
-    const Method = JitMethod(&info.ops, &info.branch_targets, &info.prim_fns);
+    const Method = JitMethod(&info.ops, &info.branch_targets);
 
     var method: Method = undefined;
     var process: Process align(Process.alignment) = undefined;
@@ -65,7 +65,7 @@ pub const PushLiteralTest = struct {
 
     pub fn init() !void {
         try initJitTest(&method, &process, "PushLiteralTest");
-        compiled.resolve(&[_]Object{literal_.init(0)}) catch @panic("Failed to resolve");
+        compiled.resolve(&[_]Object{literal_.init(7)}) catch @panic("Failed to resolve");
     }
 
     pub fn deinit() void {
@@ -73,9 +73,6 @@ pub const PushLiteralTest = struct {
     }
 
     pub fn run() !void {
-        const context = process.getContext();
-        const sp = process.endOfStack();
-        setLiteral(compiled.code[0..], 1, Object.from(7, sp, context));
         const result = runCompiled(&method, &compiled, &process, info.positions[0..], null);
         try reportResult(result, 7);
     }
@@ -90,7 +87,7 @@ pub const TailCallPatchTest = struct {
         "2const",       tf.returnTop,
     };
     const info = opsInfo(tup);
-    const Method = JitMethod(&info.ops, &info.branch_targets, &info.prim_fns);
+    const Method = JitMethod(&info.ops, &info.branch_targets);
 
     var method: Method = undefined;
     var process: Process align(Process.alignment) = undefined;
@@ -100,9 +97,9 @@ pub const TailCallPatchTest = struct {
     pub fn init() !void {
         try initJitTest(&method, &process, "TailCallPatchTest");
         compiled.resolve(&[_]Object{
-            literals_[0].init(0),
-            literals_[1].init(0),
-            literals_[2].init(0),
+            literals_[0].init(11),
+            literals_[1].init(22),
+            literals_[2].init(33),
         }) catch @panic("Failed to resolve");
     }
 
@@ -111,12 +108,6 @@ pub const TailCallPatchTest = struct {
     }
 
     pub fn run() !void {
-        const context = process.getContext();
-        const sp = process.endOfStack();
-        const code = compiled.code[0..];
-        setLiteral(code, 1, Object.from(11, sp, context));
-        setLiteral(code, 5, Object.from(22, sp, context));
-        setLiteral(code, 8, Object.from(33, sp, context));
         const result = runCompiled(&method, &compiled, &process, info.positions[0..], null);
         try reportResult(result, 33);
     }
@@ -125,7 +116,7 @@ pub const TailCallPatchTest = struct {
 pub const ReturnSelfTest = struct {
     const tup = .{tf.returnSelf};
     const info = opsInfo(tup);
-    const Method = JitMethod(&info.ops, &info.branch_targets, &info.prim_fns);
+    const Method = JitMethod(&info.ops, &info.branch_targets);
 
     var method: Method = undefined;
     var process: Process align(Process.alignment) = undefined;
@@ -161,7 +152,7 @@ pub const BranchFalseTest = struct {
         tf.returnTop,
     };
     const info = opsInfo(tup);
-    const Method = JitMethod(&info.ops, &info.branch_targets, &info.prim_fns);
+    const Method = JitMethod(&info.ops, &info.branch_targets);
 
     var method: Method = undefined;
     var process: Process align(Process.alignment) = undefined;
@@ -172,8 +163,8 @@ pub const BranchFalseTest = struct {
         try initJitTest(&method, &process, "BranchFalseTest");
         compiled.resolve(&[_]Object{
             literals_[0].init(0),
-            literals_[1].init(0),
-            literals_[2].init(0),
+            literals_[1].init(111),
+            literals_[2].init(222),
         }) catch @panic("Failed to resolve");
     }
 
@@ -183,12 +174,7 @@ pub const BranchFalseTest = struct {
 
     pub fn runWithValue(value: Object, expected: i64) !void {
         process.init();
-        const sp = process.endOfStack();
-        const code = compiled.code[0..];
-        setLiteral(code, 1, value);
-        setLiteral(code, 5, Object.from(111, sp, process.getContext()));
-        setLiteral(code, 8, Object.from(222, sp, process.getContext()));
-        
+        setLiteral(compiled.code[0..], 1, value);
         const result = runCompiled(&method, &compiled, &process, info.positions[0..], null);
         try reportResult(result, expected);
     }
@@ -203,21 +189,19 @@ pub const BranchFalseTest = struct {
 };
 
 pub const BackedgeSingleTest = struct {
-    const minus = SmallInteger.@"-".inlined;
-    const leq = SmallInteger.@"<=".inlined;
     const tup = .{
-        tf.pushLiteral,     "0const", // n = 1
-        ":loop",            tf.dup,
-        tf.pushLiteral,     "1const", // 0
-        tf.inlinePrimitive, leq, // n <= 0
-        tf.branchFalse,     "cont",
-        tf.returnTop,       ":cont",
-        tf.pushLiteral,     "2const", // step = 1
-        tf.inlinePrimitive, minus, // n = n - 1
-        tf.branch,          "loop",
+        tf.pushLiteral,  "0const", // n = 1
+        ":loop",         tf.dup,
+        tf.pushLiteral,  "1const", // 0
+        tf.@"inline<=I", tf.fail, tf.fail, // n <= 0
+        tf.branchFalse,  "cont",
+        tf.returnTop,    ":cont",
+        tf.pushLiteral,  "2const", // step = 1
+        tf.@"inline-I",  tf.fail, tf.fail, // n = n - 1
+        tf.branch,       "loop",
     };
     const info = opsInfo(tup);
-    const Method = JitMethod(&info.ops, &info.branch_targets, &info.prim_fns);
+    const Method = JitMethod(&info.ops, &info.branch_targets);
 
     var method: Method = undefined;
     var process: Process align(Process.alignment) = undefined;
@@ -245,15 +229,14 @@ pub const BackedgeSingleTest = struct {
 };
 
 pub const InlinePrimitiveAddTest = struct {
-    const plus = SmallInteger.@"+".inlined;
     const tup = .{
-        tf.pushLiteral,     "0const",
-        tf.pushLiteral,     "1const",
-        tf.inlinePrimitive, plus,
+        tf.pushLiteral, "0const",
+        tf.pushLiteral, "1const",
+        tf.@"inline+I", tf.fail, tf.fail,
         tf.returnTop,
     };
     const info = opsInfo(tup);
-    const Method = JitMethod(&info.ops, &info.branch_targets, &info.prim_fns);
+    const Method = JitMethod(&info.ops, &info.branch_targets);
 
     var method: Method = undefined;
     var process: Process align(Process.alignment) = undefined;
@@ -263,8 +246,8 @@ pub const InlinePrimitiveAddTest = struct {
     pub fn init() !void {
         try initJitTest(&method, &process, "InlinePrimitiveAddTest");
         compiled.resolve(&[_]Object{
-            literals_[0].init(0),
-            literals_[1].init(0),
+            literals_[0].init(40),
+            literals_[1].init(2),
         }) catch @panic("Failed to resolve");
     }
 
@@ -273,11 +256,6 @@ pub const InlinePrimitiveAddTest = struct {
     }
 
     pub fn run() !void {
-        const context = process.getContext();
-        const sp = process.endOfStack();
-        const code = compiled.code[0..];
-        setLiteral(code, 1, Object.from(40, sp, context));
-        setLiteral(code, 3, Object.from(2, sp, context));
         const result = runCompiled(&method, &compiled, &process, info.positions[0..], null);
         try reportResult(result, 42);
     }
@@ -294,7 +272,7 @@ pub const Send0Test = struct {
         null,           tf.returnTop,
     };
     const info = opsInfo(tup);
-    const Method = JitMethod(&info.ops, &info.branch_targets, &info.prim_fns);
+    const Method = JitMethod(&info.ops, &info.branch_targets);
 
     var method: Method = undefined;
     var process: Process align(Process.alignment) = undefined;
@@ -305,7 +283,7 @@ pub const Send0Test = struct {
         dispatch.addMethod(callee.asCompiledMethodPtr());
 
         try initJitTest(&method, &process, "Send0Test");
-        compiled.resolve(&[_]Object{literal_.init(0)}) catch @panic("Failed to resolve");
+        compiled.resolve(&[_]Object{literal_.init(10)}) catch @panic("Failed to resolve");
     }
 
     pub fn deinit() void {
@@ -314,12 +292,7 @@ pub const Send0Test = struct {
 
     pub fn run() !void {
         process.init();
-        const context = process.getContext();
-        const sp = process.endOfStack();
-        const code = compiled.code[0..];
-        setLiteral(code, 1, Object.from(10, sp, context));
-
-        const result = runCompiled(&method, &compiled, &process, info.positions[0..], null);
+       const result = runCompiled(&method, &compiled, &process, info.positions[0..], null);
         try reportResult(result, 10); 
     }
 };
@@ -335,7 +308,7 @@ pub const SendTest = struct {
         null,           tf.returnTop,
     };
     const info = opsInfo(tup);
-    const Method = JitMethod(&info.ops, &info.branch_targets, &info.prim_fns);
+    const Method = JitMethod(&info.ops, &info.branch_targets);
 
     var method: Method = undefined;
     var process: Process align(Process.alignment) = undefined;
@@ -347,8 +320,8 @@ pub const SendTest = struct {
 
         try initJitTest(&method, &process, "SendTest");
         compiled.resolve(&[_]Object{
-            literals_[0].init(0),
-            literals_[1].init(0),
+            literals_[0].init(10),
+            literals_[1].init(99),
         }) catch @panic("Failed to resolve");
     }
 
@@ -358,29 +331,22 @@ pub const SendTest = struct {
 
     pub fn run() !void {
         process.init();
-        const context = process.getContext();
-        const sp = process.endOfStack();
-        const code = compiled.code[0..];
-        setLiteral(code, 1, Object.from(10, sp, context));
-        setLiteral(code, 3, Object.from(99, sp, context));
         const result = runCompiled(&method, &compiled, &process, info.positions[0..], null);
         try reportResult(result, 99);
     }
 };
 
 pub const InlinePrimitiveChainedTest = struct {
-    const plus = SmallInteger.@"+".inlined;
-    const minus = SmallInteger.@"-".inlined;
     const tup = .{
-        tf.pushLiteral,     "0const",  // push a
-        tf.pushLiteral,     "1const",  // push b
-        tf.inlinePrimitive, plus,      // a + b
-        tf.pushLiteral,     "2const",  // push c
-        tf.inlinePrimitive, minus,     // (a + b) - c
+        tf.pushLiteral, "0const",         // push a
+        tf.pushLiteral, "1const",         // push b
+        tf.@"inline+I", tf.fail, tf.fail, // a + b
+        tf.pushLiteral, "2const",         // push c
+        tf.@"inline-I", tf.fail, tf.fail, // (a + b) - c
         tf.returnTop,
     };
     const info = opsInfo(tup);
-    const Method = JitMethod(&info.ops, &info.branch_targets, &info.prim_fns);
+    const Method = JitMethod(&info.ops, &info.branch_targets);
 
     var method: Method = undefined;
     var process: Process align(Process.alignment) = undefined;
@@ -390,9 +356,9 @@ pub const InlinePrimitiveChainedTest = struct {
     pub fn init() !void {
         try initJitTest(&method, &process, "InlinePrimitiveChainedTest");
         compiled.resolve(&[_]Object{
-            literals_[0].init(0),
-            literals_[1].init(0),
-            literals_[2].init(0),
+            literals_[0].init(40),
+            literals_[1].init(50),
+            literals_[2].init(48),
         }) catch @panic("Failed to resolve");
     }
 
@@ -401,12 +367,6 @@ pub const InlinePrimitiveChainedTest = struct {
     }
 
     pub fn run() !void {
-        const context = process.getContext();
-        const sp = process.endOfStack();
-        const code = compiled.code[0..];
-        setLiteral(code, 1, Object.from(40, sp, context));   // a = 40 at code[1]
-        setLiteral(code, 3, Object.from(50, sp, context));   // b = 50 at code[3]
-        setLiteral(code, 7, Object.from(48, sp, context));   // c = 48 at code[7]
         const result = runCompiled(&method, &compiled, &process, info.positions[0..], null);
         try reportResult(result, 42);  // 40 + 50 - 48 = 42
     }
