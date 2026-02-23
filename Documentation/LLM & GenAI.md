@@ -9,4 +9,5 @@
 
 ## GNNs
 - [Integrating Large Language Models and Graph Neural Networks](https://www.youtube.com/watch?v=reFeFpdzFaI)
-- 
+
+[Predictive Coding vs. Back Propogation](https://www.youtube.com/watch?v=l-OLgbdZ3kk)

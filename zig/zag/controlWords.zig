@@ -50,6 +50,11 @@ pub const module = struct {
         }
     };
 };
+pub const fail = struct {
+    pub fn threadedFn(_: PC, _: SP, _: *Process, _: *Context, _: Extra) Result {
+        @panic("Failed");
+    }
+};
 pub const branch = struct {
     pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
         const target = pc.targetPC();
