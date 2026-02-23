@@ -642,6 +642,7 @@ pub const primitiveThreadedFunctions = .{
     @import("primitives/Array.zig").threadedFns,
     // @import("primitives/Object.zig").threadedFns,
     @import("primitives/SmallInteger.zig").threadedFns,
+    @import("primitives/Float.zig").threadedFns,
     // @import("primitives/Behavior.zig").threadedFns,
     @import("primitives/BlockClosure.zig").threadedFns,
     @import("primitives/Boolean.zig").threadedFns,
