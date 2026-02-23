@@ -248,6 +248,12 @@ pub const PC = packed struct {
     pub inline fn next2(self: PC) PC {
         return asPC(self.array() + 2);
     }
+    pub inline fn prim3(self: PC) *const fn (PC, SP, *Process, *Context, Extra) Result {
+        return primOf("PC_prim3:        ", &self.array()[2]);
+    }
+    pub inline fn next3(self: PC) PC {
+        return asPC(self.array() + 3);
+    }
     pub inline fn skip(self: PC, n: usize) PC {
         return asPC(self.array() + n);
     }

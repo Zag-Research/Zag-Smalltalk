@@ -530,7 +530,7 @@ pub const threadedFunctions = struct {
             }, exe.stack());
         }
     };
-    pub const inlinePrimitive = struct {
+    pub const inlinePrimitiveX = struct {
         pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
             sp.traceStack("inlinePrimitive", context, extra);
             const obj = pc.signature();
@@ -641,7 +641,7 @@ pub const threadedFunctions = struct {
 pub const primitiveThreadedFunctions = .{
     @import("primitives/Array.zig").threadedFns,
     // @import("primitives/Object.zig").threadedFns,
-    @import("primitives/Smallinteger.zig").threadedFns,
+    @import("primitives/SmallInteger.zig").threadedFns,
     // @import("primitives/Behavior.zig").threadedFns,
     @import("primitives/BlockClosure.zig").threadedFns,
     @import("primitives/Boolean.zig").threadedFns,
@@ -649,7 +649,7 @@ pub const primitiveThreadedFunctions = .{
 pub fn init() void {
     @import("primitives/Array.zig").init();
     @import("primitives/Object.zig").init();
-    // @import("primitives/Smallinteger.zig").init();
+    // @import("primitives/SmallInteger.zig").init();
     // @import("primitives/Behavior.zig").init();
     // @import("primitives/BlockClosure.zig").init();
     // @import("primitives/Boolean.zig").init();

@@ -48,7 +48,7 @@ pub const Tag = enum(TagBaseType) {
     // inline
     fn from(c: ClassIndex) Tag {
         const cls = @intFromEnum(c);
-        assert(cls <= 15);
+        assert(cls <= 31);
         return @enumFromInt(cls + @intFromEnum(Tag.ThunkReturnLocal) - 1);
     }
     inline fn class(t: Tag) ClassIndex {
@@ -98,7 +98,11 @@ pub const Object = packed struct(u64) {
         return @as(i64, @bitCast(self.rawU() << intTagBits)) >> intTagBits;
     }
     pub inline fn isInt(self: Object) bool {
-        return self.rawU() >= Tag.g(.smallInteger);
+        if (true) {
+            return self.rawU() >> 48 >= Tag.u(.smallInteger);
+        } else {
+            return self.rawU() >= Tag.g(.smallInteger);
+        }
     }
     inline fn toObject(int: i64) Object {
         return @bitCast(std.math.rotr(u64, @as(u64, @bitCast(int)) + integerTag, intTagBits));
@@ -127,6 +131,8 @@ pub const Object = packed struct(u64) {
     }
     //inline
     fn oImm(c: ClassIndex, h: u32) Object {
+        if (c == .UndefinedObject)
+            return .{ .tag = .heap, .data = 0 };
         return .{ .tag = Tag.from(c), .data = h };
     }
     pub inline fn isSymbol(self: Object) bool {
@@ -202,6 +208,9 @@ pub const Object = packed struct(u64) {
     inline fn nativeI_noCheck(self: Object) i64 {
         return self.asI64();
     }
+    pub inline fn asUntaggedI(t: i51) i64 {
+        return t << 13;
+    }
     pub inline fn fromNativeI(t: i51, _: anytype, _: anytype) Object {
         return toObjectFromNative(t);
     }
@@ -262,7 +271,8 @@ pub const Object = packed struct(u64) {
     }
     pub inline fn hasMemoryReference(self: Object) bool {
         return switch (self.tag) {
-            .heap, .ThunkReturnLocal, .ThunkReturnInstance, .ThunkReturnObject, .ThunkReturnImmediate, .ThunkLocal, .ThunkInstance, .ThunkHeap => true,
+            .heap => self == Nil(),
+            .ThunkReturnLocal, .ThunkReturnInstance, .ThunkReturnObject, .ThunkReturnImmediate, .ThunkLocal, .ThunkInstance, .ThunkHeap => true,
             else => false,
         };
     }
@@ -378,12 +388,18 @@ pub const Object = packed struct(u64) {
         if (!std.math.isNan(@as(f64, @bitCast(self)))) {@branchHint(.likely);
             return .Float;
         }
-        const tag = self.tag;
-        if (tag == .heap) {@branchHint(.likely);
-            return self.toUnchecked(*HeapObject).*.getClass();
+        switch (self.tag) {
+            .heap => {@branchHint(.likely);
+                if (self == Nil()) {@branchHint(.unlikely);
+                    return .UndefinedObject;
+                }
+                return self.toUnchecked(*HeapObject).*.getClass();
+            },
+            else => |tag| {
+                if (self.rawU() == NaN) {@branchHint(.unlikely); return .Float;}
+                return tag.class();
+            },
         }
-        if (self.rawU() == NaN) {@branchHint(.unlikely); return .Float;}
-        return tag.class();
     }
     pub inline fn isHeapObject(self: Object) bool {
         return self.tag == .heap;

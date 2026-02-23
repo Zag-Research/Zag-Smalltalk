@@ -2,8 +2,13 @@
 
 Smalltalk VM Written in Zig with methods stored as type-annotated ASTs
 
-Methods are re-constituted from the AST for edit windows. 
-No Interpreter; uses Threaded and CPS execution models interchangeably 
+Methods are re-constituted from the AST for edit windows.
+
+Execution model:
+- No Interpreter
+- Threaded execution enables stepwise execution for debugging
+- Native Continuation-Passing Style execution model for performance
+- switching between the models is seamless 
 
 Memory structure and some of execution principles loosely modelled on OpenSmalltalk VM <br>
 
