@@ -7,6 +7,7 @@ const config = zag.config;
 const assert = std.debug.assert;
 const object = zag.object;
 const ClassIndex = object.ClassIndex;
+const HeapObject = zag.heap.HeapObject;
 pub const Object = packed struct(u64) {
     int: u64,
     const Self = @This();
@@ -44,6 +45,9 @@ pub const Object = packed struct(u64) {
     pub const fromUntaggedI = fromTaggedI;
     pub inline fn symbol40(_: object.Object) u40 {
         return 0;
+    }
+    pub inline fn asUntaggedI(i: i64) i64 {
+        return i;
     }
     pub inline //
     fn nativeI(self: object.Object) ?i64 {
@@ -138,6 +142,9 @@ pub const Object = packed struct(u64) {
     pub inline fn toDoubleNoCheck(_: Object) f64 {
         @panic("Not implemented");
     }
+    pub fn immediateClosure(_: anytype, _: anytype, _: anytype) ?Object {
+        @panic("Not implemented");
+    }
     pub inline fn makeImmediate(_: ClassIndex.Compact, hash: u64) Object {
         return @bitCast(hash);
     }
@@ -201,6 +208,15 @@ pub const Object = packed struct(u64) {
     }
     pub inline fn isHeapObject(_: Object) bool {
         return false;
+    }
+    pub inline fn ifHeapObject(_: object.Object) ?*HeapObject {
+        return null;
+    }
+    pub fn extraImmediateI(_: Object) ?u8 {
+        return null;
+    }
+    pub fn extraImmediateU(_: Object) ?u8 {
+        return null;
     }
     const OF = object.ObjectFunctions;
     pub const arrayAsSlice = OF.arrayAsSlice;
