@@ -141,7 +141,6 @@ fn createExperimentExecutables(
         .use_llvm = true,
     });
     b.installArtifact(fib);
-    if (true) return;
 
     const cnpFib = b.addExecutable(.{
         .name = "cnpFib",
