@@ -226,7 +226,8 @@ pub const Object = packed struct(u64) {
         return Tag.isSet(self, .float);
     }
     pub inline fn isMemoryDouble(self: Object) bool {
-        return if (self.ifMemoryAllocated()) |ptr| ptr.getClass() == .Float else false;
+        if (self.ifHeapObject()) |ptr| return ptr.getClass() == .Float;
+        return false;
     }
     inline fn oImm(c: ClassIndex.Compact, h: u56) Self {
         return Self{ .tag = .immediates, .class = c, .hash = h };
@@ -363,6 +364,43 @@ pub const Object = packed struct(u64) {
     }
     pub inline fn hasMemoryReference(self: Object) bool {
         return if (self.isHeapObject()) self != Object.Nil() else @intFromEnum(self.class) <= @intFromEnum(ClassIndex.Compact.ThunkHeap);
+    }
+
+    pub inline fn ifHeapObject(self: Object) ?*HeapObject {
+        if (self.tag == .pointer and self.rawU() != 0) return @ptrFromInt(self.rawU());
+        return null;
+    }
+
+    pub inline fn asUntaggedI(i: i64) i64 {
+        return i;
+    }
+
+    pub fn immediateClosure(sig: zag.execute.Signature, sp: SP, context: *Context) ?Object {
+        const class = sig.getClass();
+        _ = sp;
+        return switch (class) {
+            .ThunkReturnObject, .ThunkReturnLocal, .ThunkReturnInstance, .ThunkReturnImmediate, .ThunkReturnCharacter, .ThunkReturnFloat => oImm(class.compact(), @intCast(@intFromPtr(context) << 8 | sig.primitive())),
+            else => null,
+        };
+    }
+
+    pub fn extraImmediateU(obj: Object) ?u8 {
+        if (obj.isImmediateClass(.ThunkReturnLocal) or
+            obj.isImmediateClass(.ThunkReturnInstance) or
+            obj.isImmediateClass(.ThunkReturnImmediate) or
+            obj.isImmediateClass(.ThunkReturnCharacter) or
+            obj.isImmediateClass(.ThunkReturnFloat))
+        {
+            return obj.extraU();
+        }
+        return null;
+    }
+
+    pub fn extraImmediateI(obj: Object) ?i8 {
+        if (obj.isImmediateClass(.ThunkReturnObject)) {
+            return obj.extraI();
+        }
+        return null;
     }
     pub const Special = packed struct {
         imm: TagAndClassType,
