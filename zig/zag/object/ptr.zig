@@ -36,7 +36,7 @@ pub const Object = packed struct(u64) {
     }
 
     pub inline fn Nil() Object {
-        if (false and @inComptime()) {
+        if (@inComptime()) {
             return Object{ .ref = undefined };
         }
         return Object.fromAddress(&InMemory.Nil);
@@ -116,6 +116,12 @@ pub const Object = packed struct(u64) {
         if (value & 7 != 0) return value;
         return null;
     }
+    pub inline fn asUntaggedI(i: i64) i64 {
+        return i;
+    }
+    pub fn immediateClosure(_: anytype, _: anytype, _: anytype) ?Object {
+        return null;
+    }
     pub inline fn thunkImmediate(o: Object) ?Object {
         _ = .{ o, unreachable };
     }
@@ -126,8 +132,9 @@ pub const Object = packed struct(u64) {
         return false;
     }
     inline fn memObject(self: Object) ?*HeapObject {
-        const ptr: ?*HeapObject = @ptrFromInt(self.rawU());
-        return ptr;
+        const value: u64 = @bitCast(self);
+        if (value == 0) return null;
+        return @constCast(@ptrCast(self.ref));
     }
     pub inline fn isMemoryDouble(self: object.Object) bool {
         if (memObject(self)) |ptr| {
