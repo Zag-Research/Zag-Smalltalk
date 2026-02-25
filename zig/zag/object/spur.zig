@@ -179,6 +179,10 @@ pub const Object = packed union {
     pub inline fn extraValue(_: Object) Object {
         @panic("Not implemented");
     }
+    pub inline fn highPointer(self: Object, T: type) ?T {
+        if (self.isHeapObject()) return @ptrFromInt(self.rawU());
+        return null;
+    }
     pub inline fn withPrimitive(self: Object, prim: u64) Object {
         // This is only done for signature objects, which already aren't quite valid
         return @bitCast(self.rawU() | prim << 40);
@@ -275,7 +279,7 @@ pub const Object = packed union {
         pub fn init(self: *StaticObject, value: anytype) Object {
             const ptr: *InMemory.PointedObject = @ptrCast(self);
             switch (@typeInfo(@TypeOf(value))) {
-                .int, .comptime_int => return fromNativeI(value, {}, {}),
+                .int, .comptime_int => return fromNativeI(@intCast(value), {}, {}),
                 .comptime_float => {
                     if (encode(value)) |encoded| {
                         return @bitCast(encoded);
@@ -306,7 +310,8 @@ pub const Object = packed union {
     }
 
     pub inline fn isMemoryDouble(self: Object) bool {
-        return if (self.hasMemoryReference()) |ptr| ptr.getClass() == .Float else false;
+        if (self.ifHeapObject()) |ptr| return ptr.getClass() == .Float;
+        return false;
     }
 
     pub inline fn toDoubleNoCheck(self: Object) f64 {
@@ -370,6 +375,31 @@ pub const Object = packed union {
 
     pub inline fn hasMemoryReference(self: Object) bool {
         return self.isHeapObject();
+    }
+
+    pub inline fn ifHeapObject(self: Object) ?*HeapObject {
+        if (self.isHeapObject()) return @ptrFromInt(self.rawU());
+        return null;
+    }
+
+    pub inline fn asUntaggedI(i: i64) i64 {
+        return i;
+    }
+
+    pub fn immediateClosure(_: anytype, _: anytype, _: anytype) ?Object {
+        return null;
+    }
+
+    pub fn extraImmediateU(_: Object) ?u8 {
+        return null;
+    }
+
+    pub fn extraImmediateI(_: Object) ?i8 {
+        return null;
+    }
+
+    pub fn extraI(_: Object) i8 {
+        return 0;
     }
 
     // Add missing methods

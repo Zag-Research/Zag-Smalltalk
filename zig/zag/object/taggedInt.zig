@@ -223,6 +223,7 @@ pub const Object = packed union {
     }
 
     pub fn fromAddress(value: anytype) Object {
+        if (@inComptime()) return Object{ .ref = undefined };
         return @bitCast(@intFromPtr(value));
     }
     pub const StaticObject = struct {
@@ -259,7 +260,8 @@ pub const Object = packed union {
     }
 
     pub inline fn isMemoryDouble(self: object.Object) bool {
-        return if (self.hasMemoryReference()) |ptr| ptr.getClass() == .Float else false;
+        if (self.ifHeapObject()) |ptr| return ptr.getClass() == .Float;
+        return false;
     }
 
     inline fn toDoubleFromMemory(self: object.Object) f64 {
@@ -311,6 +313,35 @@ pub const Object = packed union {
     }
     pub inline fn hasMemoryReference(self: object.Object) bool {
         return self.isHeapObject();
+    }
+
+    pub inline fn ifHeapObject(self: Object) ?*HeapObject {
+        if (self.isHeapObject()) return @constCast(@ptrCast(self.ref));
+        return null;
+    }
+    pub inline fn highPointer(self: Object, T: type) ?T {
+        if (self.isHeapObject()) return @ptrFromInt(self.rawU());
+        return null;
+    }
+
+    pub inline fn asUntaggedI(i: i64) i64 {
+        return i;
+    }
+
+    pub fn immediateClosure(_: anytype, _: anytype, _: anytype) ?Object {
+        return null;
+    }
+
+    pub fn extraImmediateU(_: Object) ?u8 {
+        return null;
+    }
+
+    pub fn extraImmediateI(_: Object) ?i8 {
+        return null;
+    }
+
+    pub fn extraI(_: Object) i8 {
+        return 0;
     }
 
     // Add symbolHash method
