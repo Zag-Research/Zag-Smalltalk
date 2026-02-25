@@ -17,15 +17,12 @@ pub const Object = packed struct(u64) {
     pub inline fn False() Object {
         return @bitCast(@as(u64, 0));
     }
-
     pub inline fn True() Object {
         return @bitCast(@as(u64, 1));
     }
-
     pub inline fn Nil() Object {
         return @bitCast(@as(u64, 2));
     }
-
     pub const maxInt = 0x7fff_ffff_ffff_ffff;
     pub const tagged0: i64 = 0;
     pub const LowTagType = void;
@@ -40,159 +37,76 @@ pub const Object = packed struct(u64) {
     pub inline fn untaggedI(_: Object) ?i64 {
         @panic("not implemented");
     }
-
     inline fn untaggedI_noCheck(_: Object) i64 {
         @panic("not implemented");
     }
-
     pub const taggedI = untaggedI;
     const taggedI_noCheck = untaggedI_noCheck;
-
     pub inline fn fromTaggedI(_: i64, _: anytype, _: anytype) Object {
         @panic("not implemented");
     }
-
     pub const fromUntaggedI = fromTaggedI;
-
-    pub inline fn symbol40(self: Object) u40 {
-        return @truncate(self.rawU());
-    }
-
-    pub inline fn nativeI(_: Object) ?i64 {
-        @panic("not implemented");
-    }
-
-    pub inline fn nativeF(self: Object) ?f64 {
-        return @bitCast(self);
-    }
-
-    pub inline fn isFloat(_: Object) bool {
-        return true;
-    }
-
-    pub inline fn nativeF_noCheck(self: Object) f64 {
-        return @bitCast(self);
-    }
-
-    pub inline fn fromNativeF(f: f64, _: anytype, _: anytype) Object {
-        return @bitCast(f);
-    }
-
-    pub inline fn symbolHash(self: Object) ?u24 {
-        return @truncate(self.hash32());
-    }
-
-    pub inline fn extraValue(self: Object) Object {
-        return @bitCast(self.rawU() >> 8);
-    }
-
-    pub inline fn extraI(self: Object) i8 {
-        _ = .{ self, unreachable };
-    }
-
-    pub const testU = rawU;
-    pub const testI = rawI;
-
-    pub inline fn rawU(self: Object) u64 {
-        return @bitCast(self);
-    }
-
-    inline fn rawI(self: Object) i64 {
-        return @bitCast(self);
-    }
-
-    pub inline fn invalidObject(_: Object) ?u64 {
-        // there are no invalid objects in this encoding
-        return null;
-    }
-
-    pub inline fn thunkImmediate(o: Object) ?Object {
-        _ = .{ o, unreachable };
-    }
-
-    pub inline fn thunkImmediateValue(self: Self) Object {
-        _ = .{ self, unreachable };
-    }
-
-    pub inline fn isImmediateClass(_: Object, comptime _: ClassIndex) bool {
-        return false;
-    }
-
-    pub inline fn isMemoryDouble(_: Object) bool {
-        return false;
-    }
 
     pub inline fn isInt(_: Object) bool {
         return false;
     }
-
     pub inline fn isNat(_: Object) bool {
         return false;
     }
-
-    pub inline fn isDouble(_: Object) bool {
+    pub inline fn symbol40(self: Object) u40 {
+        return @truncate(self.rawU());
+    }
+    pub inline fn nativeI(_: Object) ?i64 {
+        @panic("not implemented");
+    }
+    pub inline fn nativeF(self: Object) ?f64 {
+        return @bitCast(self);
+    }
+    pub inline fn isFloat(_: Object) bool {
         return true;
     }
-
-    pub inline fn hasPointer(_: Object) bool {
-        return false;
+    pub inline fn nativeF_noCheck(self: Object) f64 {
+        return @bitCast(self);
     }
-
-    pub inline fn highPointer(_: Object, T: type) ?T {
-        @panic("Not implemented");
+    pub inline fn asUntaggedI(i: i64) i64 {
+        return i;
     }
-
-    pub inline fn pointer(_: Object, T: type) ?T {
-        @panic("Not implemented");
+    pub inline fn fromNativeF(f: f64, _: anytype, _: anytype) Object {
+        return @bitCast(f);
     }
-
-    pub inline fn toBoolNoCheck(self: Object) bool {
-        return self == Object.True();
+    pub inline fn symbolHash(self: Object) ?u24 {
+        return @truncate(self.hash32());
     }
-
-    pub inline fn toIntNoCheck(_: Object) i64 {
-        @panic("not implemented");
+    pub inline fn extraValue(self: Object) Object {
+        return @bitCast(self.rawU() >> 8);
     }
-
-    pub inline fn toNatNoCheck(_: Object) u64 {
-        @panic("not implemented");
-    }
-
     pub inline fn withPrimitive(self: Object, prim: u64) Object {
         return @bitCast(self.rawU() | prim << 40);
     }
-
-    inline fn toDoubleFromMemory(_: Object) f64 {
-        @panic("Not implemented");
-    }
-
-    pub inline fn toDoubleNoCheck(self: Object) f64 {
+    pub const testU = rawU;
+    pub const testI = rawI;
+    pub inline fn rawU(self: Object) u64 {
         return @bitCast(self);
+    }
+    inline fn rawI(self: Object) i64 {
+        return @bitCast(self);
+    }
+    pub inline fn invalidObject(_: Object) ?u64 {
+        // there are no invalid objects in this encoding
+        return null;
+    }
+    pub inline fn thunkImmediate(o: Object) ?Object {
+        _ = .{ o, unreachable };
+    }
+    pub inline fn thunkImmediateValue(self: Self) Object {
+        _ = .{ self, unreachable };
+    }
+    pub inline fn extraI(self: Object) i8 {
+        _ = .{ self, unreachable };
     }
     pub fn immediateClosure(_: anytype, _: anytype, _: anytype) ?Object {
         @panic("Not implemented");
     }
-
-    pub inline fn makeImmediate(_: ClassIndex.Compact, hash: u64) Object {
-        return @bitCast(hash);
-    }
-
-    pub inline fn makeThunk(cls: ClassIndex.Compact, ptr: anytype, extra: u8) Object {
-        _ = .{ cls, ptr, extra, unreachable };
-    }
-
-    pub inline fn hash24(self: Object) u24 {
-        return @truncate(self.rawU());
-    }
-
-    pub inline fn hash32(self: Object) u32 {
-        return @truncate(self.rawU());
-    }
-
-    pub inline fn isSymbol(_: Object) bool {
-        return true;
-    }
-
     pub inline fn fromAddress(value: anytype) Object {
         return @bitCast(@intFromPtr(value));
     }
@@ -215,7 +129,6 @@ pub const Object = packed struct(u64) {
             else => return undefined,
         }
     }
-
     pub fn toWithCheck(self: Object, comptime T: type, comptime _: bool) T {
         switch (T) {
             f64 => {
@@ -228,22 +141,66 @@ pub const Object = packed struct(u64) {
         }
         @panic("Trying to convert Object to " ++ @typeName(T));
     }
-
     pub inline fn which_class(_: Object) ClassIndex {
         return .Float;
     }
-
-    pub inline fn hasMemoryReference(_: Object) bool {
-        return false;
-    }
-
     pub inline fn isHeapObject(_: Object) bool {
         return false;
     }
     pub inline fn ifHeapObject(_: object.Object) ?*HeapObject {
         return null;
     }
-
+    pub inline fn hasMemoryReference(_: Object) bool {
+        return false;
+    }
+    pub inline fn isImmediateClass(_: Object, comptime _: ClassIndex) bool {
+        return false;
+    }
+    pub inline fn isMemoryDouble(_: Object) bool {
+        return false;
+    }
+    pub inline fn isSymbol(_: Object) bool {
+        return true;
+    }
+    pub inline fn toBoolNoCheck(self: Object) bool {
+        return self == Object.True();
+    }
+    pub inline fn toDoubleNoCheck(self: Object) f64 {
+        return @bitCast(self);
+    }
+    inline fn toDoubleFromMemory(_: Object) f64 {
+        @panic("Not implemented");
+    }
+    pub inline fn makeImmediate(_: ClassIndex.Compact, hash: u64) Object {
+        return @bitCast(hash);
+    }
+    pub inline fn hash24(self: Object) u24 {
+        return @truncate(self.rawU());
+    }
+    pub inline fn hash32(self: Object) u32 {
+        return @truncate(self.rawU());
+    }
+    pub inline fn highPointer(_: Object, T: type) ?T {
+        @panic("Not implemented");
+    }
+    pub inline fn pointer(_: Object, T: type) ?T {
+        @panic("Not implemented");
+    }
+    pub inline fn hasPointer(_: Object) bool {
+        return false;
+    }
+    pub inline fn isDouble(_: Object) bool {
+        return true;
+    }
+    pub inline fn toIntNoCheck(_: Object) i64 {
+        @panic("not implemented");
+    }
+    pub inline fn toNatNoCheck(_: Object) u64 {
+        @panic("not implemented");
+    }
+    pub inline fn makeThunk(cls: ClassIndex.Compact, ptr: anytype, extra: u8) Object {
+        _ = .{ cls, ptr, extra, unreachable };
+    }
     const OF = object.ObjectFunctions;
     pub const arrayAsSlice = OF.arrayAsSlice;
     pub const asObjectArray = OF.asObjectArray;

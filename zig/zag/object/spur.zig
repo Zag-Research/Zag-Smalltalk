@@ -71,21 +71,18 @@ pub const Object = packed union {
         }
         return Object.fromAddress(&InMemory.False);
     }
-
     pub inline fn True() Object {
         if (@inComptime()) {
             return Object{ .ref = undefined };
         }
         return Object.fromAddress(&InMemory.True);
     }
-
     pub inline fn Nil() Object {
         if (@inComptime()) {
             return Object{ .ref = undefined };
         }
         return Object.fromAddress(&InMemory.Nil);
     }
-
     pub const tagged0: i64 = @bitCast(oImm(.SmallInteger, 0));
     pub const LowTagType = TagAndClassType;
     pub const lowTagSmallInteger = makeImmediate(.SmallInteger, 0).tagbits();
@@ -105,24 +102,19 @@ pub const Object = packed union {
         if (self.isInt()) return untaggedI_noCheck(self);
         return null;
     }
-
     pub inline fn untaggedI_noCheck(self: Object) i64 {
         return @bitCast(Tag.unsetFromObject(self, .smallInteger));
     }
-
     pub inline fn taggedI(self: Object) ?i64 {
         if (self.isInt()) return taggedI_noCheck(self);
         return null;
     }
-
     pub inline fn taggedI_noCheck(self: Object) i64 {
         return @bitCast(self);
     }
-
     pub inline fn fromTaggedI(i: i64, _: anytype, _: anytype) Object {
         return @bitCast(i);
     }
-
     pub inline fn fromUntaggedI(i: i64, _: anytype, _: anytype) Object {
         return Tag.setToObject(@bitCast(i), .smallInteger);
     }
@@ -143,9 +135,6 @@ pub const Object = packed union {
     inline fn nativeI_noCheck(self: Object) i64 {
         return @bitCast(Tag.shiftFromObject(self));
     }
-    pub inline fn fromNativeI(i: i61, _: anytype, _: anytype) Object {
-        return Tag.shiftToObject(@bitCast(@as(i64, i)), .smallInteger);
-    }
     pub inline fn nativeF(self: Object) ?f64 {
         if (self.isImmediateDouble()) return self.toDoubleNoCheck();
         if (self.isMemoryDouble()) return self.toDoubleFromMemory();
@@ -157,6 +146,9 @@ pub const Object = packed union {
     pub inline fn nativeF_noCheck(self: Object) f64 {
         if (self.isImmediateDouble()) return self.toDoubleNoCheck();
         return self.toDoubleFromMemory();
+    }
+    pub inline fn fromNativeI(i: i61, _: anytype, _: anytype) Object {
+        return Tag.shiftToObject(@bitCast(@as(i64, i)), .smallInteger);
     }
     pub inline fn fromNativeF(t: f64, sp: SP, context: *Context) Object {
         return @bitCast(encode(t) catch {
@@ -171,92 +163,13 @@ pub const Object = packed union {
         if (self.isHeapObject() and !self.equals(Nil())) return @ptrFromInt(self.rawU());
         return null;
     }
-
-    pub inline fn isHeapObject(self: Object) bool {
-        return Tag.isSet(self, .pointer);
-    }
-
     pub inline fn extraValue(_: Object) Object {
         @panic("Not implemented");
-    }
-    pub inline fn highPointer(self: Object, T: type) ?T {
-        if (self.isHeapObject()) return @ptrFromInt(self.rawU());
-        return null;
     }
     pub inline fn withPrimitive(self: Object, prim: u64) Object {
         // This is only done for signature objects, which already aren't quite valid
         return @bitCast(self.rawU() | prim << 40);
     }
-    pub inline fn isImmediateClass(self: Object, comptime class: ClassIndex) bool {
-        switch (class) {
-            .SmallInteger => self.isInt(),
-            .Float => self.isImmediateDouble(),
-            .Character => self.isCharacter(),
-            else => false,
-        }
-    }
-    pub inline fn isImmediateDouble(self: Object) bool {
-        return Tag.isSet(self, .float);
-    }
-
-    pub const MaxImmediateCharacter = 0x10FFFF;
-
-    pub inline fn isCharacter(self: Object) bool {
-        return Tag.isSet(self, .character);
-    }
-
-    pub inline fn fromCharacter(codepoint: u24) Self {
-        if (codepoint > MaxImmediateCharacter)
-            @panic("Codepoint out of immediate Character range");
-        return Tag.shiftToObject(codepoint, .character);
-    }
-
-    pub inline fn characterValue(self: Self) ?u24 {
-        if (self.isCharacter())
-            return @intCast(Tag.shiftFromObject(self));
-        return null;
-    }
-    pub inline fn pointer(self: Object, T: type) ?T {
-        if (self.isHeapObject()) return @ptrFromInt(self.rawU());
-        return null;
-    }
-
-    pub inline fn isBool(self: Object) bool {
-        return self.rawU() == Object.True().rawU() or self.rawU() == Object.False().rawU();
-    }
-    pub inline fn toBoolNoCheck(self: Object) bool {
-        return self.rawU() == Object.True().rawU();
-    }
-    pub inline fn isSymbol(self: Object) bool {
-        // Spur-encoded symbols are heap objects
-        return self.isHeapObject() and self.ref.header.classIndex == .Symbol;
-    }
-    pub inline fn isNil(self: Object) bool {
-        return self.rawU() == Object.Nil().rawU();
-    }
-
-    inline fn oImm(c: Tag, h: u61) Self {
-        return Self{ .immediate = .{ .tag = c, .hash = h } };
-    }
-    pub inline fn makeImmediate(cls: ClassIndex, hash: u61) Object {
-        // Map ClassIndex to appropriate Tag
-        return oImm(Tag.fromClassIndex(cls), hash);
-    }
-
-    // Hash helpers
-    pub inline fn hash24(self: Object) u24 {
-        return self.ref.header.hash;
-    }
-    pub inline fn hash32(self: Object) u32 {
-        return @truncate(self.ref.data.unsigned);
-    }
-    pub inline fn hash48(self: Object) u48 {
-        return @truncate(self.rawU());
-    }
-    pub inline fn hash56(self: Object) u56 {
-        return @truncate(self.rawU());
-    }
-
     // Raw access
     pub const testU = rawU;
     pub const testI = rawI;
@@ -271,6 +184,18 @@ pub const Object = packed union {
         return null;
     }
 
+    pub fn extraImmediateU(_: Object) ?u8 {
+        return null;
+    }
+    pub fn extraImmediateI(_: Object) ?i8 {
+        return null;
+    }
+    pub fn extraI(_: Object) i8 {
+        return 0;
+    }
+    pub fn immediateClosure(_: anytype, _: anytype, _: anytype) ?Object {
+        return null;
+    }
     pub fn fromAddress(value: anytype) Object {
         return @bitCast(@intFromPtr(value));
     }
@@ -308,19 +233,6 @@ pub const Object = packed union {
         }
         @compileError("Can't convert \"" ++ @typeName(T) ++ "\"");
     }
-
-    pub inline fn isMemoryDouble(self: Object) bool {
-        if (self.ifHeapObject()) |ptr| return ptr.getClass() == .Float;
-        return false;
-    }
-
-    pub inline fn toDoubleNoCheck(self: Object) f64 {
-        return decode(@bitCast(self));
-    }
-    inline fn toDoubleFromMemory(self: Object) f64 {
-        return self.to(*InMemory.MemoryFloat).*.value;
-    }
-
     // Conversion to Zig types (partial)
     pub fn toWithCheck(self: Object, comptime T: type, comptime check: bool) T {
         switch (T) {
@@ -357,8 +269,7 @@ pub const Object = packed union {
         }
         @panic("Trying to convert Object to " ++ @typeName(T));
     }
-
-    // Class detection (stub)
+    // Class detection
     pub inline fn which_class(self: Object) ClassIndex {
         if (self.isInt()) {
             @branchHint(.likely);
@@ -372,46 +283,103 @@ pub const Object = packed union {
         }
         return self.ref.header.classIndex;
     }
-
-    pub inline fn hasMemoryReference(self: Object) bool {
-        return self.isHeapObject();
+    pub inline fn isHeapObject(self: Object) bool {
+        return Tag.isSet(self, .pointer);
     }
-
     pub inline fn ifHeapObject(self: Object) ?*HeapObject {
         if (self.isHeapObject()) return @ptrFromInt(self.rawU());
         return null;
     }
+    pub inline fn hasMemoryReference(self: Object) bool {
+        return self.isHeapObject();
+    }
+    pub inline fn isImmediateClass(self: Object, comptime class: ClassIndex) bool {
+        switch (class) {
+            .SmallInteger => self.isInt(),
+            .Float => self.isImmediateDouble(),
+            .Character => self.isCharacter(),
+            else => false,
+        }
+    }
+    pub inline fn isImmediateDouble(self: Object) bool {
+        return Tag.isSet(self, .float);
+    }
+    pub inline fn isMemoryDouble(self: Object) bool {
+        if (self.ifHeapObject()) |ptr| return ptr.getClass() == .Float;
+        return false;
+    }
+    pub inline fn isSymbol(self: Object) bool {
+        // Spur-encoded symbols are heap objects
+        return self.isHeapObject() and self.ref.header.classIndex == .Symbol;
+    }
+    pub inline fn isNil(self: Object) bool {
+        return self.rawU() == Object.Nil().rawU();
+    }
+    pub inline fn isBool(self: Object) bool {
+        return self.rawU() == Object.True().rawU() or self.rawU() == Object.False().rawU();
+    }
+    pub inline fn toBoolNoCheck(self: Object) bool {
+        return self.rawU() == Object.True().rawU();
+    }
+    pub inline fn toDoubleNoCheck(self: Object) f64 {
+        return decode(@bitCast(self));
+    }
+    inline fn toDoubleFromMemory(self: Object) f64 {
+        return self.to(*InMemory.MemoryFloat).*.value;
+    }
+    pub inline fn makeImmediate(cls: ClassIndex, hash: u61) Object {
+        // Map ClassIndex to appropriate Tag
+        return oImm(Tag.fromClassIndex(cls), hash);
+    }
+    pub inline fn hash24(self: Object) u24 {
+        return self.ref.header.hash;
+    }
+    pub inline fn hash32(self: Object) u32 {
+        return @truncate(self.ref.data.unsigned);
+    }
+    pub inline fn hash48(self: Object) u48 {
+        return @truncate(self.rawU());
+    }
+    pub inline fn hash56(self: Object) u56 {
+        return @truncate(self.rawU());
+    }
+    pub inline fn highPointer(self: Object, T: type) ?T {
+        if (self.isHeapObject()) return @ptrFromInt(self.rawU());
+        return null;
+    }
+    pub inline fn pointer(self: Object, T: type) ?T {
+        if (self.isHeapObject()) return @ptrFromInt(self.rawU());
+        return null;
+    }
 
+    pub const MaxImmediateCharacter = 0x10FFFF;
+
+    pub inline fn isCharacter(self: Object) bool {
+        return Tag.isSet(self, .character);
+    }
+    pub inline fn fromCharacter(codepoint: u24) Self {
+        if (codepoint > MaxImmediateCharacter)
+            @panic("Codepoint out of immediate Character range");
+        return Tag.shiftToObject(codepoint, .character);
+    }
+    pub inline fn characterValue(self: Self) ?u24 {
+        if (self.isCharacter())
+            return @intCast(Tag.shiftFromObject(self));
+        return null;
+    }
     pub inline fn asUntaggedI(i: i64) i64 {
         return i;
     }
-
-    pub fn immediateClosure(_: anytype, _: anytype, _: anytype) ?Object {
-        return null;
+    pub inline fn asObject(self: Object) Object {
+        return self;
     }
-
-    pub fn extraImmediateU(_: Object) ?u8 {
-        return null;
-    }
-
-    pub fn extraImmediateI(_: Object) ?i8 {
-        return null;
-    }
-
-    pub fn extraI(_: Object) i8 {
-        return 0;
-    }
-
-    // Add missing methods
     pub inline fn signature(_: Object) ?zag.execute.Signature {
         // Spur doesn't use immediate signatures like other encodings
         return null;
     }
-
-    pub inline fn asObject(self: Object) Object {
-        return self;
+    inline fn oImm(c: Tag, h: u61) Self {
+        return Self{ .immediate = .{ .tag = c, .hash = h } };
     }
-
     const OF = object.ObjectFunctions;
     pub const PackedObject = object.PackedObject;
     pub const arrayAsSlice = OF.arrayAsSlice;
