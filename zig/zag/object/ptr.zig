@@ -122,15 +122,31 @@ pub const Object = packed struct(u64) {
     pub inline fn thunkImmediateValue(self: Self) Object {
         _ = .{ self, unreachable };
     }
-    pub inline fn isImmediateClass(self: Object, comptime class: ClassIndex) bool {
-        return self.ref.header.classIndex == class;
+    pub inline fn isImmediateClass(_: Object, comptime _: ClassIndex) bool {
+        return false;
+    }
+    inline fn memObject(self: Object) ?*HeapObject {
+        const ptr: ?*HeapObject = @ptrFromInt(self.rawU());
+        return ptr;
     }
     pub inline fn isMemoryDouble(self: object.Object) bool {
-        return if (self.ifMemoryAllocated()) |ptr| ptr.getClass() == .Float else false;
+        if (memObject(self)) |ptr| {
+            return ptr.getClass() == .Float;
+        }
+        return false;
+    }
+    pub inline fn isMemoryInt(self: object.Object) bool {
+        if (memObject(self)) |ptr| {
+            return ptr.getClass() == .SmallInteger;
+        }
+        return false;
     }
     pub inline //
     fn isInt(self: Object) bool {
-        return self.ref.header.classIndex == .SmallInteger;
+        if (memObject(self)) |ptr| {
+            return ptr.getClass() == .SmallInteger;
+        }
+        return false;
     }
     pub inline fn isNat(self: Object) bool {
         return self.isInt() and self.rawI() >= 0;
@@ -281,6 +297,15 @@ pub const Object = packed struct(u64) {
     }
     pub inline fn isHeapObject(_: Object) bool {
         return true;
+    }
+    pub inline fn ifHeapObject(self: object.Object) ?*HeapObject {
+        return @ptrFromInt(@as(u64, @bitCast(self)));
+    }
+    pub fn extraImmediateI(_: Object) ?u8 {
+        return null;
+    }
+    pub fn extraImmediateU(_: Object) ?u8 {
+        return null;
     }
     const OF = object.ObjectFunctions;
     pub const arrayAsSlice = OF.arrayAsSlice;

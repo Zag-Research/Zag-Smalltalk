@@ -206,7 +206,8 @@ pub const PointedObject = packed struct {
             .length = 1,
         };
         switch (@typeInfo(@TypeOf(value))) {
-            .int, .comptime_int => self.data.int = value,
+            .int => self.data.int = @bitCast(value),
+            .comptime_int => self.data.int = value,
             .float, .comptime_float => self.data.float = value,
             .bool => self.data.bool = value,
             .null => self.data.null = value,
