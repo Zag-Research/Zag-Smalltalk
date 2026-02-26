@@ -316,6 +316,7 @@ fn createBenchStep(
                 .zagAlt,
                 .spur,
                 .taggedInt,
+                .taggedPtr,
                 .ptr,
                 .onlyInt,
                 .onlyFloat,

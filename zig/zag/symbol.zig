@@ -118,8 +118,7 @@ const SymbolsEnum = enum(u32) {
         if (config.immediateSymbols) {
             return Object.makeImmediate(.Symbol, hash_of(index, @intCast(@intFromEnum(self) >> 24)));
         }
-        const O = packed struct { sym: *const PointedObject };
-        return @bitCast(O{ .sym = &staticSymbols[index - 1] });
+        return Object.fromAddress(&staticSymbols[index - 1]);
     }
     pub fn withPrimitive(sym: SymbolsEnum, primitive: u8) Object {
         return sym.signature(primitive).asObject();
@@ -132,8 +131,7 @@ const SymbolsEnum = enum(u32) {
         if (config.immediateSymbols) {
             return Object.makeImmediate(.Symbol, hash_of(index, nArgs));
         }
-        const O = packed struct { sym: *const PointedObject };
-        return @bitCast(O{ .sym = &staticSymbols[index - 1] });
+        return Object.fromAddress(&staticSymbols[index - 1]);
     }
 };
 const initialSymbolStrings = heap.compileStrings(blk: {
