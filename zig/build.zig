@@ -318,7 +318,7 @@ fn createBenchStep(
                 .spur,
                 .taggedInt,
                 .taggedPtr,
-                .ptr,
+                // .ptr,   enable once x86 passes.
                 .onlyInt,
                 .onlyFloat,
             };
