@@ -313,7 +313,7 @@ fn createBenchStep(
             &[_]Encoding{
                 .nan,
                 .zag,
-                .zagAlt,
+                .zagSpur,
                 .spur,
                 .taggedInt,
                 .taggedPtr,

@@ -168,6 +168,9 @@ pub const PointedObject = packed struct {
     ) !void {
         try writer.print("PointedObject{{ {f}, 0x{x}}}", .{ self.header, @as(u64, @bitCast(self.data)) });
     }
+    pub fn getClass(self: *PointedObject) object.ClassIndex {
+        return self.header.classIndex;
+    }
     fn cached(self: PointedObject) ?*PointedObject {
         for (staticCache[0..]) |*p| {
             if (p.header.classIndex == self.header.classIndex and

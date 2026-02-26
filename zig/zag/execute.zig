@@ -598,14 +598,6 @@ fn CompileTimeMethod(comptime counts: usize) type {
                         code[n] = Code.objectOf(field);
                         n = n + 1;
                     },
-                    bool => {
-                        code[n] = Code.objectOf(if (field) True() else False());
-                        n = n + 1;
-                    },
-                    @TypeOf(null) => {
-                        code[n] = Code.objectOf(Nil());
-                        n = n + 1;
-                    },
                     PackedObject => {
                         code[n] = Code.packedObjectOf(field);
                         n = n + 1;
