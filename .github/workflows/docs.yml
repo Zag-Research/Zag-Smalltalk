@@ -32,10 +32,13 @@ jobs:
         run: zig build docs
         working-directory: zig
 
+      - name: Stage docs under /api
+        run: mkdir -p _site/api && cp -r zig/zig-out/docs/. _site/api/
+
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: zig/zig-out/docs
+          path: _site
 
   deploy:
     needs: build
