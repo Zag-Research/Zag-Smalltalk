@@ -66,23 +66,14 @@ pub const Object = packed union {
     pub const maxInt = 0xfff_ffff_ffff_ffff;
     pub const ZERO: Object = @bitCast(@as(u64, 0));
     pub inline fn False() Object {
-        if (@inComptime()) {
-            return Object{ .ref = undefined };
-        }
         return Object.fromAddress(&InMemory.False);
     }
 
     pub inline fn True() Object {
-        if (@inComptime()) {
-            return Object{ .ref = undefined };
-        }
         return Object.fromAddress(&InMemory.True);
     }
 
     pub inline fn Nil() Object {
-        if (@inComptime()) {
-            return Object{ .ref = undefined };
-        }
         return Object.fromAddress(&InMemory.Nil);
     }
 
@@ -127,8 +118,11 @@ pub const Object = packed union {
         return Tag.setToObject(@bitCast(i), .smallInteger);
     }
 
+    inline fn isTag(self: Object, tag: Tag) bool {
+        return Tag.isSet(self, tag);
+    }
     pub inline fn isInt(self: Object) bool {
-        return Tag.isSet(self, .smallInteger);
+        return self.isTag(.smallInteger);
     }
     pub inline fn isNat(self: Object) bool {
         return self.isInt() and self.rawI() >= 0;
@@ -173,7 +167,7 @@ pub const Object = packed union {
     }
 
     pub inline fn isHeapObject(self: Object) bool {
-        return Tag.isSet(self, .pointer);
+        return self.isTag(.pointer);
     }
 
     pub inline fn extraValue(_: Object) Object {
@@ -196,13 +190,13 @@ pub const Object = packed union {
         }
     }
     pub inline fn isImmediateDouble(self: Object) bool {
-        return Tag.isSet(self, .float);
+        return self.isTag(.float);
     }
 
     pub const MaxImmediateCharacter = 0x10FFFF;
 
     pub inline fn isCharacter(self: Object) bool {
-        return Tag.isSet(self, .character);
+        return self.isTag(.character);
     }
 
     pub inline fn fromCharacter(codepoint: u24) Self {
@@ -357,20 +351,18 @@ pub const Object = packed union {
         }
         @panic("Trying to convert Object to " ++ @typeName(T));
     }
-
-    // Class detection (stub)
     pub inline fn which_class(self: Object) ClassIndex {
         if (self.isInt()) {
             @branchHint(.likely);
             return .SmallInteger;
-        } else if (Tag.isSet(self, .float)) {
+        } else if (self.isTag(.float)) {
             @branchHint(.likely);
             return .Float;
         } else if (self.isCharacter()) {
             @branchHint(.unlikely);
             return .Character;
         }
-        return self.ref.header.classIndex;
+        return self.ref.getClass();
     }
 
     pub inline fn hasMemoryReference(self: Object) bool {

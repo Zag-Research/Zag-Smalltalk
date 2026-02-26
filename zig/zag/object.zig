@@ -134,6 +134,15 @@ pub const ClassIndex = enum(u16) {
             return @as(u8, @intFromEnum(self)) << 3 | 1;
         }
     };
+    pub fn isImmediate(self: ClassIndex) bool {
+        switch (self) {
+            .Symbol,
+            .False,
+            .True,
+            .Character => return true,
+            else => return false,
+        }
+    }
     pub inline fn compact(ci: ClassIndex) Compact {
         return @enumFromInt(@intFromEnum(ci));
     }
@@ -153,7 +162,7 @@ comptime {
 }
 pub const Object = switch (config.objectEncoding) {
     .zag => @import("object/zag.zig").Object,
-    .zagAlt => @import("object/zagAlt.zig").Object,
+    .zagSpur => @import("object/zagSpur.zig").Object,
     .nan => @import("object/nan.zig").Object,
     .spur => @import("object/spur.zig").Object,
     .taggedPtr => @import("object/taggedPtr.zig").Object,
@@ -206,7 +215,7 @@ pub const ObjectFunctions = struct {
     }
     pub inline //
     fn isNil(self: Object) bool {
-        return self == Object.Nil();
+        return self.equals(Nil());
     }
     pub inline //
     fn isBool(self: Object) bool {

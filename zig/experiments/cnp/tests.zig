@@ -269,7 +269,7 @@ pub const Send0Test = struct {
     const tup = .{
         tf.pushLiteral, "0const",
         tf.send0,       send_sig,
-        null,           tf.returnTop,
+        "1const",           tf.returnTop,
     };
     const info = opsInfo(tup);
     const Method = JitMethod(&info.ops, &info.branch_targets);
@@ -283,7 +283,7 @@ pub const Send0Test = struct {
         dispatch.addMethod(callee.asCompiledMethodPtr());
 
         try initJitTest(&method, &process, "Send0Test");
-        compiled.resolve(&[_]Object{literal_.init(10)}) catch @panic("Failed to resolve");
+        compiled.resolve(&[_]Object{literal_.init(10), Object.Nil()}) catch @panic("Failed to resolve");
     }
 
     pub fn deinit() void {
@@ -293,7 +293,7 @@ pub const Send0Test = struct {
     pub fn run() !void {
         process.init();
        const result = runCompiled(&method, &compiled, &process, info.positions[0..], null);
-        try reportResult(result, 10); 
+        try reportResult(result, 10);
     }
 };
 
@@ -302,10 +302,10 @@ pub const SendTest = struct {
 
     const send_sig = Signature.fromNameClass(Sym.@"value:", .none);
     const tup = .{
-        tf.pushLiteral, "0const", 
-        tf.pushLiteral, "1const", 
+        tf.pushLiteral, "0const",
+        tf.pushLiteral, "1const",
         tf.send,        send_sig,
-        null,           tf.returnTop,
+        "2const",           tf.returnTop,
     };
     const info = opsInfo(tup);
     const Method = JitMethod(&info.ops, &info.branch_targets);
@@ -322,6 +322,7 @@ pub const SendTest = struct {
         compiled.resolve(&[_]Object{
             literals_[0].init(10),
             literals_[1].init(99),
+            Object.Nil(),
         }) catch @panic("Failed to resolve");
     }
 
