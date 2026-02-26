@@ -351,7 +351,6 @@ fn createBenchStep(
             }),
             .use_llvm = true,
         });
-        bench_exe.root_module.addOptions("options", enc_options);
 
         const run_bench = b.addRunArtifact(bench_exe);
         bench_step.dependOn(&run_bench.step);
