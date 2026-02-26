@@ -22,7 +22,8 @@ pub fn build(b: *std.Build) void {
 
     // Test and benchmark steps
     createTestStep(b, target, optimize, build_options, llvm_module);
-    createBenchStep(b, target, optimize, build_options, zag);
+    createBenchStep(b, target, optimize, build_options, llvm_module);
+    createDocsStep(b, target, optimize, build_options, llvm_module);
 }
 
 fn createBuildOptions(b: *std.Build) BuildOptions {
@@ -304,7 +305,7 @@ fn createBenchStep(
     target: std.Build.ResolvedTarget,
     optimize: std.builtin.OptimizeMode,
     build_options: BuildOptions,
-    zag: *std.Build.Module,
+    llvm_module: *std.Build.Module,
 ) void {
     const bench_encodings: []const Encoding =
         if (build_options.encoding_option) |specific_encoding|
@@ -322,32 +323,76 @@ fn createBenchStep(
                 .onlyFloat,
             };
 
-    const bench_step = b.step("bench", "Run bench for all encoding types");
+    const bench_step = b.step("bench", "Run fib bench for all encoding types");
 
     for (bench_encodings) |enc| {
         const enc_options = b.addOptions();
         addCommonOptions(enc_options, build_options, enc);
 
-        const bench_module = b.createModule(.{
-            .root_source_file = b.path("experiments/fib.zig"),
+        const enc_zag = b.createModule(.{
+            .root_source_file = b.path("zag/zag.zig"),
             .target = target,
-            .optimize = optimize,
-            .imports = &.{
-                .{ .name = "zag", .module = zag },
-            },
-            .omit_frame_pointer = build_options.omit_frame_pointer,
         });
+        enc_zag.addOptions("options", enc_options);
+        if (build_options.include_llvm) {
+            enc_zag.addImport("llvm-build-module", llvm_module);
+        }
 
-        const enc_benchs = b.addExecutable(.{
-            .name = "bench",
-            .root_module = bench_module,
+        const bench_exe = b.addExecutable(.{
+            .name = b.fmt("fib-{s}", .{@tagName(enc)}),
+            .root_module = b.createModule(.{
+                .root_source_file = b.path("experiments/fib.zig"),
+                .target = target,
+                .optimize = optimize,
+                .imports = &.{
+                    .{ .name = "zag", .module = enc_zag },
+                },
+                .omit_frame_pointer = build_options.omit_frame_pointer,
+            }),
             .use_llvm = true,
         });
-        enc_benchs.root_module.addOptions("options", enc_options);
 
-        const run_enc_benchs = b.addRunArtifact(enc_benchs);
-        bench_step.dependOn(&run_enc_benchs.step);
+        const run_bench = b.addRunArtifact(bench_exe);
+        bench_step.dependOn(&run_bench.step);
     }
+}
+
+fn createDocsStep(
+    b: *std.Build,
+    target: std.Build.ResolvedTarget,
+    optimize: std.builtin.OptimizeMode,
+    build_options: BuildOptions,
+    llvm_module: *std.Build.Module,
+) void {
+    const options = b.addOptions();
+    const encoding = build_options.encoding_option orelse Encoding.default();
+    addCommonOptions(options, build_options, encoding);
+
+    const docs_module = b.createModule(.{
+        .root_source_file = b.path("zag/docs.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    docs_module.addOptions("options", options);
+
+    if (build_options.include_llvm) {
+        docs_module.addImport("llvm-build-module", llvm_module);
+    }
+
+    const docs_lib = b.addLibrary(.{
+        .name = "zag",
+        .root_module = docs_module,
+        .linkage = .static,
+    });
+
+    const install_docs = b.addInstallDirectory(.{
+        .source_dir = docs_lib.getEmittedDocs(),
+        .install_dir = .prefix,
+        .install_subdir = "docs",
+    });
+
+    const docs_step = b.step("docs", "Build API documentation");
+    docs_step.dependOn(&install_docs.step);
 }
 
 fn buildLLVMModule(

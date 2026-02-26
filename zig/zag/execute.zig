@@ -1,3 +1,5 @@
+//! Bytecode execution engine and method invocation helpers.
+
 const std = @import("std");
 const config = @import("config.zig");
 const tailCall = config.tailCall;

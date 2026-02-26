@@ -1,0 +1,32 @@
+name: Fib Benchmark
+
+on:
+  push:
+    branches:
+      - main
+      - docs-actions
+  workflow_dispatch:
+
+jobs:
+  bench:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, ubuntu-24.04-arm]
+    runs-on: ${{ matrix.os }}
+
+    name: bench (${{ matrix.os }})
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install Zig
+        uses: mlugg/setup-zig@v2
+        with:
+          version: 0.15.1
+
+      - name: Build and run fib bench (all encodings)
+        run: zig build bench -Doptimize=ReleaseFast
+        working-directory: zig

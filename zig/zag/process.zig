@@ -1,3 +1,5 @@
+//! Process object layout, stack management, and nursery allocation.
+
 const std = @import("std");
 const math = std.math;
 const assert = std.debug.assert;

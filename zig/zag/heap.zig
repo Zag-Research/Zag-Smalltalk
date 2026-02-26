@@ -1,3 +1,5 @@
+//! Heap object layout, allocation, and format helpers.
+
 const std = @import("std");
 const builtin = @import("builtin");
 const mem = std.mem;

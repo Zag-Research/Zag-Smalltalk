@@ -1,3 +1,5 @@
+//! Method dispatch tables and signature-based lookup.
+
 const std = @import("std");
 const assert = std.debug.assert;
 const expectEqual = std.testing.expectEqual;
