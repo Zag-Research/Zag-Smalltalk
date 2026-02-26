@@ -1,0 +1,40 @@
+name: Fib Benchmark
+
+on:
+  push:
+    branches:
+      - main
+      - docs-actions
+  workflow_dispatch:
+
+jobs:
+  bench:
+    strategy:
+      fail-fast: false
+      matrix:
+        # encoding: [nan, zag, zagSpur, spur, taggedInt, taggedPtr, ptr, onlyInt, onlyFloat] enabled onces tested
+        encoding: [nan, zag]
+        runner:
+          - { os: ubuntu-latest,  arch: x86_64 }
+          - { os: ubuntu-24.04-arm, arch: arm64 }
+    runs-on: ${{ matrix.runner.os }}
+
+    name: bench (${{ matrix.encoding }}, ${{ matrix.runner.arch }})
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install Zig
+        uses: mlugg/setup-zig@v2
+        with:
+          version: 0.15.1
+
+      - name: Build fib (${{ matrix.encoding }})
+        run: zig build -Dencoding=${{ matrix.encoding }} -Doptimize=ReleaseFast
+        working-directory: zig
+
+      - name: Run fib (${{ matrix.encoding }})
+        run: ./zig-out/bin/fib
+        working-directory: zig
