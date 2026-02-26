@@ -1,3 +1,18 @@
+//! Object encoding and representation system.
+//!
+//! This module provides the compile-time-selected `Object` type and supporting
+//! infrastructure shared across all encoding schemes.
+//!
+//! ## Object Encodings
+//!
+//! The active encoding is chosen at compile time via `config.objectEncoding`:
+//! - `Object.zag` 
+//! - `Object.nan` 
+//! - `object.spur`
+//! - `objectj.zagSpur` 
+//! - `object.taggedInt` / `taggedPtr` / `ptr` 
+//! - `object.onlyInt` / `object.onlyFloat`
+
 const std = @import("std");
 const builtin = @import("builtin");
 const mem = std.mem;

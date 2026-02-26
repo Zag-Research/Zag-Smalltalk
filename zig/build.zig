@@ -23,6 +23,7 @@ pub fn build(b: *std.Build) void {
     // Test and benchmark steps
     createTestStep(b, target, optimize, build_options, llvm_module);
     createBenchStep(b, target, optimize, build_options, zag);
+    createDocsStep(b, target, optimize, build_options, llvm_module);
 }
 
 fn createBuildOptions(b: *std.Build) BuildOptions {
@@ -348,6 +349,44 @@ fn createBenchStep(
         const run_enc_benchs = b.addRunArtifact(enc_benchs);
         bench_step.dependOn(&run_enc_benchs.step);
     }
+}
+
+fn createDocsStep(
+    b: *std.Build,
+    target: std.Build.ResolvedTarget,
+    optimize: std.builtin.OptimizeMode,
+    build_options: BuildOptions,
+    llvm_module: *std.Build.Module,
+) void {
+    const options = b.addOptions();
+    const encoding = build_options.encoding_option orelse Encoding.default();
+    addCommonOptions(options, build_options, encoding);
+
+    const docs_module = b.createModule(.{
+        .root_source_file = b.path("zag/docs.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    docs_module.addOptions("options", options);
+
+    if (build_options.include_llvm) {
+        docs_module.addImport("llvm-build-module", llvm_module);
+    }
+
+    const docs_lib = b.addLibrary(.{
+        .name = "zag",
+        .root_module = docs_module,
+        .linkage = .static,
+    });
+
+    const install_docs = b.addInstallDirectory(.{
+        .source_dir = docs_lib.getEmittedDocs(),
+        .install_dir = .prefix,
+        .install_subdir = "docs",
+    });
+
+    const docs_step = b.step("docs", "Build API documentation");
+    docs_step.dependOn(&install_docs.step);
 }
 
 fn buildLLVMModule(

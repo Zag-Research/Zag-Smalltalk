@@ -1,3 +1,17 @@
+//! Primitive registry and wiring for runtime dispatch.
+//!
+//! Each primitive module implements operations for a specific Smalltalk type.
+//! Primitive modules are accessible via the `primitives` namespace:
+//!
+//! - `primitives.Float` — Floating-point arithmetic
+//! - `primitives.SmallInteger` — Integer arithmetic and comparisons
+//! - `primitives.Array` — Array allocation and indexing
+//! - `primitives.Object` — Core object operations (`==`, `class`, `perform:`)
+//! - `primitives.BlockClosure` — Block evaluation and thunking
+//! - `primitives.Boolean` — Boolean operations (`ifTrue:ifFalse:`, etc.)
+//! - `primitives.Behavior` — Class/behavior operations
+//! - `primitives.LLVM` — JIT compilation (only when built with `-Dllvm=true`)
+
 const std = @import("std");
 const expectEqualSlices = execute.expectEqualSlices;
 const assert = std.debug.assert;
