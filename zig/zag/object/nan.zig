@@ -112,10 +112,10 @@ pub const Object = packed struct(u64) {
     }
     pub const testU = rawU;
     pub const testI = rawI;
-    pub fn rawU(self: Object) u64 {
+    inline fn rawU(self: Object) u64 {
         return @bitCast(self);
     }
-    fn rawI(self: Object) i64 {
+    inline fn rawI(self: Object) i64 {
         return @bitCast(self);
     }
     pub inline fn invalidObject(_: Object) ?u64 {

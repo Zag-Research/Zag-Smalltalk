@@ -93,7 +93,7 @@ pub const Object = packed struct(u64) {
     pub const testU = rawU;
     pub const testI = rawI;
 
-    pub inline fn rawU(self: Object) u64 {
+    inline fn rawU(self: Object) u64 {
         return @bitCast(self);
     }
 

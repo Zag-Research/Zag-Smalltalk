@@ -14,14 +14,11 @@ const HeapObject = zag.heap.HeapObject;
 const HeapObjectConstPtr = zag.heap.HeapObjectConstPtr;
 const InMemory = zag.InMemory;
 
-const classBits = 16;
-const classMask: u64 = (1 << classBits) - 1;
-const payloadBits = 64 - classBits;
-const payloadMask: u64 = (1 << payloadBits) - 1;
+const classMask: u64 = (1 << @bitSizeOf(ClassIndex)) - 1;
 
 pub const Object = packed struct(u64) {
-    class: u16,
-    data: u48,
+    class: ClassIndex,
+    intOrAddress: u48,
 
     const Self = @This();
 
@@ -83,7 +80,7 @@ pub const Object = packed struct(u64) {
     }
 
     pub inline fn isInt(self: object.Object) bool {
-        return self.class == @intFromEnum(ClassIndex.SmallInteger);
+        return self.class == .SmallInteger;
     }
     pub inline fn isNat(self: object.Object) bool {
         return self.isInt() and self.rawI() >= 0;
@@ -96,21 +93,20 @@ pub const Object = packed struct(u64) {
         return null;
     }
     inline fn nativeI_noCheck(self: object.Object) i64 {
-        return self.rawI() >> classBits;
+        return @as(i48, @bitCast(self.intOrAddress));
     }
     pub inline fn nativeF(self: object.Object) ?f64 {
         if (self.isMemoryDouble()) return self.toDoubleFromMemory();
         return null;
     }
     pub inline fn isFloat(self: object.Object) bool {
-        return self.isMemoryDouble();
+        return self.class == .Float;
     }
     pub inline fn nativeF_noCheck(self: object.Object) f64 {
         return self.toDoubleFromMemory();
     }
     pub inline fn fromNativeI(i: i48, _: anytype, _: anytype) Object {
-        const u: u64 = @as(u64, @bitCast(@as(i64, i))) << classBits;
-        return @bitCast(u | @intFromEnum(ClassIndex.SmallInteger));
+        return Object{ .intOrAddress = @bitCast(i), .class = .SmallInteger};
     }
     pub inline fn fromNativeF(t: f64, sp: SP, context: *Context) object.Object {
         return InMemory.float(t, sp, context);
@@ -121,7 +117,7 @@ pub const Object = packed struct(u64) {
         return null;
     }
     pub inline fn heapObject(self: object.Object) ?*InMemory.PointedObject {
-        if (self.isHeapObject() and !self.equals(Nil())) return @ptrFromInt(self.heapAddr());
+        if (self.isHeapObject()) return @ptrFromInt(self.heapAddr());
         return null;
     }
     pub inline fn extraValue(_: object.Object) object.Object {
@@ -132,7 +128,7 @@ pub const Object = packed struct(u64) {
     }
     pub const testU = rawU;
     pub const testI = rawI;
-    pub inline fn rawU(self: Self) u64 {
+    inline fn rawU(self: Self) u64 {
         return @bitCast(self);
     }
     inline fn rawI(self: object.Object) i64 {
@@ -162,18 +158,17 @@ pub const Object = packed struct(u64) {
     }
 
     pub fn fromAddress(value: anytype) Object {
-        if (@inComptime()) return @bitCast(@as(u64, 0));
         const addr = @intFromPtr(value);
         const Child = @typeInfo(@TypeOf(value)).pointer.child;
-        const cls: u16 = if (@hasField(Child, "header"))
-            @intFromEnum(@as(*const Child, @ptrCast(value)).header.classIndex)
+        const cls = if (@hasField(Child, "header"))
+            @as(*const Child, @ptrCast(value)).header.classIndex
         else
-            @intFromEnum(ClassIndex.none);
-        return @bitCast((addr << classBits) | cls);
+            .none;
+        return Object{ .intOrAddress = @truncate(addr), .class = cls};
     }
 
     inline fn heapAddr(self: object.Object) usize {
-        return self.rawU() >> classBits;
+        return self.intOrAddress;
     }
 
     pub const StaticObject = struct {
@@ -247,11 +242,11 @@ pub const Object = packed struct(u64) {
     }
 
     pub inline fn which_class(self: object.Object) ClassIndex {
-        return @enumFromInt(self.class);
+        return self.class;
     }
 
     pub inline fn isHeapObject(self: object.Object) bool {
-        return self.heapAddr() != 0 and self.class != @intFromEnum(ClassIndex.SmallInteger);
+        return self.class != .SmallInteger and self.heapAddr() != 0;
     }
     pub inline fn ifHeapObject(self: object.Object) ?*HeapObject {
         if (self.isHeapObject()) return @ptrFromInt(self.heapAddr());
@@ -261,17 +256,16 @@ pub const Object = packed struct(u64) {
         return self.isHeapObject();
     }
     pub inline fn isImmediateClass(self: object.Object, comptime class: ClassIndex.Compact) bool {
-        return self.class == @intFromEnum(class.classIndex()) and
-            self.rawU() >> classBits == 0;
+        return self.class == class.classIndex();
     }
     pub inline fn isImmediateDouble(_: object.Object) bool {
         return false;
     }
     pub inline fn isMemoryDouble(self: object.Object) bool {
-        return self.heapAddr() != 0 and self.class == @intFromEnum(ClassIndex.Float);
+        return self.isFloat();
     }
     pub inline fn isSymbol(self: object.Object) bool {
-        return self.heapAddr() != 0 and self.class == @intFromEnum(ClassIndex.Symbol);
+        return self.class == .Symbol;
     }
     pub inline fn toBoolNoCheck(self: object.Object) bool {
         return self.rawU() == object.Object.True().rawU();
@@ -304,8 +298,8 @@ pub const Object = packed struct(u64) {
     pub inline fn hasPointer(self: object.Object) bool {
         return self.isHeapObject();
     }
-    pub inline fn asUntaggedI(i: i64) i64 {
-        return i << classBits;
+    pub inline fn asUntaggedI(i: i48) i64 {
+        return @bitCast(Object{ .intOrAddress = @bitCast(i), .class = .none});
     }
 
     pub const Scanner = struct {
