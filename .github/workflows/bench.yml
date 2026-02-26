@@ -12,14 +12,10 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # encoding: [nan, zag, zagSpur, spur, taggedInt, taggedPtr, ptr, onlyInt, onlyFloat] enabled onces tested
-        encoding: [nan, zag]
-        runner:
-          - { os: ubuntu-latest,  arch: x86_64 }
-          - { os: ubuntu-24.04-arm, arch: arm64 }
-    runs-on: ${{ matrix.runner.os }}
+        os: [ubuntu-latest, ubuntu-24.04-arm]
+    runs-on: ${{ matrix.os }}
 
-    name: bench (${{ matrix.encoding }}, ${{ matrix.runner.arch }})
+    name: bench (${{ matrix.os }})
 
     steps:
       - uses: actions/checkout@v4
@@ -31,10 +27,6 @@ jobs:
         with:
           version: 0.15.1
 
-      - name: Build fib (${{ matrix.encoding }})
-        run: zig build -Dencoding=${{ matrix.encoding }} -Doptimize=ReleaseFast
-        working-directory: zig
-
-      - name: Run fib (${{ matrix.encoding }})
-        run: ./zig-out/bin/fib
+      - name: Build and run fib bench (all encodings)
+        run: zig build bench -Doptimize=ReleaseFast
         working-directory: zig
