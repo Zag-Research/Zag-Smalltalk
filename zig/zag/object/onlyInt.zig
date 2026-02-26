@@ -31,7 +31,6 @@ pub const Object = packed struct(u64) {
     pub const packedTagSmallInteger = 1;
     pub const intTag = @import("zag.zig").Object.intTag;
     pub const immediatesTag = 1;
-
     pub inline fn untaggedI(self: object.Object) ?i64 {
         return @bitCast(self);
     }
@@ -44,15 +43,11 @@ pub const Object = packed struct(u64) {
         return @bitCast(i);
     }
     pub const fromUntaggedI = fromTaggedI;
-
-    pub inline fn isInt(_: Object) bool {
-        return true;
-    }
-    pub inline fn isNat(self: Object) bool {
-        return self.isInt() and self.rawI() >= 0;
-    }
     pub inline fn symbol40(_: object.Object) u40 {
         return 0;
+    }
+    pub inline fn asUntaggedI(i: i64) i64 {
+        return i;
     }
     pub inline //
     fn nativeI(self: object.Object) ?i64 {
@@ -67,9 +62,6 @@ pub const Object = packed struct(u64) {
     pub inline fn nativeF_noCheck(_: object.Object) f64 {
         @panic("not implemented");
     }
-    pub inline fn asUntaggedI(i: i64) i64 {
-        return i;
-    }
     pub inline fn fromNativeF(_: f64, _: anytype, _: anytype) object.Object {
         @panic("not implemented");
     }
@@ -82,8 +74,8 @@ pub const Object = packed struct(u64) {
     pub inline fn extraValue(self: object.Object) object.Object {
         return @bitCast(self.rawU() >> 8);
     }
-    pub inline fn withPrimitive(self: object.Object, prim: u64) object.Object {
-        return @bitCast(self.rawU() | prim << 40);
+    pub inline fn extraI(self: object.Object) i8 {
+        _ = .{ self, unreachable };
     }
     pub const testU = rawU;
     pub const testI = rawI;
@@ -104,17 +96,70 @@ pub const Object = packed struct(u64) {
     pub inline fn thunkImmediateValue(self: Self) Object {
         _ = .{ self, unreachable };
     }
-    pub inline fn extraI(self: object.Object) i8 {
-        _ = .{ self, unreachable };
+    pub inline fn isImmediateClass(_: Object, comptime _: ClassIndex) bool {
+        return false;
     }
-    pub fn extraImmediateI(_: Object) ?u8 {
-        return null;
+    pub inline fn isMemoryDouble(_: object.Object) bool {
+        return false;
     }
-    pub fn extraImmediateU(_: Object) ?u8 {
-        return null;
+    pub inline //
+    fn isInt(_: Object) bool {
+        return true;
+    }
+    pub inline fn isNat(self: Object) bool {
+        return self.isInt() and self.rawI() >= 0;
+    }
+    pub inline fn isDouble(_: Object) bool {
+        return false;
+    }
+    // pub inline fn oImm(c: ClassIndex.Compact, h: u56) Self {
+    //     return Self{ .tag = .immediates, .class = c, .hash = h };
+    // }
+    pub inline fn hasPointer(_: Object) bool {
+        return false;
+    }
+    pub inline fn highPointer(_: Object, T: type) ?T {
+        @panic("Not implemented");
+    }
+    pub inline fn pointer(_: Object, T: type) ?T {
+        @panic("Not implemented");
+    }
+    pub inline fn toBoolNoCheck(self: Object) bool {
+        return self == Object.True();
+    }
+    pub inline fn toIntNoCheck(self: Object) i64 {
+        return @bitCast(self);
+    }
+    pub inline fn toNatNoCheck(self: Object) u64 {
+        return @bitCast(self);
+    }
+    pub inline fn withPrimitive(self: object.Object, prim: u64) object.Object {
+        return @bitCast(self.rawU() | prim << 40);
+    }
+    inline fn toDoubleFromMemory(_: object.Object) f64 {
+        @panic("Not implemented");
+    }
+    pub inline fn toDoubleNoCheck(_: Object) f64 {
+        @panic("Not implemented");
     }
     pub fn immediateClosure(_: anytype, _: anytype, _: anytype) ?Object {
         @panic("Not implemented");
+    }
+    pub inline fn makeImmediate(_: ClassIndex.Compact, hash: u64) Object {
+        return @bitCast(hash);
+    }
+    pub inline fn makeThunk(cls: ClassIndex.Compact, ptr: anytype, extra: u8) Object {
+        _ = .{ cls, ptr, extra, unreachable };
+    }
+    pub inline fn hash24(self: Object) u24 {
+        return @truncate(self.rawU());
+    }
+    pub inline fn hash32(self: Object) u32 {
+        return @truncate(self.rawU());
+    }
+
+    pub inline fn isSymbol(_: object.Object) bool {
+        return true;
     }
     pub inline //
     fn fromAddress(value: anytype) Object {
@@ -123,7 +168,7 @@ pub const Object = packed struct(u64) {
     pub const StaticObject = struct {
         pub fn init(_: *StaticObject, comptime value: anytype) object.Object {
             switch (@typeInfo(@TypeOf(value))) {
-                .int, .comptime_int => return @bitCast(@as(i64, value)),
+                .int, .comptime_int => return @bitCast(@as(i64,value)),
                 .bool => return if (value) object.Object.True() else object.Object.False(),
                 else => @panic("Unsupported type for compile-time object creation"),
             }
@@ -133,7 +178,7 @@ pub const Object = packed struct(u64) {
         const T = @TypeOf(value);
         if (T == Object) return value;
         switch (@typeInfo(T)) {
-            .int, .comptime_int => return @bitCast(@as(i64, value)),
+            .int, .comptime_int => return @bitCast(@as(i64,value)),
             .bool => return if (value) Object.True() else Object.False(),
             .null => return Object.Nil(),
             else => return undefined,
@@ -158,62 +203,20 @@ pub const Object = packed struct(u64) {
     fn which_class(_: Object) ClassIndex {
         return .SmallInteger;
     }
+    pub inline fn hasMemoryReference(_: Object) bool {
+        return false;
+    }
     pub inline fn isHeapObject(_: Object) bool {
         return false;
     }
     pub inline fn ifHeapObject(_: object.Object) ?*HeapObject {
         return null;
     }
-    pub inline fn hasMemoryReference(_: Object) bool {
-        return false;
+    pub fn extraImmediateI(_: Object) ?u8 {
+        return null;
     }
-    pub inline fn isImmediateClass(_: Object, comptime _: ClassIndex) bool {
-        return false;
-    }
-    pub inline fn isMemoryDouble(_: object.Object) bool {
-        return false;
-    }
-    pub inline fn isSymbol(_: object.Object) bool {
-        return true;
-    }
-    pub inline fn toBoolNoCheck(self: Object) bool {
-        return self == Object.True();
-    }
-    pub inline fn toDoubleNoCheck(_: Object) f64 {
-        @panic("Not implemented");
-    }
-    inline fn toDoubleFromMemory(_: object.Object) f64 {
-        @panic("Not implemented");
-    }
-    pub inline fn makeImmediate(_: ClassIndex.Compact, hash: u64) Object {
-        return @bitCast(hash);
-    }
-    pub inline fn hash24(self: Object) u24 {
-        return @truncate(self.rawU());
-    }
-    pub inline fn hash32(self: Object) u32 {
-        return @truncate(self.rawU());
-    }
-    pub inline fn highPointer(_: Object, T: type) ?T {
-        @panic("Not implemented");
-    }
-    pub inline fn pointer(_: Object, T: type) ?T {
-        @panic("Not implemented");
-    }
-    pub inline fn hasPointer(_: Object) bool {
-        return false;
-    }
-    pub inline fn isDouble(_: Object) bool {
-        return false;
-    }
-    pub inline fn toIntNoCheck(self: Object) i64 {
-        return @bitCast(self);
-    }
-    pub inline fn toNatNoCheck(self: Object) u64 {
-        return @bitCast(self);
-    }
-    pub inline fn makeThunk(cls: ClassIndex.Compact, ptr: anytype, extra: u8) Object {
-        _ = .{ cls, ptr, extra, unreachable };
+    pub fn extraImmediateU(_: Object) ?u8 {
+        return null;
     }
     const OF = object.ObjectFunctions;
     pub const arrayAsSlice = OF.arrayAsSlice;
