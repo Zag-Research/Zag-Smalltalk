@@ -12,11 +12,13 @@ Execution model:
 
 Memory structure and some of execution principles loosely modelled on OpenSmalltalk VM <br>
 
-Eventually it wiil include a JIT compiler
+Eventually it will include a JIT compiler
 
-More information in the [Documentation](Documentation) 
+More information in the [Documentation](Documentation) - not all completely up to date, but captures the intent.
 
 Papers and Talks can be found [here](Documentation/papers)
+
+The Zag runtime is written in Zig and [this is the auto-generated documentation](https://zag-research.github.io/Zag-Smalltalk/api/) (needs to be commented/structured better, but it will help you navigate the codebase).
 
 (Previously called AST-Smalltalk, but since the implementation is in Zig, a rename seemed obvious.)
 
