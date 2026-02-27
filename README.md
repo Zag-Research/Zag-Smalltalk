@@ -35,3 +35,6 @@ Metacello new
   repository: 'github://Zag-Research/Zag-Smalltalk:main';
   load
 ```
+
+## Commit logs
+[Commit logs are visible to the team here](https://github.com/Zag-Research/Zag-Smalltalk/actions/workflows/bench.yml)
