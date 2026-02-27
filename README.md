@@ -22,6 +22,11 @@ The Zag runtime is written in Zig and [this is the auto-generated documentation]
 
 (Previously called AST-Smalltalk, but since the implementation is in Zig, a rename seemed obvious.)
 
+## The compiler is written in Smalltalk and currently hosted on Pharo
+This includes a compiler to convert an application sitting in the image into a set of classes ready to load into Zag, with all the methods expressed as ASTs.
+
+It is *work-in-progress* to export to a Zag image ready to be run with the Zag runtime mentioned above.
+
 ### Loading into Pharo (known to load with Pharo 13)
 *very much work-in-progress at the moment*
 ```smalltalk
