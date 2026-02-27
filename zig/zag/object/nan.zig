@@ -111,7 +111,6 @@ pub const Object = packed struct(u64) {
         return toObject(int << intTagBits);
     }
     pub const testU = rawU;
-    pub const testI = rawI;
     inline fn rawU(self: Object) u64 {
         return @bitCast(self);
     }

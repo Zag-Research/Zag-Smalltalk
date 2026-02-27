@@ -2,6 +2,7 @@ const std = @import("std");
 pub const Encoding = enum {
     zag,
     zagSpur,
+    zagIntSpur,
     nan,
     spur,
     taggedPtr,
@@ -21,20 +22,21 @@ pub const Encoding = enum {
     pub fn default() Encoding {
         return .zag;
     }
-    pub fn module(self: Encoding) type {
-        return switch (self) {
-            .zag => @import("zag.zig"),
-            .zagSpur => @import("zagSpur.zig"),
-            .nan => @import("nan.zig"),
-            .spur => @import("spur.zig"),
-            .taggedPtr => @import("taggedPtr.zig"),
-            .cachedPtr, .ptr => @import("ptr.zig"),
-            .taggedInt => @import("taggedInt.zig"),
-            .onlyInt => @import("onlyInt.zig"),
-            .onlyFloat => @import("onlyFloat.zig"),
-        };
-    }
 };
+pub fn module(self: anytype) type {
+    return switch (self) {
+        .zag => @import("zag.zig"),
+        .zagSpur => @import("zagSpur.zig"),
+        .zagIntSpur => @import("zagIntSpur.zig"),
+        .nan => @import("nan.zig"),
+        .spur => @import("spur.zig"),
+        .taggedPtr => @import("taggedPtr.zig"),
+        .cachedPtr, .ptr => @import("ptr.zig"),
+        .taggedInt => @import("taggedInt.zig"),
+        .onlyInt => @import("onlyInt.zig"),
+        .onlyFloat => @import("onlyFloat.zig"),
+    };
+}
 test "fromName" {
     const match = Encoding.fromName;
     const expect = std.testing.expect;

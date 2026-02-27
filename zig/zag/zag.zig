@@ -19,6 +19,7 @@
 /// Build configuration options and feature toggles.
 pub const config = @import("config.zig");
 pub const InMemory = @import("object/inMemory.zig");
+pub const encoding = @import("object/encoding.zig");
 pub const object = @import("object.zig");
 pub const Object = object.Object;
 pub const execute = @import("execute.zig");

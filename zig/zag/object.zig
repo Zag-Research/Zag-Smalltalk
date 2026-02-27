@@ -175,17 +175,7 @@ comptime {
         std.testing.expectEqual(ci, cci) catch @panic("unreachable");
     }
 }
-pub const Object = switch (config.objectEncoding) {
-    .zag => @import("object/zag.zig").Object,
-    .zagSpur => @import("object/zagSpur.zig").Object,
-    .nan => @import("object/nan.zig").Object,
-    .spur => @import("object/spur.zig").Object,
-    .taggedPtr => @import("object/taggedPtr.zig").Object,
-    .taggedInt => @import("object/taggedInt.zig").Object,
-    .cachedPtr, .ptr => @import("object/ptr.zig").Object,
-    .onlyInt => @import("object/onlyInt.zig").Object,
-    .onlyFloat => @import("object/onlyFloat.zig").Object,
-};
+pub const Object = zag.encoding.module(config.objectEncoding).Object;
 pub const testObjects = blk: {
     var testArray: [5]Object = undefined;
     for (&testArray, 0..) |*elem, i| {
