@@ -2,7 +2,6 @@ const std = @import("std");
 pub const Encoding = enum {
     zag,
     zagSpur,
-    zagIntSpur,
     nan,
     spur,
     taggedPtr,
@@ -27,7 +26,6 @@ pub fn module(self: anytype) type {
     return switch (self) {
         .zag => @import("zag.zig"),
         .zagSpur => @import("zagSpur.zig"),
-        .zagIntSpur => @import("zagIntSpur.zig"),
         .nan => @import("nan.zig"),
         .spur => @import("spur.zig"),
         .taggedPtr => @import("taggedPtr.zig"),
