@@ -617,7 +617,7 @@ pub fn timing(args: []const []const u8, default: bool) !void {
             zag.config.printConfig();
         } else if (eql(u8, arg, "Header")) {
             print("for '{} fibonacci'\n", .{fibN});
-            print("          Median   Mean   StdDev  SD/Mean ({} run{s}, {} warmup{s})\n", .{ stat.runs, if (stat.runs != 1) "s" else "", stat.warmups, if (stat.warmups != 1) "s" else "" });
+            print("          Median   Mean   StdDev  SD/Mean GeomMean({} run{s}, {} warmup{s})\n", .{ stat.runs, if (stat.runs != 1) "s" else "", stat.warmups, if (stat.warmups != 1) "s" else "" });
         } else {
             var anyRun = false;
             inline for (&.{ fibNative, fibNativeFloat, fibInteger, fibInteger0, fibIntegerBr, fibFloat,
@@ -632,6 +632,7 @@ pub fn timing(args: []const []const u8, default: bool) !void {
                     print("{?d:5}ms {d:5}ms {d:6.2}ms", .{ stat.median(), stat.mean(), stat.stdDev() });
                     if (stat.stDevPercent()) |percent|
                         print(" {d:5.1}%", .{percent});
+                    print(" {d:5.1}ms", .{stat.geometricMean()});
                     benchmark.info.mean = stat.mean();
                     saved = deltaInfo(saved, &benchmark.info, arg);
                     print("\n", .{});

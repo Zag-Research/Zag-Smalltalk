@@ -41,6 +41,7 @@ pub fn Stats(comptime Arg: type, comptime K: type, runs: comptime_int, warmups: 
         values: [runs]T = undefined,
         minValue: T = undefined,
         maxValue: T = undefined,
+        product: f64 = undefined,
         n: usize = 0,
         sum: T = 0,
         sumsq: T = 0,
@@ -63,6 +64,7 @@ pub fn Stats(comptime Arg: type, comptime K: type, runs: comptime_int, warmups: 
             self.n = 0;
             self.sum = 0;
             self.sumsq = 0;
+            self.product = 1.0;
         }
         pub fn run(self: *Self, runner: *const fn (usize) T) void {
             for (0..self.warmups) |_| _ = runner(0);
@@ -95,6 +97,7 @@ pub fn Stats(comptime Arg: type, comptime K: type, runs: comptime_int, warmups: 
             }
             self.sum += data;
             self.sumsq += data * data;
+            self.product *= @floatFromInt(data);
             self.n += 1;
         }
         pub fn median(self: *Self) ?T {
@@ -103,6 +106,10 @@ pub fn Stats(comptime Arg: type, comptime K: type, runs: comptime_int, warmups: 
         }
         pub fn mean(self: Self) T {
             return if (isInt) self.sum / self.n else self.sum / @as(f64, @floatFromInt(self.n));
+        }
+        pub fn geometricMean(self: Self) T {
+            const power = 1.0 / @as(f64, @floatFromInt(self.n));
+            return @intFromFloat(std.math.pow(f64, self.product, power));
         }
         inline fn asFloat(v: T) f64 {
             return if (isInt) @floatFromInt(v) else v;
@@ -138,11 +145,12 @@ pub fn Stats(comptime Arg: type, comptime K: type, runs: comptime_int, warmups: 
             } else {
                 const opts: []const u8 = comptime if (isInt) "{}" else "{d:.2}";
                 var percent = false;
-                inline for ("n--m--x--s") |f| {
+                inline for ("n--m--x--s--G") |f| {
                     switch (f) {
                         'n' => try writer.print(opts, .{self.minValue}),
                         'm' => try writer.print(opts, .{self.mean()}),
                         'M' => try writer.print(opts, .{self.median()}),
+                        'G' => try writer.print(opts, .{self.geometricMean()}),
                         'x' => try writer.print(opts, .{self.maxValue}),
                         'r' => try writer.print(opts, .{(self.maxValue - self.minValue) / 2}),
                         '%' => percent = true,
