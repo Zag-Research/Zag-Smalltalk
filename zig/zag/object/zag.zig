@@ -127,6 +127,7 @@ pub const Object = packed struct(u64) {
         return TaggedClass.from(self).dataI();
     }
     pub inline fn nativeF(self: object.Object) ?f64 {
+        if (zag.config.show_trace and self.rawU() < 0x200000000 and self.rawU() > 0x100000000) return null;
         if (self.isImmediateDouble()) return self.toDoubleNoCheck();
         if (self.isMemoryDouble()) return self.toDoubleFromMemory();
         return null;
@@ -227,6 +228,9 @@ pub const Object = packed struct(u64) {
     inline fn oImm(c: ClassIndex.Compact, h: u56) Self {
         return Self{ .tag = .immediates, .class = c, .hash = h };
     }
+    inline fn oImmContext(c: ClassIndex.Compact, context: *Context, e: u8) Self {
+        return Self{ .tag = .immediates, .class = c, .hash = @as(u56, @intCast(@intFromPtr(context))) << 8 | e };
+    }
     pub inline fn hasPointer(self: object.Object) bool {
         const bits = math.rotr(TagAndClassType, self.tagbits(), 3);
         return bits <= math.rotr(TagAndClassType, oImm(.ThunkHeap, 0).tagbits(), 3) and bits != 0;
@@ -283,6 +287,21 @@ pub const Object = packed struct(u64) {
         return null;
     }
 
+    pub fn returnObjectClosure(self: Object, context: *Context) ?Object {
+        if (self.nativeI()) |i| {
+            switch(i) {
+                -128 ... 127 => return oImmContext(.ThunkReturnObject, context, @bitCast(@as(i8, @intCast(i)))),
+                else => {},
+            }
+        } else {
+            switch (self.which_class()) {
+                .False, .True => |c| return oImmContext(.ThunkReturnImmediate, context, @truncate(oImm(c.compact(),0).rawU())),
+                .UndefinedObject => return oImmContext(.ThunkReturnImmediate, context, 0),
+                else => {},
+            }
+        }
+        return null;
+    }
     pub fn immediateClosure(sig: Signature, sp: SP, context: *Context) ?Object {
         const class = sig.getClass();
         _ = sp;

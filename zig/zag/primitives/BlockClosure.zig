@@ -207,6 +207,26 @@ pub const threadedFns = struct {
             }
         }
     };
+    pub const returnLiteralClosure = struct {
+        pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
+            if (extra.installContextIfNone(sp, process, context)) |new| {
+                const newSp = new.sp;
+                const newContext = new.context;
+                newContext.setReturn(pc.next());
+                const newExtra = new.extra;
+                newSp.traceStack("returnLiteralClosure new stack", newContext, newExtra);
+                return @call(tailCall, threadedFn, .{ pc, newSp, process, newContext, newExtra });
+            }
+            if (pc.object().returnObjectClosure(context)) |closure| {
+                if (sp.push(closure)) |newSp| {
+                    return @call(tailCall, process.check(pc.prim2()), .{ pc.next2(), newSp, process, context, extra });
+                }
+                const newSp, const newContext, const newExtra = sp.spillStack(context, extra);
+                return @call(tailCall, threadedFn, .{ pc, newSp, process, newContext, newExtra });
+            }
+            @panic("Unexpected object encoding");
+        }
+    };
     pub const pushClosure = struct {
         pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
             const structure: PackedObject = pc.packedObject();

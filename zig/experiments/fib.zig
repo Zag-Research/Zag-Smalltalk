@@ -60,7 +60,7 @@ const fibNativeFloat = struct {
     fn init() void {}
     fn runIt(comptime _: void, proof: usize) usize {
         const result: usize = @intFromFloat(fib(@floatFromInt(fibN)));
-        return @as(u64,@bitCast(result)) + proof;
+        return @as(u64, @bitCast(result)) + proof;
     }
     fn fib(n: f64) f64 {
         if (n <= 2) return n;
@@ -83,20 +83,22 @@ const fibInteger = struct {
         compileMethod(Sym.fibonacci, 0, .SmallInteger, .{
             tf.push,                  self,
             tf.pushLiteral,           "1const",
-            leq, tf.fail, tf.fail,
-            tf.classCase,             classes(&.{.False}),
-            "false",                  tf.returnSelf,
-            ":false",                 tf.push,
-            self,                     tf.pushLiteral,
-            "0const",
-            minus, tf.fail, tf.fail,                    tf.send,
+            leq,                      tf.fail,
+            tf.fail,                  tf.classCase,
+            classes(&.{.False}),      "false",
+            tf.returnSelf,            ":false",
+            tf.push,                  self,
+            tf.pushLiteral,           "0const",
+            minus,                    tf.fail,
+            tf.fail,                  tf.send,
             signature(.fibonacci, 0), &nullMethod,
             tf.push,                  self,
             tf.pushLiteral,           "1const",
-            minus, tf.fail, tf.fail,
-            tf.send,                  signature(.fibonacci, 0),
-            &nullMethod,
-            plus, tf.fail, tf.fail,                     tf.returnTop,
+            minus,                    tf.fail,
+            tf.fail,                  tf.send,
+            signature(.fibonacci, 0), &nullMethod,
+            plus,                     tf.fail,
+            tf.fail,                  tf.returnTop,
         });
     var exe: MainExecutor = undefined;
     var one_: Object.StaticObject = undefined;
@@ -116,7 +118,7 @@ const fibInteger = struct {
     fn runIt(comptime _: void, proof: usize) usize {
         const obj = exe.sendTo(Sym.fibonacci.asObject(), exe.object(fibN)) catch unreachable;
         if (obj.nativeI()) |result| {
-            return @as(u64,@bitCast(result)) + proof;
+            return @as(u64, @bitCast(result)) + proof;
         }
         std.log.err("fib object: {f}\n", .{obj});
         unreachable;
@@ -137,20 +139,22 @@ const fibInteger0 = struct {
         compileMethod(Sym.fibonacci, 0, .SmallInteger, .{
             tf.push,                  self,
             tf.pushLiteral,           "1const",
-            leq, tf.fail, tf.fail,
-            tf.classCase,             classes(&.{.False}),
-            "false",                  tf.returnSelf,
-            ":false",                 tf.push,
-            self,                     tf.pushLiteral,
-            "0const",
-            minus, tf.fail, tf.fail,                    tf.send0,
+            leq,                      tf.fail,
+            tf.fail,                  tf.classCase,
+            classes(&.{.False}),      "false",
+            tf.returnSelf,            ":false",
+            tf.push,                  self,
+            tf.pushLiteral,           "0const",
+            minus,                    tf.fail,
+            tf.fail,                  tf.send0,
             signature(.fibonacci, 0), &nullMethod,
             tf.push,                  self,
             tf.pushLiteral,           "1const",
-            minus, tf.fail, tf.fail,
-            tf.send0,                 signature(.fibonacci, 0),
-            &nullMethod,
-            plus, tf.fail, tf.fail,                     tf.returnTop,
+            minus,                    tf.fail,
+            tf.fail,                  tf.send0,
+            signature(.fibonacci, 0), &nullMethod,
+            plus,                     tf.fail,
+            tf.fail,                  tf.returnTop,
         });
     var exe: MainExecutor = undefined;
     var one_: Object.StaticObject = undefined;
@@ -170,7 +174,7 @@ const fibInteger0 = struct {
     fn runIt(comptime _: void, proof: usize) usize {
         const obj = exe.sendTo(Sym.fibonacci.asObject(), exe.object(fibN)) catch unreachable;
         if (obj.nativeI()) |result| {
-            return @as(u64,@bitCast(result)) + proof;
+            return @as(u64, @bitCast(result)) + proof;
         }
         std.log.err("fib object: {f}\n", .{obj});
         unreachable;
@@ -190,21 +194,23 @@ const fibIntegerBr = struct {
     var fib align(codeAlignment) =
         compileMethod(Sym.fibonacci, 0, .SmallInteger, .{
             //            tf.debug,
-            tf.push,                  self,
-            tf.pushLiteral,           "1const",
-            leq, tf.fail, tf.fail,
-            tf.branchFalse,           "false",
-            tf.returnSelf,            ":false",
-            tf.push,                  self,
-            tf.pushLiteral,           "0const",
-            minus, tf.fail, tf.fail,
-            tf.send,                  signature(.fibonacci, 0),
-            &nullMethod,              tf.push,
-            self,                     tf.pushLiteral,
-            "1const",
-            minus, tf.fail, tf.fail,                    tf.send,
-            signature(.fibonacci, 0), &nullMethod,
-            plus, tf.fail, tf.fail,
+            tf.push,        self,
+            tf.pushLiteral, "1const",
+            leq,            tf.fail,
+            tf.fail,        tf.branchFalse,
+            "false",        tf.returnSelf,
+            ":false",       tf.push,
+            self,           tf.pushLiteral,
+            "0const",       minus,
+            tf.fail,        tf.fail,
+            tf.send,        signature(.fibonacci, 0),
+            &nullMethod,    tf.push,
+            self,           tf.pushLiteral,
+            "1const",       minus,
+            tf.fail,        tf.fail,
+            tf.send,        signature(.fibonacci, 0),
+            &nullMethod,    plus,
+            tf.fail,        tf.fail,
             //            tf.enddebug,
             tf.returnTop,
         });
@@ -234,7 +240,7 @@ const fibIntegerBr = struct {
     fn runIt(comptime _: void, proof: usize) usize {
         const obj = exe.sendTo(Sym.fibonacci.asObject(), exe.object(fibN)) catch unreachable;
         if (obj.nativeI()) |result| {
-            return @as(u64,@bitCast(result)) + proof;
+            return @as(u64, @bitCast(result)) + proof;
         }
         std.log.err("fib object: {f}\n", .{obj});
         unreachable;
@@ -255,26 +261,28 @@ const fibIntegerCl = struct {
     var TifTrue align(codeAlignment) =
         compileMethod(Sym.@"ifTrue:", 0, .True, .{ tf.dup, tf.value, tf.returnTop });
     var FifTrue align(codeAlignment) =
-        compileMethod(Sym.@"ifTrue:", 0, .False, .{ tf.returnSelf });
+        compileMethod(Sym.@"ifTrue:", 0, .False, .{tf.returnSelf});
     var fib align(codeAlignment) =
         compileMethod(Sym.fibonacci, 0, .SmallInteger, .{
             //            tf.debug,
-            tf.push,                  self,
-            tf.pushLiteral,           "1const",
-            leq, tf.fail, tf.fail,
-            tf.createClosure, fromClassI8(.ThunkReturnObject, 1),
-            tf.send,                  signature(.@"ifTrue:", 0),
-            &nullMethod,              tf.drop,
-            tf.push,                  self,
-            tf.pushLiteral,           "0const",
-            minus, tf.fail, tf.fail,
-            tf.send,                  signature(.fibonacci, 0),
-            &nullMethod,              tf.push,
-            self,                     tf.pushLiteral,
-            "1const",
-            minus, tf.fail, tf.fail,                    tf.send,
-            signature(.fibonacci, 0), &nullMethod,
-            plus, tf.fail, tf.fail,
+            tf.push,                   self,
+            tf.pushLiteral,            "1const",
+            leq,                       tf.fail,
+            tf.fail,                   tf.returnLiteralClosure,
+            "0const",                  tf.send,
+            signature(.@"ifTrue:", 0), &nullMethod,
+            tf.drop,                   tf.push,
+            self,                      tf.pushLiteral,
+            "0const",                  minus,
+            tf.fail,                   tf.fail,
+            tf.send,                   signature(.fibonacci, 0),
+            &nullMethod,               tf.push,
+            self,                      tf.pushLiteral,
+            "1const",                  minus,
+            tf.fail,                   tf.fail,
+            tf.send,                   signature(.fibonacci, 0),
+            &nullMethod,               plus,
+            tf.fail,                   tf.fail,
             //            tf.enddebug,
             tf.returnTop,
         });
@@ -296,7 +304,7 @@ const fibIntegerCl = struct {
         zag.dispatch.addMethod(@ptrCast(&FifTrue));
         if (zag.config.show_trace) {
             std.debug.print("\n", .{});
-            std.debug.print("address of one {*}\n", .{ &one });
+            std.debug.print("address of one {*}\n", .{&one});
             fib.dump();
             TifTrue.dump();
             FifTrue.dump();
@@ -313,7 +321,7 @@ const fibIntegerCl = struct {
     fn runIt(comptime _: void, proof: usize) usize {
         const obj = exe.sendTo(Sym.fibonacci.asObject(), exe.object(fibN)) catch unreachable;
         if (obj.nativeI()) |result| {
-            return @as(u64,@bitCast(result)) + proof;
+            return @as(u64, @bitCast(result)) + proof;
         }
         std.log.err("fib object: {f}\n", .{obj});
         unreachable;
@@ -333,21 +341,23 @@ const fibIntegerCnP = struct {
     var fib align(codeAlignment) =
         compileMethod(Sym.fibonacci, 0, .SmallInteger, .{
             //            tf.debug,
-            tf.push,                  self,
-            tf.pushLiteral,           "1const",
-            leq, tf.fail, tf.fail,
-            tf.branchFalse,           "false",
-            tf.returnSelf,            ":false",
-            tf.push,                  self,
-            tf.pushLiteral,           "0const",
-            minus, tf.fail, tf.fail,
-            tf.send,                  signature(.fibonacci, 0),
-            &nullMethod,              tf.push,
-            self,                     tf.pushLiteral,
-            "1const",
-            minus, tf.fail, tf.fail,                    tf.send,
-            signature(.fibonacci, 0), &nullMethod,
-            plus, tf.fail, tf.fail,
+            tf.push,        self,
+            tf.pushLiteral, "1const",
+            leq,            tf.fail,
+            tf.fail,        tf.branchFalse,
+            "false",        tf.returnSelf,
+            ":false",       tf.push,
+            self,           tf.pushLiteral,
+            "0const",       minus,
+            tf.fail,        tf.fail,
+            tf.send,        signature(.fibonacci, 0),
+            &nullMethod,    tf.push,
+            self,           tf.pushLiteral,
+            "1const",       minus,
+            tf.fail,        tf.fail,
+            tf.send,        signature(.fibonacci, 0),
+            &nullMethod,    plus,
+            tf.fail,        tf.fail,
             //            tf.enddebug,
             tf.returnTop,
         });
@@ -500,7 +510,7 @@ const fibIntegerCnP = struct {
     fn runIt(comptime _: void, proof: usize) usize {
         const obj = exe.sendTo(Sym.fibonacci.asObject(), exe.object(fibN)) catch unreachable;
         if (obj.nativeI()) |result| {
-            return @as(u64,@bitCast(result)) + proof;
+            return @as(u64, @bitCast(result)) + proof;
         }
         std.log.err("fib object: {f}\n", .{obj});
         unreachable;
@@ -519,21 +529,23 @@ const fibFloat = struct {
     const nullMethod = zag.dispatch.nullMethod;
     var fib align(codeAlignment) =
         compileMethod(Sym.fibonacci, 0, .Float, .{
-            tf.push,                  self,
-            tf.pushLiteral,           "1const",
-            leq, tf.fail, tf.fail,
-            tf.branchFalse,           "false",
-            tf.returnSelf,            ":false",
-            tf.push,                  self,
-            tf.pushLiteral,           "0const",
-            minus, tf.fail, tf.fail,
-            tf.send,                  signature(.fibonacci, 0),
-            &nullMethod,              tf.push,
-            self,                     tf.pushLiteral,
-            "1const",
-            minus, tf.fail, tf.fail,                    tf.send,
-            signature(.fibonacci, 0), &nullMethod,
-            plus, tf.fail, tf.fail,
+            tf.push,        self,
+            tf.pushLiteral, "1const",
+            leq,            tf.fail,
+            tf.fail,        tf.branchFalse,
+            "false",        tf.returnSelf,
+            ":false",       tf.push,
+            self,           tf.pushLiteral,
+            "0const",       minus,
+            tf.fail,        tf.fail,
+            tf.send,        signature(.fibonacci, 0),
+            &nullMethod,    tf.push,
+            self,           tf.pushLiteral,
+            "1const",       minus,
+            tf.fail,        tf.fail,
+            tf.send,        signature(.fibonacci, 0),
+            &nullMethod,    plus,
+            tf.fail,        tf.fail,
             tf.returnTop,
         });
     var exe: MainExecutor = undefined;
@@ -562,7 +574,6 @@ const fibFloat = struct {
     }
     fn runIt(comptime _: void, proof: usize) usize {
         const receiver = exe.object(@as(f64, @floatFromInt(fibN)));
-        if (zag.config.show_trace) std.log.err("receiver={x}\n", .{receiver.rawU()});
         _ = exe.sendTo(Sym.fibonacci.asObject(), receiver) catch @panic("Error sending message");
         return proof;
     }
@@ -620,9 +631,7 @@ pub fn timing(args: []const []const u8, default: bool) !void {
             print("          Median   Mean   StdDev  SD/Mean GeomMean({} run{s}, {} warmup{s})\n", .{ stat.runs, if (stat.runs != 1) "s" else "", stat.warmups, if (stat.warmups != 1) "s" else "" });
         } else {
             var anyRun = false;
-            inline for (&.{ fibNative, fibNativeFloat, fibInteger, fibInteger0, fibIntegerBr, fibFloat,
-                            fibIntegerCnP, fibIntegerCl
-                          }) |benchmark| {
+            inline for (&.{ fibNative, fibNativeFloat, fibInteger, fibInteger0, fibIntegerBr, fibFloat, fibIntegerCnP, fibIntegerCl }) |benchmark| {
                 if (includeFor(benchmark) and std.mem.eql(u8, name(arg), benchmark.info.name)) {
                     anyRun = true;
                     print("{s:>9}", .{benchmark.info.name});
@@ -645,14 +654,14 @@ pub fn timing(args: []const []const u8, default: bool) !void {
 }
 pub fn main() !void {
     const do_all = [_][]const u8{
-        "Config",            "Header",
-        "Native",            "NativeF",
+        "Config",    "Header",
+        "Native",    "NativeF",
         //"Integer",
         "IntegerBr?Integer",
         //"Integer0?Integer",
         //"IntegerCnP",
         "Float",
-        // "IntegerCl",
+        //"IntegerCl",
     };
     // var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     // const allocator = gpa.allocator();

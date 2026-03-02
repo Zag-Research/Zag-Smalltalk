@@ -40,19 +40,19 @@ tpc: PC, // threaded PC
 npc: *const fn (PC, SP, *Process, *Context, Extra) Result, // native PC - in Continuation Passing Style
 contextData: *ContextData,
 const contextSize = @sizeOf(Self) / @sizeOf(Object);
-const sizeOnStack = @sizeOf(ContextOnStack) / @sizeOf(Object) - 1;
+const sizeOnStack = @sizeOf(ContextOnStack) / @sizeOf(Object) - 1; // ignore locals in size
 const ContextOnStack = struct {
     spAndSelfOffset: u64,
     prevCtxt: ?*Context,
     method: *const CompiledMethod,
     trapContextNumber: u64,
-    tpc: usize,
+    tpc: PC,
     npc: *const fn (PC, SP, *Process, *Context, Extra) Result,
     contextData: *ContextData,
     contextDataHeader: HeapHeader,
     locals: Object,
     inline fn set(self: *ContextOnStack, method: *const CompiledMethod, context: *Context, selfOffset: u64, numLocals: u64) void {
-        self.spAndSelfOffset = selfOffset - 1;
+        self.spAndSelfOffset = selfOffset;
         self.prevCtxt = context;
         self.method = method;
         self.trapContextNumber = undefined;
@@ -251,16 +251,16 @@ pub inline fn pop(self: *Context, sp: SP) struct { SP, *Context } {
     @panic("incomplete");
 }
 pub fn push(self: *Context, sp: SP, process: *Process, method: *const CompiledMethod, extra: Extra) struct { SP, *ContextOnStack } {
-    const locals = method.stackStructure.locals;
+    const stackStructure = method.stackStructure;
+    const locals = stackStructure.locals;
+    const selfOffset = stackStructure.selfOffset - 1;
     if (sp.reserve(locals + sizeOnStack)) |newSp| {
-        const selfOffset = method.stackStructure.selfOffset;
         const selfAddr = extra.selfAddress(sp).?;
-        const sizeToMove = selfOffset - locals;
-        const contextAddr = selfAddr - selfOffset - (sizeOnStack - 1);
-        trace("pushContext: selfAddr={*}, contextAddr={*}, newSp.array = {*}, sizeToMove={}\n",
-            .{ selfAddr, contextAddr, newSp.array(), sizeToMove });
+        const sizeToMove = (@intFromPtr(selfAddr - selfOffset) - @intFromPtr(sp)) / @sizeOf(Object);
+        const contextAddr = selfAddr - selfOffset - locals - sizeOnStack;
+        trace("pushContext: sizeOnStack={},\n locals={},\n selfOffset={},\n selfAddr={*},\n contextAddr={*},\n context={*},\n newSp.array = {*},\n sp.array = {*}, sizeToMove={},\n {any}\n", .{ sizeOnStack, locals, selfOffset, selfAddr, contextAddr, self, newSp.array(), sp.array(), sizeToMove, sp.array()[0..sizeToMove] });
         if (contextAddr != newSp.array() + sizeToMove) @panic("pushContext: contextAddr != newSp.array() + sizeToMove");
-        for (newSp.array()[0..sizeToMove], sp.array()[0..sizeToMove]) |*target, *source| {
+        for (newSp.array()[0..sizeToMove], sp.array()) |*target, *source| {
             target.* = source.*;
         }
         const ctxt: *align(@alignOf(Self)) ContextOnStack = @ptrCast(contextAddr);
@@ -346,7 +346,7 @@ fn selfAddress(self: *const Context, sp: SP) [*]Object {
     if (self.ifOnStack(sp)) |contextOnStack|
         return contextOnStack.selfAddress();
     const wordsToDiscard = self.header.hash16();
-    trace("wordsToDiscard: {} context: {*} contextData: {*}\n", .{wordsToDiscard, self, self.contextData});
+    trace("wordsToDiscard: {} context: {*} contextData: {*}\n", .{ wordsToDiscard, self, self.contextData });
     _ = .{ wordsToDiscard, @panic("not on stack") };
     //return @ptrCast(@constCast(&self.asObjectPtr()[wordsToDiscard]));
 }

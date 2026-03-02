@@ -115,7 +115,7 @@ pub const Signature = packed struct {
                 },
                 else => |class| try writer.print("{}", .{class}),
             }
-            try writer.print(" #{s}", .{ symbol.asStringFromHash(@intCast((self.asInt() & 0xffffff00) >> 8)).arrayAsSlice(u8) catch "???" });
+            try writer.print(" #{s}", .{symbol.asStringFromHash(@intCast((self.asInt() & 0xffffff00) >> 8)).arrayAsSlice(u8) catch "???"});
         }
     }
 };
@@ -143,8 +143,7 @@ pub const PC = packed struct {
     pub fn offset(self: PC, cm: *const CompiledMethod) usize {
         return (@intFromPtr(self.code) - @intFromPtr(&cm.code[0])) / @sizeOf(Code);
     }
-    pub inline
-    fn method(self: PC) *const CompiledMethod {
+    pub inline fn method(self: PC) *const CompiledMethod {
         if (logging) |log| {
             @setRuntimeSafety(false);
             log("PC_method:       {x:0>12}: {f}", .{ @intFromPtr(self.code), self.code.method });
@@ -172,14 +171,14 @@ pub const PC = packed struct {
         return primOf("PC_prim:         ", self.code);
     }
     inline fn primOf(str: []const u8, code: *const Code) *const fn (PC, SP, *Process, *Context, Extra) Result {
-        if (logging) | log | {
+        if (logging) |log| {
             // log("{s}{x:0>12}: ", .{ str, @intFromPtr(code) });
             // for ((@as([*]const u64, @ptrCast(code))-10)[0..21]) |*word| {
             //     log("{x:0>16}: {x:0>16}{s}", .{ @intFromPtr(word), word.*, if (@intFromPtr(word) == @intFromPtr(code)) " *" else "" });
             // }
             @setRuntimeSafety(false);
             if (@import("threadedFn.zig").find(code.prim())) |name| {
-                log("{s}{x:0>12}: {}", .{ str, @intFromPtr(code), name });
+                log("{s}{x:0>12}: {} {x}", .{ str, @intFromPtr(code), name, @intFromPtr(code.prim()) });
             } else {
                 log("{s}{x:0>12}: {x}", .{ str, @intFromPtr(code), @intFromPtr(code.prim()) });
             }
@@ -378,7 +377,7 @@ pub const Code = union(enum) {
                 if (@import("threadedFn.zig").find(tFn)) |name| {
                     try writer.print("{}", .{name});
                 } else if (@import("primitives.zig").findPrimitiveAtPtr(tFn)) |primitive| {
-                    try writer.print("primitive({s}>>#{s} : {}) {*}", .{primitive.module, primitive.name, primitive.number, tFn });
+                    try writer.print("primitive({s}>>#{s} : {}) {*}", .{ primitive.module, primitive.name, primitive.number, tFn });
                 } else {
                     try writer.print("{*}", .{tFn});
                 }
@@ -445,7 +444,7 @@ pub const CompiledMethod = struct {
             .signature = Signature.fromNameClass(name, .testClass),
             .executeFn = methodFn,
             .jitted = methodFn,
-            .code = .{ Code.primOf(methodFn) },
+            .code = .{Code.primOf(methodFn)},
         };
     }
     pub fn execute(self: *const Self, sp: SP, process: *Process, context: *Context) Result {
@@ -657,8 +656,7 @@ fn CompileTimeMethod(comptime counts: usize) type {
                             if (index >= literals.len) return error.Unresolved;
                             if (literals[index].signature()) |signature| {
                                 c.* = Code.signatureOf(signature);
-                            } else
-                                c.* = Code.objectOf(literals[index]);
+                            } else c.* = Code.objectOf(literals[index]);
                             offset.* = .none;
                         }
                     },
@@ -743,7 +741,7 @@ const p = @import("threadedFn.zig").Enum;
 test "compiling method" {
     const expectEqual = std.testing.expectEqual;
     //@compileLog(&p.send);
-    const exe = Execution.init( .{
+    const exe = Execution.init(.{
         ":abc", p.branch,
         "def",  "0True",
         o0,     ":def",
@@ -1005,9 +1003,9 @@ pub const Execution = struct {
             }
             pub fn execute(self: *Self, stackObjects: ?[]const Object) void {
                 self.init(stackObjects);
-//                self.resolve(Object.empty) catch @panic("Failed to resolve");
+                //                self.resolve(Object.empty) catch @panic("Failed to resolve");
                 _ = self.method.execute(self.getSp(), self.getProcess(), self.getContext());
-//                self.getSp().traceStack("return from execution", self.getContext(), Extra.none);
+                //                self.getSp().traceStack("return from execution", self.getContext(), Extra.none);
             }
             pub fn matchStack(self: *Self, expected: []const Object) !void {
                 const result = self.stack();
@@ -1083,13 +1081,13 @@ pub fn expectEqualSlices(expected: []const Object, result: []const Object) !void
     };
     std.debug.print("first difference at index {d}\n", .{index});
     std.debug.print("expected:  {{", .{});
-    for (expected, 0..) |obj,i| {
+    for (expected, 0..) |obj, i| {
         if (i > 0) std.debug.print(", ", .{});
         std.debug.print("{f}", .{obj});
     }
     std.debug.print("}}\n", .{});
     std.debug.print("but found: {{", .{});
-    for (result, 0..) |obj,i| {
+    for (result, 0..) |obj, i| {
         if (i > 0) std.debug.print(", ", .{});
         std.debug.print("{f}", .{obj});
     }

@@ -261,8 +261,9 @@ pub const threadedFunctions = struct {
             trace("returnSelf extra=0x{x:0>16}", .{@as(u64, @bitCast(extra))});
             if (extra.selfAddress(sp)) |address| {
                 const newSp: SP = @ptrCast(address);
-                newSp.traceStack("returnSelf after", context, extra);
-                return @call(tailCall, process.check(context.npc), .{ context.tpc, newSp, process, context, Extra.fromContextData(context.contextDataPtr(sp)) });
+                const newExtra = Extra.fromContextData(context.contextDataPtr(sp));
+                newSp.traceStack("returnSelf after", context, newExtra);
+                return @call(tailCall, process.check(context.npc), .{ context.tpc, newSp, process, context, newExtra });
             }
             const newSp, const callerContext = context.pop(sp);
             newSp.traceStack("returnSelf after pop", context, extra);
@@ -352,13 +353,13 @@ pub const threadedFunctions = struct {
                 const newSp = new.sp;
                 const newContext = new.context;
                 newContext.setReturn(pc.next2());
-                return @call(tailCall, method.executeFn,
-                .{ newPc.next(), newSp, process, newContext, Extra.forMethod(method, newSp.unreserve(numArgs)) });
+                const newExtra = Extra.forMethod(method, newSp.unreserve(numArgs));
+                newSp.traceStack("send new stack", newContext, newExtra);
+                return @call(tailCall, method.executeFn, .{ newPc.next(), newSp, process, newContext, newExtra });
             }
             context.setReturn(pc.next2());
             //method.dump();
-            return @call(tailCall, method.executeFn,
-            .{ newPc.next(), sp, process, context, Extra.forMethod(method, selfAddr) });
+            return @call(tailCall, method.executeFn, .{ newPc.next(), sp, process, context, Extra.forMethod(method, selfAddr) });
         }
     };
     pub const send0 = struct {

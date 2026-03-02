@@ -130,7 +130,7 @@ const Process = struct {
         }
         return hp;
     }
-    fn copyObject(self: *Process, obj: anytype) @TypeOf(obj) {
+    fn copyObjectAndDependents(self: *Process, obj: anytype) @TypeOf(obj) {
         const result = self.h.currHp;
         const hp = @as(*HeapObject, @ptrCast(result)).copyTo(result, null);
         var sizes = [_]usize{0} ** Age.lastNurseryAge;
@@ -172,6 +172,7 @@ const Process = struct {
     fn dumpHeap(self: *Process) void {
         var scan = self.h.currHeap;
         const hp = self.h.currHp;
+        std.debug.print("heap: {*} {*}\n", .{scan, hp});
         while (@intFromPtr(scan) < @intFromPtr(hp)) {
             std.debug.print("[{x:0>10}]: {f}\n", .{ @intFromPtr(scan), scan[0].header });
             scan = scan[0].skipForward();
@@ -581,18 +582,23 @@ const Stack = struct {
         // if the Context is on the stack, the Context, Extra and SP will move
         const process = sp.theProcess();
         const size = (@intFromPtr(sp.endOfStack()) - @intFromPtr(sp)) / @sizeOf(Object);
+        process.dumpHeap();
         process.collectNursery(sp, context, size);
+        process.dumpHeap();
         const stackToCopy = sp.sliceTo(context.endOfStack(sp));
+        sp.dumpStack("original stack in spillStack <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<", context, extra);
         context.reify(sp);
-        sp.dumpStack("in spillStack", context, extra);
-        const newContext = process.copyObject(context);
+        sp.dumpStack("reified stack in spillStack  =============================================", context, extra);
+        const newContext = process.copyObjectAndDependents(context);
+        sp.dumpStack("copied stack in spillStack   >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>", context, extra);
+        process.dumpHeap();
         var n = stackToCopy.len;
-        const newSp = @as([*]Stack, @ptrCast(sp.endOfStack())) - n;
-        const targetStack = @as(SP, @ptrCast(newSp)).slice(n);
+        const targetStack = (@as([*]Object, @ptrCast(sp.endOfStack())) - n)[0..n];
         while (n > 0) : (n -= 1) {
             targetStack[n - 1] = stackToCopy[n - 1];
         }
-        sp.dumpStack("at end of spillStack", newContext, extra);
+        const newSp: SP = @ptrCast(targetStack.ptr);
+        newSp.dumpStack("newSp in spillStack ......................................", newContext, extra);
         @panic("spillStack unfinished");
     }
     pub fn format(

@@ -6,11 +6,11 @@
 //! ## Object Encodings
 //!
 //! The active encoding is chosen at compile time via `config.objectEncoding`:
-//! - `Object.zag` 
-//! - `Object.nan` 
+//! - `Object.zag`
+//! - `Object.nan`
 //! - `object.spur`
-//! - `objectj.zagSpur` 
-//! - `object.taggedInt` / `taggedPtr` / `ptr` 
+//! - `objectj.zagSpur`
+//! - `object.taggedInt` / `taggedPtr` / `ptr`
 //! - `object.onlyInt` / `object.onlyFloat`
 
 const std = @import("std");
@@ -151,10 +151,7 @@ pub const ClassIndex = enum(u16) {
     };
     pub fn isImmediate(self: ClassIndex) bool {
         switch (self) {
-            .Symbol,
-            .False,
-            .True,
-            .Character => return true,
+            .Symbol, .False, .True, .Character => return true,
             else => return false,
         }
     }
@@ -323,13 +320,17 @@ pub const ObjectFunctions = struct {
         if (self.isUnmoving()) return self;
         return error.PromoteUnimplemented;
     }
+    fn checkThreadedFn(self: u64) ?@import("threadedFn.zig").Enum {
+        if (self == 0 or self & 7 != 0) return null;
+        return @import("threadedFn.zig").find(@ptrFromInt(self));
+    }
     pub fn format(
         self: Object,
         writer: anytype,
     ) !void {
         if (false) {
             try writer.print("({x})", .{@as(u64, @bitCast(self))});
-            return;
+            //return;
         }
         if (zag.config.is_test) {
             for (0..testObjects.len) |i| {
@@ -339,7 +340,9 @@ pub const ObjectFunctions = struct {
                 }
             }
         }
-        if (self.invalidObject()) |invalid| {
+        if (checkThreadedFn(@bitCast(self))) |name| {
+            try writer.print("{}", .{name});
+        } else if (self.invalidObject()) |invalid| {
             try writer.print("{{?0x{x:0>16}}}", .{invalid});
         } else if (self.signature()) |signature| {
             try writer.print("{f}", .{signature});
@@ -348,21 +351,21 @@ pub const ObjectFunctions = struct {
         } else if (self.symbolHash()) |_| {
             try writer.print("#{s}", .{symbol.asString(self).arrayAsSlice(u8) catch "???"});
         } else if (self.extraImmediateU()) |extra| {
-            try writer.print("{}({}) -> {*}", .{self.which_class(), extra, self.highPointer(*zag.Context)});
+            try writer.print("{}({}) -> {*}", .{ self.which_class(), extra, self.highPointer(*zag.Context) });
         } else if (self.extraImmediateI()) |extra| {
-            try writer.print("{}({}) -> {*}", .{self.which_class(), extra, self.highPointer(*zag.Context)});
+            try writer.print("{}({}) -> {*}", .{ self.which_class(), extra, self.highPointer(*zag.Context) });
         } else if (self.equals(False())) {
             try writer.print("false", .{});
         } else if (self.equals(True())) {
             try writer.print("true", .{});
-        } else if (@as(u64, @bitCast(self)) == 0xaaaaaaaaaaaaaaaa) {
+        } else if (zag.config.show_trace and @as(u64, @bitCast(self)) == 0xaaaaaaaaaaaaaaaa) {
             try writer.print("undefined", .{});
         } else if (self.nativeF()) |float| {
             try writer.print("{}", .{float});
         } else if (self.equals(Nil())) {
             try writer.print("nil", .{});
         } else if (self.heapObject()) |obj| {
-            try writer.print("{f}@{x}", .{obj, @as(u64, @bitCast(self))});
+            try writer.print("{f}@{x}", .{ obj, @as(u64, @bitCast(self)) });
         } else {
             try writer.print("{{?0x{x:0>16}}}", .{@as(u64, @bitCast(self))});
         }
@@ -413,7 +416,7 @@ test "from conversion" {
     if (config.objectEncoding == .nan)
         try ee(@as(f64, @bitCast((Object.from(3.14, sp, context)))), 3.14);
     try std.testing.expect(!std.math.isNan(@as(f64, @bitCast(Object.from(3.14, sp, context)))));
-//    try ee((Object.from(3.14, sp, context)).get_class(), .Float);
+    //    try ee((Object.from(3.14, sp, context)).get_class(), .Float);
     try std.testing.expect((Object.from(3.14, sp, context)).isFloat());
     try ee((Object.from(3, sp, context)).get_class(), .SmallInteger);
     try std.testing.expect((Object.from(3, sp, context)).isInt());
@@ -444,7 +447,7 @@ test "get_class" {
     const sp = process.getSp();
     const context = process.getContext();
     const ee = std.testing.expectEqual;
-//    try ee((Object.from(3.14, sp, context)).get_class(), .Float);
+    //    try ee((Object.from(3.14, sp, context)).get_class(), .Float);
     try ee((Object.from(42, sp, context)).get_class(), .SmallInteger);
     try ee((Object.from(true, sp, context)).get_class(), .True);
     try ee((Object.from(false, sp, context)).get_class(), .False);

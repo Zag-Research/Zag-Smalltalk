@@ -291,6 +291,22 @@ pub const Object = packed struct(u64) {
     pub inline fn toDoubleNoCheck(self: Object) f64 {
         return @bitCast(self);
     }
+    pub fn returnObjectClosure(self: Object, context: *Context) ?Object {
+        if (self.nativeI()) |i| {
+            switch(i) {
+                -4 ... 3 => return oImm(.ThunkReturnObject, @intCast(@intFromPtr(context) | @as(u3, @bitCast(@as(i3, @intCast(i)))))),
+                else => {},
+            }
+        } else {
+            switch (self.which_class()) {
+                .False => return oImm(.ThunkReturnImmediate, @intCast(@intFromPtr(context) | 0)),
+                .True => return oImm(.ThunkReturnImmediate, @intCast(@intFromPtr(context) | 1)),
+                .UndefinedObject => return oImm(.ThunkReturnImmediate, @intCast(@intFromPtr(context) | 2)),
+                else => {},
+            }
+        }
+        return null;
+    }
     pub fn immediateClosure(sig: Signature, sp: SP, context: *Context) ?Object {
         const class = sig.getClass();
         _ = sp;
