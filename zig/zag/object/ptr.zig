@@ -89,9 +89,6 @@ pub const Object = packed struct(u64) {
         if (self.isImmediateClass(.Symbol)) return self.ref.header.hash;
         return null;
     }
-    pub inline fn heapObject(self: object.Object) ?*InMemory.PointedObject {
-        return self.pointer(*InMemory.PointedObject);
-    }
     pub inline fn extraValue(self: object.Object) object.Object {
         return @bitCast(self.rawU() >> 8);
     }
@@ -117,6 +114,9 @@ pub const Object = packed struct(u64) {
     }
     pub inline fn asUntaggedI(i: i64) i64 {
         return i;
+    }
+    pub fn returnObjectClosure(_: Object, _: anytype) ?Object {
+        return null;
     }
     pub fn immediateClosure(_: anytype, _: anytype, _: anytype) ?Object {
         return null;

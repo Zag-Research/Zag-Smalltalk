@@ -168,10 +168,6 @@ pub const Object = packed union {
         if (self.isImmediateClass(.Symbol)) return @truncate(self.immediate.hash);
         return null;
     }
-    pub inline fn heapObject(self: Object) ?*InMemory.PointedObject {
-        if (self.isHeapObject() and !self.equals(Nil())) return @ptrFromInt(self.rawU());
-        return null;
-    }
 
     pub inline fn isHeapObject(self: Object) bool {
         return self.isTag(.pointer);
@@ -244,6 +240,9 @@ pub const Object = packed union {
     }
     inline fn oImm(c: ClassIndex.Compact, h: u56) Self {
         return Self{ .immediate = .{ .class = c, .hash = h } };
+    }
+    inline fn oImmContext(c: ClassIndex.Compact, context: *Context, e: u8) Self {
+        return Self{ .immediate = .{ .class = c, .hash = @as(u56, @intCast(@intFromPtr(context))) << 8 | e } };
     }
     pub inline fn hasPointer(self: Object) bool {
         const bits = math.rotr(TagAndClassType, self.tagbits(), 3);
@@ -384,7 +383,21 @@ pub const Object = packed union {
     pub inline fn asUntaggedI(i: i64) i64 {
         return i;
     }
-
+    pub fn returnObjectClosure(self: Object, context: *Context) ?Object {
+        if (self.nativeI()) |i| {
+            switch(i) {
+                -128 ... 127 => return oImmContext(.ThunkReturnObject, context, @bitCast(@as(i8, @intCast(i)))),
+                else => {},
+            }
+        } else {
+            switch (self.which_class()) {
+                .False, .True => |c| return oImmContext(.ThunkReturnImmediate, context, @truncate(oImm(c.compact(),0).rawU())),
+                .UndefinedObject => return oImmContext(.ThunkReturnImmediate, context, 0),
+                else => {},
+            }
+        }
+        return null;
+    }
     pub fn immediateClosure(sig: zag.execute.Signature, sp: SP, context: *Context) ?Object {
         const class = sig.getClass();
         _ = sp;

@@ -169,6 +169,9 @@ pub const Object = packed struct(u64) {
     pub inline fn toDoubleNoCheck(self: Object) f64 {
         return @bitCast(self);
     }
+    pub fn returnObjectClosure(_: Object, _: anytype) ?Object {
+        return null;
+    }
     pub fn immediateClosure(_: anytype, _: anytype, _: anytype) ?Object {
         @panic("Not implemented");
     }

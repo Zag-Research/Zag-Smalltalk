@@ -327,7 +327,9 @@ pub const Object = packed union {
     pub inline fn asUntaggedI(i: i64) i64 {
         return i;
     }
-
+    pub fn returnObjectClosure(_: Object, _: anytype) ?Object {
+        return null;
+    }
     pub fn immediateClosure(_: anytype, _: anytype, _: anytype) ?Object {
         return null;
     }
@@ -368,10 +370,6 @@ pub const Object = packed union {
         // For spur encoding, we can't easily embed primitives in objects
         // However, this is only done for signature objects, which already aren't quite valid
         return @bitCast(self.rawU() | prim << 40);
-    }
-    pub inline fn heapObject(self: object.Object) ?*InMemory.PointedObject {
-        if (self.isHeapObject()) return self.ref;
-        return null;
     }
 
     pub inline fn extraValue(self: Object) Object {

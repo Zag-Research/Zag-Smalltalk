@@ -792,6 +792,12 @@ pub const HeapObjectSlice = []align(@alignOf(u64)) HeapObject;
 pub const HeapObjectConstPtr = *align(@alignOf(u64)) const HeapObject;
 pub const HeapObject = packed struct {
     header: HeapHeader,
+    pub fn format(
+        self: HeapObject,
+        writer: anytype,
+    ) !void {
+        try writer.print("{{{f}, ...}}", .{ self.header });
+    }
     pub inline //
     fn alignProperBoundary(self: HeapObjectArray) HeapObjectArray {
         if (@intFromPtr(self) & 8 == 0)
@@ -921,9 +927,9 @@ pub const HeapObject = packed struct {
         if (obj.ifHeapObject()) |otherHeapObject| {
             if (otherHeapObject.header.age.needsPromotionTo(head.age))
                 return error.needsPromotion;
-            const format = head.objectFormat;
-            const newFormat = format.operations().instVarWithPtr;
-            if (newFormat != format)
+            const fmt = head.objectFormat;
+            const newFormat = fmt.operations().instVarWithPtr;
+            if (newFormat != fmt)
                 self.header.objectFormat = newFormat;
         }
         ivs[index] = obj;

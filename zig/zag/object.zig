@@ -40,7 +40,7 @@ pub fn fromLE(comptime T: type, v: T) Object {
 }
 pub const compareObject = Object.compare;
 pub const ClassIndex = enum(u16) {
-    none = 0,
+    SmallInteger = 0,
     ThunkReturnLocal,
     ThunkReturnInstance,
     ThunkReturnObject,
@@ -60,19 +60,18 @@ pub const ClassIndex = enum(u16) {
     ThunkReturnFloat,
     ThunkFloat,
     LLVM,
-    SmallInteger,
+    UndefinedObject,
+    none,
     reserved_21,
     reserved_22,
     reserved_23,
     reserved_24,
     reserved_25,
-    reserved_26,
     o4,
     o3,
     o2,
     o1,
     o0,
-    UndefinedObject,
     Context,
     Float,
     ProtoObject,
@@ -110,7 +109,7 @@ pub const ClassIndex = enum(u16) {
     pub const LastSpecial = @intFromEnum(Self.Dispatch);
     const Self = @This();
     pub const Compact = enum(u5) {
-        none = 0,
+        SmallInteger = 0,
         ThunkReturnLocal,
         ThunkReturnInstance,
         ThunkReturnObject,
@@ -130,13 +129,13 @@ pub const ClassIndex = enum(u16) {
         ThunkReturnFloat,
         ThunkFloat,
         LLVM,
-        SmallInteger,
+        UndefinedObject,
+        none,
         reserved_21,
         reserved_22,
         reserved_23,
         reserved_24,
         reserved_25,
-        reserved_26,
         o4,
         o3,
         o2,
@@ -364,7 +363,7 @@ pub const ObjectFunctions = struct {
             try writer.print("{}", .{float});
         } else if (self.equals(Nil())) {
             try writer.print("nil", .{});
-        } else if (self.heapObject()) |obj| {
+        } else if (self.ifHeapObject()) |obj| {
             try writer.print("{f}@{x}", .{ obj, @as(u64, @bitCast(self)) });
         } else {
             try writer.print("{{?0x{x:0>16}}}", .{@as(u64, @bitCast(self))});

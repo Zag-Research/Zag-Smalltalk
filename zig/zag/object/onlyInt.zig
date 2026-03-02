@@ -68,9 +68,6 @@ pub const Object = packed struct(u64) {
     pub inline fn symbolHash(self: object.Object) ?u24 {
         return @truncate(self.hash32());
     }
-    pub inline fn heapObject(_: object.Object) ?*zag.InMemory.PointedObject {
-        return null;
-    }
     pub inline fn extraValue(self: object.Object) object.Object {
         return @bitCast(self.rawU() >> 8);
     }
@@ -140,6 +137,9 @@ pub const Object = packed struct(u64) {
     }
     pub inline fn toDoubleNoCheck(_: Object) f64 {
         @panic("Not implemented");
+    }
+    pub fn returnObjectClosure(_: Object, _: anytype) ?Object {
+        return null;
     }
     pub fn immediateClosure(_: anytype, _: anytype, _: anytype) ?Object {
         @panic("Not implemented");

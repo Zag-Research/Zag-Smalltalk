@@ -22,21 +22,14 @@ case "$1" in
         Log=true;;
     *) Log=false;;
 esac
-Version=`git log "--pretty=format:%cI-%h" -1`
-for encoding in nan zag #onlyInt onlyFloat taggedInt zagAlt spur ptr
-do
-    zig build -Dencoding=$encoding -Doptimize=ReleaseFast &&
-    for benchFile in bench.*
-    do
-        bench=`expr "$benchFile" : 'bench\.\(.*\)'`
-        if $Log; then
-            mkdir -p Benchmarks/$bench/$Host/$encoding
-            ./$benchFile >Benchmarks/$bench/$Host/$encoding/$Version 2>&1
-        else
-            ./$benchFile
-        fi
-    done
-done
+Version=`git log "--pretty=format:%cI-%h" -1|sed 's/:/-/g'`
+benchIt="zig build bench -Doptimize=ReleaseFast --summary all"
+if $Log; then
+    mkdir -p Benchmarks/$Host
+    $benchIt >Benchmarks/$Host/$Version 2>&1
+else
+    $benchIt
+fi
 if $Commit; then
     git add Benchmarks
     git commit -m "Experiment results for $Version for $Host"

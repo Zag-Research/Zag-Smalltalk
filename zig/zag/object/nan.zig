@@ -230,9 +230,6 @@ pub const Object = packed struct(u64) {
         if (self.isImmediateClass(.Symbol)) return @truncate(self.hash32());
         return null;
     }
-    pub inline fn heapObject(self: Object) ?*zag.InMemory.PointedObject {
-        return pointer(self,*zag.InMemory.PointedObject);
-    }
     pub inline fn extraValue(self: Object) Object {
         _ = self;
         @panic("not implemented");

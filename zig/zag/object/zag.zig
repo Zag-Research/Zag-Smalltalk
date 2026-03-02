@@ -127,7 +127,7 @@ pub const Object = packed struct(u64) {
         return TaggedClass.from(self).dataI();
     }
     pub inline fn nativeF(self: object.Object) ?f64 {
-        if (zag.config.show_trace and self.rawU() < 0x200000000 and self.rawU() > 0x100000000) return null;
+        if (zag.config.show_trace and self.rawU() < 0x200000000 and self.rawU() > 0x1F00000000) return null;
         if (self.isImmediateDouble()) return self.toDoubleNoCheck();
         if (self.isMemoryDouble()) return self.toDoubleFromMemory();
         return null;
@@ -153,11 +153,7 @@ pub const Object = packed struct(u64) {
     pub inline fn symbolHash(self: object.Object) ?u24 {
         if (self.isImmediateClass(.Symbol)) return @truncate(self.hash);
         return null;
-    }
-    pub inline fn heapObject(self: object.Object) ?*InMemory.PointedObject {
-        if (self.rawU() & 0xf == 0 and !self.equals(Nil())) return @ptrFromInt(self.rawU());
-        return null;
-    }
+   }
     pub inline fn extraValue(self: object.Object) object.Object {
         return @bitCast(self.nativeI_noCheck() >> 8);
     }

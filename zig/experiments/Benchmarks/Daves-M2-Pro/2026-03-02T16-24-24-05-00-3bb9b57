@@ -1,0 +1,155 @@
+
+Config:
+  compile_date   = 2026-03-02T17:57:03-0500
+  git_version    = 2026-03-02T16:24:24-05:00-3bb9b57
+  cpu            = apple_m2 (.aarch64)
+  objectEncoding = .onlyFloat
+  max_classes    = 255
+  stack/nursery  = 511w/3830w (8192w)
+for '36 fibonacci'
+          Median   Mean   StdDev  SD/Mean GeomMean(5 runs, 0 warmups)
+   Native   26ms    26ms   0.49ms   1.9%    26ms
+  NativeF   39ms    38ms   0.49ms   1.3%    38ms
+    Float  448ms   447ms   1.62ms   0.4%   447ms
+
+Config:
+  compile_date   = 2026-03-02T17:57:03-0500
+  git_version    = 2026-03-02T16:24:24-05:00-3bb9b57
+  cpu            = apple_m2 (.aarch64)
+  objectEncoding = .taggedInt
+  max_classes    = 255
+  stack/nursery  = 511w/3830w (8192w)
+for '36 fibonacci'
+          Median   Mean   StdDev  SD/Mean GeomMean(5 runs, 0 warmups)
+   Native   31ms    31ms   0.80ms   2.6%    31ms
+  NativeF   38ms    38ms   0.00ms   0.0%    37ms
+IntegerBr  494ms   493ms   0.75ms   0.2%   493ms
+    Float  723ms   723ms   1.17ms   0.2%   723ms
+
+Config:
+  compile_date   = 2026-03-02T17:57:03-0500
+  git_version    = 2026-03-02T16:24:24-05:00-3bb9b57
+  cpu            = apple_m2 (.aarch64)
+  objectEncoding = .zagSpur
+  max_classes    = 255
+  stack/nursery  = 511w/3830w (8192w)
+for '36 fibonacci'
+          Median   Mean   StdDev  SD/Mean GeomMean(5 runs, 0 warmups)
+   Native   26ms    26ms   0.80ms   3.1%    26ms
+  NativeF   37ms    37ms   0.40ms   1.1%    37ms
+IntegerBr  497ms   497ms   0.75ms   0.2%   497ms
+    Float  636ms   635ms   1.72ms   0.3%   635ms
+
+Config:
+  compile_date   = 2026-03-02T17:57:03-0500
+  git_version    = 2026-03-02T16:24:24-05:00-3bb9b57
+  cpu            = apple_m2 (.aarch64)
+  objectEncoding = .ptr
+  max_classes    = 255
+  stack/nursery  = 511w/3830w (8192w)
+for '36 fibonacci'
+          Median   Mean   StdDev  SD/Mean GeomMean(5 runs, 0 warmups)
+   Native   26ms    26ms   0.40ms   1.5%    26ms
+  NativeF   37ms    37ms   0.49ms   1.3%    37ms
+IntegerBr  698ms   697ms   1.33ms   0.2%   697ms
+    Float  762ms   762ms   1.50ms   0.2%   762ms
+
+Config:
+  compile_date   = 2026-03-02T17:57:03-0500
+  git_version    = 2026-03-02T16:24:24-05:00-3bb9b57
+  cpu            = apple_m2 (.aarch64)
+  objectEncoding = .zag
+  max_classes    = 255
+  stack/nursery  = 511w/3830w (8192w)
+for '36 fibonacci'
+          Median   Mean   StdDev  SD/Mean GeomMean(5 runs, 0 warmups)
+   Native   26ms    26ms   0.80ms   3.1%    26ms
+  NativeF   37ms    37ms   0.40ms   1.1%    37ms
+IntegerBr  502ms   502ms   1.17ms   0.2%   502ms
+    Float  540ms   539ms   1.02ms   0.2%   539ms
+
+Config:
+  compile_date   = 2026-03-02T17:57:03-0500
+  git_version    = 2026-03-02T16:24:24-05:00-3bb9b57
+  cpu            = apple_m2 (.aarch64)
+  objectEncoding = .taggedPtr
+  max_classes    = 255
+  stack/nursery  = 511w/3830w (8192w)
+for '36 fibonacci'
+          Median   Mean   StdDev  SD/Mean GeomMean(5 runs, 0 warmups)
+   Native   26ms    26ms   2.14ms   8.2%    26ms
+  NativeF   37ms    37ms   0.40ms   1.1%    37ms
+IntegerBr  501ms   501ms   1.02ms   0.2%   501ms
+    Float  735ms   735ms   0.63ms   0.1%   734ms
+
+Config:
+  compile_date   = 2026-03-02T17:57:03-0500
+  git_version    = 2026-03-02T16:24:24-05:00-3bb9b57
+  cpu            = apple_m2 (.aarch64)
+  objectEncoding = .spur
+  max_classes    = 255
+  stack/nursery  = 511w/3830w (8192w)
+for '36 fibonacci'
+          Median   Mean   StdDev  SD/Mean GeomMean(5 runs, 0 warmups)
+   Native   26ms    26ms   1.47ms   5.7%    26ms
+  NativeF   37ms    37ms   0.49ms   1.3%    37ms
+IntegerBr  497ms   497ms   0.00ms   0.0%   497ms
+    Float  616ms   616ms   0.63ms   0.1%   615ms
+
+Config:
+  compile_date   = 2026-03-02T17:57:03-0500
+  git_version    = 2026-03-02T16:24:24-05:00-3bb9b57
+  cpu            = apple_m2 (.aarch64)
+  objectEncoding = .nan
+  max_classes    = 255
+  stack/nursery  = 511w/3830w (8192w)
+for '36 fibonacci'
+          Median   Mean   StdDev  SD/Mean GeomMean(5 runs, 0 warmups)
+   Native   26ms    27ms   3.43ms  12.7%    27ms
+  NativeF   37ms    37ms   0.00ms   0.0%    37ms
+IntegerBr  512ms   513ms   2.58ms   0.5%   513ms
+    Float  502ms   502ms   1.20ms   0.2%   502ms
+
+Config:
+  compile_date   = 2026-03-02T17:57:03-0500
+  git_version    = 2026-03-02T16:24:24-05:00-3bb9b57
+  cpu            = apple_m2 (.aarch64)
+  objectEncoding = .onlyInt
+  max_classes    = 255
+  stack/nursery  = 511w/3830w (8192w)
+for '36 fibonacci'
+          Median   Mean   StdDev  SD/Mean GeomMean(5 runs, 0 warmups)
+   Native   26ms    26ms   0.40ms   1.5%    26ms
+  NativeF   37ms    37ms   0.40ms   1.1%    37ms
+IntegerBr  435ms   435ms   2.06ms   0.5%   435ms
+
+Build Summary: 28/28 steps succeeded
+bench success
++- run exe fib-nan success 6s MaxRSS:1M
+|  +- compile exe fib-nan ReleaseFast native success 9s MaxRSS:271M
+|     +- options success
++- run exe fib-zag success 6s MaxRSS:1M
+|  +- compile exe fib-zag ReleaseFast native success 9s MaxRSS:272M
+|     +- options success
++- run exe fib-zagSpur success 6s MaxRSS:1M
+|  +- compile exe fib-zagSpur ReleaseFast native success 9s MaxRSS:271M
+|     +- options success
++- run exe fib-spur success 6s MaxRSS:1M
+|  +- compile exe fib-spur ReleaseFast native success 9s MaxRSS:277M
+|     +- options success
++- run exe fib-taggedInt success 7s MaxRSS:1M
+|  +- compile exe fib-taggedInt ReleaseFast native success 9s MaxRSS:272M
+|     +- options success
++- run exe fib-taggedPtr success 7s MaxRSS:1M
+|  +- compile exe fib-taggedPtr ReleaseFast native success 9s MaxRSS:273M
+|     +- options success
++- run exe fib-ptr success 8s MaxRSS:1M
+|  +- compile exe fib-ptr ReleaseFast native success 9s MaxRSS:275M
+|     +- options success
++- run exe fib-onlyInt success 2s MaxRSS:1M
+|  +- compile exe fib-onlyInt ReleaseFast native success 9s MaxRSS:259M
+|     +- options success
++- run exe fib-onlyFloat success 3s MaxRSS:1M
+   +- compile exe fib-onlyFloat ReleaseFast native success 9s MaxRSS:262M
+      +- options success
+

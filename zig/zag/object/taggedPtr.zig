@@ -26,17 +26,17 @@ pub const Object = packed struct(u64) {
 
     pub const ZERO: Object = @bitCast(@as(u64, 0));
 
+    inline fn oImm(c: ClassIndex.Compact, h: u48) Self {
+        return Self{ .class = c.classIndex(), .intOrAddress = h };
+    }
     pub inline fn False() Object {
-        if (@inComptime()) return @bitCast(@as(u64, 0));
-        return fromAddress(&InMemory.False);
+        return oImm(.False, 12345);
     }
     pub inline fn True() Object {
-        if (@inComptime()) return @bitCast(@as(u64, 0));
-        return fromAddress(&InMemory.True);
+        return oImm(.True, 23451);
     }
     pub inline fn Nil() Object {
-        if (@inComptime()) return @bitCast(@as(u64, 0));
-        return fromAddress(&InMemory.Nil);
+        return oImm(.UndefinedObject, 34512);
     }
 
     pub const tagged0: i64 = @as(i64, @intFromEnum(ClassIndex.SmallInteger));
@@ -59,7 +59,8 @@ pub const Object = packed struct(u64) {
     }
 
     pub inline fn untaggedI_noCheck(self: object.Object) i64 {
-        return @bitCast(self.rawU() & ~classMask);
+        std.debug.assert(@intFromEnum(ClassIndex.SmallInteger) == 0);
+        return @bitCast(self);
     }
 
     pub inline fn taggedI(self: object.Object) ?i64 {
@@ -76,10 +77,11 @@ pub const Object = packed struct(u64) {
     }
 
     pub inline fn fromUntaggedI(i: i64, _: anytype, _: anytype) object.Object {
-        return @bitCast(@as(u64, @bitCast(i)) | @intFromEnum(ClassIndex.SmallInteger));
+        return @bitCast(i);
     }
 
     pub inline fn isInt(self: object.Object) bool {
+        std.debug.assert(@intFromEnum(ClassIndex.SmallInteger) == 0);
         return self.class == .SmallInteger;
     }
     pub inline fn isNat(self: object.Object) bool {
@@ -93,7 +95,7 @@ pub const Object = packed struct(u64) {
         return null;
     }
     inline fn nativeI_noCheck(self: object.Object) i64 {
-        return @as(i48, @bitCast(self.intOrAddress));
+        return @bitCast(@as(i64, self.intOrAddress));
     }
     pub inline fn nativeF(self: object.Object) ?f64 {
         if (self.isMemoryDouble()) return self.toDoubleFromMemory();
@@ -114,10 +116,6 @@ pub const Object = packed struct(u64) {
 
     pub inline fn symbolHash(self: object.Object) ?u24 {
         if (self.isSymbol()) return self.toUnchecked(*HeapObject).header.hash;
-        return null;
-    }
-    pub inline fn heapObject(self: object.Object) ?*InMemory.PointedObject {
-        if (self.isHeapObject()) return @ptrFromInt(self.heapAddr());
         return null;
     }
     pub inline fn extraValue(_: object.Object) object.Object {
@@ -152,6 +150,9 @@ pub const Object = packed struct(u64) {
     }
     pub fn extraI(_: Object) i8 {
         return 0;
+    }
+    pub fn returnObjectClosure(_: Object, _: anytype) ?Object {
+        return null;
     }
     pub fn immediateClosure(_: anytype, _: anytype, _: anytype) ?Object {
         return null;
@@ -284,7 +285,7 @@ pub const Object = packed struct(u64) {
         return 0;
     }
     pub inline fn hash32(self: object.Object) u32 {
-        if (self.heapObject()) |po| return @truncate(po.data.unsigned);
+        if (self.ifHeapObject()) |ho| return ho.header.hash;
         return 0;
     }
     pub inline fn highPointer(self: object.Object, T: type) ?T {

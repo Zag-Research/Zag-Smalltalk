@@ -161,10 +161,6 @@ pub const Object = packed union {
         if (self.isSymbol()) return @truncate(self.hash32());
         return null;
     }
-    pub inline fn heapObject(self: Object) ?*InMemory.PointedObject {
-        if (self.isHeapObject() and !self.equals(Nil())) return @ptrFromInt(self.rawU());
-        return null;
-    }
 
     pub inline fn isHeapObject(self: Object) bool {
         return self.isTag(.pointer);
@@ -377,7 +373,9 @@ pub const Object = packed union {
     pub inline fn asUntaggedI(i: i64) i64 {
         return i;
     }
-
+    pub fn returnObjectClosure(_: Object, _: anytype) ?Object {
+        return null;
+    }
     pub fn immediateClosure(_: anytype, _: anytype, _: anytype) ?Object {
         return null;
     }
