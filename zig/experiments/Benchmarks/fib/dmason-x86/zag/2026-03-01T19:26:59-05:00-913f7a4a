@@ -1,0 +1,14 @@
+
+Config:
+  compile_date   = 2026-03-02T01:00:27-0500
+  git_version    = 2026-03-01T19:26:59-05:00-913f7a4a
+  cpu            = skylake (.x86_64)
+  objectEncoding = .zag
+  max_classes    = 255
+  stack/nursery  = 511w/3830w (8192w)
+for '36 fibonacci'
+          Median   Mean   StdDev  SD/Mean GeomMean(5 runs, 0 warmups)
+   Native   22ms    21ms   0.40ms   1.9%    21ms
+  NativeF   37ms    37ms   0.80ms   2.2%    37ms
+IntegerBr 1013ms  1013ms   0.75ms   0.1%  1013ms
+    Float 1051ms  1051ms   0.80ms   0.1%  1051ms
