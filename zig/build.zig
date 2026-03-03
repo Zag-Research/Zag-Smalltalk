@@ -318,6 +318,7 @@ fn createBenchStep(
                 .spur,
                 .taggedInt,
                 .taggedPtr,
+                .cachedPtr,
                 .ptr,
                 .onlyInt,
                 .onlyFloat,

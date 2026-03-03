@@ -55,6 +55,7 @@ The interesting thing about Zag is that the threaded code in the `CompiledMethod
 - [LLVM IR](https://llvm.org/docs/Reference.html#llvm-ir) [Reference Manual](https://llvm.org/docs/LangRef.html#syntax) [Turorials](https://llvm.org/docs/GettingStartedTutorials.html)
 - [LLVM getelementptr](https://llvm.org/docs/GetElementPtr.html)
 - [Oonta - OCaML to LLVM](https://github.com/fuad1502/oonta)
+- [Zig - LLVM intersection](https://ziggit.dev/t/zig-the-build-system-compiling-llvm-with-zig/)
 
 ## JIT on MacOs
 #### 1. `MAP_JIT`

@@ -25,11 +25,11 @@ const show_error_stack = debugging;
 pub const show_trace = debugging or options.trace;
 
 pub const immediateIntegers = switch (objectEncoding) {
-    .zag, .nan, .spur, .zagSpur, .onlyInt, .taggedInt, .taggedPtr => true,
+    .zag, .nan, .spur, .zagSpur, .onlyInt, .taggedInt => true,
     else => false,
 };
 pub const immediateSymbols = switch (objectEncoding) {
-    .zag, .nan, .zagSpur, .onlyInt, .onlyFloat => true,
+    .zag, .nan, .zagSpur, .onlyInt, .onlyFloat, .taggedPtr => true,
     else => false,
 };
 pub const notZag = objectEncoding != .zag;

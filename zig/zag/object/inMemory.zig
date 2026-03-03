@@ -143,7 +143,7 @@ const SmallIntegerCache = if (config.immediateIntegers)
 const SICacheMin = -5;
 const SICacheMax = 100;
 const SICache = switch (objectEncoding) {
-    .cachedPtr, .taggedPtr => true,
+    .cachedPtr => true,
     else => false,
 };
 pub const PointedObject = packed struct {
@@ -224,7 +224,7 @@ pub const PointedObjectRef = packed struct {
 };
 pub inline fn int(i: i64, sp: SP, context: *Context) Object {
     if (SICache and SICacheMin <= i and i <= SICacheMax)
-        return Object.from(&SmallIntegerCache.objects[(@as(usize, @bitCast(i - SICacheMin))) << 1], null);
+        return Object.fromAddress(&SmallIntegerCache.objects[(@as(usize, @bitCast(i - SICacheMin))) << 1]);
     const allocResult = sp.alloc(context, .SmallInteger, 1, null, Object, false);
     allocResult.allocated.array(i64)[1] = i;
     allocResult.allocated.header.hash = @truncate(@as(u64, @bitCast(i)));

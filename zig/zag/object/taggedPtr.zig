@@ -77,11 +77,11 @@ pub const Object = packed struct(u64) {
     }
 
     pub inline fn fromUntaggedI(i: i64, _: anytype, _: anytype) object.Object {
+        std.debug.assert(@intFromEnum(ClassIndex.SmallInteger) == 0);
         return @bitCast(i);
     }
 
     pub inline fn isInt(self: object.Object) bool {
-        std.debug.assert(@intFromEnum(ClassIndex.SmallInteger) == 0);
         return self.class == .SmallInteger;
     }
     pub inline fn isNat(self: object.Object) bool {
