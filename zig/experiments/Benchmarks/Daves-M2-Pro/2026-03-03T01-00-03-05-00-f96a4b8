@@ -1,0 +1,216 @@
+
+Config:
+  compile_date   = 2026-03-03T17:16:09-0500
+  git_version    = 2026-03-03T01:00:03-05:00-f96a4b8
+  cpu            = apple_m2 (.aarch64)
+  objectEncoding = .onlyFloat
+  max_classes    = 255
+  stack/nursery  = 511w/3830w (8192w)
+for '40 fibonacci'
+          Median   Mean   StdDev  SD/Mean GeomMean(10 runs, 3 warmups)
+   Native  182ms   182ms   0.87ms   0.5%   182ms
+  NativeF  260ms   260ms   1.18ms   0.5%   259ms
+    Float 2891ms  2897ms  34.98ms   1.2%  2896ms
+
+Config:
+  compile_date   = 2026-03-03T17:16:09-0500
+  git_version    = 2026-03-03T01:00:03-05:00-f96a4b8
+  cpu            = apple_m2 (.aarch64)
+  objectEncoding = .onlyInt
+  max_classes    = 255
+  stack/nursery  = 511w/3830w (8192w)
+for '40 fibonacci'
+          Median   Mean   StdDev  SD/Mean GeomMean(10 runs, 3 warmups)
+   Native  184ms   183ms   0.83ms   0.5%   183ms
+  NativeF  265ms   264ms   0.98ms   0.4%   264ms
+IntegerBr 3100ms  3101ms   7.27ms   0.2%  3101ms
+
+Config:
+  compile_date   = 2026-03-03T17:16:09-0500
+  git_version    = 2026-03-03T01:00:03-05:00-f96a4b8
+  cpu            = apple_m2 (.aarch64)
+  objectEncoding = .zag
+  max_classes    = 255
+  stack/nursery  = 511w/3830w (8192w)
+for '40 fibonacci'
+          Median   Mean   StdDev  SD/Mean GeomMean(10 runs, 3 warmups)
+   Native  184ms   184ms   0.70ms   0.4%   184ms
+  NativeF  265ms   264ms   1.17ms   0.4%   264ms
+IntegerBr 3606ms  3579ms  47.59ms   1.3%  3579ms
+    Float 3839ms  3815ms  44.07ms   1.2%  3815ms
+
+Config:
+  compile_date   = 2026-03-03T17:16:09-0500
+  git_version    = 2026-03-03T01:00:03-05:00-f96a4b8
+  cpu            = apple_m2 (.aarch64)
+  objectEncoding = .spur
+  max_classes    = 255
+  stack/nursery  = 511w/3830w (8192w)
+for '40 fibonacci'
+          Median   Mean   StdDev  SD/Mean GeomMean(10 runs, 3 warmups)
+   Native  184ms   184ms   0.60ms   0.3%   184ms
+  NativeF  264ms   264ms   0.49ms   0.2%   264ms
+IntegerBr 3530ms  3511ms  34.23ms   1.0%  3511ms
+    Float 4469ms  4449ms  50.01ms   1.1%  4449ms
+
+Config:
+  compile_date   = 2026-03-03T17:16:09-0500
+  git_version    = 2026-03-03T01:00:03-05:00-f96a4b8
+  cpu            = apple_m2 (.aarch64)
+  objectEncoding = .ptr
+  max_classes    = 255
+  stack/nursery  = 511w/3830w (8192w)
+for '40 fibonacci'
+          Median   Mean   StdDev  SD/Mean GeomMean(10 runs, 3 warmups)
+   Native  183ms   183ms   0.63ms   0.3%   182ms
+  NativeF  264ms   263ms   1.25ms   0.5%   263ms
+IntegerBr 4892ms  4890ms  15.89ms   0.3%  4890ms
+    Float 5362ms  5377ms  43.88ms   0.8%  5377ms
+
+Config:
+  compile_date   = 2026-03-03T17:16:09-0500
+  git_version    = 2026-03-03T01:00:03-05:00-f96a4b8
+  cpu            = apple_m2 (.aarch64)
+  objectEncoding = .zagSpur
+  max_classes    = 255
+  stack/nursery  = 511w/3830w (8192w)
+for '40 fibonacci'
+          Median   Mean   StdDev  SD/Mean GeomMean(10 runs, 3 warmups)
+   Native  185ms   184ms   0.60ms   0.3%   184ms
+  NativeF  266ms   265ms   1.69ms   0.6%   265ms
+IntegerBr 3465ms  3491ms  63.62ms   1.8%  3490ms
+    Float 4486ms  4485ms  16.96ms   0.4%  4485ms
+
+Config:
+  compile_date   = 2026-03-03T17:16:09-0500
+  git_version    = 2026-03-03T01:00:03-05:00-f96a4b8
+  cpu            = apple_m2 (.aarch64)
+  objectEncoding = .nan
+  max_classes    = 255
+  stack/nursery  = 511w/3830w (8192w)
+for '40 fibonacci'
+          Median   Mean   StdDev  SD/Mean GeomMean(10 runs, 3 warmups)
+   Native  184ms   183ms   1.50ms   0.8%   183ms
+  NativeF  266ms   265ms   1.43ms   0.5%   265ms
+IntegerBr 3588ms  3613ms  85.02ms   2.4%  3612ms
+    Float 3514ms  3516ms  21.19ms   0.6%  3516ms
+
+Config:
+  compile_date   = 2026-03-03T17:16:09-0500
+  git_version    = 2026-03-03T01:00:03-05:00-f96a4b8
+  cpu            = apple_m2 (.aarch64)
+  objectEncoding = .taggedPtr
+  max_classes    = 255
+  stack/nursery  = 511w/3830w (8192w)
+for '40 fibonacci'
+          Median   Mean   StdDev  SD/Mean GeomMean(10 runs, 3 warmups)
+   Native  183ms   183ms   0.80ms   0.4%   183ms
+  NativeF  264ms   264ms   1.17ms   0.4%   264ms
+IntegerBrerror: loadMethodForClass(.SmallInteger 1111001 Signature{empty} 121)
+
+thread 4427249 panic: Method not found
+/Users/dmason/git/Zag-Smalltalk/zig/zag/dispatch.zig:47:9: 0x100db5593 in loadMethodForClass (fib-taggedPtr)
+        @panic("Method not found");
+        ^
+/Users/dmason/git/Zag-Smalltalk/zig/zag/dispatch.zig:41:34: 0x100db555b in sendTo (fib-taggedPtr)
+        return loadMethodForClass(ci, signature);
+                                 ^
+/Users/dmason/git/Zag-Smalltalk/zig/experiments/fib.zig:241:31: 0x100db50e7 in runIt__anon_9006 (fib-taggedPtr)
+        const obj = exe.sendTo(Sym.fibonacci.asObject(), exe.object(fibN)) catch unreachable;
+                              ^
+/Users/dmason/git/Zag-Smalltalk/zig/zag/utilities/stats.zig:78:73: 0x100daf663 in timing (fib-taggedPtr)
+                self.proof = @call(.never_inline, runner, .{ param, self.proof });
+                                                                        ^
+/Users/dmason/git/Zag-Smalltalk/zig/experiments/fib.zig:684:15: 0x100db2eef in main (fib-taggedPtr)
+    try timing(if (default) @constCast(do_all[0..]) else args[start..], nRuns, default);
+              ^
+???:?:?: 0x186701d53 in ??? (???)
+???:?:?: 0x0 in ??? (???)
+
+Config:
+  compile_date   = 2026-03-03T17:16:09-0500
+  git_version    = 2026-03-03T01:00:03-05:00-f96a4b8
+  cpu            = apple_m2 (.aarch64)
+  objectEncoding = .cachedPtr
+  max_classes    = 255
+  stack/nursery  = 511w/3830w (8192w)
+for '40 fibonacci'
+          Median   Mean   StdDev  SD/Mean GeomMean(10 runs, 3 warmups)
+   Native  184ms   185ms   4.25ms   2.3%   185ms
+  NativeF  266ms   265ms   1.08ms   0.4%   265ms
+IntegerBrthread 4427342 panic: not on stack
+/Users/dmason/git/Zag-Smalltalk/zig/zag/context.zig:350:28: 0x1024fec9b in threadedFn (fib-cachedPtr)
+    _ = .{ wordsToDiscard, @panic("not on stack") };
+                           ^
+/Users/dmason/git/Zag-Smalltalk/zig/zag/execute.zig:453:30: 0x1024f137b in sendTo (fib-cachedPtr)
+        return self.executeFn(pc, sp, process, context, newExtra);
+                             ^
+/Users/dmason/git/Zag-Smalltalk/zig/experiments/fib.zig:241:31: 0x1024f0feb in runIt__anon_9045 (fib-cachedPtr)
+        const obj = exe.sendTo(Sym.fibonacci.asObject(), exe.object(fibN)) catch unreachable;
+                              ^
+/Users/dmason/git/Zag-Smalltalk/zig/zag/utilities/stats.zig:78:73: 0x1024eb68f in timing (fib-cachedPtr)
+                self.proof = @call(.never_inline, runner, .{ param, self.proof });
+                                                                        ^
+/Users/dmason/git/Zag-Smalltalk/zig/experiments/fib.zig:684:15: 0x1024eeddb in main (fib-cachedPtr)
+    try timing(if (default) @constCast(do_all[0..]) else args[start..], nRuns, default);
+              ^
+???:?:?: 0x186701d53 in ??? (???)
+???:?:?: 0x0 in ??? (???)
+
+Config:
+  compile_date   = 2026-03-03T17:16:09-0500
+  git_version    = 2026-03-03T01:00:03-05:00-f96a4b8
+  cpu            = apple_m2 (.aarch64)
+  objectEncoding = .taggedInt
+  max_classes    = 255
+  stack/nursery  = 511w/3830w (8192w)
+for '40 fibonacci'
+          Median   Mean   StdDev  SD/Mean GeomMean(10 runs, 3 warmups)
+   Native  183ms   183ms   1.14ms   0.6%   183ms
+  NativeF  267ms   266ms   0.81ms   0.3%   266ms
+IntegerBr 3375ms  3378ms   8.48ms   0.3%  3378ms
+    Float 4913ms  4911ms  12.57ms   0.3%  4911ms
+bench
++- run exe fib-taggedPtr failure
+error: the following command terminated unexpectedly:
+/Users/dmason/git/Zag-Smalltalk/zig/.zig-cache/o/6d923cbebc6d67fbbdf6e4580425d643/fib-taggedPtr
+bench
++- run exe fib-cachedPtr failure
+error: the following command terminated unexpectedly:
+/Users/dmason/git/Zag-Smalltalk/zig/.zig-cache/o/84ee09738083c39d068f8b530ec1066e/fib-cachedPtr
+
+Build Summary: 28/31 steps succeeded; 2 failed
+bench transitive failure
++- run exe fib-nan success 1m MaxRSS:1M
+|  +- compile exe fib-nan ReleaseFast native success 10s MaxRSS:275M
+|     +- options success
++- run exe fib-zag success 1m MaxRSS:1M
+|  +- compile exe fib-zag ReleaseFast native success 9s MaxRSS:274M
+|     +- options success
++- run exe fib-zagSpur success 1m MaxRSS:1M
+|  +- compile exe fib-zagSpur ReleaseFast native success 10s MaxRSS:274M
+|     +- options success
++- run exe fib-spur success 1m MaxRSS:1M
+|  +- compile exe fib-spur ReleaseFast native success 10s MaxRSS:274M
+|     +- options success
++- run exe fib-taggedInt success 1m MaxRSS:1M
+|  +- compile exe fib-taggedInt ReleaseFast native success 10s MaxRSS:268M
+|     +- options success
++- run exe fib-taggedPtr failure
+|  +- compile exe fib-taggedPtr ReleaseFast native success 9s MaxRSS:273M
+|     +- options success
++- run exe fib-cachedPtr failure
+|  +- compile exe fib-cachedPtr ReleaseFast native success 10s MaxRSS:274M
+|     +- options success
++- run exe fib-ptr success 2m MaxRSS:1M
+|  +- compile exe fib-ptr ReleaseFast native success 9s MaxRSS:275M
+|     +- options success
++- run exe fib-onlyInt success 46s MaxRSS:1M
+|  +- compile exe fib-onlyInt ReleaseFast native success 9s MaxRSS:264M
+|     +- options success
++- run exe fib-onlyFloat success 46s MaxRSS:1M
+   +- compile exe fib-onlyFloat ReleaseFast native success 9s MaxRSS:263M
+      +- options success
+
+error: the following build command failed with exit code 1:
+/Users/dmason/git/Zag-Smalltalk/zig/.zig-cache/o/ac8f01183469e08325c689a0c659956e/build /usr/local/share/zig-aarch64-macos-0.15.1/zig /usr/local/share/zig-aarch64-macos-0.15.1/lib /Users/dmason/git/Zag-Smalltalk/zig /Users/dmason/git/Zag-Smalltalk/zig/.zig-cache /Users/dmason/.cache/zig --seed 0xa82e2f6b -Z9b526e34bdd69d6a bench -Doptimize=ReleaseFast --summary all

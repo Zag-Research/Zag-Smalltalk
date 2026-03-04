@@ -619,9 +619,9 @@ fn includeFor(benchmark: anytype) bool {
     return true;
 }
 const Stats = zag.Stats;
-pub fn timing(args: []const []const u8, default: bool) !void {
+pub fn timing(args: []const []const u8, nRuns: usize, default: bool) !void {
     const eql = std.mem.eql;
-    var stat = Stats(void, void, nRuns, warmups, .milliseconds).init();
+    var stat = Stats(void, void, 100, .milliseconds).init(nRuns, warmups);
     var saved: ?*Info = null;
     for (args) |arg| {
         if (eql(u8, arg, "Config")) {
@@ -672,10 +672,18 @@ pub fn main() !void {
     //     if (deinit_status == .leak) @panic("TEST FAIL");
     // }
     const args = try std.process.argsAlloc(allocator);
-    const default = args.len <= 1;
-    try timing(if (default) @constCast(do_all[0..]) else args[1..], default);
+    var start: usize = 1;
+    var nRuns: usize = defaultRuns;
+    if (args.len > 1) {
+        if (std.fmt.parseInt(usize, args[1], 10)) |n| {
+            start = 2;
+            nRuns = n;
+        } else |_| {}
+    }
+    const default = args.len <= start;
+    try timing(if (default) @constCast(do_all[0..]) else args[start..], nRuns, default);
 }
 const testRun = zag.config.testRun;
-const fibN = if (testRun) 3 else 36;
-const nRuns = if (testRun) 1 else 5;
-const warmups = if (testRun) 0 else 0;
+const fibN = if (testRun) 3 else 40;
+const defaultRuns = if (testRun) 1 else 10;
+const warmups = if (testRun) 0 else null;

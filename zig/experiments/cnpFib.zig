@@ -120,7 +120,7 @@ fn includeFor(benchmark: anytype) bool {
 const Stats = zag.Stats;
 pub fn timing(args: []const []const u8, default: bool) !void {
     const eql = std.mem.eql;
-    var stat = Stats(void, void, nRuns, warmups, .milliseconds).init();
+    var stat = Stats(void, void, 100, .milliseconds).init(nRuns, warmups);
     var saved: ?*Info = null;
     for (args) |arg| {
         if (eql(u8, arg, "Config")) {
