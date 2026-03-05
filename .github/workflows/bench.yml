@@ -38,7 +38,7 @@ jobs:
 
       - name: Emit LLVM IR (ptr fib)
         run: |
-          zig build emit-fib-ir -Dencoding=ptr -Doptimize=ReleaseFast -Dtarget=x86_64-linux-gnu -Dcpu=baseline --summary all
+          /usr/bin/time -v zig build emit-fib-ir -j1 -Dencoding=ptr -Doptimize=ReleaseFast -Dtarget=x86_64-linux-gnu -Dcpu=baseline --summary all
           ls -lah zig-out/llvm-ir || true
         working-directory: zig
 

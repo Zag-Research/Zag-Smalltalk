@@ -419,7 +419,9 @@ fn createEmitFibIrStep(
     });
 
     const emit_fib_ir = b.step("emit-fib-ir", "Emit LLVM IR for fib executable");
+    const install_fib_bin = b.addInstallBinFile(fib_ir.getEmittedBin(), "fib-ir");
     const install_fib_ir = b.addInstallFileWithDir(fib_ir.getEmittedLlvmIr(), .prefix, "llvm-ir/fib.ll");
+    emit_fib_ir.dependOn(&install_fib_bin.step);
     emit_fib_ir.dependOn(&install_fib_ir.step);
 }
 
