@@ -37,6 +37,6 @@ jobs:
           cat /etc/os-release || true
 
       - name: Build and run fib bench (all encodings)
-        run: zig build bench -Dencoding=ptr -Doptimize=ReleaseFast -Dtarget=x86_64-linux-gnu -j1 --summary all
+        run: /usr/bin/time -v zig build bench -Dencoding=ptr -Doptimize=ReleaseFast --summary all
         working-directory: zig
 
