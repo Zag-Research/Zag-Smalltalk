@@ -36,6 +36,7 @@ fn createBuildOptions(b: *std.Build) BuildOptions {
     const trace = b.option(bool, "trace", "trace execution") orelse false;
     const quit_on_first_failure = b.option(bool, "quitOnFirstFailure", "Stop after first error");
     const omit_frame_pointer = false;
+    const emit_llvm_ir = b.option(bool, "emit-llvm-ir", "Emit LLVM IR for debug artifacts") orelse false;
 
     return .{
         .include_llvm = include_llvm,
@@ -46,6 +47,7 @@ fn createBuildOptions(b: *std.Build) BuildOptions {
         .trace = trace,
         .quit_on_first_failure = quit_on_first_failure,
         .omit_frame_pointer = omit_frame_pointer,
+        .emit_llvm_ir = emit_llvm_ir,
     };
 }
 
@@ -142,6 +144,10 @@ fn createExperimentExecutables(
         .use_llvm = true,
     });
     b.installArtifact(fib);
+    if (build_options.emit_llvm_ir) {
+        const install_fib_ir = b.addInstallFileWithDir(fib.getEmittedLlvmIr(), .prefix, "llvm-ir/fib.ll");
+        b.getInstallStep().dependOn(&install_fib_ir.step);
+    }
 
     const cnpFib = b.addExecutable(.{
         .name = "cnpFib",
@@ -350,7 +356,7 @@ fn createBenchStep(
                 },
                 .omit_frame_pointer = build_options.omit_frame_pointer,
             }),
-            .use_llvm = false,
+            .use_llvm = true,
         });
 
         const run_bench = b.addRunArtifact(bench_exe);
@@ -446,4 +452,5 @@ const BuildOptions = struct {
     trace: bool,
     quit_on_first_failure: ?bool,
     omit_frame_pointer: bool,
+    emit_llvm_ir: bool,
 };

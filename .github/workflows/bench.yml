@@ -36,6 +36,15 @@ jobs:
           lscpu || true
           cat /etc/os-release || true
 
-      - name: Build and run fib bench (all encodings)
-        run: zig build bench -Dencoding=ptr -Doptimize=ReleaseFast -Dtarget=x86_64-linux-gnu -Dcpu=baseline --summary all
+      - name: Emit LLVM IR (ptr fib)
+        run: |
+          zig build -Dencoding=ptr -Doptimize=ReleaseFast -Dtarget=x86_64-linux-gnu -Dcpu=baseline -Demit-llvm-ir --summary all
+          ls -lah zig-out/llvm-ir || true
         working-directory: zig
+
+      - name: Upload LLVM IR artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: llvm-ir-${{ matrix.os }}
+          path: zig/zig-out/llvm-ir/
+          if-no-files-found: warn
