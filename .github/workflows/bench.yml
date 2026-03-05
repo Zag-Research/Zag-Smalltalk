@@ -28,6 +28,15 @@ jobs:
           version: 0.15.1
           use-cache: false
 
+      - name: Print platform info
+        run: |
+          echo "runner.os=${{ runner.os }}"
+          echo "runner.arch=${{ runner.arch }}"
+          uname -a
+          lscpu || true
+          cat /etc/os-release || true
+
       - name: Build and run fib bench (all encodings)
-        run: zig build bench -Dencoding=ptr -Doptimize=ReleaseFast -Dtarget=x86_64-linux-gnu -Dcpu=baseline -j1 --summary all
+        run: zig build bench -Dencoding=ptr -Doptimize=ReleaseFast -Dtarget=x86_64-linux-gnu -j1 --summary all
         working-directory: zig
+
