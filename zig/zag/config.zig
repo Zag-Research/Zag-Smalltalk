@@ -6,12 +6,12 @@ pub const testRun = debugMode or show_trace;
 pub const debugMode = builtin.mode == .Debug;
 pub const native_endian = builtin.target.cpu.arch.endian();
 
-// pub const tailCall: std.builtin.CallModifier = if (show_error_stack) .never_inline else .always_tail;
+pub const tailCall: std.builtin.CallModifier = if (show_error_stack) .never_inline else .always_tail;
 
-pub const tailCall: std.builtin.CallModifier =
-    if (builtin.target.cpu.arch == .x86_64) .never_inline
-    else if (show_error_stack) .never_inline
-    else .always_tail;
+// pub const tailCall: std.builtin.CallModifier =
+//     if (builtin.target.cpu.arch == .x86_64) .never_inline
+//     else if (show_error_stack) .never_inline
+//     else .always_tail;
 
 
 pub fn trace(comptime format: anytype, values: anytype) void {

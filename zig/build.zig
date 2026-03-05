@@ -350,7 +350,7 @@ fn createBenchStep(
                 },
                 .omit_frame_pointer = build_options.omit_frame_pointer,
             }),
-            .use_llvm = true,
+            .use_llvm = false,
         });
 
         const run_bench = b.addRunArtifact(bench_exe);

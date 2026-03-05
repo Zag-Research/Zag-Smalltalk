@@ -25,7 +25,7 @@ jobs:
       - name: Install Zig
         uses: mlugg/setup-zig@v2
         with:
-          version: 0.15.1
+          version: 0.15.2
           use-cache: false
 
       - name: Print platform info
@@ -37,6 +37,5 @@ jobs:
           cat /etc/os-release || true
 
       - name: Build and run fib bench (all encodings)
-        run: zig build bench -Dencoding=ptr -Doptimize=ReleaseSafe --summary all
+        run: zig build bench -Dencoding=ptr -Doptimize=ReleaseFast -Dtarget=x86_64-linux-gnu -Dcpu=baseline --summary all
         working-directory: zig
-
