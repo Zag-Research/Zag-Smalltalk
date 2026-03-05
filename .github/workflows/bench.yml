@@ -26,7 +26,8 @@ jobs:
         uses: mlugg/setup-zig@v2
         with:
           version: 0.15.1
+          use-cache: false
 
       - name: Build and run fib bench (all encodings)
-        run: zig build bench -Doptimize=ReleaseFast -Dtarget=x86_64-linux-gnu -Dcpu=baseline -j1 --summary all
+        run: zig build bench -Dencoding=ptr -Doptimize=ReleaseFast -Dtarget=x86_64-linux-gnu -Dcpu=baseline -j1 --summary all
         working-directory: zig
