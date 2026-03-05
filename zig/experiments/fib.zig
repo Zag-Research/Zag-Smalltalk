@@ -684,6 +684,6 @@ pub fn main() !void {
     try timing(if (default) @constCast(do_all[0..]) else args[start..], nRuns, default);
 }
 const testRun = zag.config.testRun;
-const fibN = if (testRun) 3 else 40;
+const fibN = if (testRun) 3 else 36;
 const defaultRuns = if (testRun) 1 else 10;
 const warmups = if (testRun) 0 else null;

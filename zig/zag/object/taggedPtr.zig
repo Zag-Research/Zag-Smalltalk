@@ -95,7 +95,7 @@ pub const Object = packed struct(u64) {
         return null;
     }
     inline fn nativeI_noCheck(self: object.Object) i64 {
-        return @bitCast(@as(i64, self.intOrAddress));
+        return @as(i48, @bitCast(self.intOrAddress));
     }
     pub inline fn nativeF(self: object.Object) ?f64 {
         if (self.isMemoryDouble()) return self.toDoubleFromMemory();
@@ -115,7 +115,7 @@ pub const Object = packed struct(u64) {
     }
 
     pub inline fn symbolHash(self: object.Object) ?u24 {
-        if (self.isSymbol()) return self.toUnchecked(*HeapObject).header.hash;
+        if (self.isSymbol()) return @truncate(self.intOrAddress);
         return null;
     }
     pub inline fn extraValue(_: object.Object) object.Object {
@@ -247,7 +247,10 @@ pub const Object = packed struct(u64) {
     }
 
     pub inline fn isHeapObject(self: object.Object) bool {
-        return self.class != .SmallInteger and self.heapAddr() != 0;
+        return switch (self.class) {
+            .SmallInteger, .True, .False, .UndefinedObject, .Symbol => false,
+            else => self.intOrAddress != 0,
+        };
     }
     pub inline fn ifHeapObject(self: object.Object) ?*HeapObject {
         if (self.isHeapObject()) return @ptrFromInt(self.heapAddr());
@@ -277,15 +280,20 @@ pub const Object = packed struct(u64) {
     inline fn toDoubleFromMemory(self: object.Object) f64 {
         return self.toUnchecked(*InMemory.MemoryFloat).*.value;
     }
-    pub inline fn makeImmediate(cls: ClassIndex.Compact, _: u56) object.Object {
-        return @bitCast(@as(u64, @intFromEnum(cls.classIndex())));
+    pub inline fn makeImmediate(cls: ClassIndex.Compact, hash: u56) object.Object {
+        return Object{ .class = cls.classIndex(), .intOrAddress = @truncate(hash) };
     }
     pub inline fn hash24(self: object.Object) u24 {
+        if (self.isSymbol()) return @truncate(self.intOrAddress);
         if (self.ifHeapObject()) |ho| return ho.header.hash;
         return 0;
     }
     pub inline fn hash32(self: object.Object) u32 {
-        if (self.ifHeapObject()) |ho| return ho.header.hash;
+        if (self.isSymbol()) return @truncate(self.intOrAddress);
+        if (self.ifHeapObject()) |ho| {
+            const po: *InMemory.PointedObject = @ptrCast(@alignCast(ho));
+            return @truncate(po.data.unsigned);
+        }
         return 0;
     }
     pub inline fn highPointer(self: object.Object, T: type) ?T {
