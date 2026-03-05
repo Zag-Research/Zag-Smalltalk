@@ -12,7 +12,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, ubuntu-24.04-arm]
+        os: [ubuntu-latest]
     runs-on: ${{ matrix.os }}
 
     name: bench (${{ matrix.os }})
@@ -28,5 +28,5 @@ jobs:
           version: 0.15.1
 
       - name: Build and run fib bench (all encodings)
-        run: zig build bench -Doptimize=ReleaseFast -j1 --summary all
+        run: zig build bench -Doptimize=ReleaseFast -Dtarget=x86_64-linux-gnu -Dcpu=baseline -j1 --summary all
         working-directory: zig
