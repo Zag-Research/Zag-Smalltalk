@@ -209,6 +209,7 @@ pub const threadedFns = struct {
     };
     pub const returnLiteralClosure = struct {
         pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
+            sp.traceStack("returnLiteralClosure", context, extra);
             if (extra.installContextIfNone(sp, process, context)) |new| {
                 const newSp = new.sp;
                 const newContext = new.context;
@@ -355,8 +356,9 @@ pub const threadedFns = struct {
             if (nonLocalReturning(val, class, sp, context)) |result| {
                 const newSp, const newContext = val.highPointer(*Context).?.pop(sp);
                 const newExtra = Extra.fromContextData(newContext.contextDataPtr(newSp));
+                trace("newSp = {*}..{*} newConect = {*} newExtra = {x} newContext.npc = {*}", .{newSp, newSp.endOfStack(), newContext, @as(u64,@bitCast(newExtra)), newContext.npc});
                 newSp.top = result;
-                newSp.traceStack("returnSelf after", newContext, newExtra);
+                newSp.traceStack("value after", newContext, newExtra);
                 return @call(tailCall, process.check(newContext.npc), .{ newContext.tpc, newSp, process, newContext, newExtra });
             }
             _ = .{ pc, @panic("Unimplemented class")};

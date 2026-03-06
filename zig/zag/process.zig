@@ -36,11 +36,11 @@ const Result = execute.Result;
 
 /// this is really a Process object with the low bits encoding additional information
 const Self = @This();
-const process_total_size = config.process_total_size;
+const process_total_size = 1024*1024;//config.process_total_size;
 m: [process_total_size]u8 align(1), // alignment explicitly stated to emphasize the difference from Process
 pub const alignment = @max(stack_mask_overflow * 2, flagMask + 1);
 const alignment_mask = @as(u64, @bitCast(-@as(i64, alignment)));
-const stack_mask_overflow: usize = zag.utilities.largerPowerOf2(Process.stack_size * @sizeOf(Object));
+const stack_mask_overflow: usize = zag.utilities.largerPowerOf2(@min(Process.stack_size * @sizeOf(Object), Context.stack_limit));
 pub const stack_mask = stack_mask_overflow - @sizeOf(Object);
 pub const stack_mask_shift = @ctz(stack_mask_overflow);
 pub const process_stack_size = Process.stack_size;
@@ -64,7 +64,6 @@ const Process = struct {
         currEnd: HeapObjectArray,
         otherHeap: HeapObjectArray,
         singleStepping: bool,
-        foo: [3]u64,
     };
     const processAvail = (process_total_size - @sizeOf(Fields) - @sizeOf(Context)) / @sizeOf(Object);
     const approx_nursery_size = (processAvail - processAvail / 16) / 2;
@@ -81,9 +80,12 @@ const Process = struct {
         // @compileLog("approx_nursery_size:", approx_nursery_size);
         // @compileLog("stack_size:", stack_size);
         // @compileLog("nursery_size:", nursery_size);
+        // @compileLog("fill_size:", fill_size);
         // @compileLog("alignment:", alignment);
         // @compileLog("stack_mask_overflow:", stack_mask_overflow);
-        assert(stack_size <= nursery_size);
+        assert(stack_size < nursery_size);
+        assert(fill_size <= 1);
+        assert(@offsetOf(Process,"stack") == 0);
     }
     const maxNurseryObjectSize = @min(HeapHeader.maxLength, nursery_size / 4);
 
@@ -524,7 +526,8 @@ const Stack = struct {
     }
     pub //inline
     fn traceStack(self: SP, why: []const u8, context: *Context, extra: Extra) void {
-        trace("traceStack ({s})", .{why});
+        trace("traceStack ({s}) {} {}", .{why, @intFromPtr(self.endOfStack()) - @intFromPtr(self), self.getStack().len});
+        trace("sp = {*} context = {*} extra = {x}", .{self, context, @as(u64,@bitCast(extra))});
         const selfAddr = extra.selfAddress(self) orelse context.selfAddress(self);
         for (self.getStack()) |*obj| {
             const addr = @intFromPtr(obj);

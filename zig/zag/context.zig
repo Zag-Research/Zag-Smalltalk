@@ -109,6 +109,7 @@ fn ifOnStack(context: *const Context, sp: SP) ?*const ContextOnStack {
     }
     return null;
 }
+pub const stack_limit = Extra.is_encoded;
 pub const Extra = packed struct {
     addr: u48,
     stack_offset: u16 = 0,
@@ -190,11 +191,14 @@ pub const Extra = packed struct {
 pub const ContextData = struct {
     header: HeapHeader,
     contextData: [1]Object,
-    fn objects(self: *ContextData) [*]Object {
-        return @ptrCast(self);
+    fn objects(self: *const ContextData) [*]Object {
+        return @constCast(@ptrCast(self));
     }
-    fn localAddress(self: *ContextData, r: usize) [*]Object {
+    fn localAddress(self: *const ContextData, r: usize) [*]Object {
         return self.objects() + r;
+    }
+    fn selfAddress(self: *const ContextData) [*]Object {
+        return self.objects() + 1;
     }
 };
 var theStaticContextData = ContextData{
@@ -345,10 +349,7 @@ pub //inline
 fn selfAddress(self: *const Context, sp: SP) [*]Object {
     if (self.ifOnStack(sp)) |contextOnStack|
         return contextOnStack.selfAddress();
-    const wordsToDiscard = self.header.hash16();
-    trace("wordsToDiscard: {} context: {*} contextData: {*}\n", .{ wordsToDiscard, self, self.contextData });
-    _ = .{ wordsToDiscard, @panic("not on stack") };
-    //return @ptrCast(@constCast(&self.asObjectPtr()[wordsToDiscard]));
+    return self.contextData.selfAddress();
 }
 pub inline fn previous(self: *const Context) *Context {
     return self.prevCtxt orelse @panic("0 prev");
