@@ -46,7 +46,11 @@ const fibNative = struct {
     var info = Info{ .name = "Native" };
     fn init() void {}
     fn runIt(comptime _: void, proof: usize) usize {
-        return fib(fibN) + proof;
+        var acc = proof;
+        for (0..innerIterations) |_| {
+            acc = fib(fibN) + acc;
+        }
+        return acc;
     }
     fn fib(n: u64) u64 {
         if (n <= 2) return n;
@@ -59,8 +63,12 @@ const fibNativeFloat = struct {
     var info = Info{ .name = "NativeF" };
     fn init() void {}
     fn runIt(comptime _: void, proof: usize) usize {
-        const result: usize = @intFromFloat(fib(@floatFromInt(fibN)));
-        return @as(u64, @bitCast(result)) + proof;
+        var acc = proof;
+        for (0..innerIterations) |_| {
+            const result: usize = @intFromFloat(fib(@floatFromInt(fibN)));
+            acc = @as(u64, @bitCast(result)) + acc;
+        }
+        return acc;
     }
     fn fib(n: f64) f64 {
         if (n <= 2) return n;
@@ -116,12 +124,17 @@ const fibInteger = struct {
         }
     }
     fn runIt(comptime _: void, proof: usize) usize {
-        const obj = exe.sendTo(Sym.fibonacci.asObject(), exe.object(fibN)) catch unreachable;
-        if (obj.nativeI()) |result| {
-            return @as(u64, @bitCast(result)) + proof;
+        var acc = proof;
+        for (0..innerIterations) |_| {
+            const obj = exe.sendTo(Sym.fibonacci.asObject(), exe.object(fibN)) catch unreachable;
+            if (obj.nativeI()) |result| {
+                acc = @as(u64, @bitCast(result)) + acc;
+                continue;
+            }
+            std.log.err("fib object: {f}\n", .{obj});
+            unreachable;
         }
-        std.log.err("fib object: {f}\n", .{obj});
-        unreachable;
+        return acc;
     }
 };
 
@@ -172,12 +185,17 @@ const fibInteger0 = struct {
         }
     }
     fn runIt(comptime _: void, proof: usize) usize {
-        const obj = exe.sendTo(Sym.fibonacci.asObject(), exe.object(fibN)) catch unreachable;
-        if (obj.nativeI()) |result| {
-            return @as(u64, @bitCast(result)) + proof;
+        var acc = proof;
+        for (0..innerIterations) |_| {
+            const obj = exe.sendTo(Sym.fibonacci.asObject(), exe.object(fibN)) catch unreachable;
+            if (obj.nativeI()) |result| {
+                acc = @as(u64, @bitCast(result)) + acc;
+                continue;
+            }
+            std.log.err("fib object: {f}\n", .{obj});
+            unreachable;
         }
-        std.log.err("fib object: {f}\n", .{obj});
-        unreachable;
+        return acc;
     }
 };
 
@@ -238,12 +256,17 @@ const fibIntegerBr = struct {
         // }
     }
     fn runIt(comptime _: void, proof: usize) usize {
-        const obj = exe.sendTo(Sym.fibonacci.asObject(), exe.object(fibN)) catch unreachable;
-        if (obj.nativeI()) |result| {
-            return @as(u64, @bitCast(result)) + proof;
+        var acc = proof;
+        for (0..innerIterations) |_| {
+            const obj = exe.sendTo(Sym.fibonacci.asObject(), exe.object(fibN)) catch unreachable;
+            if (obj.nativeI()) |result| {
+                acc = @as(u64, @bitCast(result)) + acc;
+                continue;
+            }
+            std.log.err("fib object: {f}\n", .{obj});
+            unreachable;
         }
-        std.log.err("fib object: {f}\n", .{obj});
-        unreachable;
+        return acc;
     }
 };
 
@@ -319,12 +342,17 @@ const fibIntegerCl = struct {
         }
     }
     fn runIt(comptime _: void, proof: usize) usize {
-        const obj = exe.sendTo(Sym.fibonacci.asObject(), exe.object(fibN)) catch unreachable;
-        if (obj.nativeI()) |result| {
-            return @as(u64, @bitCast(result)) + proof;
+        var acc = proof;
+        for (0..innerIterations) |_| {
+            const obj = exe.sendTo(Sym.fibonacci.asObject(), exe.object(fibN)) catch unreachable;
+            if (obj.nativeI()) |result| {
+                acc = @as(u64, @bitCast(result)) + acc;
+                continue;
+            }
+            std.log.err("fib object: {f}\n", .{obj});
+            unreachable;
         }
-        std.log.err("fib object: {f}\n", .{obj});
-        unreachable;
+        return acc;
     }
 };
 
@@ -508,12 +536,17 @@ const fibIntegerCnP = struct {
         }
     }
     fn runIt(comptime _: void, proof: usize) usize {
-        const obj = exe.sendTo(Sym.fibonacci.asObject(), exe.object(fibN)) catch unreachable;
-        if (obj.nativeI()) |result| {
-            return @as(u64, @bitCast(result)) + proof;
+        var acc = proof;
+        for (0..innerIterations) |_| {
+            const obj = exe.sendTo(Sym.fibonacci.asObject(), exe.object(fibN)) catch unreachable;
+            if (obj.nativeI()) |result| {
+                acc = @as(u64, @bitCast(result)) + acc;
+                continue;
+            }
+            std.log.err("fib object: {f}\n", .{obj});
+            unreachable;
         }
-        std.log.err("fib object: {f}\n", .{obj});
-        unreachable;
+        return acc;
     }
 };
 
@@ -573,9 +606,18 @@ const fibFloat = struct {
         }
     }
     fn runIt(comptime _: void, proof: usize) usize {
-        const receiver = exe.object(@as(f64, @floatFromInt(fibN)));
-        _ = exe.sendTo(Sym.fibonacci.asObject(), receiver) catch @panic("Error sending message");
-        return proof;
+        var acc = proof;
+        for (0..innerIterations) |_| {
+            const receiver = exe.object(@as(f64, @floatFromInt(fibN)));
+            const obj = exe.sendTo(Sym.fibonacci.asObject(), receiver) catch @panic("Error sending message");
+            if (obj.nativeF()) |result| {
+                acc = @as(u64, @intFromFloat(result)) + acc;
+                continue;
+            }
+            std.log.err("fib object: {f}\n", .{obj});
+            unreachable;
+        }
+        return acc;
     }
 };
 const print = std.debug.print;
@@ -595,6 +637,7 @@ fn showDelta(infos: ?*Info, new: u64, target: []const u8) void {
         } else showDelta(info.previous, new, target);
     }
 }
+
 fn deltaInfo(previous: ?*Info, new: *Info, arg: []const u8) *Info {
     new.previous = previous;
     for (arg, 0..) |c, i| {
@@ -604,6 +647,7 @@ fn deltaInfo(previous: ?*Info, new: *Info, arg: []const u8) *Info {
     }
     return new;
 }
+
 fn name(original: []const u8) []const u8 {
     for (original, 0..) |c, i| {
         if (c == '?') {
@@ -612,23 +656,40 @@ fn name(original: []const u8) []const u8 {
     }
     return original;
 }
+
 fn includeFor(benchmark: anytype) bool {
     for (benchmark.exclude) |exclude| {
         if (config.objectEncoding == exclude) return false;
     }
     return true;
 }
+
+fn perIter(value: anytype) f64 {
+    return @as(f64, @floatFromInt(value)) / @as(f64, @floatFromInt(innerIterations));
+}
+
+fn perIterFloat(value: f64) f64 {
+    return value / @as(f64, @floatFromInt(innerIterations));
+}
+
 const Stats = zag.Stats;
 pub fn timing(args: []const []const u8, nRuns: usize, default: bool) !void {
     const eql = std.mem.eql;
-    var stat = Stats(void, void, 100, .milliseconds).init(nRuns, warmups);
+    var stat = Stats(void, void, 100, .microseconds).init(nRuns, warmups);
     var saved: ?*Info = null;
     for (args) |arg| {
         if (eql(u8, arg, "Config")) {
             zag.config.printConfig();
         } else if (eql(u8, arg, "Header")) {
             print("for '{} fibonacci'\n", .{fibN});
-            print("          Median   Mean   StdDev  SD/Mean GeomMean({} run{s}, {} warmup{s})\n", .{ stat.runs, if (stat.runs != 1) "s" else "", stat.warmups, if (stat.warmups != 1) "s" else "" });
+            print("          Median    Mean    StdDev  SD/Mean GeomMean({} run{s}, {} warmup{s}, {} inner iter{s})\n", .{
+                stat.runs,
+                if (stat.runs != 1) "s" else "",
+                stat.warmups,
+                if (stat.warmups != 1) "s" else "",
+                innerIterations,
+                if (innerIterations != 1) "s" else "",
+            });
         } else {
             var anyRun = false;
             inline for (&.{ fibNative, fibNativeFloat, fibInteger, fibInteger0, fibIntegerBr, fibFloat, fibIntegerCnP, fibIntegerCl }) |benchmark| {
@@ -638,10 +699,10 @@ pub fn timing(args: []const []const u8, nRuns: usize, default: bool) !void {
                     benchmark.init();
                     stat.reset();
                     stat.time(benchmark.runIt, {});
-                    print("{?d:5}ms {d:5}ms {d:6.2}ms", .{ stat.median(), stat.mean(), stat.stdDev() });
+                    print("{d:7.2}us {d:7.2}us {d:7.2}us", .{ perIter(stat.median().?), perIter(stat.mean()), perIterFloat(stat.stdDev()) });
                     if (stat.stDevPercent()) |percent|
                         print(" {d:5.1}%", .{percent});
-                    print(" {d:5.1}ms", .{stat.geometricMean()});
+                    print(" {d:7.2}us", .{perIter(stat.geometricMean())});
                     benchmark.info.mean = stat.mean();
                     saved = deltaInfo(saved, &benchmark.info, arg);
                     print("\n", .{});
@@ -683,7 +744,9 @@ pub fn main() !void {
     const default = args.len <= start;
     try timing(if (default) @constCast(do_all[0..]) else args[start..], nRuns, default);
 }
+
 const testRun = zag.config.testRun;
-const fibN = if (testRun) 5 else 5;
+const fibN = if (testRun) 5 else 20;
 const defaultRuns = if (testRun) 1 else 10;
+const innerIterations = if (testRun) 1 else 10_000;
 const warmups = if (testRun) 0 else null;
