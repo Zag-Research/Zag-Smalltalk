@@ -1,0 +1,180 @@
+bench
++- run exe fib-cachedPtr
+   +- compile exe fib-cachedPtr ReleaseFast native failure
+error: the following command terminated unexpectedly:
+/usr/local/share/zig-x86_64-linux-0.15.1/zig build-exe -fllvm -fno-omit-frame-pointer -OReleaseFast --dep zag -Mroot=/home/dmason/git/Zag-Smalltalk/zig/experiments/fib.zig --dep options -Mzag=/home/dmason/git/Zag-Smalltalk/zig/zag/zag.zig -Moptions=/home/dmason/git/Zag-Smalltalk/zig/.zig-cache/c/e8dc301b5c4d4d0bcf455b57ce363d30/options.zig --cache-dir /home/dmason/git/Zag-Smalltalk/zig/.zig-cache --global-cache-dir /home/dmason/.cache/zig --name fib-cachedPtr --zig-lib-dir /usr/local/share/zig-x86_64-linux-0.15.1/lib/ --listen=-
+bench
++- run exe fib-ptr
+   +- compile exe fib-ptr ReleaseFast native failure
+error: the following command terminated unexpectedly:
+/usr/local/share/zig-x86_64-linux-0.15.1/zig build-exe -fllvm -fno-omit-frame-pointer -OReleaseFast --dep zag -Mroot=/home/dmason/git/Zag-Smalltalk/zig/experiments/fib.zig --dep options -Mzag=/home/dmason/git/Zag-Smalltalk/zig/zag/zag.zig -Moptions=/home/dmason/git/Zag-Smalltalk/zig/.zig-cache/c/16cc19f21e0797de7a219a712b294210/options.zig --cache-dir /home/dmason/git/Zag-Smalltalk/zig/.zig-cache --global-cache-dir /home/dmason/.cache/zig --name fib-ptr --zig-lib-dir /usr/local/share/zig-x86_64-linux-0.15.1/lib/ --listen=-
+
+Config:
+  compile_date   = 2026-03-09T01:00:02-0400
+  git_version    = 2026-03-08T01:01:23-05:00-b9aed434
+  cpu            = skylake (.x86_64)
+  objectEncoding = .onlyInt
+  max_classes    = 255
+  stack/nursery  = 511w/3830w (8192w)
+for '36 fibonacci'
+          Median   Mean   StdDev  SD/Mean GeomMean(5 runs, 0 warmups)
+   Native   29ms    28ms   0.40ms   1.4%    28ms
+  NativeF   42ms    42ms   0.00ms   0.0%    42ms
+IntegerBr  934ms   932ms  33.56ms   3.6%   931ms
+
+Config:
+  compile_date   = 2026-03-09T01:00:02-0400
+  git_version    = 2026-03-08T01:01:23-05:00-b9aed434
+  cpu            = skylake (.x86_64)
+  objectEncoding = .taggedInt
+  max_classes    = 255
+  stack/nursery  = 511w/3830w (8192w)
+for '36 fibonacci'
+          Median   Mean   StdDev  SD/Mean GeomMean(5 runs, 0 warmups)
+   Native   24ms    24ms   0.40ms   1.7%    24ms
+  NativeF   43ms    43ms   0.00ms   0.0%    43ms
+IntegerBr  934ms   934ms   0.75ms   0.1%   934ms
+    Float 1298ms  1298ms   0.49ms   0.0%  1298ms
+
+Config:
+  compile_date   = 2026-03-09T01:00:02-0400
+  git_version    = 2026-03-08T01:01:23-05:00-b9aed434
+  cpu            = skylake (.x86_64)
+  objectEncoding = .spur
+  max_classes    = 255
+  stack/nursery  = 511w/3830w (8192w)
+for '36 fibonacci'
+          Median   Mean   StdDev  SD/Mean GeomMean(5 runs, 0 warmups)
+   Native   23ms    23ms   0.40ms   1.7%    23ms
+  NativeF   36ms    35ms   0.49ms   1.4%    35ms
+IntegerBr  930ms   930ms   0.49ms   0.1%   930ms
+    Float 1168ms  1168ms   0.49ms   0.0%  1168ms
+
+Config:
+  compile_date   = 2026-03-09T01:00:02-0400
+  git_version    = 2026-03-08T01:01:23-05:00-b9aed434
+  cpu            = skylake (.x86_64)
+  objectEncoding = .onlyFloat
+  max_classes    = 255
+  stack/nursery  = 511w/3830w (8192w)
+for '36 fibonacci'
+          Median   Mean   StdDev  SD/Mean GeomMean(5 runs, 0 warmups)
+   Native   24ms    24ms   0.49ms   2.0%    24ms
+  NativeF   43ms    43ms   0.00ms   0.0%    43ms
+    Float  799ms   799ms   0.40ms   0.1%   799ms
+
+Config:
+  compile_date   = 2026-03-09T01:00:02-0400
+  git_version    = 2026-03-08T01:01:23-05:00-b9aed434
+  cpu            = skylake (.x86_64)
+  objectEncoding = .nan
+  max_classes    = 255
+  stack/nursery  = 511w/3830w (8192w)
+for '36 fibonacci'
+          Median   Mean   StdDev  SD/Mean GeomMean(5 runs, 0 warmups)
+   Native   24ms    24ms   0.40ms   1.7%    24ms
+  NativeF   43ms    43ms   0.00ms   0.0%    43ms
+IntegerBr  964ms   963ms   1.17ms   0.1%   963ms
+    Float  968ms   968ms   0.40ms   0.0%   968ms
+
+Config:
+  compile_date   = 2026-03-09T01:00:02-0400
+  git_version    = 2026-03-08T01:01:23-05:00-b9aed434
+  cpu            = skylake (.x86_64)
+  objectEncoding = .zag
+  max_classes    = 255
+  stack/nursery  = 511w/3830w (8192w)
+for '36 fibonacci'
+          Median   Mean   StdDev  SD/Mean GeomMean(5 runs, 0 warmups)
+   Native   24ms    24ms   0.63ms   2.6%    23ms
+  NativeF   35ms    35ms   0.49ms   1.4%    35ms
+IntegerBr  980ms   981ms   1.74ms   0.2%   981ms
+    Float  960ms   960ms   0.40ms   0.0%   960ms
+
+Config:
+  compile_date   = 2026-03-09T01:00:02-0400
+  git_version    = 2026-03-08T01:01:23-05:00-b9aed434
+  cpu            = skylake (.x86_64)
+  objectEncoding = .taggedPtr
+  max_classes    = 255
+  stack/nursery  = 511w/3830w (8192w)
+for '36 fibonacci'
+          Median   Mean   StdDev  SD/Mean GeomMean(5 runs, 0 warmups)
+   Native   24ms    24ms   0.40ms   1.7%    24ms
+  NativeF   43ms    43ms   0.00ms   0.0%    43ms
+IntegerBrerror: loadMethodForClass(.SmallInteger 1111001 Signature{empty} 121)
+
+thread 32739 panic: Method not found
+/home/dmason/git/Zag-Smalltalk/zig/zag/dispatch.zig:47:9: 0x1061953 in loadMethodForClass (fib-taggedPtr)
+        @panic("Method not found");
+        ^
+/home/dmason/git/Zag-Smalltalk/zig/zag/dispatch.zig:41:34: 0x102cf56 in sendTo (fib-taggedPtr)
+        return loadMethodForClass(ci, signature);
+                                 ^
+/home/dmason/git/Zag-Smalltalk/zig/experiments/fib.zig:241:31: 0x102c9c9 in runIt__anon_9411 (fib-taggedPtr)
+        const obj = exe.sendTo(Sym.fibonacci.asObject(), exe.object(fibN)) catch unreachable;
+                              ^
+/home/dmason/git/Zag-Smalltalk/zig/zag/utilities/stats.zig:82:73: 0x1027ea0 in timing (fib-taggedPtr)
+                self.proof = @call(.never_inline, runner, .{ param, self.proof });
+                                                                        ^
+/home/dmason/git/Zag-Smalltalk/zig/experiments/fib.zig:676:15: 0x1024751 in posixCallMainAndExit (fib-taggedPtr)
+    try timing(if (default) @constCast(do_all[0..]) else args[1..], default);
+              ^
+/usr/local/share/zig-x86_64-linux-0.15.1/lib/std/start.zig:232:5: 0x102394d in _start (fib-taggedPtr)
+    asm volatile (switch (native_arch) {
+    ^
+???:?:?: 0x0 in ??? (???)
+bench
++- run exe fib-taggedPtr failure
+error: the following command terminated unexpectedly:
+/home/dmason/git/Zag-Smalltalk/zig/.zig-cache/o/299a39b9f023172b5f3716b6adf296b9/fib-taggedPtr
+
+Config:
+  compile_date   = 2026-03-09T01:00:02-0400
+  git_version    = 2026-03-08T01:01:23-05:00-b9aed434
+  cpu            = skylake (.x86_64)
+  objectEncoding = .zagSpur
+  max_classes    = 255
+  stack/nursery  = 511w/3830w (8192w)
+for '36 fibonacci'
+          Median   Mean   StdDev  SD/Mean GeomMean(5 runs, 0 warmups)
+   Native   24ms    24ms   0.40ms   1.7%    24ms
+  NativeF   35ms    35ms   0.40ms   1.1%    35ms
+IntegerBr  889ms   889ms   0.49ms   0.1%   889ms
+    Float 1090ms  1089ms   0.75ms   0.1%  1089ms
+
+Build Summary: 25/31 steps succeeded; 3 failed
+bench transitive failure
++- run exe fib-nan success 10s MaxRSS:3M
+|  +- compile exe fib-nan ReleaseFast native success 15s MaxRSS:247M
+|     +- options success
++- run exe fib-zag success 10s MaxRSS:3M
+|  +- compile exe fib-zag ReleaseFast native success 15s MaxRSS:249M
+|     +- options success
++- run exe fib-zagSpur success 11s MaxRSS:3M
+|  +- compile exe fib-zagSpur ReleaseFast native success 15s MaxRSS:248M
+|     +- options success
++- run exe fib-spur success 11s MaxRSS:3M
+|  +- compile exe fib-spur ReleaseFast native success 12s MaxRSS:248M
+|     +- options success
++- run exe fib-taggedInt success 12s MaxRSS:3M
+|  +- compile exe fib-taggedInt ReleaseFast native success 12s MaxRSS:246M
+|     +- options success
++- run exe fib-taggedPtr failure
+|  +- compile exe fib-taggedPtr ReleaseFast native success 15s MaxRSS:248M
+|     +- options success
++- run exe fib-cachedPtr transitive failure
+|  +- compile exe fib-cachedPtr ReleaseFast native failure
+|     +- options success
++- run exe fib-ptr transitive failure
+|  +- compile exe fib-ptr ReleaseFast native failure
+|     +- options success
++- run exe fib-onlyInt success 5s MaxRSS:2M
+|  +- compile exe fib-onlyInt ReleaseFast native success 11s MaxRSS:241M
+|     +- options success
++- run exe fib-onlyFloat success 5s MaxRSS:3M
+   +- compile exe fib-onlyFloat ReleaseFast native success 12s MaxRSS:238M
+      +- options success
+
+error: the following build command failed with exit code 1:
+/home/dmason/git/Zag-Smalltalk/zig/.zig-cache/o/c468dfa2700fc883d9beeeab0c608e50/build /usr/local/share/zig-x86_64-linux-0.15.1/zig /usr/local/share/zig-x86_64-linux-0.15.1/lib /home/dmason/git/Zag-Smalltalk/zig /home/dmason/git/Zag-Smalltalk/zig/.zig-cache /home/dmason/.cache/zig --seed 0x52eafae4 -Z502ce2430298ef99 bench -Doptimize=ReleaseFast --summary all
