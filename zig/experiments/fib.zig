@@ -700,8 +700,7 @@ pub fn timing(args: []const []const u8, nRuns: usize, default: bool) !void {
                     stat.reset();
                     stat.time(benchmark.runIt, {});
                     print("{d:7.2}us {d:7.2}us {d:7.2}us", .{ perIter(stat.median().?), perIter(stat.mean()), perIterFloat(stat.stdDev()) });
-                    if (stat.stDevPercent()) |percent|
-                        print(" {d:5.1}%", .{percent});
+                    print(" {d:5.1}%", .{stat.stDevPercent() orelse 0.0});
                     print(" {d:7.2}us", .{perIter(stat.geometricMean())});
                     benchmark.info.mean = stat.mean();
                     saved = deltaInfo(saved, &benchmark.info, arg);
@@ -746,7 +745,7 @@ pub fn main() !void {
 }
 
 const testRun = zag.config.testRun;
-const fibN = if (testRun) 5 else 20;
+const fibN = if (testRun) 5 else 5;
 const defaultRuns = if (testRun) 1 else 10;
 const innerIterations = if (testRun) 1 else 10_000;
 const warmups = if (testRun) 0 else null;
