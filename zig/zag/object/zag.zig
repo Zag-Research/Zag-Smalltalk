@@ -153,7 +153,7 @@ pub const Object = packed struct(u64) {
     pub inline fn symbolHash(self: object.Object) ?u24 {
         if (self.isImmediateClass(.Symbol)) return @truncate(self.hash);
         return null;
-   }
+    }
     pub inline fn extraValue(self: object.Object) object.Object {
         return @bitCast(self.nativeI_noCheck() >> 8);
     }
@@ -285,14 +285,23 @@ pub const Object = packed struct(u64) {
 
     pub fn returnObjectClosure(self: Object, context: *Context) ?Object {
         if (self.nativeI()) |i| {
-            switch(i) {
-                -128 ... 127 => return oImmContext(.ThunkReturnObject, context, @bitCast(@as(i8, @intCast(i)))),
+            switch (i) {
+                -128...127 => return oImmContext(.ThunkReturnObject, context, @bitCast(@as(i8, @intCast(i)))),
                 else => {},
             }
         } else {
             switch (self.which_class()) {
-                .False, .True => |c| return oImmContext(.ThunkReturnImmediate, context, @truncate(oImm(c.compact(),0).rawU())),
+                .False, .True => |c| return oImmContext(.ThunkReturnImmediate, context, @truncate(oImm(c.compact(), 0).rawU())),
                 .UndefinedObject => return oImmContext(.ThunkReturnImmediate, context, 0),
+                else => {},
+            }
+        }
+        return null;
+    }
+    pub fn returnLocalClosure(self: Object, context: *Context) ?Object {
+        if (self.nativeI()) |i| {
+            switch (i) {
+                0...255 => return oImmContext(.ThunkReturnLocal, context, @bitCast(@as(i8, @intCast(i)))),
                 else => {},
             }
         }
