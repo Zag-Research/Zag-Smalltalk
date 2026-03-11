@@ -654,8 +654,8 @@ pub fn timing(args: []const []const u8, nRuns: usize, default: bool) !void {
 }
 pub fn main() !void {
     const do_all = [_][]const u8{
-        "Config",    "Header",
-        "Native",    "NativeF",
+        "Config",            "Header",
+        "Native",            "NativeF",
         //"Integer",
         "IntegerBr?Integer",
         //"Integer0?Integer",
@@ -674,16 +674,24 @@ pub fn main() !void {
     const args = try std.process.argsAlloc(allocator);
     var start: usize = 1;
     var nRuns: usize = defaultRuns;
-    if (args.len > 1) {
-        if (std.fmt.parseInt(usize, args[1], 10)) |n| {
-            start = 2;
-            nRuns = n;
-        } else |_| {}
+    var fibN: usize = defaultFib;
+    while (args.len > start + 1) {
+        if (std.mem.eql(u8, args[i], "--runs") or std.mem.eql(u8, args[i], "-r")) {
+            if (std.fmt.parseInt(usize, args[start], 10)) |n| {
+                start += 2;
+                nRuns = n;
+            } else |_| {}
+        } else if (std.mem.eql(u8, args[i], "--fib") or std.mem.eql(u8, args[i], "-f")) {
+            if (std.fmt.parseInt(usize, args[start], 10)) |n| {
+                start += 2;
+                fibN = n;
+            } else |_| {}
+        } else break;
     }
     const default = args.len <= start;
     try timing(if (default) @constCast(do_all[0..]) else args[start..], nRuns, default);
 }
 const testRun = zag.config.testRun;
-const fibN = if (testRun) 5 else 5;
+const defaultFib = if (testRun) 5 else 5;
 const defaultRuns = if (testRun) 1 else 10;
 const warmups = if (testRun) 0 else null;
