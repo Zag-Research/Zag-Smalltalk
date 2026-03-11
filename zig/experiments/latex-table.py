@@ -69,8 +69,6 @@ def tabular(row_header, col_headers, rows):
 def per_encoding_tables(results, benchmark_order):
     tables = []
     for enc, benchmarks in results.items():
-        if enc in BASELINES:
-            continue
         rows = []
         for bm in benchmark_order:
             entry = benchmarks.get(bm)
