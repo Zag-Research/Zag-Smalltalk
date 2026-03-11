@@ -2,82 +2,108 @@
 import re
 import argparse
 
-
 ENCODING_RE = re.compile(r"objectEncoding\s*=\s*\.(\w+)")
 DATA_RE = re.compile(
     r"^\s{0,8}(\w+)\s+(\d+)ms\s+(\d+)ms\s+([\d.]+)ms"
     r"(?:\s+([\d.]+)%)?\s+([\d.]+)ms\s*$",
     re.MULTILINE,
 )
+METRICS = ["median", "mean", "stddev", "sdpct", "geomean"]
+METRIC_LABELS = ["Median", "Mean", "StdDev", r"SD\%", "GeoM"]
+BASELINES = {"onlyInt", "onlyFloat"}
 
 
 def parse(file_content):
-    # Split on Config: blocks (leading \n handles blank line before each block)
     blocks = re.split(r"\nConfig:", "\n" + file_content)
-    results = {}  # encoding -> benchmark_name -> geomean (float ms)
-    column_order = []  # preserve first-seen order across all blocks
-
+    results, benchmark_order = {}, []
     for block in blocks:
-        if not block.strip():
-            continue
         enc_match = ENCODING_RE.search(block)
         if not enc_match:
             continue
-        encoding = enc_match.group(1)
-        results[encoding] = {}
-
+        enc = enc_match.group(1)
+        results[enc] = {}
         for m in DATA_RE.finditer(block):
             name = m.group(1)
-            geomean = float(m.group(6))
-            results[encoding][name] = geomean
-            if name not in column_order:
-                column_order.append(name)
+            results[enc][name] = {
+                "median": int(m.group(2)),
+                "mean": int(m.group(3)),
+                "stddev": float(m.group(4)),
+                "sdpct": float(m.group(5)) if m.group(5) else None,
+                "geomean": float(m.group(6)),
+            }
+            if name not in benchmark_order:
+                benchmark_order.append(name)
+    return results, benchmark_order
 
-    return results, column_order
+
+def get_base(benchmark, results):
+    if benchmark.startswith("Integer"):
+        return results.get("onlyInt", {}).get(benchmark)
+    if benchmark == "Float":
+        return results.get("onlyFloat", {}).get(benchmark)
+    return None
 
 
-def generate_latex_table(results, column_order):
-    encodings = list(results.keys())
+def fmt_cell(metric, val, base):
+    if val is None:
+        return "N/A"
+    if metric in ("median", "mean", "geomean") and base:
+        return f"{int(round(val - base[metric]))}ms"
+    if metric == "stddev":
+        return f"{val:.2f}ms"
+    if metric == "sdpct":
+        return f"{val:.1f}\\%"
+    return f"{int(round(val))}ms"
 
-    col_fmt = "|l|" + "r|" * len(column_order)
-    header_cells = " & ".join(
-        r"\textbf{" + c + "}" for c in column_order
-    )
 
-    lines = [
-        r"\begin{tabular}{" + col_fmt + "}",
-        r"\hline",
-        r"\textbf{Encoding} & " + header_cells + r" \\ \hline",
-    ]
-
-    for enc in encodings:
-        clean_enc = enc.replace("_", r"\_")
-        cells = []
-        for col in column_order:
-            val = results[enc].get(col)
-            if val is None:
-                cells.append("N/A")
-            else:
-                ms = int(round(val))
-                cells.append(f"{ms}ms")
-        lines.append(clean_enc + " & " + " & ".join(cells) + r" \\ \hline")
-
+def tabular(row_header, col_headers, rows):
+    col_fmt = "|l|" + "r|" * len(col_headers)
+    header = r"\textbf{" + row_header + "} & " + " & ".join(r"\textbf{" + c + "}" for c in col_headers)
+    lines = [r"\begin{tabular}{" + col_fmt + "}", r"\hline", header + r" \\ \hline"]
+    for label, cells in rows:
+        lines.append(label + " & " + " & ".join(cells) + r" \\ \hline")
     lines.append(r"\end{tabular}")
     return "\n".join(lines)
 
 
+def per_encoding_tables(results, benchmark_order):
+    tables = []
+    for enc, benchmarks in results.items():
+        if enc in BASELINES:
+            continue
+        rows = []
+        for bm in benchmark_order:
+            entry = benchmarks.get(bm)
+            base = get_base(bm, results)
+            cells = ["N/A"] * len(METRICS) if entry is None else [fmt_cell(m, entry[m], base) for m in METRICS]
+            rows.append((bm, cells))
+        tables.append(f"\\subsection*{{{enc}}}\n" + tabular("Benchmark", METRIC_LABELS, rows))
+    return "\n\n".join(tables)
+
+
+def median_summary(results, benchmark_order):
+    rows = []
+    for enc, benchmarks in results.items():
+        if enc in BASELINES:
+            continue
+        cells = []
+        for bm in benchmark_order:
+            entry = benchmarks.get(bm)
+            base = get_base(bm, results)
+            cells.append("N/A" if entry is None else fmt_cell("median", entry["median"], base))
+        rows.append((enc, cells))
+    return tabular("Encoding", benchmark_order, rows)
+
+
 def main():
-    parser = argparse.ArgumentParser(
-        description="Parse fib.zig benchmark logs into a LaTeX table."
-    )
-    parser.add_argument("filename", help="Path to the benchmark log file")
+    parser = argparse.ArgumentParser()
+    parser.add_argument("filename")
     args = parser.parse_args()
-
-    with open(args.filename, "r") as f:
-        content = f.read()
-
-    results, column_order = parse(content)
-    print(generate_latex_table(results, column_order))
+    with open(args.filename) as f:
+        results, benchmark_order = parse(f.read())
+    print(per_encoding_tables(results, benchmark_order))
+    print()
+    print(median_summary(results, benchmark_order))
 
 
 if __name__ == "__main__":
