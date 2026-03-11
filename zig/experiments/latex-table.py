@@ -1,87 +1,83 @@
 #! /usr/bin/env python
 import re
+import argparse
 
 
-def generate_complex_latex_table(file_content):
-    # Regex patterns
-    encoding_regex = re.compile(r"objectEncoding\s*=\s*\.(\w+)")
-    # Captures the label (IntegerBr/IntegerCL/Float) and the LAST ms value on that line
-    data_regex = re.compile(r"^\s*(Integer\w+|Float)\s+.*?(\d+)ms\s*$", re.MULTILINE)
+ENCODING_RE = re.compile(r"objectEncoding\s*=\s*\.(\w+)")
+DATA_RE = re.compile(
+    r"^\s{0,8}(\w+)\s+(\d+)ms\s+(\d+)ms\s+([\d.]+)ms"
+    r"(?:\s+([\d.]+)%)?\s+([\d.]+)ms\s*$",
+    re.MULTILINE,
+)
 
-    blocks = file_content.split("Config:")
-    results = {}
+
+def parse(file_content):
+    # Split on Config: blocks (leading \n handles blank line before each block)
+    blocks = re.split(r"\nConfig:", "\n" + file_content)
+    results = {}  # encoding -> benchmark_name -> geomean (float ms)
+    column_order = []  # preserve first-seen order across all blocks
 
     for block in blocks:
         if not block.strip():
             continue
+        enc_match = ENCODING_RE.search(block)
+        if not enc_match:
+            continue
+        encoding = enc_match.group(1)
+        results[encoding] = {}
 
-        enc_match = encoding_regex.search(block)
-        if enc_match:
-            enc_name = enc_match.group(1)
-            results[enc_name] = {}
+        for m in DATA_RE.finditer(block):
+            name = m.group(1)
+            geomean = float(m.group(6))
+            results[encoding][name] = geomean
+            if name not in column_order:
+                column_order.append(name)
 
-            # Find all relevant data lines in this block
-            for match in data_regex.finditer(block):
-                label, value = match.groups()
-                results[enc_name][label] = int(value)
+    return results, column_order
 
-    # Establish Baselines
-    # .onlyInt baseline applies to IntegerBr and IntegerCL
-    int_baseline = results.get("onlyInt", {}).get("IntegerBr", 0)
-    # .onlyFloat baseline applies to Float
-    float_baseline = results.get("onlyFloat", {}).get("Float", 0)
 
-    # LaTeX Table Generation
-    latex = [
-        r"\begin{tabular}{|l|c|c|c|}",
+def generate_latex_table(results, column_order):
+    encodings = list(results.keys())
+
+    col_fmt = "|l|" + "r|" * len(column_order)
+    header_cells = " & ".join(
+        r"\textbf{" + c + "}" for c in column_order
+    )
+
+    lines = [
+        r"\begin{tabular}{" + col_fmt + "}",
         r"\hline",
-        r"\textbf{Encoding} & \textbf{IntegerBr (adj)} & \textbf{IntegerCL (adj)} & \textbf{Float (adj)} \\ \hline",
+        r"\textbf{Encoding} & " + header_cells + r" \\ \hline",
     ]
 
-    # Sort encodings for the table rows
-    for enc in sorted(results.keys()):
-        # Skip the baseline rows themselves if you don't want them in the final table,
-        # or leave them in to show they result in 0.
-
-        row_data = results[enc]
-
-        # Helper to get adjusted value
-        def get_adj(label, baseline):
-            val = row_data.get(label)
+    for enc in encodings:
+        clean_enc = enc.replace("_", r"\_")
+        cells = []
+        for col in column_order:
+            val = results[enc].get(col)
             if val is None:
-                return "N/A"
-            return f"{val - baseline}ms"
+                cells.append("N/A")
+            else:
+                ms = int(round(val))
+                cells.append(f"{ms}ms")
+        lines.append(clean_enc + " & " + " & ".join(cells) + r" \\ \hline")
 
-        br_adj = get_adj("IntegerBr", int_baseline)
-        cl_adj = get_adj("IntegerCL", int_baseline)
-        fl_adj = get_adj("Float", float_baseline)
-
-        clean_name = enc.replace("_", r"\_")
-        latex.append(f"{clean_name} & {br_adj} & {cl_adj} & {fl_adj} \\\\ \\hline")
-
-    latex.append(r"\end{tabular}")
-    return "\n".join(latex)
-
-
-import argparse
+    lines.append(r"\end{tabular}")
+    return "\n".join(lines)
 
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Parse benchmark logs into LaTeX tables."
+        description="Parse fib.zig benchmark logs into a LaTeX table."
     )
-
-    # Add the argument for the filename
-    parser.add_argument("filename", help="The path to the benchmark log file")
-
+    parser.add_argument("filename", help="Path to the benchmark log file")
     args = parser.parse_args()
 
-    # Now you can use args.filename
     with open(args.filename, "r") as f:
         content = f.read()
-        # Call your function here
-        result = generate_complex_latex_table(content)
-        print(result)
+
+    results, column_order = parse(content)
+    print(generate_latex_table(results, column_order))
 
 
 if __name__ == "__main__":
