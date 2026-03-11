@@ -67,7 +67,7 @@ const cnpThreaded = struct {
             _ = threaded;
         }
     }
-    fn runIt(comptime _: void, proof: usize) usize {
+    fn runIt(_: void, proof: usize) usize {
         const obj = exe.sendTo(Sym.value.asObject(), exe.object(cnpN)) catch unreachable;
         if (obj.nativeI()) |result| {
             return @as(u64, @bitCast(result)) + proof;

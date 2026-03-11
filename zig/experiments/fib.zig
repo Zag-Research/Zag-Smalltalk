@@ -44,8 +44,8 @@ const Info = struct {
 const fibNative = struct {
     const exclude: []const Encoding = &[_]Encoding{};
     var info = Info{ .name = "Native" };
-    fn init() void {}
-    fn runIt(comptime _: void, proof: usize) usize {
+    fn init(_: u32) void {}
+    fn runIt(fibN: u32, proof: usize) usize {
         return fib(fibN) + proof;
     }
     fn fib(n: u64) u64 {
@@ -57,8 +57,8 @@ const fibNative = struct {
 const fibNativeFloat = struct {
     const exclude: []const Encoding = &[_]Encoding{};
     var info = Info{ .name = "NativeF" };
-    fn init() void {}
-    fn runIt(comptime _: void, proof: usize) usize {
+    fn init(_: u32) void {}
+    fn runIt(fibN: u32, proof: usize) usize {
         const result: usize = @intFromFloat(fib(@floatFromInt(fibN)));
         return @as(u64, @bitCast(result)) + proof;
     }
@@ -103,7 +103,7 @@ const fibInteger = struct {
     var exe: MainExecutor = undefined;
     var one_: Object.StaticObject = undefined;
     var two_: Object.StaticObject = undefined;
-    fn init() void {
+    fn init(_: u32) void {
         exe = MainExecutor.new();
         const one = one_.init(1);
         const two = two_.init(2);
@@ -115,7 +115,7 @@ const fibInteger = struct {
             fib.dump();
         }
     }
-    fn runIt(comptime _: void, proof: usize) usize {
+    fn runIt(fibN: u32, proof: usize) usize {
         const obj = exe.sendTo(Sym.fibonacci.asObject(), exe.object(fibN)) catch unreachable;
         if (obj.nativeI()) |result| {
             return @as(u64, @bitCast(result)) + proof;
@@ -159,7 +159,7 @@ const fibInteger0 = struct {
     var exe: MainExecutor = undefined;
     var one_: Object.StaticObject = undefined;
     var two_: Object.StaticObject = undefined;
-    fn init() void {
+    fn init(_: u32) void {
         exe = MainExecutor.new();
         const one = one_.init(1);
         const two = two_.init(2);
@@ -171,7 +171,7 @@ const fibInteger0 = struct {
             fib.dump();
         }
     }
-    fn runIt(comptime _: void, proof: usize) usize {
+    fn runIt(fibN: u32, proof: usize) usize {
         const obj = exe.sendTo(Sym.fibonacci.asObject(), exe.object(fibN)) catch unreachable;
         if (obj.nativeI()) |result| {
             return @as(u64, @bitCast(result)) + proof;
@@ -217,7 +217,7 @@ const fibIntegerBr = struct {
     var exe: MainExecutor = undefined;
     var one_: Object.StaticObject = undefined;
     var two_: Object.StaticObject = undefined;
-    fn init() void {
+    fn init(_: anytype) void {
         exe = MainExecutor.new();
         const one = one_.init(1);
         const two = two_.init(2);
@@ -237,7 +237,7 @@ const fibIntegerBr = struct {
         //     }
         // }
     }
-    fn runIt(comptime _: void, proof: usize) usize {
+    fn runIt(fibN: u32, proof: usize) usize {
         const obj = exe.sendTo(Sym.fibonacci.asObject(), exe.object(fibN)) catch unreachable;
         if (obj.nativeI()) |result| {
             return @as(u64, @bitCast(result)) + proof;
@@ -268,17 +268,17 @@ const fibIntegerCl = struct {
             tf.push,                   self,
             tf.pushLiteral,            "1const",
             leq,                       tf.fail,
-            tf.fail,                   tf.returnLiteralClosure,
+            tf.fail,                   tf.returnLocalClosure,
             "0const",                  tf.send,
             signature(.@"ifTrue:", 0), &nullMethod,
             tf.drop,                   tf.push,
             self,                      tf.pushLiteral,
-            "0const",                  minus,
+            "1const",                  minus,
             tf.fail,                   tf.fail,
             tf.send,                   signature(.fibonacci, 0),
             &nullMethod,               tf.push,
             self,                      tf.pushLiteral,
-            "1const",                  minus,
+            "2const",                  minus,
             tf.fail,                   tf.fail,
             tf.send,                   signature(.fibonacci, 0),
             &nullMethod,               plus,
@@ -289,11 +289,13 @@ const fibIntegerCl = struct {
     var exe: MainExecutor = undefined;
     var one_: Object.StaticObject = undefined;
     var two_: Object.StaticObject = undefined;
-    fn init() void {
+    var zero_: Object.StaticObject = undefined;
+    fn init(fibN: u32) void {
         exe = MainExecutor.new();
         const one = one_.init(1);
         const two = two_.init(2);
-        fib.resolve(&[_]Object{ one, two }) catch @panic("Failed to resolve");
+        const zero = zero_.init(0);
+        fib.resolve(&[_]Object{ zero, one, two }) catch @panic("Failed to resolve");
         fib.initExecute();
         TifTrue.resolve(Object.empty) catch @panic("Failed to resolve");
         TifTrue.initExecute();
@@ -310,7 +312,7 @@ const fibIntegerCl = struct {
             FifTrue.dump();
             zag.execute.endMethod.dump();
         } else {
-            const threaded = runIt({}, 0);
+            const threaded = runIt(fibN, 0);
             const native = fibCheck(fibN);
             if (threaded != native) {
                 std.log.err("threaded={}, native={}\n", .{ threaded, native });
@@ -318,7 +320,7 @@ const fibIntegerCl = struct {
             }
         }
     }
-    fn runIt(comptime _: void, proof: usize) usize {
+    fn runIt(fibN: u32, proof: usize) usize {
         const obj = exe.sendTo(Sym.fibonacci.asObject(), exe.object(fibN)) catch unreachable;
         if (obj.nativeI()) |result| {
             return @as(u64, @bitCast(result)) + proof;
@@ -488,7 +490,7 @@ const fibIntegerCnP = struct {
     var exe: MainExecutor = undefined;
     var one_: Object.StaticObject = undefined;
     var two_: Object.StaticObject = undefined;
-    fn init() void {
+    fn init(fibN: u32) void {
         exe = MainExecutor.new();
         const one = one_.init(1);
         const two = two_.init(2);
@@ -499,7 +501,7 @@ const fibIntegerCnP = struct {
             std.log.err("\n", .{});
             fib.dump();
         } else {
-            const threaded = runIt({}, 0);
+            const threaded = runIt(fibN, 0);
             const native = fibCheck(fibN);
             if (threaded != native) {
                 std.log.err("threaded={}, native={}\n", .{ threaded, native });
@@ -507,7 +509,7 @@ const fibIntegerCnP = struct {
             }
         }
     }
-    fn runIt(comptime _: void, proof: usize) usize {
+    fn runIt(fibN: u32, proof: usize) usize {
         const obj = exe.sendTo(Sym.fibonacci.asObject(), exe.object(fibN)) catch unreachable;
         if (obj.nativeI()) |result| {
             return @as(u64, @bitCast(result)) + proof;
@@ -551,7 +553,7 @@ const fibFloat = struct {
     var exe: MainExecutor = undefined;
     var one_: Object.StaticObject = undefined;
     var two_: Object.StaticObject = undefined;
-    fn init() void {
+    fn init(fibN: u32) void {
         exe = MainExecutor.new();
         const one = one_.init(1.0);
         const two = two_.init(2.0);
@@ -572,7 +574,7 @@ const fibFloat = struct {
             }
         }
     }
-    fn runIt(comptime _: void, proof: usize) usize {
+    fn runIt(fibN: u32, proof: usize) usize {
         const receiver = exe.object(@as(f64, @floatFromInt(fibN)));
         _ = exe.sendTo(Sym.fibonacci.asObject(), receiver) catch @panic("Error sending message");
         return proof;
@@ -619,9 +621,9 @@ fn includeFor(benchmark: anytype) bool {
     return true;
 }
 const Stats = zag.Stats;
-pub fn timing(args: []const []const u8, nRuns: usize, default: bool) !void {
+pub fn timing(args: []const []const u8, nRuns: usize, fibN: u32, default: bool) !void {
     const eql = std.mem.eql;
-    var stat = Stats(void, void, 100, .milliseconds).init(nRuns, warmups);
+    var stat = Stats(u32, void, 100, .milliseconds).init(nRuns, warmups);
     var saved: ?*Info = null;
     for (args) |arg| {
         if (eql(u8, arg, "Config")) {
@@ -635,9 +637,9 @@ pub fn timing(args: []const []const u8, nRuns: usize, default: bool) !void {
                 if (includeFor(benchmark) and std.mem.eql(u8, name(arg), benchmark.info.name)) {
                     anyRun = true;
                     print("{s:>9}", .{benchmark.info.name});
-                    benchmark.init();
+                    benchmark.init(fibN);
                     stat.reset();
-                    stat.time(benchmark.runIt, {});
+                    stat.time(benchmark.runIt, fibN);
                     print("{?d:5}ms {d:5}ms {d:6.2}ms", .{ stat.median(), stat.mean(), stat.stdDev() });
                     if (stat.stDevPercent()) |percent|
                         print(" {d:5.1}%", .{percent});
@@ -674,22 +676,22 @@ pub fn main() !void {
     const args = try std.process.argsAlloc(allocator);
     var start: usize = 1;
     var nRuns: usize = defaultRuns;
-    var fibN: usize = defaultFib;
+    var fibN: u32 = defaultFib;
     while (args.len > start + 1) {
-        if (std.mem.eql(u8, args[i], "--runs") or std.mem.eql(u8, args[i], "-r")) {
-            if (std.fmt.parseInt(usize, args[start], 10)) |n| {
+        if (std.mem.eql(u8, args[start], "--runs") or std.mem.eql(u8, args[start], "-r")) {
+            if (std.fmt.parseInt(usize, args[start + 1], 10)) |n| {
                 start += 2;
                 nRuns = n;
             } else |_| {}
-        } else if (std.mem.eql(u8, args[i], "--fib") or std.mem.eql(u8, args[i], "-f")) {
-            if (std.fmt.parseInt(usize, args[start], 10)) |n| {
+        } else if (std.mem.eql(u8, args[start], "--fib") or std.mem.eql(u8, args[start], "-f")) {
+            if (std.fmt.parseInt(usize, args[start + 1], 10)) |n| {
                 start += 2;
-                fibN = n;
+                fibN = @intCast(n);
             } else |_| {}
         } else break;
     }
     const default = args.len <= start;
-    try timing(if (default) @constCast(do_all[0..]) else args[start..], nRuns, default);
+    try timing(if (default) @constCast(do_all[0..]) else args[start..], nRuns, fibN, default);
 }
 const testRun = zag.config.testRun;
 const defaultFib = if (testRun) 5 else 5;

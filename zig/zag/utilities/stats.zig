@@ -59,7 +59,7 @@ pub fn Stats(comptime Arg: type, comptime K: type, maxRuns: usize, comptime unit
         const scale = units.scale();
         pub fn init(runs: usize, warmups: ?usize) Self {
             std.debug.assert(runs <= maxRuns);
-            return .{ .runs = runs, .warmups = if (warmups) |w| w else @min(3, @max(1, (runs + 1) / 3))};
+            return .{ .runs = runs, .warmups = if (warmups) |w| w else @min(3, @max(1, (runs + 1) / 3)) };
         }
         pub fn reset(self: *Self) void {
             self.n = 0;
@@ -73,7 +73,7 @@ pub fn Stats(comptime Arg: type, comptime K: type, maxRuns: usize, comptime unit
                 self.addData(runner(runNumber));
             }
         }
-        pub fn time(self: *Self, runner: *const fn (comptime Arg, usize) usize, comptime param: Arg) void {
+        pub fn time(self: *Self, runner: *const fn (Arg, usize) usize, param: Arg) void {
             for (0..self.warmups) |_| {
                 self.proof = @call(.never_inline, runner, .{ param, self.proof });
             }
