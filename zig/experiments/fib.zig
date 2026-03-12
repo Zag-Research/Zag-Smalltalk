@@ -673,7 +673,12 @@ pub fn main() !void {
     //     //fail test; can't try in defer as defer is executed after we return
     //     if (deinit_status == .leak) @panic("TEST FAIL");
     // }
-    const args = try std.process.argsAlloc(allocator);
+    var args_iter = try std.process.argsWithAllocator(allocator);
+    defer args_iter.deinit();
+    var args_list = std.ArrayList([:0]const u8).init(allocator);
+    defer args_list.deinit();
+    while (args_iter.next()) |arg| try args_list.append(arg);
+    const args = args_list.items;
     var start: usize = 1;
     var nRuns: usize = defaultRuns;
     var fibN: u32 = defaultFib;
