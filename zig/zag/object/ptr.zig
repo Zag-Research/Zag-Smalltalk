@@ -118,6 +118,9 @@ pub const Object = packed struct(u64) {
     pub fn returnObjectClosure(_: Object, _: anytype) ?Object {
         return null;
     }
+    pub fn returnLocalClosure(_: Object, _: anytype) ?Object {
+        return null;
+    }
     pub fn immediateClosure(_: anytype, _: anytype, _: anytype) ?Object {
         return null;
     }

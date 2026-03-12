@@ -27,6 +27,10 @@ def parse(file_content):
         if not enc_match:
             continue
         enc = enc_match.group(1)
+        if enc == "zag":
+            enc = "max"
+        elif enc == "zagSpur":
+            enc = "maxSpur"
         results[enc] = {}
         for m in DATA_RE.finditer(block):
             name = m.group(1)

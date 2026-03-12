@@ -108,7 +108,7 @@ pub const Object = packed struct(u64) {
         return self.toDoubleFromMemory();
     }
     pub inline fn fromNativeI(i: i48, _: anytype, _: anytype) Object {
-        return Object{ .intOrAddress = @bitCast(i), .class = .SmallInteger};
+        return Object{ .intOrAddress = @bitCast(i), .class = .SmallInteger };
     }
     pub inline fn fromNativeF(t: f64, sp: SP, context: *Context) object.Object {
         return InMemory.float(t, sp, context);
@@ -154,6 +154,9 @@ pub const Object = packed struct(u64) {
     pub fn returnObjectClosure(_: Object, _: anytype) ?Object {
         return null;
     }
+    pub fn returnLocalClosure(_: Object, _: anytype) ?Object {
+        return null;
+    }
     pub fn immediateClosure(_: anytype, _: anytype, _: anytype) ?Object {
         return null;
     }
@@ -165,7 +168,7 @@ pub const Object = packed struct(u64) {
             @as(*const Child, @ptrCast(value)).header.classIndex
         else
             .none;
-        return Object{ .intOrAddress = @truncate(addr), .class = cls};
+        return Object{ .intOrAddress = @truncate(addr), .class = cls };
     }
 
     inline fn heapAddr(self: object.Object) usize {
@@ -308,7 +311,7 @@ pub const Object = packed struct(u64) {
         return self.isHeapObject();
     }
     pub inline fn asUntaggedI(i: i48) i64 {
-        return @bitCast(Object{ .intOrAddress = @bitCast(i), .class = .none});
+        return @bitCast(Object{ .intOrAddress = @bitCast(i), .class = .none });
     }
 
     pub const Scanner = struct {

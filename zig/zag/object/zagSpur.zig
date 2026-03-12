@@ -385,17 +385,20 @@ pub const Object = packed union {
     }
     pub fn returnObjectClosure(self: Object, context: *Context) ?Object {
         if (self.nativeI()) |i| {
-            switch(i) {
-                -128 ... 127 => return oImmContext(.ThunkReturnObject, context, @bitCast(@as(i8, @intCast(i)))),
+            switch (i) {
+                -128...127 => return oImmContext(.ThunkReturnObject, context, @bitCast(@as(i8, @intCast(i)))),
                 else => {},
             }
         } else {
             switch (self.which_class()) {
-                .False, .True => |c| return oImmContext(.ThunkReturnImmediate, context, @truncate(oImm(c.compact(),0).rawU())),
+                .False, .True => |c| return oImmContext(.ThunkReturnImmediate, context, @truncate(oImm(c.compact(), 0).rawU())),
                 .UndefinedObject => return oImmContext(.ThunkReturnImmediate, context, 0),
                 else => {},
             }
         }
+        return null;
+    }
+    pub fn returnLocalClosure(_: Object, _: anytype) ?Object {
         return null;
     }
     pub fn immediateClosure(sig: zag.execute.Signature, sp: SP, context: *Context) ?Object {

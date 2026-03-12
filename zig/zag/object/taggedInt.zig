@@ -88,7 +88,7 @@ pub const Object = packed union {
         return @bitCast(self);
     }
 
-    pub inline fn fromTaggedI(i: i64, _:anytype, _: anytype) Object {
+    pub inline fn fromTaggedI(i: i64, _: anytype, _: anytype) Object {
         return @bitCast(i);
     }
 
@@ -236,8 +236,8 @@ pub const Object = packed union {
                 .bool => return if (value) object.Object.True() else object.Object.False(),
                 else => @panic("Unsupported type for compile-time object creation"),
             }
-        return fromAddress(ptr);
-    }
+            return fromAddress(ptr);
+        }
     };
     // Conversion from Zig types
     pub inline fn from(value: anytype, sp: SP, context: *Context) Object {
@@ -306,7 +306,8 @@ pub const Object = packed union {
 
     // Class detection (stub)
     pub inline fn which_class(self: Object) ClassIndex {
-        if (self.isInt()) {@branchHint(.likely);
+        if (self.isInt()) {
+            @branchHint(.likely);
             return .SmallInteger;
         }
         return self.ref.header.classIndex;
@@ -328,6 +329,9 @@ pub const Object = packed union {
         return i;
     }
     pub fn returnObjectClosure(_: Object, _: anytype) ?Object {
+        return null;
+    }
+    pub fn returnLocalClosure(_: Object, _: anytype) ?Object {
         return null;
     }
     pub fn immediateClosure(_: anytype, _: anytype, _: anytype) ?Object {

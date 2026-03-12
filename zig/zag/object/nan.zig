@@ -156,7 +156,8 @@ pub const Object = packed struct(u64) {
     pub fn extraImmediateU(obj: Object) ?u8 {
         if (obj.isImmediateClass(.ThunkReturnLocal) or
             obj.isImmediateClass(.ThunkReturnInstance) or
-            obj.isImmediateClass(.ThunkReturnImmediate)) {
+            obj.isImmediateClass(.ThunkReturnImmediate))
+        {
             return obj.extraU();
         }
         return null;
@@ -253,7 +254,8 @@ pub const Object = packed struct(u64) {
     }
     pub inline fn pointer(self: Object, T: type) ?T {
         switch (self.tag) {
-            .heap => {@branchHint(.likely);
+            .heap => {
+                @branchHint(.likely);
                 return self.highPointer(T);
             },
             .ThunkReturnLocal, .ThunkReturnInstance, .ThunkReturnObject, .ThunkReturnImmediate, .ThunkLocal, .ThunkInstance, .ThunkHeap => return self.highPointer(T),
@@ -290,8 +292,8 @@ pub const Object = packed struct(u64) {
     }
     pub fn returnObjectClosure(self: Object, context: *Context) ?Object {
         if (self.nativeI()) |i| {
-            switch(i) {
-                -4 ... 3 => return oImm(.ThunkReturnObject, @intCast(@intFromPtr(context) | @as(u3, @bitCast(@as(i3, @intCast(i)))))),
+            switch (i) {
+                -4...3 => return oImm(.ThunkReturnObject, @intCast(@intFromPtr(context) | @as(u3, @bitCast(@as(i3, @intCast(i)))))),
                 else => {},
             }
         } else {
@@ -304,21 +306,21 @@ pub const Object = packed struct(u64) {
         }
         return null;
     }
+    pub fn returnLocalClosure(_: Object, _: anytype) ?Object {
+        return null;
+    }
     pub fn immediateClosure(sig: Signature, sp: SP, context: *Context) ?Object {
         const class = sig.getClass();
         _ = sp;
         //FIX: check that the primitive value fits in 3 bits
         return switch (class) {
-            .ThunkReturnObject,
-            .ThunkReturnLocal, .ThunkReturnInstance, .ThunkReturnImmediate,
-            .ThunkReturnCharacter, .ThunkReturnFloat =>
-                oImm(class, @intCast(@intFromPtr(context) | sig.primitive())),
+            .ThunkReturnObject, .ThunkReturnLocal, .ThunkReturnInstance, .ThunkReturnImmediate, .ThunkReturnCharacter, .ThunkReturnFloat => oImm(class, @intCast(@intFromPtr(context) | sig.primitive())),
             else => null,
         };
     }
 
     pub inline fn fromAddress(value: anytype) Object {
-        return .{ .tag = .heap, .data = @as(u48, @intCast(@intFromPtr(value)))};
+        return .{ .tag = .heap, .data = @as(u48, @intCast(@intFromPtr(value))) };
     }
     pub const StaticObject = struct {
         pub fn init(_: *StaticObject, comptime value: anytype) Object {
@@ -331,9 +333,9 @@ pub const Object = packed struct(u64) {
         }
     };
     pub inline fn from(value: anytype, _: anytype, _: anytype) Object {
-    //     return fromWithError(value) catch @panic("unreachable");
-    // }
-    // pub inline fn fromWithError(value: anytype) !Object {
+        //     return fromWithError(value) catch @panic("unreachable");
+        // }
+        // pub inline fn fromWithError(value: anytype) !Object {
         const T = @TypeOf(value);
         if (T == Object) return value;
         switch (@typeInfo(T)) {
@@ -394,21 +396,28 @@ pub const Object = packed struct(u64) {
         return @as(u48, @truncate(@as(usize, @bitCast(self))));
     }
     pub inline fn which_class(self: Object) ClassIndex {
-        if (self.isInt()) {@branchHint(.likely);
+        if (self.isInt()) {
+            @branchHint(.likely);
             return .SmallInteger;
         }
-        if (!std.math.isNan(@as(f64, @bitCast(self)))) {@branchHint(.likely);
+        if (!std.math.isNan(@as(f64, @bitCast(self)))) {
+            @branchHint(.likely);
             return .Float;
         }
         switch (self.tag) {
-            .heap => {@branchHint(.likely);
-                if (self == Nil()) {@branchHint(.unlikely);
+            .heap => {
+                @branchHint(.likely);
+                if (self == Nil()) {
+                    @branchHint(.unlikely);
                     return .UndefinedObject;
                 }
                 return self.toUnchecked(*HeapObject).*.getClass();
             },
             else => |tag| {
-                if (self.rawU() == NaN) {@branchHint(.unlikely); return .Float;}
+                if (self.rawU() == NaN) {
+                    @branchHint(.unlikely);
+                    return .Float;
+                }
                 return tag.class();
             },
         }

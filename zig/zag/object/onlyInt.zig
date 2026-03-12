@@ -141,6 +141,9 @@ pub const Object = packed struct(u64) {
     pub fn returnObjectClosure(_: Object, _: anytype) ?Object {
         return null;
     }
+    pub fn returnLocalClosure(_: Object, _: anytype) ?Object {
+        return null;
+    }
     pub fn immediateClosure(_: anytype, _: anytype, _: anytype) ?Object {
         @panic("Not implemented");
     }
@@ -167,7 +170,7 @@ pub const Object = packed struct(u64) {
     pub const StaticObject = struct {
         pub fn init(_: *StaticObject, comptime value: anytype) object.Object {
             switch (@typeInfo(@TypeOf(value))) {
-                .int, .comptime_int => return @bitCast(@as(i64,value)),
+                .int, .comptime_int => return @bitCast(@as(i64, value)),
                 .bool => return if (value) object.Object.True() else object.Object.False(),
                 else => @panic("Unsupported type for compile-time object creation"),
             }
@@ -177,7 +180,7 @@ pub const Object = packed struct(u64) {
         const T = @TypeOf(value);
         if (T == Object) return value;
         switch (@typeInfo(T)) {
-            .int, .comptime_int => return @bitCast(@as(i64,value)),
+            .int, .comptime_int => return @bitCast(@as(i64, value)),
             .bool => return if (value) Object.True() else Object.False(),
             .null => return Object.Nil(),
             else => return undefined,
