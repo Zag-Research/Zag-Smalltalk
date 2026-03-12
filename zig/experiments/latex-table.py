@@ -1,87 +1,107 @@
 #! /usr/bin/env python
 import re
-
-
-def generate_complex_latex_table(file_content):
-    # Regex patterns
-    encoding_regex = re.compile(r"objectEncoding\s*=\s*\.(\w+)")
-    # Captures the label (IntegerBr/IntegerCL/Float) and the LAST ms value on that line
-    data_regex = re.compile(r"^\s*(Integer\w+|Float)\s+.*?(\d+)ms\s*$", re.MULTILINE)
-
-    blocks = file_content.split("Config:")
-    results = {}
-
-    for block in blocks:
-        if not block.strip():
-            continue
-
-        enc_match = encoding_regex.search(block)
-        if enc_match:
-            enc_name = enc_match.group(1)
-            results[enc_name] = {}
-
-            # Find all relevant data lines in this block
-            for match in data_regex.finditer(block):
-                label, value = match.groups()
-                results[enc_name][label] = int(value)
-
-    # Establish Baselines
-    # .onlyInt baseline applies to IntegerBr and IntegerCL
-    int_baseline = results.get("onlyInt", {}).get("IntegerBr", 0)
-    # .onlyFloat baseline applies to Float
-    float_baseline = results.get("onlyFloat", {}).get("Float", 0)
-
-    # LaTeX Table Generation
-    latex = [
-        r"\begin{tabular}{|l|c|c|c|}",
-        r"\hline",
-        r"\textbf{Encoding} & \textbf{IntegerBr (adj)} & \textbf{IntegerCL (adj)} & \textbf{Float (adj)} \\ \hline",
-    ]
-
-    # Sort encodings for the table rows
-    for enc in sorted(results.keys()):
-        # Skip the baseline rows themselves if you don't want them in the final table,
-        # or leave them in to show they result in 0.
-
-        row_data = results[enc]
-
-        # Helper to get adjusted value
-        def get_adj(label, baseline):
-            val = row_data.get(label)
-            if val is None:
-                return "N/A"
-            return f"{val - baseline}ms"
-
-        br_adj = get_adj("IntegerBr", int_baseline)
-        cl_adj = get_adj("IntegerCL", int_baseline)
-        fl_adj = get_adj("Float", float_baseline)
-
-        clean_name = enc.replace("_", r"\_")
-        latex.append(f"{clean_name} & {br_adj} & {cl_adj} & {fl_adj} \\\\ \\hline")
-
-    latex.append(r"\end{tabular}")
-    return "\n".join(latex)
-
-
 import argparse
+
+ENCODING_RE = re.compile(r"objectEncoding\s*=\s*\.(\w+)")
+DATA_RE = re.compile(
+    r"^\s{0,8}(\w+)\s+(\d+)ms\s+(\d+)ms\s+([\d.]+)ms"
+    r"(?:\s+([\d.]+)%)?\s+([\d.]+)ms\s*$",
+    re.MULTILINE,
+)
+METRICS = ["median", "mean", "stddev", "sdpct", "geomean"]
+METRIC_LABELS = ["Median", "Mean", "StdDev", r"SD\%", "GeoM"]
+BASELINES = {"onlyInt", "onlyFloat"}
+
+
+def parse(file_content):
+    blocks = re.split(r"\nConfig:", "\n" + file_content)
+    results, benchmark_order = {}, []
+    for block in blocks:
+        enc_match = ENCODING_RE.search(block)
+        if not enc_match:
+            continue
+        enc = enc_match.group(1)
+        results[enc] = {}
+        for m in DATA_RE.finditer(block):
+            name = m.group(1)
+            results[enc][name] = {
+                "median": int(m.group(2)),
+                "mean": int(m.group(3)),
+                "stddev": float(m.group(4)),
+                "sdpct": float(m.group(5)) if m.group(5) else None,
+                "geomean": float(m.group(6)),
+            }
+            if name not in benchmark_order:
+                benchmark_order.append(name)
+    return results, benchmark_order
+
+
+def get_base(benchmark, results):
+    if benchmark.startswith("Integer"):
+        return results.get("onlyInt", {}).get(benchmark)
+    if benchmark == "Float":
+        return results.get("onlyFloat", {}).get(benchmark)
+    return None
+
+
+def fmt_cell(metric, val, base):
+    if val is None:
+        return "N/A"
+    if metric in ("median", "mean", "geomean") and base:
+        return f"{int(round(val - base[metric]))}ms"
+    if metric == "stddev":
+        return f"{val:.2f}ms"
+    if metric == "sdpct":
+        return f"{val:.1f}\\%"
+    return f"{int(round(val))}ms"
+
+
+def tabular(row_header, col_headers, rows):
+    col_fmt = "|l|" + "r|" * len(col_headers)
+    header = r"\textbf{" + row_header + "} & " + " & ".join(r"\textbf{" + c + "}" for c in col_headers)
+    lines = [r"\begin{tabular}{" + col_fmt + "}", r"\hline", header + r" \\ \hline"]
+    for label, cells in rows:
+        lines.append(label + " & " + " & ".join(cells) + r" \\ \hline")
+    lines.append(r"\end{tabular}")
+    return "\n".join(lines)
+
+
+def per_encoding_tables(results, benchmark_order):
+    tables = []
+    for enc, benchmarks in results.items():
+        rows = []
+        for bm in benchmark_order:
+            entry = benchmarks.get(bm)
+            base = get_base(bm, results)
+            cells = ["N/A"] * len(METRICS) if entry is None else [fmt_cell(m, entry[m], base) for m in METRICS]
+            rows.append((bm, cells))
+        tables.append(f"\\subsection*{{{enc}}}\n" + tabular("Benchmark", METRIC_LABELS, rows))
+    return "\n\n".join(tables)
+
+
+def median_summary(results, benchmark_order):
+    rows = []
+    for enc, benchmarks in results.items():
+        if enc in BASELINES:
+            continue
+        cells = []
+        for bm in benchmark_order:
+            entry = benchmarks.get(bm)
+            base = get_base(bm, results)
+            cells.append("N/A" if entry is None else fmt_cell("median", entry["median"], base))
+        rows.append((enc, cells))
+    return tabular("Encoding", benchmark_order, rows)
 
 
 def main():
-    parser = argparse.ArgumentParser(
-        description="Parse benchmark logs into LaTeX tables."
-    )
-
-    # Add the argument for the filename
-    parser.add_argument("filename", help="The path to the benchmark log file")
-
+    parser = argparse.ArgumentParser()
+    parser.add_argument("filename")
     args = parser.parse_args()
-
-    # Now you can use args.filename
-    with open(args.filename, "r") as f:
-        content = f.read()
-        # Call your function here
-        result = generate_complex_latex_table(content)
-        print(result)
+    with open(args.filename) as f:
+        results, benchmark_order = parse(f.read())
+    print(per_encoding_tables(results, benchmark_order))
+    print()
+    print(median_summary(results, benchmark_order))
 
 
 if __name__ == "__main__":
