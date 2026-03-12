@@ -654,7 +654,7 @@ pub fn timing(args: []const []const u8, nRuns: usize, fibN: u32, default: bool) 
         }
     }
 }
-pub fn main() !void {
+pub fn main(init: std.process.Init) !void {
     const do_all = [_][]const u8{
         "Config",            "Header",
         "Native",            "NativeF",
@@ -665,19 +665,8 @@ pub fn main() !void {
         "Float",
         //"IntegerCl",
     };
-    // var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-    // const allocator = gpa.allocator();
-    const allocator = std.heap.page_allocator;
-    // defer {
-    //     const deinit_status = gpa.deinit();
-    //     //fail test; can't try in defer as defer is executed after we return
-    //     if (deinit_status == .leak) @panic("TEST FAIL");
-    // }
-    var args_iter = std.process.args();
-    var args_list = std.ArrayList([:0]const u8).init(allocator);
-    defer args_list.deinit();
-    while (args_iter.next()) |arg| try args_list.append(arg);
-    const args = args_list.items;
+    const allocator = init.gpa;
+    const args = try init.minimal.args.toSlice(allocator);
     var start: usize = 1;
     var nRuns: usize = defaultRuns;
     var fibN: u32 = defaultFib;
