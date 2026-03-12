@@ -17,9 +17,12 @@ const HeapObjectConstPtr = heap.HeapObjectConstPtr;
 const Process = zag.Process;
 const SP = Process.SP;
 const Context = zag.Context;
-pub const Object = packed struct(u64) {
+pub const Object = packed struct {
     ref: *const InMemory.PointedObject,
     const Self = @This();
+    comptime {
+        assert(@sizeOf(Self) == @sizeOf(u64));
+    }
     pub const ZERO: Object = @bitCast(@as(u64, 0));
     pub inline fn False() Object {
         if (@inComptime()) {
@@ -107,7 +110,7 @@ pub const Object = packed struct(u64) {
         return self.ref.data.int;
     }
     pub inline fn invalidObject(self: object.Object) ?u64 {
-        const value: u64 = @bitCast(self);
+        const value: u64 = @intFromPtr(self.ref);
         if (value == 0) return value;
         if (value & 7 != 0) return value;
         return null;
@@ -134,7 +137,7 @@ pub const Object = packed struct(u64) {
         return false;
     }
     inline fn memObject(self: Object) ?*HeapObject {
-        const value: u64 = @bitCast(self);
+        const value: u64 = @intFromPtr(self.ref);
         if (value == 0) return null;
         return @constCast(@ptrCast(self.ref));
     }
@@ -186,7 +189,7 @@ pub const Object = packed struct(u64) {
         return self.ref.data.unsigned;
     }
     pub inline fn withPrimitive(self: object.Object, prim: u64) object.Object {
-        return @bitCast(self.rawU() | prim << 40);
+        return .{ .ref = @ptrFromInt(self.rawU() | prim << 40) };
     }
     inline fn toDoubleFromMemory(self: object.Object) f64 {
         return self.to(*InMemory.MemoryFloat).*.value;
@@ -209,7 +212,7 @@ pub const Object = packed struct(u64) {
     }
     pub inline //
     fn fromAddress(value: anytype) Object {
-        return @bitCast(@intFromPtr(value));
+        return .{ .ref = @ptrCast(@alignCast(value)) };
     }
     pub const StaticObject = struct {
         obj: InMemory.PointedObject,
@@ -266,9 +269,9 @@ pub const Object = packed struct(u64) {
                             .@"struct" => {
                                 if (!check or (self.hasMemoryReference() and (!@hasDecl(ptrInfo.child, "ClassIndex") or self.to(HeapObjectConstPtr).classIndex == ptrInfo.child.ClassIndex))) {
                                     if (@hasField(ptrInfo.child, "header") or (@hasDecl(ptrInfo.child, "includesHeader") and ptrInfo.child.includesHeader)) {
-                                        return @as(T, @ptrFromInt(@as(usize, @bitCast(self))));
+                                        return @as(T, @ptrFromInt(@intFromPtr(self.ref)));
                                     } else {
-                                        return @as(T, @ptrFromInt(@sizeOf(HeapHeader) + (@as(usize, @bitCast(self)))));
+                                        return @as(T, @ptrFromInt(@sizeOf(HeapHeader) + @intFromPtr(self.ref)));
                                     }
                                 }
                             },
@@ -308,7 +311,7 @@ pub const Object = packed struct(u64) {
         return true;
     }
     pub inline fn ifHeapObject(self: object.Object) ?*HeapObject {
-        return @ptrFromInt(@as(u64, @bitCast(self)));
+        return @ptrFromInt(@intFromPtr(self.ref));
     }
     pub fn extraImmediateI(_: Object) ?u8 {
         return null;
