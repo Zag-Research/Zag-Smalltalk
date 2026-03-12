@@ -1,8 +1,9 @@
 #! /usr/bin/env python
-import re
 import argparse
+import re
 
 ENCODING_RE = re.compile(r"objectEncoding\s*=\s*\.(\w+)")
+CPU_RE = re.compile(r"cpu\s*=.*\.(\w+)")
 DATA_RE = re.compile(
     r"^\s{0,8}(\w+)\s+(\d+)ms\s+(\d+)ms\s+([\d.]+)ms"
     r"(?:\s+([\d.]+)%)?\s+([\d.]+)ms\s*$",
@@ -14,6 +15,11 @@ BASELINES = {"onlyInt", "onlyFloat"}
 
 
 def parse(file_content):
+    cpu_match = CPU_RE.search(file_content)
+    if cpu_match:
+        arch = cpu_match.group(1)
+    else:
+        arch = "unknown"
     blocks = re.split(r"\nConfig:", "\n" + file_content)
     results, benchmark_order = {}, []
     for block in blocks:
@@ -33,7 +39,7 @@ def parse(file_content):
             }
             if name not in benchmark_order:
                 benchmark_order.append(name)
-    return results, benchmark_order
+    return results, benchmark_order, arch
 
 
 def get_base(benchmark, results):
@@ -58,7 +64,12 @@ def fmt_cell(metric, val, base):
 
 def tabular(row_header, col_headers, rows):
     col_fmt = "|l|" + "r|" * len(col_headers)
-    header = r"\textbf{" + row_header + "} & " + " & ".join(r"\textbf{" + c + "}" for c in col_headers)
+    header = (
+        r"\textbf{"
+        + row_header
+        + "} & "
+        + " & ".join(r"\textbf{" + c + "}" for c in col_headers)
+    )
     lines = [r"\begin{tabular}{" + col_fmt + "}", r"\hline", header + r" \\ \hline"]
     for label, cells in rows:
         lines.append(label + " & " + " & ".join(cells) + r" \\ \hline")
@@ -73,9 +84,15 @@ def per_encoding_tables(results, benchmark_order):
         for bm in benchmark_order:
             entry = benchmarks.get(bm)
             base = get_base(bm, results)
-            cells = ["N/A"] * len(METRICS) if entry is None else [fmt_cell(m, entry[m], base) for m in METRICS]
+            cells = (
+                ["N/A"] * len(METRICS)
+                if entry is None
+                else [fmt_cell(m, entry[m], base) for m in METRICS]
+            )
             rows.append((bm, cells))
-        tables.append(f"\\subsection*{{{enc}}}\n" + tabular("Benchmark", METRIC_LABELS, rows))
+        tables.append(
+            f"\\subsection*{{{enc}}}\n" + tabular("Benchmark", METRIC_LABELS, rows)
+        )
     return "\n\n".join(tables)
 
 
@@ -88,7 +105,9 @@ def median_summary(results, benchmark_order):
         for bm in benchmark_order:
             entry = benchmarks.get(bm)
             base = get_base(bm, results)
-            cells.append("N/A" if entry is None else fmt_cell("median", entry["median"], base))
+            cells.append(
+                "N/A" if entry is None else fmt_cell("median", entry["median"], base)
+            )
         rows.append((enc, cells))
     return tabular("Encoding", benchmark_order, rows)
 
@@ -98,10 +117,13 @@ def main():
     parser.add_argument("filename")
     args = parser.parse_args()
     with open(args.filename) as f:
-        results, benchmark_order = parse(f.read())
+        results, benchmark_order, arch = parse(f.read())
+    print(r"\newcommand{\\" + arch + "Appendix}{")
     print(per_encoding_tables(results, benchmark_order))
-    print()
+    print("}")
+    print(r"\newcommand{\\" + arch + "Summary}{")
     print(median_summary(results, benchmark_order))
+    print("}")
 
 
 if __name__ == "__main__":
