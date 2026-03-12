@@ -153,7 +153,7 @@ test "inMemory int()" {
     const one: PointedObjectRef = @bitCast(one_);
     trace("one: {}", .{one});
     SmallIntegerCache.ensure();
-    for (&SmallIntegerCache.objects, 0..) |*o, i| trace("[{}](0x{x:0>4}): 0x{x:0>16}", .{ i, @intFromPtr(o), @as(u64, @bitCast(o.*)) });
+    for (&SmallIntegerCache.objects, 0..) |*o, i| trace("[{}](0x{x:0>4}): 0x{x:0>16}", .{ i, @intFromPtr(o), @as(u64, @bitCast(o.data)) });
     try ee(.SmallInteger, one.ref.header.classIndex);
     try ee(1, one.ref.data.int);
     try ee(one_, int(1, sp, context));

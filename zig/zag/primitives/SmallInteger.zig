@@ -258,7 +258,9 @@ pub const threadedFns = struct {
     }
     test "countDown" {
         var exe = Execution.initTest("countDown", .{ tf.countDown, tf.pushLiteral, "0One", tf.countDown , tf.pushLiteral, "1Neg", tf.countDown , tf.countDown });
-        try exe.resolve(&[_]Object{Object.fromNativeI(1, null, null), Object.fromNativeI(-5, null, null)});
+        const sp = exe.getSp();
+        const context = exe.getContext();
+        try exe.resolve(&[_]Object{Object.fromNativeI(1, sp, context), Object.fromNativeI(-5, sp, context)});
         if (true) return config.skipForDebugging;
         try exe.runTest(
             &[_]Object{

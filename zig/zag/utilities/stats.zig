@@ -180,7 +180,7 @@ pub fn Stats(comptime Arg: type, comptime K: type, maxRuns: usize, comptime unit
 test "simple int stats" {
     const expectEqual = @import("std").testing.expectEqual;
     const expect = @import("std").testing.expect;
-    var stat = Stats(void, usize, 0, null, .units).init();
+    var stat = Stats(void, usize, 0, .units).init(0, null);
     stat.addData(2);
     stat.addData(4);
     try expectEqual(stat.min(), 2);
@@ -194,7 +194,7 @@ test "simple int stats" {
 }
 test "simple int stats with values" {
     const expectEqual = @import("std").testing.expectEqual;
-    var stat = Stats(void, usize, 10, null, .units).init();
+    var stat = Stats(void, usize, 10, .units).init(10, null);
     stat.addData(2);
     stat.addData(4);
     try expectEqual(stat.min(), 2);
@@ -212,7 +212,7 @@ fn testRunner(run: usize) usize {
 }
 test "simple int stats with runner" {
     const expectEqual = @import("std").testing.expectEqual;
-    var stat = Stats(void, usize, 3, null, .units).init();
+    var stat = Stats(void, usize, 3, .units).init(3, null);
     stat.run(testRunner);
     try expectEqual(stat.min(), 2);
     try expectEqual(stat.max(), 4);
@@ -222,7 +222,7 @@ test "simple int stats with runner" {
 }
 test "larger int stats with runner" {
     const expectEqual = @import("std").testing.expectEqual;
-    var stat = Stats(void, usize, 10, null, .units).init();
+    var stat = Stats(void, usize, 10, .units).init(10, null);
     stat.run(testRunner);
     try expectEqual(stat.min(), 2);
     try expectEqual(stat.max(), 16);
@@ -234,7 +234,7 @@ test "larger int stats with runner" {
 test "simple float stats" {
     const expectEqual = @import("std").testing.expectEqual;
     const expect = @import("std").testing.expect;
-    var stat = Stats(void, f64, 0, null, .units).init();
+    var stat = Stats(void, f64, 0, .units).init(0, null);
     stat.addData(2.0);
     stat.addData(4.0);
     try expectEqual(stat.min(), 2.0);
@@ -252,7 +252,7 @@ fn timeRunner(comptime _: usize, proof: usize) usize {
 }
 test "simple timed stats" {
     const expect = @import("std").testing.expect;
-    var stat = Stats(usize, void, 3, null, .nanoseconds).init();
+    var stat = Stats(usize, void, 3, .nanoseconds).init(3, null);
     stat.time(timeRunner, 0);
     try expect(stat.max() > 0);
     try expect(stat.mean() > 0);

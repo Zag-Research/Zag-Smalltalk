@@ -82,6 +82,9 @@ pub const Object = packed struct(u64) {
     pub inline fn nativeF_noCheck(self: object.Object) f64 {
         return self.toDoubleFromMemory();
     }
+    pub inline fn fromNativeI(i: i64, sp: SP, context: *Context) object.Object {
+        return InMemory.int(i, sp, context);
+    }
     pub inline fn fromNativeF(t: f64, sp: SP, context: *Context) object.Object {
         return from(t, sp, context);
     }
@@ -209,6 +212,7 @@ pub const Object = packed struct(u64) {
     }
     pub inline //
     fn fromAddress(value: anytype) Object {
+        if (@inComptime()) return Object{ .ref = undefined };
         return @bitCast(@intFromPtr(value));
     }
     pub const StaticObject = struct {
