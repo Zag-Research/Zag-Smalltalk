@@ -25,7 +25,7 @@ jobs:
       - name: Install Zig
         uses: mlugg/setup-zig@v2
         with:
-          version: 0.15.1
+          version: master
 
       - name: Build and run fib bench (all encodings)
         run: zig build bench -Doptimize=ReleaseFast --summary all
