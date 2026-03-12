@@ -1,0 +1,185 @@
+bench
++- run exe fib-taggedPtr
+   +- compile exe fib-taggedPtr ReleaseFast native 1 errors
+/home/dmason/git/Zag-Smalltalk/zig/zag/primitives/BlockClosure.zig:242:28: error: no field or member function named 'returnLocalClosure' in 'object.taggedPtr.Object'
+            if (pc.object().returnLocalClosure(context)) |closure| {
+                ~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~
+/home/dmason/git/Zag-Smalltalk/zig/zag/object/taggedPtr.zig:19:27: note: struct declared here
+pub const Object = packed struct(u64) {
+                   ~~~~~~~^~~~~~
+referenced by:
+    enumAndFunctions: /home/dmason/git/Zag-Smalltalk/zig/zag/threadedFn.zig:94:121
+    Enum: /home/dmason/git/Zag-Smalltalk/zig/zag/threadedFn.zig:138:18
+    10 reference(s) hidden; use '-freference-trace=12' to see all references
+error: the following command failed with 1 compilation errors:
+/usr/local/share/zig-aarch64-linux-0.15.1/zig build-exe -fllvm -fno-omit-frame-pointer -OReleaseFast --dep zag -Mroot=/home/dmason/git/Zag-Smalltalk/zig/experiments/fib.zig --dep options -Mzag=/home/dmason/git/Zag-Smalltalk/zig/zag/zag.zig -Moptions=/home/dmason/git/Zag-Smalltalk/zig/.zig-cache/c/654142085fe45773a9121b228aa4907a/options.zig --cache-dir /home/dmason/git/Zag-Smalltalk/zig/.zig-cache --global-cache-dir /home/dmason/.cache/zig --name fib-taggedPtr --zig-lib-dir /usr/local/share/zig-aarch64-linux-0.15.1/lib/ --listen=-
+bench
++- run exe fib-onlyInt
+   +- compile exe fib-onlyInt ReleaseFast native 1 errors
+/home/dmason/git/Zag-Smalltalk/zig/zag/primitives/BlockClosure.zig:242:28: error: no field or member function named 'returnLocalClosure' in 'object.onlyInt.Object'
+            if (pc.object().returnLocalClosure(context)) |closure| {
+                ~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~
+/home/dmason/git/Zag-Smalltalk/zig/zag/object/onlyInt.zig:11:27: note: struct declared here
+pub const Object = packed struct(u64) {
+                   ~~~~~~~^~~~~~
+referenced by:
+    enumAndFunctions: /home/dmason/git/Zag-Smalltalk/zig/zag/threadedFn.zig:94:121
+    Enum: /home/dmason/git/Zag-Smalltalk/zig/zag/threadedFn.zig:138:18
+    10 reference(s) hidden; use '-freference-trace=12' to see all references
+error: the following command failed with 1 compilation errors:
+/usr/local/share/zig-aarch64-linux-0.15.1/zig build-exe -fllvm -fno-omit-frame-pointer -OReleaseFast --dep zag -Mroot=/home/dmason/git/Zag-Smalltalk/zig/experiments/fib.zig --dep options -Mzag=/home/dmason/git/Zag-Smalltalk/zig/zag/zag.zig -Moptions=/home/dmason/git/Zag-Smalltalk/zig/.zig-cache/c/73c62c95b2439e578f165232c0bc3d53/options.zig --cache-dir /home/dmason/git/Zag-Smalltalk/zig/.zig-cache --global-cache-dir /home/dmason/.cache/zig --name fib-onlyInt --zig-lib-dir /usr/local/share/zig-aarch64-linux-0.15.1/lib/ --listen=-
+bench
++- run exe fib-nan
+   +- compile exe fib-nan ReleaseFast native 1 errors
+/home/dmason/git/Zag-Smalltalk/zig/zag/primitives/BlockClosure.zig:242:28: error: no field or member function named 'returnLocalClosure' in 'object.nan.Object'
+            if (pc.object().returnLocalClosure(context)) |closure| {
+                ~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~
+/home/dmason/git/Zag-Smalltalk/zig/zag/object/nan.zig:63:27: note: struct declared here
+pub const Object = packed struct(u64) {
+                   ~~~~~~~^~~~~~
+referenced by:
+    enumAndFunctions: /home/dmason/git/Zag-Smalltalk/zig/zag/threadedFn.zig:94:121
+    Enum: /home/dmason/git/Zag-Smalltalk/zig/zag/threadedFn.zig:138:18
+    10 reference(s) hidden; use '-freference-trace=12' to see all references
+error: the following command failed with 1 compilation errors:
+/usr/local/share/zig-aarch64-linux-0.15.1/zig build-exe -fllvm -fno-omit-frame-pointer -OReleaseFast --dep zag -Mroot=/home/dmason/git/Zag-Smalltalk/zig/experiments/fib.zig --dep options -Mzag=/home/dmason/git/Zag-Smalltalk/zig/zag/zag.zig -Moptions=/home/dmason/git/Zag-Smalltalk/zig/.zig-cache/c/9389efe89472443edb3a480f561bf5d7/options.zig --cache-dir /home/dmason/git/Zag-Smalltalk/zig/.zig-cache --global-cache-dir /home/dmason/.cache/zig --name fib-nan --zig-lib-dir /usr/local/share/zig-aarch64-linux-0.15.1/lib/ --listen=-
+bench
++- run exe fib-cachedPtr
+   +- compile exe fib-cachedPtr ReleaseFast native 1 errors
+/home/dmason/git/Zag-Smalltalk/zig/zag/primitives/BlockClosure.zig:242:28: error: no field or member function named 'returnLocalClosure' in 'object.ptr.Object'
+            if (pc.object().returnLocalClosure(context)) |closure| {
+                ~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~
+/home/dmason/git/Zag-Smalltalk/zig/zag/object/ptr.zig:20:27: note: struct declared here
+pub const Object = packed struct(u64) {
+                   ~~~~~~~^~~~~~
+referenced by:
+    enumAndFunctions: /home/dmason/git/Zag-Smalltalk/zig/zag/threadedFn.zig:94:121
+    Enum: /home/dmason/git/Zag-Smalltalk/zig/zag/threadedFn.zig:138:18
+    10 reference(s) hidden; use '-freference-trace=12' to see all references
+error: the following command failed with 1 compilation errors:
+/usr/local/share/zig-aarch64-linux-0.15.1/zig build-exe -fllvm -fno-omit-frame-pointer -OReleaseFast --dep zag -Mroot=/home/dmason/git/Zag-Smalltalk/zig/experiments/fib.zig --dep options -Mzag=/home/dmason/git/Zag-Smalltalk/zig/zag/zag.zig -Moptions=/home/dmason/git/Zag-Smalltalk/zig/.zig-cache/c/624537ad3e9d1e6f6c8f8467b24771f8/options.zig --cache-dir /home/dmason/git/Zag-Smalltalk/zig/.zig-cache --global-cache-dir /home/dmason/.cache/zig --name fib-cachedPtr --zig-lib-dir /usr/local/share/zig-aarch64-linux-0.15.1/lib/ --listen=-
+bench
++- run exe fib-onlyFloat
+   +- compile exe fib-onlyFloat ReleaseFast native 1 errors
+/home/dmason/git/Zag-Smalltalk/zig/zag/primitives/BlockClosure.zig:242:28: error: no field or member function named 'returnLocalClosure' in 'object.onlyFloat.Object'
+            if (pc.object().returnLocalClosure(context)) |closure| {
+                ~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~
+/home/dmason/git/Zag-Smalltalk/zig/zag/object/onlyFloat.zig:12:27: note: struct declared here
+pub const Object = packed struct(u64) {
+                   ~~~~~~~^~~~~~
+referenced by:
+    enumAndFunctions: /home/dmason/git/Zag-Smalltalk/zig/zag/threadedFn.zig:94:121
+    Enum: /home/dmason/git/Zag-Smalltalk/zig/zag/threadedFn.zig:138:18
+    10 reference(s) hidden; use '-freference-trace=12' to see all references
+error: the following command failed with 1 compilation errors:
+/usr/local/share/zig-aarch64-linux-0.15.1/zig build-exe -fllvm -fno-omit-frame-pointer -OReleaseFast --dep zag -Mroot=/home/dmason/git/Zag-Smalltalk/zig/experiments/fib.zig --dep options -Mzag=/home/dmason/git/Zag-Smalltalk/zig/zag/zag.zig -Moptions=/home/dmason/git/Zag-Smalltalk/zig/.zig-cache/c/63d2fc272d4419c1c95fd0bd331d7142/options.zig --cache-dir /home/dmason/git/Zag-Smalltalk/zig/.zig-cache --global-cache-dir /home/dmason/.cache/zig --name fib-onlyFloat --zig-lib-dir /usr/local/share/zig-aarch64-linux-0.15.1/lib/ --listen=-
+bench
++- run exe fib-spur
+   +- compile exe fib-spur ReleaseFast native 1 errors
+/home/dmason/git/Zag-Smalltalk/zig/zag/primitives/BlockClosure.zig:242:28: error: no field or member function named 'returnLocalClosure' in 'object.spur.Object'
+            if (pc.object().returnLocalClosure(context)) |closure| {
+                ~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~
+/home/dmason/git/Zag-Smalltalk/zig/zag/object/spur.zig:58:27: note: union declared here
+pub const Object = packed union {
+                   ~~~~~~~^~~~~
+referenced by:
+    enumAndFunctions: /home/dmason/git/Zag-Smalltalk/zig/zag/threadedFn.zig:94:121
+    Enum: /home/dmason/git/Zag-Smalltalk/zig/zag/threadedFn.zig:138:18
+    10 reference(s) hidden; use '-freference-trace=12' to see all references
+error: the following command failed with 1 compilation errors:
+/usr/local/share/zig-aarch64-linux-0.15.1/zig build-exe -fllvm -fno-omit-frame-pointer -OReleaseFast --dep zag -Mroot=/home/dmason/git/Zag-Smalltalk/zig/experiments/fib.zig --dep options -Mzag=/home/dmason/git/Zag-Smalltalk/zig/zag/zag.zig -Moptions=/home/dmason/git/Zag-Smalltalk/zig/.zig-cache/c/be662d384b685b28e199b46d08c3b01f/options.zig --cache-dir /home/dmason/git/Zag-Smalltalk/zig/.zig-cache --global-cache-dir /home/dmason/.cache/zig --name fib-spur --zig-lib-dir /usr/local/share/zig-aarch64-linux-0.15.1/lib/ --listen=-
+bench
++- run exe fib-taggedInt
+   +- compile exe fib-taggedInt ReleaseFast native 1 errors
+/home/dmason/git/Zag-Smalltalk/zig/zag/primitives/BlockClosure.zig:242:28: error: no field or member function named 'returnLocalClosure' in 'object.taggedInt.Object'
+            if (pc.object().returnLocalClosure(context)) |closure| {
+                ~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~
+/home/dmason/git/Zag-Smalltalk/zig/zag/object/taggedInt.zig:33:27: note: union declared here
+pub const Object = packed union {
+                   ~~~~~~~^~~~~
+referenced by:
+    enumAndFunctions: /home/dmason/git/Zag-Smalltalk/zig/zag/threadedFn.zig:94:121
+    Enum: /home/dmason/git/Zag-Smalltalk/zig/zag/threadedFn.zig:138:18
+    10 reference(s) hidden; use '-freference-trace=12' to see all references
+error: the following command failed with 1 compilation errors:
+/usr/local/share/zig-aarch64-linux-0.15.1/zig build-exe -fllvm -fno-omit-frame-pointer -OReleaseFast --dep zag -Mroot=/home/dmason/git/Zag-Smalltalk/zig/experiments/fib.zig --dep options -Mzag=/home/dmason/git/Zag-Smalltalk/zig/zag/zag.zig -Moptions=/home/dmason/git/Zag-Smalltalk/zig/.zig-cache/c/d41e4d4cc6ffbee952061925d9d1b396/options.zig --cache-dir /home/dmason/git/Zag-Smalltalk/zig/.zig-cache --global-cache-dir /home/dmason/.cache/zig --name fib-taggedInt --zig-lib-dir /usr/local/share/zig-aarch64-linux-0.15.1/lib/ --listen=-
+bench
++- run exe fib-ptr
+   +- compile exe fib-ptr ReleaseFast native 1 errors
+/home/dmason/git/Zag-Smalltalk/zig/zag/primitives/BlockClosure.zig:242:28: error: no field or member function named 'returnLocalClosure' in 'object.ptr.Object'
+            if (pc.object().returnLocalClosure(context)) |closure| {
+                ~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~
+/home/dmason/git/Zag-Smalltalk/zig/zag/object/ptr.zig:20:27: note: struct declared here
+pub const Object = packed struct(u64) {
+                   ~~~~~~~^~~~~~
+referenced by:
+    enumAndFunctions: /home/dmason/git/Zag-Smalltalk/zig/zag/threadedFn.zig:94:121
+    Enum: /home/dmason/git/Zag-Smalltalk/zig/zag/threadedFn.zig:138:18
+    10 reference(s) hidden; use '-freference-trace=12' to see all references
+error: the following command failed with 1 compilation errors:
+/usr/local/share/zig-aarch64-linux-0.15.1/zig build-exe -fllvm -fno-omit-frame-pointer -OReleaseFast --dep zag -Mroot=/home/dmason/git/Zag-Smalltalk/zig/experiments/fib.zig --dep options -Mzag=/home/dmason/git/Zag-Smalltalk/zig/zag/zag.zig -Moptions=/home/dmason/git/Zag-Smalltalk/zig/.zig-cache/c/e593041f95a6a3064f73f1a65d19f297/options.zig --cache-dir /home/dmason/git/Zag-Smalltalk/zig/.zig-cache --global-cache-dir /home/dmason/.cache/zig --name fib-ptr --zig-lib-dir /usr/local/share/zig-aarch64-linux-0.15.1/lib/ --listen=-
+bench
++- run exe fib-zagSpur
+   +- compile exe fib-zagSpur ReleaseFast native 1 errors
+/home/dmason/git/Zag-Smalltalk/zig/zag/primitives/BlockClosure.zig:242:28: error: no field or member function named 'returnLocalClosure' in 'object.zagSpur.Object'
+            if (pc.object().returnLocalClosure(context)) |closure| {
+                ~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~
+/home/dmason/git/Zag-Smalltalk/zig/zag/object/zagSpur.zig:58:27: note: union declared here
+pub const Object = packed union {
+                   ~~~~~~~^~~~~
+referenced by:
+    enumAndFunctions: /home/dmason/git/Zag-Smalltalk/zig/zag/threadedFn.zig:94:121
+    Enum: /home/dmason/git/Zag-Smalltalk/zig/zag/threadedFn.zig:138:18
+    10 reference(s) hidden; use '-freference-trace=12' to see all references
+error: the following command failed with 1 compilation errors:
+/usr/local/share/zig-aarch64-linux-0.15.1/zig build-exe -fllvm -fno-omit-frame-pointer -OReleaseFast --dep zag -Mroot=/home/dmason/git/Zag-Smalltalk/zig/experiments/fib.zig --dep options -Mzag=/home/dmason/git/Zag-Smalltalk/zig/zag/zag.zig -Moptions=/home/dmason/git/Zag-Smalltalk/zig/.zig-cache/c/7b049beb320694d43dbed4ba7d7e3c4a/options.zig --cache-dir /home/dmason/git/Zag-Smalltalk/zig/.zig-cache --global-cache-dir /home/dmason/.cache/zig --name fib-zagSpur --zig-lib-dir /usr/local/share/zig-aarch64-linux-0.15.1/lib/ --listen=-
+
+Config:
+  compile_date   = 2026-03-12T07:46:50-0400
+  git_version    = 2026-03-12T07:13:57-04:00-b29b6391
+  cpu            = apple_m1 (.aarch64)
+  objectEncoding = .zag
+  max_classes    = 255
+  stack/nursery  = 8191w/61431w (8192w)
+for '36 fibonacci'
+          Median   Mean   StdDev  SD/Mean GeomMean(10 runs, 3 warmups)
+   Native   28ms    28ms   0.30ms   1.1%    28ms
+  NativeF   44ms    44ms   0.00ms   0.0%    44ms
+IntegerBr  427ms   427ms   0.30ms   0.1%   427ms
+    Float  444ms   444ms   0.00ms   0.0%   444ms
+
+Build Summary: 12/31 steps succeeded; 9 failed
+bench transitive failure
++- run exe fib-nan transitive failure
+|  +- compile exe fib-nan ReleaseFast native 1 errors
+|     +- options success
++- run exe fib-zag success 12s MaxRSS:2M
+|  +- compile exe fib-zag ReleaseFast native success 7s MaxRSS:273M
+|     +- options success
++- run exe fib-zagSpur transitive failure
+|  +- compile exe fib-zagSpur ReleaseFast native 1 errors
+|     +- options success
++- run exe fib-spur transitive failure
+|  +- compile exe fib-spur ReleaseFast native 1 errors
+|     +- options success
++- run exe fib-taggedInt transitive failure
+|  +- compile exe fib-taggedInt ReleaseFast native 1 errors
+|     +- options success
++- run exe fib-taggedPtr transitive failure
+|  +- compile exe fib-taggedPtr ReleaseFast native 1 errors
+|     +- options success
++- run exe fib-cachedPtr transitive failure
+|  +- compile exe fib-cachedPtr ReleaseFast native 1 errors
+|     +- options success
++- run exe fib-ptr transitive failure
+|  +- compile exe fib-ptr ReleaseFast native 1 errors
+|     +- options success
++- run exe fib-onlyInt transitive failure
+|  +- compile exe fib-onlyInt ReleaseFast native 1 errors
+|     +- options success
++- run exe fib-onlyFloat transitive failure
+   +- compile exe fib-onlyFloat ReleaseFast native 1 errors
+      +- options success
+
+error: the following build command failed with exit code 1:
+/home/dmason/git/Zag-Smalltalk/zig/.zig-cache/o/59c0cd159852ff89d860fee3520e2347/build /usr/local/share/zig-aarch64-linux-0.15.1/zig /usr/local/share/zig-aarch64-linux-0.15.1/lib /home/dmason/git/Zag-Smalltalk/zig /home/dmason/git/Zag-Smalltalk/zig/.zig-cache /home/dmason/.cache/zig --seed 0xfad47e80 -Z507b5b9a5d833601 bench -Doptimize=ReleaseFast --summary all
