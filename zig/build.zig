@@ -3,7 +3,6 @@ const Encoding = @import("zag/object/encoding.zig").Encoding;
 
 pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
-    const releaseFast = b.standardOptimizeOption(.{ .preferred_optimize_mode = .ReleaseFast });
     const optimize = b.standardOptimizeOption(.{});
 
     // Build options
@@ -13,7 +12,7 @@ pub fn build(b: *std.Build) void {
     const llvm_module = buildLLVMModule(b, target, optimize);
 
     // Main zag module
-    const zag = createZagModule(b, target, build_options, llvm_module);
+    const zag = createZagModule(b, target, optimize, build_options, llvm_module);
 
     // Main executable
     createMainExecutable(b, target, optimize, zag, build_options, llvm_module);
@@ -23,7 +22,7 @@ pub fn build(b: *std.Build) void {
 
     // Test and benchmark steps
     createTestStep(b, target, optimize, build_options, llvm_module);
-    createBenchStep(b, target, releaseFast, build_options, llvm_module);
+    createBenchStep(b, target, .ReleaseFast, build_options, llvm_module);
     createDocsStep(b, target, optimize, build_options, llvm_module);
 }
 
@@ -62,6 +61,7 @@ fn addCommonOptions(options: *std.Build.Step.Options, build_options: BuildOption
 fn createZagModule(
     b: *std.Build,
     target: std.Build.ResolvedTarget,
+    optimize: std.builtin.OptimizeMode,
     build_options: BuildOptions,
     llvm_module: *std.Build.Module,
 ) *std.Build.Module {
@@ -72,6 +72,7 @@ fn createZagModule(
     const zag = b.createModule(.{
         .root_source_file = b.path("zag/zag.zig"),
         .target = target,
+        .optimize = optimize,
     });
     zag.addOptions("options", options);
 
@@ -334,6 +335,7 @@ fn createBenchStep(
         const enc_zag = b.createModule(.{
             .root_source_file = b.path("zag/zag.zig"),
             .target = target,
+            .optimize = optimize,
         });
         enc_zag.addOptions("options", enc_options);
         if (build_options.include_llvm) {
