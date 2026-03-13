@@ -308,11 +308,6 @@ fn createBenchStep(
     build_options: BuildOptions,
     llvm_module: *std.Build.Module,
 ) void {
-    const is_x86_target = switch (target.result.cpu.arch) {
-        .x86, .x86_64 => true,
-        else => false,
-    };
-
     const bench_encodings: []const Encoding =
         if (build_options.encoding_option) |specific_encoding|
             &[_]Encoding{specific_encoding}
@@ -365,7 +360,7 @@ fn createBenchStep(
         });
         bench_step.dependOn(&install.step);
 
-        if (!is_x86_target) {
+        if (enc != .ptr or enc != .cachedPtr) { 
             const run_bench = b.addRunArtifact(bench_exe);
             bench_step.dependOn(&run_bench.step);
         }
