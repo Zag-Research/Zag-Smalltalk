@@ -354,6 +354,7 @@ fn createBenchStep(
                 .omit_frame_pointer = build_options.omit_frame_pointer,
             }),
             .use_llvm = true,
+            .linkage = if (target.result.os.tag == .linux) .static else null,
         });
 
         const arch_name = @tagName(target.result.cpu.arch);
