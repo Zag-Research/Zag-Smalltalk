@@ -359,9 +359,13 @@ fn createBenchStep(
             .use_llvm = true,
         });
 
-        if (is_x86_target) {
-            b.installArtifact(bench_exe);
-        } else {
+        const arch_name = @tagName(target.result.cpu.arch);
+        const install = b.addInstallArtifact(bench_exe, .{
+            .dest_dir = .{ .override = .{ .custom = arch_name } },
+        });
+        bench_step.dependOn(&install.step);
+
+        if (!is_x86_target) {
             const run_bench = b.addRunArtifact(bench_exe);
             bench_step.dependOn(&run_bench.step);
         }
