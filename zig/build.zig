@@ -362,10 +362,8 @@ fn createBenchStep(
         });
         bench_step.dependOn(&install.step);
 
-        if (enc != .ptr and enc != .cachedPtr) { 
-            const run_bench = b.addRunArtifact(bench_exe);
-            bench_step.dependOn(&run_bench.step);
-        }
+        const run_bench = b.addRunArtifact(bench_exe);
+        bench_step.dependOn(&run_bench.step);
     }
 }
 
