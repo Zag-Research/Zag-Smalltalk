@@ -3,6 +3,7 @@ const Encoding = @import("zag/object/encoding.zig").Encoding;
 
 pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
+    const releaseFast = b.standardOptimizeOption(.{ .preferred_optimize_mode = .ReleaseFast });
     const optimize = b.standardOptimizeOption(.{});
 
     // Build options
@@ -22,7 +23,7 @@ pub fn build(b: *std.Build) void {
 
     // Test and benchmark steps
     createTestStep(b, target, optimize, build_options, llvm_module);
-    createBenchStep(b, target, optimize, build_options, llvm_module);
+    createBenchStep(b, target, releaseFast, build_options, llvm_module);
     createDocsStep(b, target, optimize, build_options, llvm_module);
 }
 
@@ -332,10 +333,6 @@ fn createBenchStep(
     const bench_step = b.step("bench", "Run fib bench for all encoding types");
 
     for (bench_encodings) |enc| {
-        if (is_x86_target and (enc == .ptr or enc == .cachedPtr)) {
-            continue;
-        }
-
         const enc_options = b.addOptions();
         addCommonOptions(enc_options, build_options, enc);
 
@@ -362,8 +359,12 @@ fn createBenchStep(
             .use_llvm = true,
         });
 
-        const run_bench = b.addRunArtifact(bench_exe);
-        bench_step.dependOn(&run_bench.step);
+        if (is_x86_target) {
+            b.installArtifact(bench_exe);
+        } else {
+            const run_bench = b.addRunArtifact(bench_exe);
+            bench_step.dependOn(&run_bench.step);
+        }
     }
 }
 
