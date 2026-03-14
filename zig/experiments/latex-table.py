@@ -3,7 +3,7 @@ import argparse
 import re
 
 ENCODING_RE = re.compile(r"objectEncoding\s*=\s*\.(\w+)")
-CPU_RE = re.compile(r"cpu\s*=.*\.(\w+)")
+CPU_RE = re.compile(r"cpu\s*=.*\.([a-z]+)")
 DATA_RE = re.compile(
     r"^\s{0,8}(\w+)\s+(\d+)ms\s+(\d+)ms\s+([\d.]+)ms"
     r"(?:\s+([\d.]+)%)?\s+([\d.]+)ms\s*$",
@@ -11,7 +11,7 @@ DATA_RE = re.compile(
 )
 METRICS = ["median", "mean", "stddev", "sdpct", "geomean"]
 METRIC_LABELS = ["Median", "Mean", "StdDev", r"SD\%", "GeoM"]
-BASELINES = {"onlyInt", "onlyFloat"}
+NATIVES = {"Native", "NativeF"}
 
 
 def parse(file_content):
@@ -100,20 +100,68 @@ def per_encoding_tables(results, benchmark_order):
     return "\n\n".join(tables)
 
 
+summary_order = [
+    "nan",
+    "max",
+    "maxSpur",
+    "spur",
+    "taggedInt",
+    "cachedPtr",
+    "taggedPtr",
+    "ptr",
+]
+
+
 def median_summary(results, benchmark_order):
+    total = "Native" in benchmark_order
     rows = []
-    for enc, benchmarks in results.items():
-        if enc in BASELINES:
-            continue
+    for enc in results.keys() if total else summary_order:
+        benchmarks = results[enc]
         cells = []
         for bm in benchmark_order:
             entry = benchmarks.get(bm)
             base = get_base(bm, results)
             cells.append(
-                "N/A" if entry is None else fmt_cell("median", entry["median"], base)
+                "N/A"
+                if entry is None
+                else fmt_cell("median", entry["median"], None if total else base)
             )
         rows.append((enc, cells))
     return tabular("Encoding", benchmark_order, rows)
+
+
+colours = [
+    "cyan!50",
+    "teal!70",
+    "green!60!black",
+    "orange!60",
+    "red!40",
+    "blue!80!black",
+    "olive!70",
+    "red!60",
+]
+
+
+def median_graph(results, benchmark_order):
+    result = "\\benchmarkBarChart{}{%"
+    for enc, colour in zip(summary_order, colours):
+        str = ", postaction={pattern=north east lines}" if False else ""
+        result = (
+            result
+            + f"\n\\addplot[fill={colour}, draw=black, line width=0.3pt] coordinates "
+            + "{"
+        )
+        benchmarks = results[enc]
+        for bm in benchmark_order:
+            entry = benchmarks.get(bm)
+            base = get_base(bm, results)
+            if entry:
+                result = (
+                    result + f"({bm},{(int(round(entry['median'] - base['median'])))})"
+                )
+        result = result + "};"
+    result = result + "}"
+    return result
 
 
 def main():
@@ -122,11 +170,18 @@ def main():
     args = parser.parse_args()
     with open(args.filename) as f:
         results, benchmark_order, arch = parse(f.read())
-    print(r"\newcommand{\\" + arch + "Appendix}{")
+    print("\\newcommand{\\" + arch + "Appendix}{")
     print(per_encoding_tables(results, benchmark_order))
     print("}")
-    print(r"\newcommand{\\" + arch + "Summary}{")
+    print("\\newcommand{\\" + arch + "Total}{")
     print(median_summary(results, benchmark_order))
+    print("}")
+    benchmark_summary = [item for item in benchmark_order if item not in NATIVES]
+    print("\\newcommand{\\" + arch + "Summary}{")
+    print(median_summary(results, benchmark_summary))
+    print("}")
+    print("\\newcommand{\\" + arch + "BarChart}{")
+    print(median_graph(results, benchmark_summary))
     print("}")
 
 
