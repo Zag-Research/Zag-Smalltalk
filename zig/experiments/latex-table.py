@@ -12,6 +12,7 @@ DATA_RE = re.compile(
 METRICS = ["median", "mean", "stddev", "sdpct", "geomean"]
 METRIC_LABELS = ["Median", "Mean", "StdDev", r"SD\%", "GeoM"]
 BASELINES = {"onlyInt", "onlyFloat"}
+NATIVE_BENCHMARKS = {"Native", "NativeF"}
 
 
 def parse(file_content):
@@ -102,18 +103,20 @@ def per_encoding_tables(results, benchmark_order):
 
 def median_summary(results, benchmark_order):
     rows = []
+    summary_benchmarks = [bm for bm in benchmark_order if bm not in NATIVE_BENCHMARKS]
     for enc, benchmarks in results.items():
         if enc in BASELINES:
             continue
         cells = []
-        for bm in benchmark_order:
+        for bm in summary_benchmarks:
             entry = benchmarks.get(bm)
             base = get_base(bm, results)
             cells.append(
                 "N/A" if entry is None else fmt_cell("median", entry["median"], base)
             )
+
         rows.append((enc, cells))
-    return tabular("Encoding", benchmark_order, rows)
+    return tabular("Encoding", summary_benchmarks, rows)
 
 
 def main():
