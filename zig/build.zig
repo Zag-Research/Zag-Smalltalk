@@ -320,6 +320,7 @@ fn createBenchStep(
                 .spur,
                 .taggedInt,
                 .taggedPtr,
+                .taggedHigh,
                 .cachedPtr,
                 .ptr,
                 .onlyInt,
