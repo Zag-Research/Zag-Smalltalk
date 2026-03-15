@@ -104,13 +104,7 @@ pub const Object = packed struct(u64) {
         return Object{ .intOrAddress = @bitCast(i), .class = .SmallInteger };
     }
     pub inline fn fromNativeF(t: f64, sp: SP, context: *Context) object.Object {
-        if (!math.isNan(t)) {
-            const f: f32 = @floatCast(t);
-            if (@as(f64, f) == t) {
-                const bits: u32 = @bitCast(f);
-                return Object{ .class = .Float, .intOrAddress = (@as(u48, bits) << 1) | 1 };
-            }
-        }
+        if (encodeF32(t)) |encoded| return encoded;
         return InMemory.float(t, sp, context);
     }
 
@@ -182,11 +176,7 @@ pub const Object = packed struct(u64) {
             switch (@typeInfo(@TypeOf(value))) {
                 .int, .comptime_int => return fromNativeI(@intCast(value), {}, {}),
                 .comptime_float => {
-                    const f: f32 = value;
-                    if (@as(f64, f) == @as(f64, value)) {
-                        const bits: u32 = @bitCast(f);
-                        return @bitCast(Object{ .class = .Float, .intOrAddress = (@as(u48, bits) << 1) | 1 });
-                    }
+                    if (encodeF32(value)) |encoded| return encoded;
                     return fromAddress(ptr.set(.Float, value));
                 },
                 .bool => return if (value) object.Object.True() else object.Object.False(),
@@ -285,15 +275,27 @@ pub const Object = packed struct(u64) {
     pub inline fn toBoolNoCheck(self: object.Object) bool {
         return self.rawU() == object.Object.True().rawU();
     }
-    pub inline fn toDoubleNoCheck(self: object.Object) f64 {
-        return self.nativeF_noCheck();
-    }
+    pub const toDoubleNoCheck = nativeF_noCheck;
     inline fn toImmediateDouble(self: object.Object) f64 {
-        const bits: u32 = @truncate(self.intOrAddress >> 1);
-        return @as(f32, @bitCast(bits));
+        return decodeF32(self.intOrAddress);
     }
     inline fn toDoubleFromMemory(self: object.Object) f64 {
         return self.toUnchecked(*InMemory.MemoryFloat).*.value;
+    }
+
+    inline fn encodeF32(t: f64) ?Object {
+        if (!math.isNan(t)) {
+            const f: f32 = @floatCast(t);
+            if (@as(f64, f) == t) {
+                const bits: u32 = @bitCast(f);
+                return Object{ .class = .Float, .intOrAddress = (@as(u48, bits) << 1) | 1 };
+            }
+        }
+        return null;
+    }
+    inline fn decodeF32(encoded: u48) f64 {
+        const bits: u32 = @truncate(encoded >> 1);
+        return @as(f32, @bitCast(bits));
     }
     pub inline fn makeImmediate(cls: ClassIndex.Compact, hash: u56) object.Object {
         return Object{ .class = cls.classIndex(), .intOrAddress = @truncate(hash) };
