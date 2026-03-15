@@ -94,10 +94,10 @@ pub const Object = packed struct(u64) {
         return null;
     }
     pub inline fn isFloat(self: object.Object) bool {
-        return self.class == .Float;
+        return self.class == .Float or self.class == .ImmediateFloat;
     }
     pub inline fn nativeF_noCheck(self: object.Object) f64 {
-        if (self.isImmediateDouble()) return self.toImmediateDouble();
+        if (self.class == .ImmediateFloat) return decodeF32(self.intOrAddress);
         return self.toDoubleFromMemory();
     }
     pub inline fn fromNativeI(i: i48, _: anytype, _: anytype) Object {
@@ -243,13 +243,13 @@ pub const Object = packed struct(u64) {
     }
 
     pub inline fn which_class(self: object.Object) ClassIndex {
+        if (self.class == .ImmediateFloat) return .Float;
         return self.class;
     }
 
     pub inline fn isHeapObject(self: object.Object) bool {
         return switch (self.class) {
-            .SmallInteger, .True, .False, .UndefinedObject, .Symbol => false,
-            .Float => (self.intOrAddress & 1) == 0 and self.intOrAddress != 0,
+            .SmallInteger, .True, .False, .UndefinedObject, .Symbol, .ImmediateFloat => false,
             else => self.intOrAddress != 0,
         };
     }
@@ -264,10 +264,10 @@ pub const Object = packed struct(u64) {
         return self.class == class.classIndex();
     }
     pub inline fn isImmediateDouble(self: object.Object) bool {
-        return self.class == .Float and (self.intOrAddress & 1) != 0;
+        return self.class == .ImmediateFloat;
     }
     pub inline fn isMemoryDouble(self: object.Object) bool {
-        return self.class == .Float and (self.intOrAddress & 1) == 0 and self.intOrAddress != 0;
+        return self.class == .Float and self.intOrAddress != 0;
     }
     pub inline fn isSymbol(self: object.Object) bool {
         return self.class == .Symbol;
@@ -276,9 +276,6 @@ pub const Object = packed struct(u64) {
         return self.rawU() == object.Object.True().rawU();
     }
     pub const toDoubleNoCheck = nativeF_noCheck;
-    inline fn toImmediateDouble(self: object.Object) f64 {
-        return decodeF32(self.intOrAddress);
-    }
     inline fn toDoubleFromMemory(self: object.Object) f64 {
         return self.toUnchecked(*InMemory.MemoryFloat).*.value;
     }
@@ -287,15 +284,13 @@ pub const Object = packed struct(u64) {
         if (!math.isNan(t)) {
             const f: f32 = @floatCast(t);
             if (@as(f64, f) == t) {
-                const bits: u32 = @bitCast(f);
-                return Object{ .class = .Float, .intOrAddress = (@as(u48, bits) << 1) | 1 };
+                return Object{ .class = .ImmediateFloat, .intOrAddress = @as(u48, @as(u32, @bitCast(f))) };
             }
         }
         return null;
     }
     inline fn decodeF32(encoded: u48) f64 {
-        const bits: u32 = @truncate(encoded >> 1);
-        return @as(f32, @bitCast(bits));
+        return @as(f32, @bitCast(@as(u32, @truncate(encoded))));
     }
     pub inline fn makeImmediate(cls: ClassIndex.Compact, hash: u56) object.Object {
         return Object{ .class = cls.classIndex(), .intOrAddress = @truncate(hash) };
