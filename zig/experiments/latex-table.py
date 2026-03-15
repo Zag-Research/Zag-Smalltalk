@@ -91,7 +91,7 @@ def per_encoding_tables(results, benchmark_order):
             cells = (
                 ["N/A"] * len(METRICS)
                 if entry is None
-                else [fmt_cell(m, entry[m], base) for m in METRICS]
+                else [fmt_cell(m, entry[m], None) for m in METRICS]
             )
             rows.append((bm, cells))
         tables.append(
