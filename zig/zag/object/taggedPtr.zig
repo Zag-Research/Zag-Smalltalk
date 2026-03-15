@@ -98,19 +98,27 @@ pub const Object = packed struct(u64) {
         return @as(i48, @bitCast(self.intOrAddress));
     }
     pub inline fn nativeF(self: object.Object) ?f64 {
-        if (self.isMemoryDouble()) return self.toDoubleFromMemory();
+        if (self.isFloat()) return self.nativeF_noCheck();
         return null;
     }
     pub inline fn isFloat(self: object.Object) bool {
         return self.class == .Float;
     }
     pub inline fn nativeF_noCheck(self: object.Object) f64 {
+        if (self.isImmediateDouble()) return self.toImmediateDouble();
         return self.toDoubleFromMemory();
     }
     pub inline fn fromNativeI(i: i48, _: anytype, _: anytype) Object {
         return Object{ .intOrAddress = @bitCast(i), .class = .SmallInteger };
     }
     pub inline fn fromNativeF(t: f64, sp: SP, context: *Context) object.Object {
+        if (!math.isNan(t)) {
+            const f: f32 = @floatCast(t);
+            if (@as(f64, f) == t) {
+                const bits: u32 = @bitCast(f);
+                return Object{ .class = .Float, .intOrAddress = (@as(u48, bits) << 1) | 1 };
+            }
+        }
         return InMemory.float(t, sp, context);
     }
 
@@ -181,7 +189,14 @@ pub const Object = packed struct(u64) {
             const ptr: *InMemory.PointedObject = @ptrCast(self);
             switch (@typeInfo(@TypeOf(value))) {
                 .int, .comptime_int => return fromNativeI(@intCast(value), {}, {}),
-                .comptime_float => return fromAddress(ptr.set(.Float, value)),
+                .comptime_float => {
+                    const f: f32 = value;
+                    if (@as(f64, f) == @as(f64, value)) {
+                        const bits: u32 = @bitCast(f);
+                        return @bitCast(Object{ .class = .Float, .intOrAddress = (@as(u48, bits) << 1) | 1 });
+                    }
+                    return fromAddress(ptr.set(.Float, value));
+                },
                 .bool => return if (value) object.Object.True() else object.Object.False(),
                 else => @panic("Unsupported type for compile-time object creation"),
             }
@@ -210,7 +225,7 @@ pub const Object = packed struct(u64) {
     pub fn toWithCheck(self: object.Object, comptime T: type, comptime check: bool) T {
         switch (T) {
             f64 => {
-                if (!check or self.isMemoryDouble()) return self.toDoubleFromMemory();
+                if (!check or self.isFloat()) return self.nativeF_noCheck();
             },
             i64 => {
                 if (!check or self.isInt()) return self.nativeI_noCheck();
@@ -252,6 +267,7 @@ pub const Object = packed struct(u64) {
     pub inline fn isHeapObject(self: object.Object) bool {
         return switch (self.class) {
             .SmallInteger, .True, .False, .UndefinedObject, .Symbol => false,
+            .Float => (self.intOrAddress & 1) == 0 and self.intOrAddress != 0,
             else => self.intOrAddress != 0,
         };
     }
@@ -265,11 +281,11 @@ pub const Object = packed struct(u64) {
     pub inline fn isImmediateClass(self: object.Object, comptime class: ClassIndex.Compact) bool {
         return self.class == class.classIndex();
     }
-    pub inline fn isImmediateDouble(_: object.Object) bool {
-        return false;
+    pub inline fn isImmediateDouble(self: object.Object) bool {
+        return self.class == .Float and (self.intOrAddress & 1) != 0;
     }
     pub inline fn isMemoryDouble(self: object.Object) bool {
-        return self.isFloat();
+        return self.class == .Float and (self.intOrAddress & 1) == 0 and self.intOrAddress != 0;
     }
     pub inline fn isSymbol(self: object.Object) bool {
         return self.class == .Symbol;
@@ -278,7 +294,11 @@ pub const Object = packed struct(u64) {
         return self.rawU() == object.Object.True().rawU();
     }
     pub inline fn toDoubleNoCheck(self: object.Object) f64 {
-        return self.toDoubleFromMemory();
+        return self.nativeF_noCheck();
+    }
+    inline fn toImmediateDouble(self: object.Object) f64 {
+        const bits: u32 = @truncate(self.intOrAddress >> 1);
+        return @as(f32, @bitCast(bits));
     }
     inline fn toDoubleFromMemory(self: object.Object) f64 {
         return self.toUnchecked(*InMemory.MemoryFloat).*.value;
