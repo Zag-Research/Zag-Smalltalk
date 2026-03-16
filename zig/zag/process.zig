@@ -36,11 +36,11 @@ const Result = execute.Result;
 
 /// this is really a Process object with the low bits encoding additional information
 const Self = @This();
-const process_total_size = 1024*1024;//config.process_total_size;
+const process_total_size = config.process_total_size;
 m: [process_total_size]u8 align(1), // alignment explicitly stated to emphasize the difference from Process
 pub const alignment = @max(stack_mask_overflow * 2, flagMask + 1);
 const alignment_mask = @as(u64, @bitCast(-@as(i64, alignment)));
-const stack_mask_overflow: usize = zag.utilities.largerPowerOf2(@min(Process.stack_size * @sizeOf(Object), Context.stack_limit));
+const stack_mask_overflow: usize = zag.utilities.largerPowerOf2(Process.stack_size * @sizeOf(Object));
 pub const stack_mask = stack_mask_overflow - @sizeOf(Object);
 pub const stack_mask_shift = @ctz(stack_mask_overflow);
 pub const process_stack_size = Process.stack_size;
