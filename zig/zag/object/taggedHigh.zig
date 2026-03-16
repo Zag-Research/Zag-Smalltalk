@@ -14,6 +14,8 @@ const HeapObject = zag.heap.HeapObject;
 const HeapObjectConstPtr = zag.heap.HeapObjectConstPtr;
 const InMemory = zag.InMemory;
 
+const immFloatMask: u48 = 1;
+
 pub const Object = packed struct(u64) {
     intOrAddress: u48,
     class: ClassIndex,
@@ -94,10 +96,10 @@ pub const Object = packed struct(u64) {
         return null;
     }
     pub inline fn isFloat(self: object.Object) bool {
-        return self.class == .Float or self.class == .ImmediateFloat;
+        return self.isImmediateDouble() or self.isMemoryDouble();
     }
     pub inline fn nativeF_noCheck(self: object.Object) f64 {
-        if (self.class == .ImmediateFloat) return decodeF32(self.intOrAddress);
+        if (self.isImmediateDouble()) return decodeF32(self.intOrAddress);
         return self.toDoubleFromMemory();
     }
     pub inline fn fromNativeI(i: i48, _: anytype, _: anytype) Object {
@@ -243,13 +245,13 @@ pub const Object = packed struct(u64) {
     }
 
     pub inline fn which_class(self: object.Object) ClassIndex {
-        if (self.class == .ImmediateFloat) return .Float;
         return self.class;
     }
 
     pub inline fn isHeapObject(self: object.Object) bool {
         return switch (self.class) {
-            .SmallInteger, .True, .False, .UndefinedObject, .Symbol, .ImmediateFloat => false,
+            .SmallInteger, .True, .False, .UndefinedObject, .Symbol => false,
+            .Float => !self.isImmediateDouble() and self.intOrAddress != 0,
             else => self.intOrAddress != 0,
         };
     }
@@ -264,10 +266,10 @@ pub const Object = packed struct(u64) {
         return self.class == class.classIndex();
     }
     pub inline fn isImmediateDouble(self: object.Object) bool {
-        return self.class == .ImmediateFloat;
+        return self.class == .Float and (self.intOrAddress & immFloatMask) != 0;
     }
     pub inline fn isMemoryDouble(self: object.Object) bool {
-        return self.class == .Float and self.intOrAddress != 0;
+        return self.class == .Float and !self.isImmediateDouble() and self.intOrAddress != 0;
     }
     pub inline fn isSymbol(self: object.Object) bool {
         return self.class == .Symbol;
@@ -284,13 +286,15 @@ pub const Object = packed struct(u64) {
         if (!math.isNan(t)) {
             const f: f32 = @floatCast(t);
             if (@as(f64, f) == t) {
-                return Object{ .class = .ImmediateFloat, .intOrAddress = @as(u48, @as(u32, @bitCast(f))) };
+                const payload: u48 = (@as(u48, @as(u32, @bitCast(f))) << 1) | immFloatMask;
+                return Object{ .class = .Float, .intOrAddress = payload };
             }
         }
         return null;
     }
     inline fn decodeF32(encoded: u48) f64 {
-        return @as(f32, @bitCast(@as(u32, @truncate(encoded))));
+        const bits: u32 = @truncate(encoded >> 1);
+        return @as(f32, @bitCast(bits));
     }
     pub inline fn makeImmediate(cls: ClassIndex.Compact, hash: u56) object.Object {
         return Object{ .class = cls.classIndex(), .intOrAddress = @truncate(hash) };
