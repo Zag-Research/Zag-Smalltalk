@@ -299,7 +299,7 @@ pub const Object = packed struct(u64) {
         return null;
     }
     pub fn returnLocalClosure(self: Object, context: *Context) ?Object {
-        if (self.nativeU()) |i| {
+        if (self.nativeI()) |i| {
             switch (i) {
                 0...255 => return oImmContext(.ThunkReturnLocal, context, @bitCast(@as(i8, @intCast(i)))),
                 else => {},
