@@ -63,9 +63,9 @@ jobs:
         run: |
           out="bench/bench-results.txt"
           : > "$out"
-          for bin in bench/fib-*; do
+          find bench -name 'fib-*' -type f -print0 | while IFS= read -r -d '' bin; do
             chmod +x "$bin"
-            "$bin" | tee -a "$out" || true
+            "$bin" 2>&1 | tee -a "$out" || true
           done
 
       - name: Generate LaTeX table
@@ -93,9 +93,9 @@ jobs:
         run: |
           out="bench/bench-results.txt"
           : > "$out"
-          for bin in bench/fib-*; do
+          find bench -name 'fib-*' -type f -print0 | while IFS= read -r -d '' bin; do
             chmod +x "$bin"
-            "$bin" | tee -a "$out" || true
+            "$bin" 2>&1 | tee -a "$out" || true
           done
 
       - name: Generate LaTeX table
