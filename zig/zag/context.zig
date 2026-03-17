@@ -109,7 +109,6 @@ fn ifOnStack(context: *const Context, sp: SP) ?*const ContextOnStack {
     }
     return null;
 }
-pub const stack_limit = Extra.is_encoded;
 pub const Extra = packed struct {
     addr: u48,
     stack_offset: u16 = 0,
