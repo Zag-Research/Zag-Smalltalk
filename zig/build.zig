@@ -327,6 +327,7 @@ fn createBenchStep(
                 .onlyFloat,
             };
 
+    const bench_build_step = b.step("bench-build", "Build fib bench for all encoding types (no run)");
     const bench_step = b.step("bench", "Run fib bench for all encoding types");
 
     for (bench_encodings) |enc| {
@@ -361,6 +362,7 @@ fn createBenchStep(
         const install = b.addInstallArtifact(bench_exe, .{
             .dest_dir = .{ .override = .{ .custom = arch_name } },
         });
+        bench_build_step.dependOn(&install.step);
         bench_step.dependOn(&install.step);
 
         const run_bench = b.addRunArtifact(bench_exe);

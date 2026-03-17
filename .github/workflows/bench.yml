@@ -8,14 +8,9 @@ on:
   workflow_dispatch:
 
 jobs:
-  bench:
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest, ubuntu-24.04-arm]
-    runs-on: ${{ matrix.os }}
-
-    name: bench (${{ matrix.os }})
+  build:
+    runs-on: ubuntu-latest
+    name: Cross-compile benchmarks
 
     steps:
       - uses: actions/checkout@v4
@@ -27,6 +22,62 @@ jobs:
         with:
           version: 0.15.1
 
-      - name: Build and run fib bench (all encodings)
-        run: zig build bench -Doptimize=ReleaseFast --summary all
+      - name: Build benchmarks for x86_64
+        run: zig build bench-build -Doptimize=ReleaseFast -Dtarget=x86_64-linux --summary all
         working-directory: zig
+
+      - name: Build benchmarks for aarch64
+        run: zig build bench-build -Doptimize=ReleaseFast -Dtarget=aarch64-linux --summary all
+        working-directory: zig
+
+      - name: Upload x86_64 artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: bench-x86_64
+          path: zig/zig-out/x86_64/
+
+      - name: Upload aarch64 artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: bench-aarch64
+          path: zig/zig-out/aarch64/
+
+  run-x86:
+    needs: build
+    runs-on: ubuntu-latest
+    name: Run benchmarks (x86_64)
+
+    steps:
+      - name: Download x86_64 artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: bench-x86_64
+          path: bench/
+
+      - name: Run all benchmarks
+        run: |
+          for bin in bench/fib-*; do
+            chmod +x "$bin"
+            echo "=== $(basename "$bin") ==="
+            "$bin" || true
+          done
+
+  run-arm:
+    needs: build
+    runs-on: ubuntu-24.04-arm
+    name: Run benchmarks (aarch64)
+
+    steps:
+      - name: Download aarch64 artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: bench-aarch64
+          path: bench/
+
+      - name: Run all benchmarks
+        run: |
+          for bin in bench/fib-*; do
+            chmod +x "$bin"
+            echo "=== $(basename "$bin") ==="
+            "$bin" || true
+          done
