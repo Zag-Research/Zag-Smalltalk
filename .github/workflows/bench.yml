@@ -48,6 +48,8 @@ jobs:
     name: Run benchmarks (x86_64)
 
     steps:
+      - uses: actions/checkout@v4
+
       - name: Download x86_64 artifacts
         uses: actions/download-artifact@v4
         with:
@@ -62,12 +64,17 @@ jobs:
             "$bin" || true
           done
 
+      - name: Generate LaTeX table
+        run: python3 zig/experiments/latex-table.py
+
   run-arm:
     needs: build
     runs-on: ubuntu-24.04-arm
     name: Run benchmarks (aarch64)
 
     steps:
+      - uses: actions/checkout@v4
+
       - name: Download aarch64 artifacts
         uses: actions/download-artifact@v4
         with:
@@ -81,3 +88,6 @@ jobs:
             echo "=== $(basename "$bin") ==="
             "$bin" || true
           done
+
+      - name: Generate LaTeX table
+        run: python3 zig/experiments/latex-table.py
