@@ -61,17 +61,18 @@ jobs:
 
       - name: Run all benchmarks
         run: |
+          out="bench/bench-results.txt"
+          : > "$out"
           for bin in bench/fib-*; do
             chmod +x "$bin"
-            echo "=== $(basename "$bin") ==="
-            "$bin" || true
+            "$bin" | tee -a "$out" || true
           done
 
       - name: Generate LaTeX table
         run: |
           echo "### LaTeX Table (x86_64)" >> "$GITHUB_STEP_SUMMARY"
           echo '```tex' >> "$GITHUB_STEP_SUMMARY"
-          python3 zig/experiments/latex-table.py >> "$GITHUB_STEP_SUMMARY"
+          python3 zig/experiments/latex-table.py bench/bench-results.txt >> "$GITHUB_STEP_SUMMARY"
           echo '```' >> "$GITHUB_STEP_SUMMARY"
 
   run-arm:
@@ -90,15 +91,16 @@ jobs:
 
       - name: Run all benchmarks
         run: |
+          out="bench/bench-results.txt"
+          : > "$out"
           for bin in bench/fib-*; do
             chmod +x "$bin"
-            echo "=== $(basename "$bin") ==="
-            "$bin" || true
+            "$bin" | tee -a "$out" || true
           done
 
       - name: Generate LaTeX table
         run: |
           echo "### LaTeX Table (aarch64)" >> "$GITHUB_STEP_SUMMARY"
           echo '```tex' >> "$GITHUB_STEP_SUMMARY"
-          python3 zig/experiments/latex-table.py >> "$GITHUB_STEP_SUMMARY"
+          python3 zig/experiments/latex-table.py bench/bench-results.txt >> "$GITHUB_STEP_SUMMARY"
           echo '```' >> "$GITHUB_STEP_SUMMARY"
