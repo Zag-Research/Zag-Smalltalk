@@ -108,6 +108,7 @@ summary_order = [
     "taggedInt",
     "cachedPtr",
     "taggedPtr",
+    "taggedHigh",
     "ptr",
 ]
 
@@ -116,6 +117,8 @@ def median_summary(results, benchmark_order):
     total = "Native" in benchmark_order
     rows = []
     for enc in results.keys() if total else summary_order:
+        if enc not in results:
+            continue
         benchmarks = results[enc]
         cells = []
         for bm in benchmark_order:
@@ -145,6 +148,8 @@ colours = [
 def median_graph(results, benchmark_order):
     result = "\\benchmarkBarChart{}{%"
     for enc, colour in zip(summary_order, colours):
+        if enc not in results:
+            continue
         str = ", postaction={pattern=north east lines}" if False else ""
         result = (
             result
