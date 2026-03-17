@@ -7,15 +7,13 @@ on:
       - docs-actions
   workflow_dispatch:
 
-jobs:
-  bench:
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest, ubuntu-24.04-arm]
-    runs-on: ${{ matrix.os }}
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
-    name: bench (${{ matrix.os }})
+jobs:
+  build:
+    runs-on: ubuntu-24.04-arm
+    name: Cross-compile benchmarks
 
     steps:
       - uses: actions/checkout@v4
@@ -27,6 +25,82 @@ jobs:
         with:
           version: 0.15.1
 
-      - name: Build and run fib bench (all encodings)
-        run: zig build bench -Doptimize=ReleaseFast --summary all
+      - name: Build benchmarks for x86_64
+        run: zig build bench-build -Doptimize=ReleaseFast -Dtarget=x86_64-linux --summary all
         working-directory: zig
+
+      - name: Build benchmarks for aarch64
+        run: zig build bench-build -Doptimize=ReleaseFast -Dtarget=aarch64-linux --summary all
+        working-directory: zig
+
+      - name: Upload x86_64 artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: bench-x86_64
+          path: zig/zig-out/x86_64/
+
+      - name: Upload aarch64 artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: bench-aarch64
+          path: zig/zig-out/aarch64/
+
+  run-x86:
+    needs: build
+    runs-on: ubuntu-latest
+    name: Run benchmarks (x86_64)
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download x86_64 artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: bench-x86_64
+          path: bench/
+
+      - name: Run all benchmarks
+        run: |
+          out="bench/bench-results.txt"
+          : > "$out"
+          find bench -name 'fib-*' -type f -print0 | while IFS= read -r -d '' bin; do
+            chmod +x "$bin"
+            "$bin" 2>&1 | tee -a "$out" || true
+          done
+
+      - name: Generate LaTeX table
+        run: |
+          echo "### LaTeX Table (x86_64)" >> "$GITHUB_STEP_SUMMARY"
+          echo '```tex' >> "$GITHUB_STEP_SUMMARY"
+          python3 zig/experiments/latex-table.py bench/bench-results.txt >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+
+  run-arm:
+    needs: build
+    runs-on: ubuntu-24.04-arm
+    name: Run benchmarks (aarch64)
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download aarch64 artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: bench-aarch64
+          path: bench/
+
+      - name: Run all benchmarks
+        run: |
+          out="bench/bench-results.txt"
+          : > "$out"
+          find bench -name 'fib-*' -type f -print0 | while IFS= read -r -d '' bin; do
+            chmod +x "$bin"
+            "$bin" 2>&1 | tee -a "$out" || true
+          done
+
+      - name: Generate LaTeX table
+        run: |
+          echo "### LaTeX Table (aarch64)" >> "$GITHUB_STEP_SUMMARY"
+          echo '```tex' >> "$GITHUB_STEP_SUMMARY"
+          python3 zig/experiments/latex-table.py bench/bench-results.txt >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
