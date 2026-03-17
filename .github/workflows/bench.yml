@@ -7,6 +7,9 @@ on:
       - docs-actions
   workflow_dispatch:
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 jobs:
   build:
     runs-on: ubuntu-24.04-arm
@@ -65,7 +68,11 @@ jobs:
           done
 
       - name: Generate LaTeX table
-        run: python3 zig/experiments/latex-table.py
+        run: |
+          echo "### LaTeX Table (x86_64)" >> "$GITHUB_STEP_SUMMARY"
+          echo '```tex' >> "$GITHUB_STEP_SUMMARY"
+          python3 zig/experiments/latex-table.py >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
 
   run-arm:
     needs: build
@@ -90,4 +97,8 @@ jobs:
           done
 
       - name: Generate LaTeX table
-        run: python3 zig/experiments/latex-table.py
+        run: |
+          echo "### LaTeX Table (aarch64)" >> "$GITHUB_STEP_SUMMARY"
+          echo '```tex' >> "$GITHUB_STEP_SUMMARY"
+          python3 zig/experiments/latex-table.py >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
