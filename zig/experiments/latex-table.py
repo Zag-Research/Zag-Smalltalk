@@ -1,6 +1,7 @@
 #! /usr/bin/env python
 import argparse
 import re
+import math
 
 ENCODING_RE = re.compile(r"objectEncoding\s*=\s*\.(\w+)")
 CPU_RE = re.compile(r"cpu\s*=.*\.([a-z]+)")
@@ -108,7 +109,6 @@ summary_order = [
     "taggedInt",
     "cachedPtr",
     "taggedPtr",
-    "taggedHigh",
     "ptr",
 ]
 
@@ -171,25 +171,204 @@ def median_graph(results, benchmark_order):
     return result
 
 
+SCATTER_ENCODINGS = [
+    "cachedPtr",
+    "nan",
+    "ptr",
+    "spur",
+    "taggedInt",
+    "taggedPtr",
+    "max",
+    "maxSpur",
+]
+
+
+def latex_arch_label(arch):
+    if arch == "x":
+        return "x86\\_64"
+    if arch == "aarch":
+        return "AArch64"
+    if arch == "x86_64":
+        return "x86\\_64"
+    if arch == "aarch64":
+        return "AArch64"
+    return arch
+
+
+def scatter_points(results):
+    base_int = results.get("onlyInt", {}).get("IntegerBr")
+    base_float = results.get("onlyFloat", {}).get("Float")
+    if not base_int or not base_float:
+        raise ValueError("Missing onlyInt/onlyFloat baselines for scatter plot.")
+    points = {}
+    for enc in SCATTER_ENCODINGS:
+        entry = results.get(enc, {})
+        int_entry = entry.get("IntegerBr")
+        float_entry = entry.get("Float")
+        if not int_entry or not float_entry:
+            continue
+        dx = int(round(int_entry["median"] - base_int["median"]))
+        dy = int(round(float_entry["median"] - base_float["median"]))
+        points[enc] = (dx, dy)
+    return points
+
+
+def pareto_frontier(all_points):
+    pts = list(all_points)
+    frontier = []
+    for i, (x, y) in enumerate(pts):
+        dominated = False
+        for j, (ox, oy) in enumerate(pts):
+            if i == j:
+                continue
+            if ox <= x and oy <= y and (ox < x or oy < y):
+                dominated = True
+                break
+        if not dominated:
+            frontier.append((x, y))
+    frontier.sort(key=lambda p: (p[0], p[1]))
+    collapsed = []
+    for x, y in frontier:
+        if collapsed and collapsed[-1][0] == x:
+            if y < collapsed[-1][1]:
+                collapsed[-1] = (x, y)
+        else:
+            collapsed.append((x, y))
+    return collapsed
+
+
+def axis_limits(points):
+    xs = [p[0] for p in points]
+    ys = [p[1] for p in points]
+    max_x = max(xs)
+    max_y = max(ys)
+    min_y = min(ys)
+    pad_x = max(10, int(math.ceil(max_x * 0.06)))
+    pad_y = max(10, int(math.ceil(max_y * 0.06)))
+    xmax = int(math.ceil((max_x + pad_x) / 10.0) * 10)
+    ymax = int(math.ceil((max_y + pad_y) / 10.0) * 10)
+    ymin = int(math.floor((min_y - pad_y) / 10.0) * 10)
+    if ymin < 0:
+        ymin = 0
+    return 0, xmax, ymin, ymax
+
+
+def label_anchor(y, ymin, ymax):
+    if y - ymin < (ymax - ymin) * 0.08:
+        return "north west"
+    if ymax - y < (ymax - ymin) * 0.08:
+        return "south"
+    return "south west"
+
+
+def scatter_plot_raw(results_a, arch_a, results_b, arch_b):
+    points_a = scatter_points(results_a)
+    points_b = scatter_points(results_b)
+    all_points = list(points_a.values()) + list(points_b.values())
+    xmin, xmax, ymin, ymax = axis_limits(all_points)
+    frontier = pareto_frontier(all_points)
+
+    lines = []
+    lines.append("% ── Scatter plot (raw ms) ──")
+    lines.append("\\newcommand{\\scatterPlotRaw}{%")
+    lines.append("\\begin{tikzpicture}")
+    lines.append("\\begin{axis}[")
+    lines.append("    width=\\columnwidth,")
+    lines.append("    height=\\columnwidth,")
+    lines.append("    xlabel={IntegerBr (ms)},")
+    lines.append("    ylabel={Float (ms)},")
+    lines.append(f"    xmin={xmin}, xmax={xmax},")
+    lines.append(f"    ymin={ymin}, ymax={ymax},")
+    lines.append("    grid=major,")
+    lines.append("    grid style={line width=0.2pt, draw=gray!30},")
+    lines.append("    legend style={")
+    lines.append("        at={(0.98,0.02)},")
+    lines.append("        anchor=south east,")
+    lines.append("        font=\\scriptsize,")
+    lines.append("        draw=black,")
+    lines.append("        legend columns=1,")
+    lines.append("    },")
+    lines.append("]")
+    lines.append(
+        "    \\addplot[gray!60, thick, dashed, forget plot] coordinates {"
+    )
+    lines.append(
+        "        "
+        + " ".join(f"({x},{y})" for x, y in frontier)
+        + "\n    };"
+    )
+    lines.append(
+        "    \\addplot[only marks, mark=*, mark size=3pt, blue!80!black] coordinates {"
+    )
+    lines.append(
+        "        "
+        + " ".join(f"({points_a[e][0]},{points_a[e][1]})" for e in SCATTER_ENCODINGS if e in points_a)
+        + "\n    };"
+    )
+    lines.append(f"    \\addlegendentry{{{latex_arch_label(arch_a)}}}")
+    lines.append(
+        "    \\addplot[only marks, mark=*, mark size=3pt, red!70!black] coordinates {"
+    )
+    lines.append(
+        "        "
+        + " ".join(f"({points_b[e][0]},{points_b[e][1]})" for e in SCATTER_ENCODINGS if e in points_b)
+        + "\n    };"
+    )
+    lines.append(f"    \\addlegendentry{{{latex_arch_label(arch_b)}}}")
+    lines.append("    \\addplot[gray!60, thick, dashed] coordinates {(-100,-100) (-100,-100)};")
+    lines.append("    \\addlegendentry{Pareto frontier}")
+    lines.append(f"    % {latex_arch_label(arch_a)} labels")
+    for enc in SCATTER_ENCODINGS:
+        if enc not in points_a:
+            continue
+        x, y = points_a[enc]
+        anchor = label_anchor(y, ymin, ymax)
+        lines.append(
+            f"    \\node[font=\\tiny, blue!80!black, anchor={anchor}] at (axis cs:{x+2},{y+3}) {{{enc}}};"
+        )
+    lines.append(f"    % {latex_arch_label(arch_b)} labels")
+    for enc in SCATTER_ENCODINGS:
+        if enc not in points_b:
+            continue
+        x, y = points_b[enc]
+        anchor = label_anchor(y, ymin, ymax)
+        lines.append(
+            f"    \\node[font=\\tiny, red!70!black, anchor={anchor}] at (axis cs:{x+2},{y+3}) {{{enc}}};"
+        )
+    lines.append("\\end{axis}")
+    lines.append("\\end{tikzpicture}")
+    lines.append("}")
+    return "\n".join(lines)
+
+
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("filename")
+    parser.add_argument("filename", nargs="+")
     args = parser.parse_args()
-    with open(args.filename) as f:
-        results, benchmark_order, arch = parse(f.read())
-    print("\\newcommand{\\" + arch + "Appendix}{")
-    print(per_encoding_tables(results, benchmark_order))
-    print("}")
-    print("\\newcommand{\\" + arch + "Total}{")
-    print(median_summary(results, benchmark_order))
-    print("}")
-    benchmark_summary = [item for item in benchmark_order if item not in NATIVES]
-    print("\\newcommand{\\" + arch + "Summary}{")
-    print(median_summary(results, benchmark_summary))
-    print("}")
-    print("\\newcommand{\\" + arch + "BarChart}{")
-    print(median_graph(results, benchmark_summary))
-    print("}")
+    if len(args.filename) == 1:
+        with open(args.filename[0]) as f:
+            results, benchmark_order, arch = parse(f.read())
+        print("\\newcommand{\\" + arch + "Appendix}{")
+        print(per_encoding_tables(results, benchmark_order))
+        print("}")
+        print("\\newcommand{\\" + arch + "Total}{")
+        print(median_summary(results, benchmark_order))
+        print("}")
+        benchmark_summary = [item for item in benchmark_order if item not in NATIVES]
+        print("\\newcommand{\\" + arch + "Summary}{")
+        print(median_summary(results, benchmark_summary))
+        print("}")
+        print("\\newcommand{\\" + arch + "BarChart}{")
+        print(median_graph(results, benchmark_summary))
+        print("}")
+    elif len(args.filename) == 2:
+        with open(args.filename[0]) as f:
+            results_a, _, arch_a = parse(f.read())
+        with open(args.filename[1]) as f:
+            results_b, _, arch_b = parse(f.read())
+        print(scatter_plot_raw(results_a, arch_a, results_b, arch_b))
+    else:
+        raise SystemExit("Provide one file (tables) or two files (scatter plot).")
 
 
 if __name__ == "__main__":

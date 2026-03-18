@@ -75,6 +75,12 @@ jobs:
           python3 zig/experiments/latex-table.py bench/bench-results.txt >> "$GITHUB_STEP_SUMMARY"
           echo '```' >> "$GITHUB_STEP_SUMMARY"
 
+      - name: Upload x86_64 benchmark results
+        uses: actions/upload-artifact@v4
+        with:
+          name: bench-results-x86_64
+          path: bench/bench-results.txt
+
   run-arm:
     needs: build
     runs-on: ubuntu-24.04-arm
@@ -103,4 +109,39 @@ jobs:
           echo "### LaTeX Table (aarch64)" >> "$GITHUB_STEP_SUMMARY"
           echo '```tex' >> "$GITHUB_STEP_SUMMARY"
           python3 zig/experiments/latex-table.py bench/bench-results.txt >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload aarch64 benchmark results
+        uses: actions/upload-artifact@v4
+        with:
+          name: bench-results-aarch64
+          path: bench/bench-results.txt
+
+  pareto:
+    needs:
+      - run-x86
+      - run-arm
+    runs-on: ubuntu-latest
+    name: Generate Pareto Scatter Plot
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download x86_64 results
+        uses: actions/download-artifact@v4
+        with:
+          name: bench-results-x86_64
+          path: bench/x86
+
+      - name: Download aarch64 results
+        uses: actions/download-artifact@v4
+        with:
+          name: bench-results-aarch64
+          path: bench/aarch
+
+      - name: Generate Pareto LaTeX plot
+        run: |
+          echo "### Pareto Scatter Plot" >> "$GITHUB_STEP_SUMMARY"
+          echo '```tex' >> "$GITHUB_STEP_SUMMARY"
+          python3 zig/experiments/latex-table.py bench/x86/bench-results.txt bench/aarch/bench-results.txt >> "$GITHUB_STEP_SUMMARY"
           echo '```' >> "$GITHUB_STEP_SUMMARY"
