@@ -129,7 +129,7 @@ pub const Object = packed union {
         return Tag.isSet(self, tag);
     }
     pub inline fn isInt(self: Object) bool {
-        return !self.isTag(.float) and self.isTag(.smallInteger);
+        return self.isTag(.smallInteger);
     }
     pub inline fn isNat(self: Object) bool {
         return self.isInt() and self.rawI() >= 0;
@@ -356,12 +356,12 @@ pub const Object = packed union {
         @panic("Trying to convert Object to " ++ @typeName(T));
     }
     pub inline fn which_class(self: Object) ClassIndex {
-        if (self.isTag(.float)) {
-            @branchHint(.likely);
-            return .Float;
-        } else if (self.isTag(.smallInteger)) {
+        if (self.isTag(.smallInteger)) {
             @branchHint(.likely);
             return .SmallInteger;
+        } else if (self.isTag(.float)) {
+            @branchHint(.likely);
+            return .Float;
         } else if (self.isTag(.immediates)) {
             @branchHint(.unpredictable);
             return self.immediate.class.classIndex();

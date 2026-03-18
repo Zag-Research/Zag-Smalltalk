@@ -9,6 +9,7 @@ pub const Encoding = enum {
     cachedPtr,
     ptr,
     taggedInt,
+//   taggedSMI,
     onlyInt,
     onlyFloat,
     pub fn fromName(key: []const u8) !Encoding {
@@ -33,6 +34,7 @@ pub fn module(self: anytype) type {
         .taggedHigh => @import("taggedHigh.zig"),
         .cachedPtr, .ptr => @import("ptr.zig"),
         .taggedInt => @import("taggedInt.zig"),
+//      .taggedSMI => @import("taggedSMI.zig"),
         .onlyInt => @import("onlyInt.zig"),
         .onlyFloat => @import("onlyFloat.zig"),
     };

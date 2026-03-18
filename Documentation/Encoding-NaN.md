@@ -9,32 +9,32 @@ There are several ways to do NaN tagging/encoding. You can choose integers, poin
 
 So this leaves us with the following encoding based on the **S**ign+**E**xponent and **F**raction bits:
 
-| S+E             | F      | F      | F      | Type                      |
-| --------------- | ------ | ------ | ------ | ------------------------- |
-| `0000`          | `0000` | `0000` | `0000` | double  +0                |
-| `0000`-`7FEF`   | `xxxx` | `xxxx` | `xxxx` | double (positive)         |
-| `7FF0`          | `0000` | `0000` | `0000` | +inf                      |
-| `7FF0`          | `aaaa` | `aaaa` | `aaaa` | `ThunkReturnLocal`        |
-| `7FF1`          | `aaaa` | `aaaa` | `aaaa` | `ThunkReturnInstance`     |
-| `7FF2`          | `aaaa` | `aaaa` | `aaaa` | `ThunkReturnObject` |
-| `7FF3`          | `aaaa` | `aaaa` | `aaaa` | `ThunkReturnImmediate`    |
-| `7FF4`          | `aaaa` | `aaaa` | `aaaa` | `ThunkLocal`              |
-| `7FF5`          | `aaaa` | `aaaa` | `aaaa` | `BlockAssignLocal`        |
-| `7FF6`          | `aaaa` | `aaaa` | `aaaa` | `ThunkInstance`           |
-| `7FF7`          | `aaaa` | `aaaa` | `aaaa` | `BlockAssignInstance`     |
-| `7FF8`          | `aaaa` | `aaaa` | `aaaa` | `ThunkHeap`               |
-| `7FF9`          | `xxxx` | `xxxx` | `xxxx` | `ThunkImmediate`          |
-| `7FFA`          | `0000` | `hhhh` | `hhhh` | `Symbol`                  |
-| `7FFB`          | `0000` | `0000` | `0000` | `False`                   |
-| `7FFC`          | `0000` | `0000` | `0001` | `True`                    |
-| `7FFD`          | `0000` | `00uu` | `uuuu` | `Character`               |
-| `7FFE`          | `cccc` | `hhhh` | `hhhh` | `Signature`               |
-| `7FFF`          | `aaaa` | `aaaa` | `aaaa` | heap object               |
-| `8000`          | `0000` | `0000` | `0000` | double     -0             |
-| `8000`-`FFEF`   | `xxxx` | `xxxx` | `xxxx` | double (negative)         |
-| `FFF0`          | `0000` | `0000` | `0000` | -inf                      |
-| `FFF0` - `FFF7` | `xxxx` | `xxxx` | `xxxx` | NaN (unused)              |
-| `FFF8` + `ii`   | `iiii` | `iiii` | `iiii` | `SmallInteger` values     |
+| S+E             | F      | F      | F      | Type                   |
+| --------------- | ------ | ------ | ------ | ---------------------- |
+| `0000`          | `0000` | `0000` | `0000` | double  +0             |
+| `0000`-`7FEF`   | `xxxx` | `xxxx` | `xxxx` | double (positive)      |
+| `7FF0`          | `0000` | `0000` | `0000` | +inf                   |
+| `7FF0`          | `aaaa` | `aaaa` | `aaaa` | `ThunkReturnLocal`     |
+| `7FF1`          | `aaaa` | `aaaa` | `aaaa` | `ThunkReturnInstance`  |
+| `7FF2`          | `aaaa` | `aaaa` | `aaaa` | `ThunkReturnObject`    |
+| `7FF3`          | `aaaa` | `aaaa` | `aaaa` | `ThunkReturnImmediate` |
+| `7FF4`          | `aaaa` | `aaaa` | `aaaa` | `ThunkLocal`           |
+| `7FF5`          | `aaaa` | `aaaa` | `aaaa` | `BlockAssignLocal`     |
+| `7FF6`          | `aaaa` | `aaaa` | `aaaa` | `ThunkInstance`        |
+| `7FF7`          | `aaaa` | `aaaa` | `aaaa` | `BlockAssignInstance`  |
+| `7FF8`          | `aaaa` | `aaaa` | `aaaa` | `ThunkHeap`            |
+| `7FF9`          | `xxxx` | `xxxx` | `xxxx` | `ThunkImmediate`       |
+| `7FFA`          | `0000` | `hhhh` | `hhhh` | `Symbol`               |
+| `7FFB`          | `0000` | `0000` | `0000` | `False`                |
+| `7FFC`          | `0000` | `0000` | `0001` | `True`                 |
+| `7FFD`          | `0000` | `00uu` | `uuuu` | `Character`            |
+| `7FFE`          | `cccc` | `hhhh` | `hhhh` | `Signature`            |
+| `7FFF`          | `aaaa` | `aaaa` | `aaaa` | heap object            |
+| `8000`          | `0000` | `0000` | `0000` | double     -0          |
+| `8000`-`FFEF`   | `xxxx` | `xxxx` | `xxxx` | double (negative)      |
+| `FFF0`          | `0000` | `0000` | `0000` | -inf                   |
+| `FFF0` - `FFF7` | `xxxx` | `xxxx` | `xxxx` | NaN (unused)           |
+| `FFF8` + `iii`  | `iiii` | `iiii` | `iiii` | `SmallInteger` values  |
 
 So, interpreted as a u64, any value that is less than or equal to -inf is a double. Else, the top 4 bits of the mantissa are a class grouping. For group B, the next 16 bits are a class number so the first 8 classes have (and all classes can have) a compressed representation. 
 Groups 0 through A have the low 48 bits being the address of an object.

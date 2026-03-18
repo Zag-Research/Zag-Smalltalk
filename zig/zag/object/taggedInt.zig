@@ -24,10 +24,10 @@ const Tag = enum(Object.LowTagType) {
         return @intFromEnum(cg);
     }
     inline fn isSet(obj: Object, comptime tag: Tag) bool {
-        if (tag == .pointer) {
-            return obj.rawU() & 1 == 0;
-        }
-        return (obj.rawU() & @intFromEnum(tag)) != 0;
+        return switch (@intFromEnum(tag)) {
+                0 => obj.rawU() & 1 == 0,
+                else => obj.rawU() & 1 != 0,
+            };
     }
 };
 pub const Object = packed union {
@@ -98,7 +98,7 @@ pub const Object = packed union {
 
     // Spur SmallInteger
     pub inline fn isInt(self: Object) bool {
-        return (self.rawU() & SmallIntegerTag) != 0;
+        return Tag.isSet(self, .smallInteger);
     }
     pub inline fn isNat(self: Object) bool {
         return self.isInt() and self.rawI() >= 0;
@@ -121,7 +121,7 @@ pub const Object = packed union {
         return Tag.isSet(self, .pointer);
     }
     pub inline fn pointer(self: Object, T: type) ?T {
-        if (self.isHeapObject()) return @ptrFromInt(self.rawU());
+        if (self.isHeapObject()) return @ptrFromInt(self.rawU() - PointerTag);
         return null;
     }
 
@@ -224,7 +224,7 @@ pub const Object = packed union {
 
     pub fn fromAddress(value: anytype) Object {
         if (@inComptime()) return Object{ .ref = undefined };
-        return @bitCast(@intFromPtr(value));
+        return @bitCast(@intFromPtr(value) + PointerTag);
     }
     pub const StaticObject = struct {
         obj: InMemory.PointedObject,

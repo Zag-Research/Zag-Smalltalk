@@ -83,6 +83,11 @@
     "cwd": "$ZED_WORKTREE_ROOT/zig",
   },
   {
+    "label": "trace fib taggedSMI",
+    "command": "zig build -Dtrace -Dencoding=taggedSMI -Doptimize=Debug -freference-trace=5 && ./zig-out/bin/fib",
+    "cwd": "$ZED_WORKTREE_ROOT/zig",
+  },
+  {
     "label": "trace fib ptr",
     "command": "zig build -Dtrace -Dencoding=ptr -Doptimize=Debug -freference-trace=5 && ./zig-out/bin/fib",
     "cwd": "$ZED_WORKTREE_ROOT/zig",
@@ -146,8 +151,18 @@
     "cwd": "$ZED_WORKTREE_ROOT/zig",
   },
   {
+    "label": "time fib taggedSMI",
+    "command": "zig build -Dencoding=taggedSMI -Doptimize=ReleaseFast && ./zig-out/bin/fib",
+    "cwd": "$ZED_WORKTREE_ROOT/zig",
+  },
+  {
     "label": "time fib taggedPtr",
     "command": "zig build -Dencoding=taggedPtr -Doptimize=ReleaseFast && ./zig-out/bin/fib",
+    "cwd": "$ZED_WORKTREE_ROOT/zig",
+  },
+  {
+    "label": "time fib taggedHigh",
+    "command": "zig build -Dencoding=taggedHigh -Doptimize=ReleaseFast && ./zig-out/bin/fib",
     "cwd": "$ZED_WORKTREE_ROOT/zig",
   },
   {

@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 import argparse
-import re
 import math
+import re
 
 ENCODING_RE = re.compile(r"objectEncoding\s*=\s*\.(\w+)")
 CPU_RE = re.compile(r"cpu\s*=.*\.([a-z]+)")
@@ -32,6 +32,8 @@ def parse(file_content):
             enc = "max"
         elif enc == "zagSpur":
             enc = "maxSpur"
+        elif enc == "taggedPtr":
+            enc = "taggedLow"
         results[enc] = {}
         for m in DATA_RE.finditer(block):
             name = m.group(1)
@@ -106,10 +108,10 @@ summary_order = [
     "max",
     "maxSpur",
     "spur",
+    "taggedLow",
+    "taggedHigh",
     "taggedInt",
     "cachedPtr",
-    "taggedPtr",
-    "taggedHigh",
     "ptr",
 ]
 
@@ -145,6 +147,7 @@ colours = [
     "blue!80!black",
     "olive!70",
     "red!60",
+    "teal!40",
 ]
 
 
@@ -178,7 +181,7 @@ SCATTER_ENCODINGS = [
     "ptr",
     "spur",
     "taggedInt",
-    "taggedPtr",
+    "taggedLow",
     "taggedHigh",
     "max",
     "maxSpur",
@@ -268,7 +271,8 @@ def scatter_plot_raw(results_a, arch_a, results_b, arch_b):
     points_b = scatter_points(results_b)
     all_points = list(points_a.values()) + list(points_b.values())
     xmin, xmax, ymin, ymax = axis_limits(all_points)
-    frontier = pareto_frontier(all_points)
+    frontier_a = pareto_frontier(list(points_a.values()))
+    frontier_b = pareto_frontier(list(points_b.values()))
 
     lines = []
     lines.append("% ── Scatter plot (raw ms) ──")
@@ -291,20 +295,24 @@ def scatter_plot_raw(results_a, arch_a, results_b, arch_b):
     lines.append("        legend columns=1,")
     lines.append("    },")
     lines.append("]")
+    lines.append("    \\addplot[blue!60, thick, dashed, forget plot] coordinates {")
     lines.append(
-        "    \\addplot[gray!60, thick, dashed, forget plot] coordinates {"
+        "        " + " ".join(f"({x},{y})" for x, y in frontier_a) + "\n    };"
     )
+    lines.append("    \\addplot[red!60, thick, dashed, forget plot] coordinates {")
     lines.append(
-        "        "
-        + " ".join(f"({x},{y})" for x, y in frontier)
-        + "\n    };"
+        "        " + " ".join(f"({x},{y})" for x, y in frontier_b) + "\n    };"
     )
     lines.append(
         "    \\addplot[only marks, mark=*, mark size=3pt, blue!80!black] coordinates {"
     )
     lines.append(
         "        "
-        + " ".join(f"({points_a[e][0]},{points_a[e][1]})" for e in SCATTER_ENCODINGS if e in points_a)
+        + " ".join(
+            f"({points_a[e][0]},{points_a[e][1]})"
+            for e in SCATTER_ENCODINGS
+            if e in points_a
+        )
         + "\n    };"
     )
     lines.append(f"    \\addlegendentry{{{latex_arch_label(arch_a)}}}")
@@ -313,11 +321,17 @@ def scatter_plot_raw(results_a, arch_a, results_b, arch_b):
     )
     lines.append(
         "        "
-        + " ".join(f"({points_b[e][0]},{points_b[e][1]})" for e in SCATTER_ENCODINGS if e in points_b)
+        + " ".join(
+            f"({points_b[e][0]},{points_b[e][1]})"
+            for e in SCATTER_ENCODINGS
+            if e in points_b
+        )
         + "\n    };"
     )
     lines.append(f"    \\addlegendentry{{{latex_arch_label(arch_b)}}}")
-    lines.append("    \\addplot[gray!60, thick, dashed] coordinates {(-100,-100) (-100,-100)};")
+    lines.append(
+        "    \\addplot[gray!60, thick, dashed] coordinates {(-100,-100) (-100,-100)};"
+    )
     lines.append("    \\addlegendentry{Pareto frontier}")
     lines.append(f"    % {latex_arch_label(arch_a)} labels")
     for enc in SCATTER_ENCODINGS:
@@ -326,7 +340,7 @@ def scatter_plot_raw(results_a, arch_a, results_b, arch_b):
         x, y = points_a[enc]
         anchor = label_anchor(y, ymin, ymax)
         lines.append(
-            f"    \\node[font=\\tiny, blue!80!black, anchor={anchor}] at (axis cs:{x+2},{y+3}) {{{enc}}};"
+            f"    \\node[font=\\tiny, blue!80!black, anchor={anchor}] at (axis cs:{x + 2},{y + 3}) {{{enc}}};"
         )
     lines.append(f"    % {latex_arch_label(arch_b)} labels")
     for enc in SCATTER_ENCODINGS:
@@ -335,7 +349,7 @@ def scatter_plot_raw(results_a, arch_a, results_b, arch_b):
         x, y = points_b[enc]
         anchor = label_anchor(y, ymin, ymax)
         lines.append(
-            f"    \\node[font=\\tiny, red!70!black, anchor={anchor}] at (axis cs:{x+2},{y+3}) {{{enc}}};"
+            f"    \\node[font=\\tiny, red!70!black, anchor={anchor}] at (axis cs:{x + 2},{y + 3}) {{{enc}}};"
         )
     lines.append("\\end{axis}")
     lines.append("\\end{tikzpicture}")
