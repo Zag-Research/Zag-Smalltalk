@@ -109,6 +109,7 @@ summary_order = [
     "taggedInt",
     "cachedPtr",
     "taggedPtr",
+    "taggedHigh",
     "ptr",
 ]
 
@@ -178,6 +179,7 @@ SCATTER_ENCODINGS = [
     "spur",
     "taggedInt",
     "taggedPtr",
+    "taggedHigh",
     "max",
     "maxSpur",
 ]
