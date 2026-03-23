@@ -261,7 +261,7 @@ pub fn push(self: *Context, sp: SP, process: *Process, method: *const CompiledMe
         const selfAddr = extra.selfAddress(sp).?;
         const sizeToMove = (@intFromPtr(selfAddr - selfOffset) - @intFromPtr(sp)) / @sizeOf(Object);
         const contextAddr = selfAddr - selfOffset - locals - sizeOnStack;
-        trace("pushContext: sizeOnStack={},\n locals={},\n selfOffset={},\n selfAddr={*},\n contextAddr={*},\n context={*},\n newSp.array = {*},\n sp.array = {*}, sizeToMove={},\n {any}\n", .{ sizeOnStack, locals, selfOffset, selfAddr, contextAddr, self, newSp.array(), sp.array(), sizeToMove, sp.array()[0..sizeToMove] });
+        trace("pushContext: sizeOnStack={},\n locals={},\n selfOffset={},\n selfAddr={*},\n contextAddr={*},\n context={*},\n newSp.array = {*},\n sp.array = {*},\n sizeToMove={},\n", .{ sizeOnStack, locals, selfOffset, selfAddr, contextAddr, self, newSp.array(), sp.array(), sizeToMove,});// sp.array()[0..sizeToMove] });
         if (contextAddr != newSp.array() + sizeToMove) @panic("pushContext: contextAddr != newSp.array() + sizeToMove");
         for (newSp.array()[0..sizeToMove], sp.array()) |*target, *source| {
             target.* = source.*;

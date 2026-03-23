@@ -52,7 +52,7 @@ pub const Signature = packed struct {
         return @bitCast(self);
     }
     pub fn isEmpty(self: Signature) bool {
-        return self.asInt() == sigTag;
+        return self.equals(empty);
     }
     pub fn fullHash(self: Signature) u32 {
         return @truncate(self.asInt());
