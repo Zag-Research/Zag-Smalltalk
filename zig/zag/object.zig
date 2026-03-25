@@ -246,7 +246,7 @@ pub const ObjectFunctions = struct {
     }
     pub inline //
     fn toDouble(self: Object) !f64 {
-        if (self.isDouble()) return self.toDoubleNoCheck();
+        if (self.nativeF()) |flt| return flt;
         return error.wrongType;
     }
     pub fn rawFromU(u: u64) Object {

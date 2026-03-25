@@ -79,9 +79,6 @@ pub const Object = packed struct(u64) {
     pub inline fn isFloat(self: object.Object) bool {
         return self.isMemoryDouble();
     }
-    pub inline fn nativeF_noCheck(self: object.Object) f64 {
-        return self.toDoubleFromMemory();
-    }
     pub inline fn fromNativeF(t: f64, sp: SP, context: *Context) object.Object {
         return from(t, sp, context);
     }
@@ -191,9 +188,6 @@ pub const Object = packed struct(u64) {
     inline fn toDoubleFromMemory(self: object.Object) f64 {
         return self.to(*InMemory.MemoryFloat).*.value;
     }
-    pub inline fn toDoubleNoCheck(self: Object) f64 {
-        return self.ref.data.float;
-    }
     pub inline fn makeImmediate(cls: ClassIndex.Compact, hash: u64) Object {
         //@compileLog(cls, hash);
         _ = .{ cls, hash, unreachable };
@@ -245,7 +239,7 @@ pub const Object = packed struct(u64) {
     pub fn toWithCheck(self: Object, comptime T: type, comptime check: bool) T {
         switch (T) {
             f64 => {
-                if (!check or self.isDouble()) return self.toDoubleNoCheck();
+                if (self.nativeF()) |flt| return flt;
             },
             i64 => {
                 if (!check or self.isInt()) return self.toIntNoCheck();

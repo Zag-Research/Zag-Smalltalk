@@ -11,8 +11,10 @@ pub inline fn encode(x: f64) !u64 {
     }
     return error.Unencodable;
 }
-pub inline fn decode(self: u64) f64 {
-    return @bitCast(math.rotr(u64, self - 2, 4));
+pub inline fn decode(self: u64) ?f64 {
+    if (self & 6 != 0)
+        return @bitCast(math.rotr(u64, self - 2, 4));
+    return null;
 }
 const smallest: f64 = @bitCast(@as(u64, 0x0000_0000_0000_0001));
 const largest: f64 = @bitCast(@as(u64, 0x5FFF_FFFF_FFFF_FFFF));
@@ -67,7 +69,7 @@ const decode_values = [_]u64{
 pub fn encode_valid(iterations: u64) void {
     for (0..iterations / valid_values.len) |_| {
         for (valid_values) |val| {
-            _ = encode(val) catch return;
+            _ = encode(val) catch 0;
         }
     }
 }
@@ -81,19 +83,20 @@ pub fn encode_invalid(iterations: u64) void {
 pub fn decode_valid(iterations: u64) void {
     for (0..iterations / decode_values.len) |_| {
         for (decode_values) |val| {
-            std.mem.doNotOptimizeAway(decode(val));
+            if (decode(val)) |decoded|
+                _ = decoded;
         }
     }
 }
 
-// zig run -Doptimize=ReleaseFast floatSpur.zig
+// zig run -Doptimize=ReleaseFast floatZag.zig
 pub fn main() void {
     const iterations = 100_000_000;
     const ns = 1.0 / @as(f64, @floatFromInt(iterations));
 
     if (false) {
         for (valid_values) |val| {
-            std.log.err("0x{x:0>16},\n", .{encode(val) catch unreachable});
+            std.debug.print("0x{x:0>16},\n", .{encode(val) catch unreachable});
         }
     }
 
@@ -107,7 +110,7 @@ pub fn main() void {
     const invalid_time = timer.lap();
     decode_valid(iterations);
     const decode_time = timer.lap();
-    std.log.err("encode time: {d:.3}s {d:.3}s {d:.3}s\n", .{ @as(f64, @floatFromInt(valid_time))*ns, @as(f64, @floatFromInt(invalid_time))*ns, @as(f64, @floatFromInt(decode_time))*ns });
+    std.debug.print("time encode:{d:.3}s invalid:{d:.3}s decode:{d:.3}s\n", .{ @as(f64, @floatFromInt(valid_time))*ns, @as(f64, @floatFromInt(invalid_time))*ns, @as(f64, @floatFromInt(decode_time))*ns });
 }
 
 fn delta(spec: u64, check: u64) f64 {

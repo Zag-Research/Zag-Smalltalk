@@ -2,6 +2,24 @@
 Commit=false
 Log=true
 Host=`hostname|sed 's/\..*//'`
+OS_TYPE=$(uname -s)
+ARCH=$(uname -m)
+
+echo "--- Zag VM Benchmarking Environment ($OS_TYPE) ---"
+if [ "$OS_TYPE" == "Linux" ]; then
+    # Linux Path: High Control
+    echo "Isolation: ASLR Off, Core 0 Pinned, High Priority"
+    Prefix='setarch "$ARCH" -R taskset -c 0 nice -n -20'
+elif [ "$OS_TYPE" == "Darwin" ]; then
+    # macOS Path: Best Effort
+    echo "Isolation: High Priority (nice), DYLD Hint"
+    echo "Note: macOS SIP may ignore ASLR disable hints. Ensure binary is linked with -no_pie."
+    Prefix=' nice -n -20 '
+else
+    echo "Unsupported OS."
+    exit 1
+fi
+
 cd ~/git/Zag-Smalltalk/zig/experiments
 case "$1" in
     -log) Log=true;;
@@ -26,9 +44,9 @@ Version=`git log "--pretty=format:%cI-%h" -1|sed 's/:/-/g'`
 benchIt="zig build bench -Doptimize=ReleaseFast --summary all"
 if $Log; then
     mkdir -p Benchmarks/$Host
-    $benchIt >Benchmarks/$Host/$Version 2>&1
+    DYLD_NO_PIE=1 $Prefix $benchIt >Benchmarks/$Host/$Version 2>&1
 else
-    $benchIt
+    DYLD_NO_PIE=1 $Prefix $benchIt
 fi
 if $Commit; then
     git add Benchmarks

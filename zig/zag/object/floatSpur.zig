@@ -13,18 +13,19 @@ const TAG = 0b100; // immediate float tag
 const SHIFTED_EXP: u64 = 0xFFE0_0000_0000_0000;
 const SIGN_MASK: u64 = 0x8000_0000_0000_0000;
 const ZERO_SHAPE: u64 = 0x8000_0000_0000_0008;
+const raise_specific_errors = false;
 
-pub const encode = encode_n; // used by the spur.zig
+pub const encode = encode_spec; // used by spur.zig
 pub const EncodeError = error{ Unencodable, PosInf, NegInf, NaN };
 
 // immediate float layout: [exp8(8)][mant(52)][sign(1)][tag(3)]
 // Ref: https://clementbera.wordpress.com/2018/11/09/64-bits-immediate-floats/
 
-pub noinline fn encode_n(v: f64) !u64 {
+inline fn encode_default(v: f64) EncodeError!u64 {
     const bits: u64 = @bitCast(v);
     const y = rotr(u64, rotl(u64, bits, 5) +% 1, 1);
     if ((y & 0x7) == TAG and (y | 0x8) != 0xC) return y;
-    if (bits & 0x7FFFFFFF_FFFFFFFF == 0) return 4 + ((bits >> 61) & 8);
+    if (bits & 0x7FFFFFFF_FFFFFFFF == 0) return TAG + ((bits >> 61) & 8);
     return error.Unencodable;
 }
 
@@ -32,21 +33,21 @@ inline fn encode_dave(v: f64) EncodeError!u64 {
     const bits: u64 = @bitCast(v);
     var y = std.math.rotl(u64, bits, 5);
     if (y <= 0x10) { // probably 0
-        if (y == 0) return 4;
-        if (y == 0x10) return 0xc;
-        y +%= 1;
-        y = std.math.rotr(u64, y, 1);
+        @branchHint(.unlikely);
+        if (y == 0) return TAG; // 0
+        if (y == 0x10) return 8 + TAG; // -0
+        y = std.math.rotr(u64, y +% 1, 1);
         // handle normal immediate float; with zero-collision check
         if ((y & 0x7) == TAG and (y | 0x8) != 0xC) return y;
         // if ((y & 0x7) == TAG and (y & 0xffff_ffff_ffff_ffff) != 0) return y;
         // if ((y & 0x7) == TAG and (y >> 4) != 0) return y;
-        return error.Unencodable;
-    }
-    y +%= 1;
-    y = std.math.rotr(u64, y, 1);
+    } else {
+        @branchHint(.likely);
+        y = std.math.rotr(u64, y +% 1, 1);
 
-    // handle normal immediate float
-    if ((y & 0x7) == TAG) return y;
+        // handle normal immediate float
+        if ((y & 0x7) == TAG) return y;
+    }
     return error.Unencodable;
 }
 
@@ -60,16 +61,17 @@ inline fn encode_spec(v: f64) EncodeError!u64 {
     if ((y & 0x7) == TAG) return if ((y | 0x8) == 0xC) return error.Unencodable else y;
     // handle zero
     if ((y | 0x8) == ZERO_SHAPE) return ((bits >> 60) & 0x8) | TAG;
-    // handle Inf
-    const shifted = (bits << 1);
-    if (shifted == SHIFTED_EXP) return if ((bits & SIGN_MASK) != 0) error.NegInf else error.PosInf;
-    // handle NaN
-    if (shifted > SHIFTED_EXP) return error.NaN;
-
+    if (raise_specific_errors) {
+        // handle Inf
+        const shifted = (bits << 1);
+        if (shifted == SHIFTED_EXP) return if ((bits & SIGN_MASK) != 0) error.NegInf else error.PosInf;
+        // handle NaN
+        if (shifted > SHIFTED_EXP) return error.NaN;
+    }
     return error.Unencodable; // unencodable (subnormal vs out-of-range)
 }
 
-inline fn encode_check(value: f64) !u64 {
+inline fn encode_check(value: f64) EncodeError!u64 {
     const bits: u64 = @bitCast(value);
     const exp: u64 = (bits & EXPONENT_MASK);
     const mant = bits & MANTISSA_MASK;
@@ -81,11 +83,12 @@ inline fn encode_check(value: f64) !u64 {
 
     // Handle IEEE special values (Inf/NaN)
     if (exp == EXPONENT_MASK) {
-        if (mant == 0) {
-            return if ((bits & SIGN_MASK) != 0) EncodeError.NegInf else EncodeError.PosInf;
-        }
-
-        return EncodeError.NaN;
+        if (raise_specific_errors) {
+            if (mant == 0) {
+                return if ((bits & SIGN_MASK) != 0) EncodeError.NegInf else EncodeError.PosInf;
+            }
+            return EncodeError.NaN;
+        } else return EncodeError.Unencodable;
     }
 
     const e11: u32 = @intCast(exp >> 52);
@@ -105,12 +108,30 @@ inline fn encode_check(value: f64) !u64 {
     r +%= 1;
     return std.math.rotr(u64, r, 1);
 }
-
-pub fn decode(self: u64) f64 {
+fn checkEqual(str: []const u8, i: usize, expected: anytype, actual: @TypeOf(expected)) !void {
+    if (expectEqual(expected,actual)) |_| {
+    } else |_| {
+        const f: f64 = @bitCast(i << (64-BITS));
+        std.debug.print("for i={}({x})({}) in {s}\n",.{i, i, f, str});
+        //return err;
+    }
+}
+const BITS = 14;
+test "encode accuracy" {
+    for (0..1<<BITS) |i| {
+        const f: f64 = @bitCast(i << (64-BITS));
+        const check = encode_check(f);
+        try checkEqual("default",i,check,encode_default(f));
+        try checkEqual("dave",i,check,encode_dave(f));
+        try checkEqual("check",i,check,encode_spec(f));
+    }
+}
+pub fn decode(self: u64) ?f64 {
+    if (self & TAG == 0) return null;
     if (self <= 0xC) {@branchHint(.unlikely);
-        if (self == 4) {
+        if (self == TAG) {
             return 0.0;
-        } else if (self == 0xC) {
+        } else {
             return -0.0;
         }
     }
@@ -196,7 +217,8 @@ pub fn encode_invalid(iterations: u64) void {
 pub fn decode_valid(iterations: u64) void {
     for (0..iterations / decode_values.len) |_| {
         for (decode_values) |val| {
-            std.mem.doNotOptimizeAway(decode(val));
+            if (decode(val)) |decoded|
+                _ = decoded;
         }
     }
 }
@@ -207,7 +229,7 @@ pub fn main() void {
 
     if (false) {
         for (valid_values) |val| {
-            std.log.err("0x{x:0>16},\n", .{encode(val) catch unreachable});
+            std.debug.print("0x{x:0>16},\n", .{encode(val) catch unreachable});
         }
     }
 
@@ -227,7 +249,7 @@ pub fn main() void {
         }
     }
     const dave_invalid_time = timer.lap();
-    std.log.err("dave time: {d:.3}ns {d:.3}ns\n", .{ @as(f64, @floatFromInt(dave_valid_time))*ns, @as(f64, @floatFromInt(dave_invalid_time))*ns });
+    std.debug.print("dave time: {d:.3}ns {d:.3}ns\n", .{ @as(f64, @floatFromInt(dave_valid_time))*ns, @as(f64, @floatFromInt(dave_invalid_time))*ns });
 
     _ = timer.lap();
     for (0..iterations / valid_values.len) |_| {
@@ -242,21 +264,43 @@ pub fn main() void {
         }
     }
     const spec_invalid_time = timer.lap();
-    std.log.err("Spec time: {d:.3}ns {d:.3}ns\n", .{ @as(f64, @floatFromInt(spec_valid_time))*ns, @as(f64, @floatFromInt(spec_invalid_time))*ns });
+    std.debug.print("spec time: {d:.3}ns {d:.3}ns\n", .{ @as(f64, @floatFromInt(spec_valid_time))*ns, @as(f64, @floatFromInt(spec_invalid_time))*ns });
+
+    _ = timer.lap();
+    for (0..iterations / valid_values.len) |_| {
+        for (valid_values) |val| {
+            _ = encode_check(val) catch return;
+        }
+    }
+    const check_valid_time = timer.lap();
+    for (0..iterations / invalid_values.len) |_| {
+        for (invalid_values) |val| {
+            _ = encode_check(val) catch continue;
+        }
+    }
+    const check_invalid_time = timer.lap();
+    std.debug.print("check time: {d:.3}ns {d:.3}ns\n", .{ @as(f64, @floatFromInt(check_valid_time))*ns, @as(f64, @floatFromInt(check_invalid_time))*ns });
 
     _ = timer.lap();
     encode_valid(iterations);
-    const valid_time = timer.lap();
+    const default_valid_time = timer.lap();
     std.mem.doNotOptimizeAway(encode_invalid(iterations));
-    const invalid_time = timer.lap();
+    const default_invalid_time = timer.lap();
     std.mem.doNotOptimizeAway(decode_valid(iterations));
     const decode_time = timer.lap();
 
-    std.log.err("Foo time: {d:.3}ns {d:.3}ns {d:.3}ns\n", .{ @as(f64, @floatFromInt(valid_time))*ns, @as(f64, @floatFromInt(invalid_time))*ns, @as(f64, @floatFromInt(decode_time))*ns });
 
-    std.log.err("Dave is {d:.2}x {d:.2}x faster than Foo\n", .{ delta(dave_valid_time, valid_time), delta(dave_invalid_time, invalid_time) });
-    std.log.err("Spec is {d:.2}x {d:.2}x faster than Foo\n", .{ delta(spec_valid_time, valid_time), delta(spec_invalid_time, invalid_time) });
-    std.log.err("Dave is {d:.2}x {d:.2}x faster than Spec\n", .{ delta(dave_valid_time, spec_valid_time), delta(dave_invalid_time, spec_invalid_time) });
+    std.debug.print("dave is {d:.2}x {d:.2}x faster than check\n", .{ delta(dave_valid_time, check_valid_time), delta(dave_invalid_time, check_valid_time) });
+    std.debug.print("spec is {d:.2}x {d:.2}x faster than check\n", .{ delta(spec_valid_time, check_valid_time), delta(spec_invalid_time, check_valid_time) });
+    std.debug.print("default is {d:.2}x {d:.2}x faster than check\n", .{ delta(default_valid_time, check_valid_time), delta(default_invalid_time, check_valid_time) });
+    std.debug.print("dave is {d:.2}x {d:.2}x faster than spec\n", .{ delta(dave_valid_time, spec_valid_time), delta(dave_invalid_time, spec_invalid_time) });
+
+    if (encode == encode_default) std.debug.print("using default\n",.{});
+    if (encode == encode_dave) std.debug.print("using dave\n",.{});
+    if (encode == encode_check) std.debug.print("using check\n",.{});
+    if (encode == encode_spec) std.debug.print("using spec\n",.{});
+
+    std.debug.print("time: {d:.3}ns {d:.3}ns {d:.3}ns\n", .{ @as(f64, @floatFromInt(default_valid_time))*ns, @as(f64, @floatFromInt(default_invalid_time))*ns, @as(f64, @floatFromInt(decode_time))*ns });
 }
 
 fn delta(spec: u64, check: u64) f64 {

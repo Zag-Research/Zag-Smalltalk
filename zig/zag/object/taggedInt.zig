@@ -182,9 +182,6 @@ pub const Object = packed union {
     pub inline fn isFloat(self: object.Object) bool {
         return self.isMemoryDouble();
     }
-    pub inline fn nativeF_noCheck(self: object.Object) f64 {
-        return self.toDoubleFromMemory();
-    }
     pub inline fn fromNativeF(t: f64, sp: SP, context: *Context) object.Object {
         return memoryFloat(t, sp, context);
     }

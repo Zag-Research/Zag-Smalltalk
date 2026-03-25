@@ -59,9 +59,6 @@ pub const Object = packed struct(u64) {
     pub inline fn isFloat(_: object.Object) bool {
         return false;
     }
-    pub inline fn nativeF_noCheck(_: object.Object) f64 {
-        @panic("not implemented");
-    }
     pub inline fn fromNativeF(_: f64, _: anytype, _: anytype) object.Object {
         @panic("not implemented");
     }
@@ -133,9 +130,6 @@ pub const Object = packed struct(u64) {
         return @bitCast(self.rawU() | prim << 40);
     }
     inline fn toDoubleFromMemory(_: object.Object) f64 {
-        @panic("Not implemented");
-    }
-    pub inline fn toDoubleNoCheck(_: Object) f64 {
         @panic("Not implemented");
     }
     pub fn returnObjectClosure(_: Object, _: anytype) ?Object {

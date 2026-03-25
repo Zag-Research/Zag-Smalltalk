@@ -96,16 +96,13 @@ pub const Object = packed struct(u64) {
         return @as(i64, @bitCast(self)) >> 16;
     }
     pub inline fn nativeF(self: object.Object) ?f64 {
-        if (self.isFloat()) return self.nativeF_noCheck();
+        if (self.immediateDouble()) |int|
+            return @as(f32, @bitCast(int));
+        if (self.class == .Float) return self.toDoubleFromMemory();
         return null;
     }
     pub inline fn isFloat(self: object.Object) bool {
         return self.class == .Float;
-    }
-    pub inline fn nativeF_noCheck(self: object.Object) f64 {
-        if (self.immediateDouble()) |int|
-            return @as(f32, @bitCast(int));
-        return self.toDoubleFromMemory();
     }
     pub inline fn fromNativeI(i: i48, _: anytype, _: anytype) Object {
         return Object{ .intOrAddress = @bitCast(i), .class = .SmallInteger };
@@ -214,7 +211,7 @@ pub const Object = packed struct(u64) {
     pub fn toWithCheck(self: object.Object, comptime T: type, comptime check: bool) T {
         switch (T) {
             f64 => {
-                if (!check or self.isFloat()) return self.nativeF_noCheck();
+                if (self.nativeF()) |flt| return flt;
             },
             i64 => {
                 if (!check or self.isInt()) return self.nativeI_noCheck();
@@ -285,7 +282,6 @@ pub const Object = packed struct(u64) {
     pub inline fn toBoolNoCheck(self: object.Object) bool {
         return self.rawU() == object.Object.True().rawU();
     }
-    pub const toDoubleNoCheck = nativeF_noCheck;
     inline fn toDoubleFromMemory(self: object.Object) f64 {
         return self.toUnchecked(*InMemory.MemoryFloat).*.value;
     }

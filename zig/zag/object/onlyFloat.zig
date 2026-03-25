@@ -70,10 +70,6 @@ pub const Object = packed struct(u64) {
         return true;
     }
 
-    pub inline fn nativeF_noCheck(self: Object) f64 {
-        return @bitCast(self);
-    }
-
     pub inline fn fromNativeF(f: f64, _: anytype, _: anytype) Object {
         return @bitCast(f);
     }
@@ -165,10 +161,6 @@ pub const Object = packed struct(u64) {
     inline fn toDoubleFromMemory(_: Object) f64 {
         @panic("Not implemented");
     }
-
-    pub inline fn toDoubleNoCheck(self: Object) f64 {
-        return @bitCast(self);
-    }
     pub fn returnObjectClosure(_: Object, _: anytype) ?Object {
         return null;
     }
@@ -225,7 +217,7 @@ pub const Object = packed struct(u64) {
     pub fn toWithCheck(self: Object, comptime T: type, comptime _: bool) T {
         switch (T) {
             f64 => {
-                return self.toDoubleNoCheck();
+                if (self.nativeF()) |flt| return flt;
             },
             bool => {
                 return self.toBoolNoCheck();

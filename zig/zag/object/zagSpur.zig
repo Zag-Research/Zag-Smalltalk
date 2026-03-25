@@ -148,16 +148,12 @@ pub const Object = packed union {
         return Tag.shiftToObject(@bitCast(@as(i64, i)), .smallInteger);
     }
     pub inline fn nativeF(self: Object) ?f64 {
-        if (self.isImmediateDouble()) return self.toDoubleNoCheck();
+        if (decode(@bitCast(self))) |flt| return flt;
         if (self.isMemoryDouble()) return self.toDoubleFromMemory();
         return null;
     }
     pub inline fn isFloat(self: Object) bool {
         return self.isImmediateDouble() or self.isMemoryDouble();
-    }
-    pub inline fn nativeF_noCheck(self: Object) f64 {
-        if (self.isImmediateDouble()) return self.toDoubleNoCheck();
-        return self.toDoubleFromMemory();
     }
     pub inline fn fromNativeF(t: f64, sp: SP, context: *Context) Object {
         return @bitCast(encode(t) catch {
@@ -262,9 +258,6 @@ pub const Object = packed union {
     pub inline fn toBoolNoCheck(self: Object) bool {
         return self.rawU() == Object.True().rawU();
     }
-    pub inline fn toDoubleNoCheck(self: Object) f64 {
-        return decode(@bitCast(self));
-    }
     inline fn toDoubleFromMemory(self: Object) f64 {
         return self.to(*InMemory.MemoryFloat).*.value;
     }
@@ -318,8 +311,7 @@ pub const Object = packed union {
     pub fn toWithCheck(self: Object, comptime T: type, comptime check: bool) T {
         switch (T) {
             f64 => {
-                if (!check or self.isImmediateDouble()) return self.toDoubleNoCheck();
-                if (!check or self.isMemoryDouble()) return self.toDoubleFromMemory();
+                if (self.nativeF()) |flt| return flt;
             },
             i64 => {
                 if (!check or self.isInt()) return self.nativeI_noCheck();

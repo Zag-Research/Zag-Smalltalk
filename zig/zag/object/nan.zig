@@ -215,14 +215,11 @@ pub const Object = packed struct(u64) {
         return toObjectFromNative(t);
     }
     pub inline fn nativeF(self: Object) ?f64 {
-        if (self.isImmediateDouble()) return self.toDoubleNoCheck();
+        if (self.isImmediateDouble()) return @bitCast(self);
         return null;
     }
     pub inline fn isFloat(self: Object) bool {
         return self.isImmediateDouble();
-    }
-    pub inline fn nativeF_noCheck(self: Object) f64 {
-        return self.toDoubleNoCheck();
     }
     pub inline fn fromNativeF(t: f64, _: anytype, _: anytype) Object {
         return @bitCast(t);
@@ -286,9 +283,6 @@ pub const Object = packed struct(u64) {
     }
     pub inline fn toBoolNoCheck(self: Object) bool {
         return self == True();
-    }
-    pub inline fn toDoubleNoCheck(self: Object) f64 {
-        return @bitCast(self);
     }
     pub fn returnObjectClosure(self: Object, context: *Context) ?Object {
         if (self.nativeI()) |i| {
@@ -356,7 +350,7 @@ pub const Object = packed struct(u64) {
     pub fn toWithCheck(self: Object, comptime T: type, comptime check: bool) T {
         switch (T) {
             f64 => {
-                if (!check or self.isImmediateDouble()) return self.toDoubleNoCheck();
+                if (self.nativeF()) |flt| return flt;
             },
             i64 => {
                 if (!check or self.isInt()) return self.nativeI_noCheck();
