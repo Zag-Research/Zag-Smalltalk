@@ -7,10 +7,10 @@ const expectEqual = std.testing.expectEqual;
 const expect = std.testing.expect;
 
 pub inline fn encode(x: f64) !u64 {
-    const u = math.rotl(u64, @bitCast(x), 5);
-    if ((u + 1) & 6 == 0) {
+    const u = math.rotl(u64, @bitCast(x), 5) -% 3;
+    if (u & 6 == 4) {
         @branchHint(.likely);
-        return u ^ 2;
+        return u;
     }
     return error.Unencodable;
 }
@@ -31,9 +31,9 @@ pub inline fn encode(x: f64) !u64 {
 //     unreachable;
 // }
 pub inline fn decode(self: u64) ?f64 {
-    if (((self ^ (self >> 1)) & 3) == 3) {
+    if (self & 6 == 4) {
         @branchHint(.likely);
-        return @bitCast(math.rotr(u64, self ^ 2, 5));
+        return @bitCast(math.rotr(u64, self +% 3, 5));
     }
     return null;
 }
@@ -89,24 +89,24 @@ const invalid_values =
 [_]f64{tooLg1} ** 1 ++
 [_]f64{tooSm2} ** 1 ;
 const decode_values = [_]u64{
-    0x0000000000000002, // encoded +0.0
-    0x0000000000000012, // encoded -0.0
-    0xfe00000000000005, // encoded +1.0
-    0xfe00000000000015, // encoded -1.0
-    0x01243f6a8885a30a, // encoded +pi
-    0x08a000000000000a, // encoded +42.0
-    0x01243f3e0370cdda, // encoded -3.14159
-    0x0b2000000000000a, // encoded +100.0
-    0x0b2000000000001a, // encoded -100.0
-    0x0000000000000022, // encoded small0
-    0xffffffffffffffe2, // encoded large0
-    0x0000000000000005, // encoded small1
-    0xffffffffffffffea, // encoded large1
-    0x000000000000000d, // encoded small2
-    0xdfffffffffffffed, // encoded large2
-    0xff0000000000000d, // excoded nan
-    0xfe0000000000000d, // encoded +inf
-    0xfe0000000000001d, // encoded -inf
+    0xfffffffffffffffd, // +0.0
+    0x000000000000000d, // -0.0
+    0xfe00000000000004, // +1.0
+    0xfe00000000000014, // -1.0
+    0x01243f6a8885a305, // +pi
+    0x08a0000000000005, // +42.0
+    0x01243f3e0370cdd5, // -3.14159
+    0x0b20000000000005, // +100.0
+    0x0b20000000000015, // -100.0
+    0x000000000000001d, // small0
+    0xffffffffffffffdd, // large0
+    0x0000000000000004, // small1
+    0xffffffffffffffe5, // large1
+    0x000000000000000c, // small2
+    0xdfffffffffffffec, // large2
+    0xff0000000000000c, // nan
+    0xfe0000000000000c, // +inf
+    0xfe0000000000001c, // -inf
 };
 pub fn encode_valid(iterations: u64) void {
     for (0..iterations / valid_values.len) |_| {
