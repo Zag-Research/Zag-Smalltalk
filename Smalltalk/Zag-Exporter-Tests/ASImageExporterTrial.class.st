@@ -12,6 +12,14 @@ Class {
 }
 
 { #category : 'writing' }
+ASImageExporterTrial class >> doYoureself [
+
+	<script>
+	self imageFolder.
+	self new writeImageSending: #yourself to: #yourself
+]
+
+{ #category : 'writing' }
 ASImageExporterTrial class >> inspect42 [
 
 	<script>
