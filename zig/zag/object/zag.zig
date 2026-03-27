@@ -110,7 +110,7 @@ pub const Object = packed struct(u64) {
         return @bitCast(i + oImm(.SmallInteger, 0).tagbits());
     }
 
-    pub inline fn isInt(self: object.Object) bool {
+    inline fn isInt(self: object.Object) bool {
         return self.isImmediateClass(.SmallInteger);
     }
     pub inline fn isNat(self: object.Object) bool {

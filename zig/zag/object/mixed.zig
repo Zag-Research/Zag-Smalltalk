@@ -88,7 +88,7 @@ pub const Object = packed struct(u64) {
         return null;
     }
 
-    pub inline fn untaggedI_noCheck(self: object.Object) i64 {
+    inline fn untaggedI_noCheck(self: object.Object) i64 {
         return @bitCast(self.rawU() >> tagAndClassBits << tagAndClassBits);
         //return @bitCast(self.rawU() & ~tagAndClass);
     }
@@ -98,7 +98,7 @@ pub const Object = packed struct(u64) {
         return null;
     }
 
-    pub inline fn taggedI_noCheck(self: object.Object) i64 {
+    inline fn taggedI_noCheck(self: object.Object) i64 {
         return @bitCast(self);
     }
 
@@ -111,7 +111,8 @@ pub const Object = packed struct(u64) {
     }
 
     pub inline fn isInt(self: object.Object) bool {
-        return self.isImmediateClass(.SmallInteger);
+        const u: u64 = @bitCast(self);
+        return u & 2 != 0;
     }
     pub inline fn isNat(self: object.Object) bool {
         return self.isInt() and self.rawI() >= 0;
@@ -126,7 +127,10 @@ pub const Object = packed struct(u64) {
     inline fn nativeI_noCheck(self: object.Object) i64 {
         return TaggedClass.from(self).dataI();
     }
-    pub const nativeF = decode;
+    pub inline fn nativeF(self: object.Object) ?f64 {
+        if (decode(@bitCast(self))) |flt| return flt;
+        return null;
+    }
     pub inline fn fromNativeF(t: f64, sp: SP, context: *Context) object.Object {
         return @bitCast(encode(t) catch {
             return InMemory.float(t, sp, context);
@@ -390,21 +394,17 @@ pub const Object = packed struct(u64) {
     };
     pub inline fn which_class(self: object.Object) ClassIndex {
         const u: u64 = @bitCast(self);
-        if (u & 3 == 0) { // tag = 0 or 4
-            @branchHint(.likely);
-            return .SmallInteger;
-        } else if (decode(u)) |_| { // tag = 2 or 5
-            @branchHint(.likely);
-            return .Float;
-        } else if (u & 1 == 0) { // tag = 6 (immediate)
-            @branchHint(.unpredictable);
-            return self.class.classIndex();
-        } else if (u & 4 == 0) { // tag = 1 (heap) or 3 (unused)
-            @branchHint(.likely);
-            return self.toUnchecked(*HeapObject).*.getClass();
-        } else { // tag = 7 (immediate closure)
-                @branchHint(.unlikely);
-                self.class.classIndex();
+        switch (@as(u3,@truncate(u))) {
+            2, 3, 6, 7 => { return .SmallInteger;},
+            4, 5 => { return .Float;},
+            1 => { return self.class.classIndex();},
+            0 => {
+                const class = self.class;
+                if (class == .none) {
+                    return self.toUnchecked(*HeapObject).*.getClass();
+                } else
+                    return self.class.classIndex();
+            },
         }
     }
     pub const Special = packed struct {

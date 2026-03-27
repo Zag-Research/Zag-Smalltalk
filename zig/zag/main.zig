@@ -116,10 +116,10 @@ fn loadSymbols() !void {
     }
 }
 fn loadClassTable() !void {
-    assert(zagImageHeader.classTable == object.Nil);
+    assert(zagImageHeader.classTable == object.Nil());
 }
 fn loadDispatchTable(file: std.fs.File) !void {
-    execute.loadIntrinsicsDispatch();
+//    execute.loadIntrinsicsDispatch();
     const stat = try file.stat();
     assert(stat.size == @sizeOf(ZagImageHeader)); // no dispatch to read
     //    _ = references;
@@ -136,7 +136,7 @@ fn loadCodeAddresses() !void {
         std.log.err("my primitives length: {} file:{}\n", .{ threadedFunctions.len, codeAddresses.len });
     for (&map, &threadedFunctions, codeAddresses) |*element, o, f| {
         element.files = f;
-        element.ours = @intFromPtr(o.f);
+        element.ours = @intFromPtr(o);
     }
 }
 fn processHeader(file: std.fs.File) !void {
@@ -147,7 +147,8 @@ fn processHeader(file: std.fs.File) !void {
     try loadClassTable();
 }
 fn runImage() !void {
-    _ = try execute.mainSendTo(zagImageHeader.selector, zagImageHeader.target);
+    @panic("runImage");
+//    _ = try execute.mainSendTo(zagImageHeader.selector, zagImageHeader.target);
 }
 fn readHeap(file: std.fs.File, address: u64) !void {
     //const stat = try file.stat();std.log.err("heap stat: {}\naddress: 0x{x}\n", .{ stat, address });
@@ -212,7 +213,7 @@ pub fn main() !void {
             usage();
         } else {
             _ = zag.controlWords.drop.threadedFn;
-            // try loadAndRun(arg);
+            try loadAndRun(arg);
         }
         while (argsIterator.next()) |extra|
             std.log.err(

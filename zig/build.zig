@@ -114,6 +114,8 @@ fn createMainExecutable(
         exe.root_module.addImport("llvm-build-module", llvm_module);
     }
 
+    b.installArtifact(exe);
+
     const run_step = b.step("run", "Run the app");
     const run_cmd = b.addRunArtifact(exe);
     run_step.dependOn(&run_cmd.step);
