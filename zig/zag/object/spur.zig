@@ -185,7 +185,7 @@ pub const Object = packed union {
             else => false,
         }
     }
-    pub inline fn isImmediateDouble(self: Object) bool {
+    inline fn isImmediateDouble(self: Object) bool {
         return self.isTag(.float);
     }
     inline fn isMemoryDouble(self: Object) bool {

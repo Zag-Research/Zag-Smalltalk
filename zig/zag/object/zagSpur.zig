@@ -28,13 +28,6 @@ const Tag = enum(u3) {
     inline fn u(tag: Tag) u3 {
         return @intFromEnum(tag);
     }
-    inline fn fromClassIndex(cls: ClassIndex) Tag {
-        return switch (cls) {
-            .SmallInteger => .smallInteger,
-            .Float => .float,
-            else => if (cls.isImmediate()) .immediates else .heap,
-        };
-    }
     inline fn isSet(obj: Object, comptime tag: Tag) bool {
         if (@intFromEnum(tag) == 0) {
             return obj.rawU() & 7 == 0;
@@ -43,15 +36,6 @@ const Tag = enum(u3) {
     }
     inline fn setToObject(bits: u64, comptime tag: Tag) Object {
         return @bitCast(bits + @intFromEnum(tag));
-    }
-    inline fn shiftToObject(bits: u64, comptime tag: Tag) Object {
-        return @bitCast((bits << 3) + @intFromEnum(tag));
-    }
-    inline fn shiftFromObject(obj: Object) u64 {
-        return @as(u64, @bitCast(obj)) >> 3;
-    }
-    inline fn unsetFromObject(obj: Object, comptime tag: Tag) u64 {
-        return @as(u64, @bitCast(obj)) - @intFromEnum(tag);
     }
 };
 
@@ -95,35 +79,34 @@ pub const Object = packed union {
     pub inline fn tagbits(self: Object) TagAndClassType {
         return @truncate(self.rawU());
     }
+    inline fn isTag(self: Object, tag: Tag) bool {
+        return Tag.isSet(self, tag);
+    }
 
     pub inline fn untaggedI(self: Object) ?i64 {
-        if (self.isInt()) return untaggedI_noCheck(self);
+        if (self.taggedI()) |int| return int - Tag.u(.smallInteger);
         return null;
     }
-
-    pub inline fn untaggedI_noCheck(self: Object) i64 {
-        return @bitCast(Tag.unsetFromObject(self, .smallInteger));
-    }
-
-    pub inline fn taggedI(self: Object) ?i64 {
-        if (self.isInt()) return taggedI_noCheck(self);
+    pub inline fn taggedI(self: object.Object) ?i64 {
+        if (self.isInt()) return @bitCast(self);
         return null;
     }
-
-    pub inline fn taggedI_noCheck(self: Object) i64 {
-        return @bitCast(self);
+    pub inline fn nativeI(self: object.Object) ?i64 {
+        if (self.taggedI()) |int| return int >> 3;
+        return null;
     }
 
     pub inline fn fromTaggedI(i: i64, _: anytype, _: anytype) Object {
         return @bitCast(i);
     }
-
     pub inline fn fromUntaggedI(i: i64, _: anytype, _: anytype) Object {
-        return Tag.setToObject(@bitCast(i), .smallInteger);
+        return @bitCast(i + @intFromEnum(Tag.smallInteger));
     }
-
-    inline fn isTag(self: Object, tag: Tag) bool {
-        return Tag.isSet(self, tag);
+    pub inline fn fromNativeI(i: i61, _: anytype, _: anytype) Object {
+        return @bitCast((@as(i64,i) << 3) + @intFromEnum(Tag.smallInteger));
+    }
+    pub inline fn asUntaggedI(i: i61) i64 {
+        return @as(i64, i) << 3;
     }
     inline fn isInt(self: Object) bool {
         return self.isTag(.smallInteger);
@@ -131,29 +114,33 @@ pub const Object = packed union {
     pub inline fn isNat(self: Object) bool {
         return self.isInt() and self.rawI() >= 0;
     }
-    pub inline fn nativeI(self: Object) ?i64 {
-        if (self.isInt()) return self.nativeI_noCheck();
-        return null;
-    }
-    inline fn nativeI_noCheck(self: Object) i64 {
-        return @bitCast(Tag.shiftFromObject(self));
-    }
-    pub inline fn fromNativeI(i: i61, _: anytype, _: anytype) Object {
-        return Tag.shiftToObject(@bitCast(@as(i64, i)), .smallInteger);
-    }
+
     pub inline fn nativeF(self: Object) ?f64 {
         if (decode(@bitCast(self))) |flt| return flt;
         if (self.isMemoryDouble()) return self.toDoubleFromMemory();
         return null;
-    }
-    pub inline fn isFloat(self: Object) bool {
-        return self.isImmediateDouble() or self.isMemoryDouble();
     }
     pub inline fn fromNativeF(t: f64, sp: SP, context: *Context) Object {
         return @bitCast(encode(t) catch {
             return InMemory.float(t, sp, context);
         });
     }
+    pub inline fn isFloat(self: Object) bool {
+        return self.isImmediateDouble() or self.isMemoryDouble();
+    }
+    inline fn isImmediateDouble(self: Object) bool {
+        return self.isTag(.float);
+    }
+    pub inline fn isMemoryDouble(self: Object) bool {
+        return if (self.ifHeapObject()) |ptr|
+            ptr.getClass() == .Float
+        else
+            false;
+    }
+    inline fn toDoubleFromMemory(self: Object) f64 {
+        return self.to(*InMemory.MemoryFloat).*.value;
+    }
+
     pub inline fn symbolHash(self: Object) ?u24 {
         if (self.isImmediateClass(.Symbol)) return @truncate(self.immediate.hash);
         return null;
@@ -187,18 +174,6 @@ pub const Object = packed union {
     }
     pub inline fn isImmediateClass(self: Object, comptime class: ClassIndex.Compact) bool {
         return self.tagbits() == oImm(class, 0).tagbits();
-    }
-    pub inline fn isImmediateDouble(self: Object) bool {
-        return self.isTag(.float);
-    }
-    pub inline fn isMemoryDouble(self: Object) bool {
-        return if (self.ifHeapObject()) |ptr|
-            ptr.getClass() == .Float
-        else
-            false;
-    }
-    inline fn toDoubleFromMemory(self: Object) f64 {
-        return self.to(*InMemory.MemoryFloat).*.value;
     }
     inline fn oImm(c: ClassIndex.Compact, h: u56) Self {
         return Self{ .immediate = .{ .class = c, .hash = h } };
@@ -254,7 +229,7 @@ pub const Object = packed union {
             .float, .comptime_float => return fromNativeF(value, sp, context),
             .bool => return if (value) Object.True() else Object.False(),
             .null => return Object.Nil(),
-            .heap => |ptr_info| {
+            .pointer => |ptr_info| {
                 switch (ptr_info.size) {
                     .one, .many => return fromAddress(value),
                     else => {},
@@ -283,7 +258,7 @@ pub const Object = packed union {
             //u8  => {return @intCast(u8, self.hash & 0xff);},
             else => {
                 switch (@typeInfo(T)) {
-                    .heap => |ptrInfo| {
+                    .pointer => |ptrInfo| {
                         switch (@typeInfo(ptrInfo.child)) {
                             .@"fn" => {},
                             .@"struct" => {
@@ -323,25 +298,21 @@ pub const Object = packed union {
     pub inline fn hasMemoryReference(self: Object) bool {
         return if (self.isHeapObject())
             !self.equals(Object.Nil())
-        else switch (self.class) {
+        else switch (self.immediate.class) {
             .ThunkReturnLocal, .ThunkReturnInstance, .ThunkReturnObject, .ThunkReturnImmediate, .ThunkLocal, .BlockAssignLocal, .ThunkInstance, .BlockAssignInstance, .ThunkHeap, .ThunkReturnCharacter, .ThunkReturnFloat => true,
             else => false, // catches the nil case
         };
     }
-
     pub inline fn ifHeapObject(self: Object) ?*HeapObject {
         if (self.isTag(.heap) and self.rawU() != 0) return @ptrFromInt(self.rawU());
         return null;
     }
 
-    pub inline fn asUntaggedI(i: i61) i64 {
-        return @as(i64, i) << 3;
-    }
     pub inline fn isSymbol(self: Object) bool {
         return self.tagbits() == comptime makeImmediate(.Symbol, 0).tagbits();
     }
 
-   pub fn returnObjectClosure(self: Object, context: *Context) ?Object {
+    pub fn returnObjectClosure(self: Object, context: *Context) ?Object {
         if (self.nativeI()) |i| {
             switch (i) {
                 -128...127 => return oImmContext(.ThunkReturnObject, context, @bitCast(@as(i8, @intCast(i)))),
@@ -369,7 +340,7 @@ pub const Object = packed union {
     }
 
     pub fn extraImmediateU(obj: Object) ?u11 {
-        switch (obj.class) {
+        switch (obj.immediate.class) {
             .ThunkReturnLocal,
             .ThunkReturnInstance,
             .ThunkReturnImmediate,
@@ -381,12 +352,13 @@ pub const Object = packed union {
     }
 
     pub fn extraImmediateI(obj: Object) ?i11 {
-        switch (obj.class) {
+        switch (obj.immediate.class) {
             .ThunkReturnObject => { return obj.extraI(); },
             else => {}
         }
         return null;
     }
+
     pub const Special = packed struct {
         imm: TagAndClassType,
         tag: u8,

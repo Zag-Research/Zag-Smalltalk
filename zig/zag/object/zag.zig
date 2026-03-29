@@ -164,7 +164,7 @@ pub const Object = packed struct(u64) {
     pub inline fn isImmediateClass(self: object.Object, comptime class: ClassIndex.Compact) bool {
         return self.tagbits() == oImm(class, 0).tagbits();
     }
-    pub inline fn isImmediateDouble(self: object.Object) bool {
+    inline fn isImmediateDouble(self: object.Object) bool {
         return (self.rawU() & 6) != 0;
     }
     inline fn isMemoryDouble(self: object.Object) bool {
