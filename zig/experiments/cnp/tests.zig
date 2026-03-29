@@ -12,7 +12,7 @@ const PC = zag.execute.PC;
 const Signature = zag.execute.Signature;
 const compileMethod = zag.execute.compileMethod;
 const dispatch = zag.dispatch;
-const Sym = zag.symbol.symbols;
+const Sym = zag.symbol.Symbols;
 const SmallInteger = zag.primitives.primitives.SmallInteger;
 const symbol = zag.symbol;
 

@@ -29,7 +29,7 @@ pub fn module(self: anytype) type {
     return switch (self) {
         .zag => @import("zag.zig"),
         .zagSpur => @import("zagSpur.zig"),
-        .zagMixed => @import("mixed.zig"),
+        .zagMixed => @import("zagMixed.zig"),
         .nan => @import("nan.zig"),
         .spur => @import("spur.zig"),
         .taggedPtr => @import("taggedPtr.zig"),

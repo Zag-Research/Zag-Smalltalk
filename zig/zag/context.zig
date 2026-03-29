@@ -383,7 +383,7 @@ pub fn initHeapClosure(self: *const Context, sp: SP, size: usize, class: ClassIn
     _ = .{ size, class, @panic("Context.initHeapClosure unimplemented") };
 }
 pub const Variable = packed struct {
-    lowBits: u8,
+    lowBits: Object.PackedTagType,
     localIndex: u7,
     isLocal: bool,
     stackOffset: u8,
@@ -401,8 +401,8 @@ pub const Variable = packed struct {
         for (indices, 0..) |index, shift| {
             oi = oi | @as(usize, index) << @intCast(10 * shift);
         }
-        return Variable{
-            .lowBits = Object.intTag,
+        return .{
+            .lowBits = Object.packedTagSmallInteger,
             .localIndex = localIndex,
             .isLocal = options == .Local,
             .stackOffset = stackOffset,

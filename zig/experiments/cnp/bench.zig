@@ -8,7 +8,7 @@ const Extra = Context.Extra;
 const Object = zag.Object;
 const PC = zag.execute.PC;
 const compileMethod = zag.execute.compileMethod;
-const Sym = zag.symbol.symbols;
+const Sym = zag.symbol.Symbols;
 const SmallInteger = zag.primitives.primitives.SmallInteger;
 
 const jitmethod = @import("jit_method.zig");

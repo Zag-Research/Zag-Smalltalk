@@ -67,10 +67,8 @@ pub const Object = packed union {
     pub const HighTagType = void;
     pub const highTagSmallInteger = {};
     pub const PackedTagType = u3;
-    pub const packedTagSmallInteger = intTag;
-    pub const intTag = Tag.u(.smallInteger);
-    pub const immediatesTag = Tag.u(.smallInteger);
-    pub const tagged0: i64 = Tag.u(.smallInteger); // SmallInteger 0 in spur encoding
+    pub const packedTagSmallInteger = 1;
+    pub const signatureTag = Tag.u(.smallInteger);
     const TagAndClassType = u1;
     pub inline fn tagbits(self: Self) TagAndClassType {
         return @truncate(self.rawU());
@@ -102,14 +100,11 @@ pub const Object = packed union {
         return @bitCast(@as(u64, @bitCast(i)) + SmallIntegerTag);
     }
 
-    pub inline fn isInt(self: Object) bool {
+    inline fn isInt(self: Object) bool {
         return Tag.isSet(self, .smallInteger);
     }
     pub inline fn isNat(self: Object) bool {
         return self.isInt() and self.rawI() >= 0;
-    }
-    pub inline fn symbol40(self: object.Object) u40 {
-        return @truncate(self.addr().data.unsigned);
     }
     pub inline fn nativeI(self: Object) ?i64 {
         if (self.isInt()) return self.nativeI_noCheck();
@@ -150,15 +145,9 @@ pub const Object = packed union {
     pub inline fn isBool(self: Object) bool {
         return self.rawU() == Object.True().rawU() or self.rawU() == Object.False().rawU();
     }
-    pub inline fn toBoolNoCheck(self: Object) bool {
-        return self.rawU() == Object.True().rawU();
-    }
     pub inline fn isSymbol(self: Object) bool {
         // symbols are heap objects
         return self.isImmediateClass(.Symbol);
-    }
-    pub inline fn isNil(self: Object) bool {
-        return self.rawU() == Object.Nil().rawU();
     }
 
     inline fn oImm(c: Tag, h: u61) Self {
@@ -192,12 +181,6 @@ pub const Object = packed union {
     }
     pub inline fn hash32(self: Object) u32 {
         return @truncate(self.addr().data.unsigned);
-    }
-    pub inline fn hash48(self: Object) u48 {
-        return @truncate(self.rawU());
-    }
-    pub inline fn hash56(self: Object) u56 {
-        return @truncate(self.rawU());
     }
 
     // Raw access
@@ -261,9 +244,11 @@ pub const Object = packed union {
         @compileError("Can't convert \"" ++ @typeName(T) ++ "\"");
     }
 
-    pub inline fn isMemoryDouble(self: object.Object) bool {
-        if (self.ifHeapObject()) |ptr| return ptr.getClass() == .Float;
-        return false;
+    inline fn isMemoryDouble(self: object.Object) bool {
+        return if (self.ifHeapObject()) |ptr|
+            ptr.getClass() == .Float
+        else
+            false;
     }
 
     inline fn toDoubleFromMemory(self: object.Object) f64 {
@@ -277,7 +262,7 @@ pub const Object = packed union {
                 if (!check or self.isMemoryDouble()) return self.toDoubleFromMemory();
             },
             i64 => {
-                if (!check or self.isInt()) return self.nativeI_noCheck();
+                if (self.nativeI()) |int| return int;
             },
             bool => {
                 if (!check or self.isBool()) return self.toBoolNoCheck();
@@ -328,7 +313,7 @@ pub const Object = packed union {
     }
 
     pub inline fn asUntaggedI(i: i64) i64 {
-        return i;
+        return i << 1;
     }
     pub fn returnObjectClosure(_: Object, _: anytype) ?Object {
         return null;
@@ -368,10 +353,6 @@ pub const Object = packed union {
         return self.isMemoryDouble();
     }
 
-    pub inline fn asObject(self: Object) Object {
-        return self;
-    }
-
     pub inline fn withPrimitive(self: Object, prim: u64) Object {
         // For spur encoding, we can't easily embed primitives in objects
         // However, this is only done for signature objects, which already aren't quite valid
@@ -399,6 +380,7 @@ pub const Object = packed union {
     pub const getField = OF.getField;
     pub const get_class = OF.get_class;
     pub const isIndexable = OF.isIndexable;
+    pub const isNil = OF.isNil;
     pub const isUnmoving = OF.isUnmoving;
     pub const numArgs = OF.numArgs;
     pub const promoteToUnmovable = OF.promoteToUnmovable;

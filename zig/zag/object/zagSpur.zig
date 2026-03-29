@@ -1,5 +1,5 @@
 //! This module implements Object encoding for the Zag Spur encoding
-//! // it is a superset of Spur
+//! it is a superset of Spur where the Character encoding is replaced by more general immediates
 const std = @import("std");
 const expectEqual = std.testing.expectEqual;
 const expect = std.testing.expect;
@@ -20,7 +20,7 @@ const encode = @import("floatSpur.zig").encode;
 const decode = @import("floatSpur.zig").decode;
 
 const Tag = enum(u3) {
-    pointer = 0,
+    heap = 0,
     smallInteger = 0b001,
     immediates = 0b010,
     float = 0b100,
@@ -32,7 +32,7 @@ const Tag = enum(u3) {
         return switch (cls) {
             .SmallInteger => .smallInteger,
             .Float => .float,
-            else => if (cls.isImmediate()) .immediates else .pointer,
+            else => if (cls.isImmediate()) .immediates else .heap,
         };
     }
     inline fn isSet(obj: Object, comptime tag: Tag) bool {
@@ -78,15 +78,13 @@ pub const Object = packed union {
     pub inline fn Nil() Object {
         return Self{ .ref = null };
     }
-    pub const tagged0: i64 = @bitCast(oImm(.SmallInteger, 0));
     pub const LowTagType = TagAndClassType;
     pub const lowTagSmallInteger = makeImmediate(.SmallInteger, 0).tagbits();
     pub const HighTagType = void;
     pub const highTagSmallInteger = {};
-    pub const PackedTagType = u8;
-    pub const packedTagSmallInteger = intTag;
-    pub const intTag = Tag.u(.smallInteger);
-    pub const immediatesTag = Tag.u(.immediates);
+    pub const PackedTagType = Tag;
+    pub const packedTagSmallInteger = Tag.smallInteger;
+    pub const signatureTag = Tag.u(.immediates);
     const TagAndClassType = u8;
     const tagAndClassBits = @bitSizeOf(Tag) + @bitSizeOf(ClassIndex.Compact);
     comptime {
@@ -94,7 +92,6 @@ pub const Object = packed union {
     }
     const tagAndClass = (@as(u64, 1) << tagAndClassBits) - 1;
     const extraMask = 0xff;
-    const ExtraType = u8;
     pub inline fn tagbits(self: Object) TagAndClassType {
         return @truncate(self.rawU());
     }
@@ -128,14 +125,11 @@ pub const Object = packed union {
     inline fn isTag(self: Object, tag: Tag) bool {
         return Tag.isSet(self, tag);
     }
-    pub inline fn isInt(self: Object) bool {
+    inline fn isInt(self: Object) bool {
         return self.isTag(.smallInteger);
     }
     pub inline fn isNat(self: Object) bool {
         return self.isInt() and self.rawI() >= 0;
-    }
-    pub inline fn symbol40(self: Object) u40 {
-        return @truncate(self.rawU());
     }
     pub inline fn nativeI(self: Object) ?i64 {
         if (self.isInt()) return self.nativeI_noCheck();
@@ -166,7 +160,7 @@ pub const Object = packed union {
     }
 
     pub inline fn isHeapObject(self: Object) bool {
-        return self.isTag(.pointer);
+        return self.isTag(.heap);
     }
 
     pub inline fn extraValue(self: Object) Object {
@@ -191,39 +185,6 @@ pub const Object = packed union {
         // there are no invalid objects in this encoding
         return null;
     }
-    pub inline fn makeThunk(class: ClassIndex.Compact, obj: anytype, tag: u8) Object {
-        return oImm(class, @truncate((@intFromPtr(obj) << 8) | tag));
-    }
-    pub inline fn makeThunkNoArg(class: ClassIndex.Compact, value: u56) Object {
-        return .oImm(class, value);
-    }
-    inline fn thunkImmediate(o: Object) ?Object {
-        const value: i64 = @bitCast(o);
-        const shifted = value >> 55;
-        if (shifted == 0 or shifted == -1)
-            return oImm(.ThunkImmediate, @bitCast(@as(i56, @truncate(value))));
-        return null;
-    }
-    inline fn thunkImmediateValue(self: Self) Object {
-        return @bitCast(self.rawI() >> 8);
-    }
-    inline fn isThunkImmediate(self: Object) bool {
-        return self.isImmediateClass(.ThunkImmediate);
-    }
-    pub inline fn extraU(self: object.Object) u8 {
-        return @intCast(self.immediate.hash & extraMask);
-    }
-    pub inline fn extraI(self: object.Object) i8 {
-        return @bitCast(self.extraU());
-    }
-    test "ThunkImmediate" {
-        const ee = std.testing.expectEqual;
-        if (thunkImmediate(Object.tests[0])) |value|
-            try ee(Object.tests[0], value.thunkImmediateValue());
-        if (thunkImmediate(Object.from(-42, undefined, undefined))) |value|
-            try ee(Object.from(-42, undefined, undefined), value.thunkImmediateValue());
-        try ee(null, thunkImmediate(Object.from(@as(u64, 1) << 47, undefined, undefined)));
-    }
     pub inline fn isImmediateClass(self: Object, comptime class: ClassIndex.Compact) bool {
         return self.tagbits() == oImm(class, 0).tagbits();
     }
@@ -231,8 +192,13 @@ pub const Object = packed union {
         return self.isTag(.float);
     }
     pub inline fn isMemoryDouble(self: Object) bool {
-        if (self.ifHeapObject()) |ptr| return ptr.getClass() == .Float;
-        return false;
+        return if (self.ifHeapObject()) |ptr|
+            ptr.getClass() == .Float
+        else
+            false;
+    }
+    inline fn toDoubleFromMemory(self: Object) f64 {
+        return self.to(*InMemory.MemoryFloat).*.value;
     }
     inline fn oImm(c: ClassIndex.Compact, h: u56) Self {
         return Self{ .immediate = .{ .class = c, .hash = h } };
@@ -240,13 +206,9 @@ pub const Object = packed union {
     inline fn oImmContext(c: ClassIndex.Compact, context: *Context, e: u8) Self {
         return Self{ .immediate = .{ .class = c, .hash = @as(u56, @intCast(@intFromPtr(context))) << 8 | e } };
     }
-    pub inline fn hasPointer(self: Object) bool {
-        const bits = math.rotr(TagAndClassType, self.tagbits(), 3);
-        return bits <= math.rotr(TagAndClassType, oImm(.ThunkHeap, 0).tagbits(), 3) and bits != 0;
-    }
     pub inline fn pointer(self: Object, T: type) ?T {
         switch (self.tag) {
-            .pointer => return @ptrFromInt(self.rawU()),
+            .heap => return @ptrFromInt(self.rawU()),
             .immediates => switch (self.class) {
                 .ThunkReturnLocal, .ThunkReturnInstance, .ThunkReturnObject, .ThunkReturnImmediate, .ThunkReturnCharacter, .ThunkReturnFloat, .ThunkHeap, .ThunkLocal, .ThunkInstance, .BlockAssignLocal, .BlockAssignInstance => return self.highPointer(T),
                 else => {},
@@ -254,13 +216,7 @@ pub const Object = packed union {
             else => {},
         }
         return null;
-    }
-    pub inline fn toBoolNoCheck(self: Object) bool {
-        return self.rawU() == Object.True().rawU();
-    }
-    inline fn toDoubleFromMemory(self: Object) f64 {
-        return self.to(*InMemory.MemoryFloat).*.value;
-    }
+   }
     pub inline fn makeImmediate(cls: ClassIndex.Compact, hash: u56) Object {
         return oImm(cls, hash);
     }
@@ -298,7 +254,7 @@ pub const Object = packed union {
             .float, .comptime_float => return fromNativeF(value, sp, context),
             .bool => return if (value) Object.True() else Object.False(),
             .null => return Object.Nil(),
-            .pointer => |ptr_info| {
+            .heap => |ptr_info| {
                 switch (ptr_info.size) {
                     .one, .many => return fromAddress(value),
                     else => {},
@@ -308,13 +264,14 @@ pub const Object = packed union {
         }
         @compileError("Can't convert \"" ++ @typeName(T) ++ "\"");
     }
+
     pub fn toWithCheck(self: Object, comptime T: type, comptime check: bool) T {
         switch (T) {
             f64 => {
                 if (self.nativeF()) |flt| return flt;
             },
             i64 => {
-                if (!check or self.isInt()) return self.nativeI_noCheck();
+                if (self.nativeI()) |int| return int;
             },
             bool => {
                 if (!check or self.isBool()) return self.toBoolNoCheck();
@@ -326,7 +283,7 @@ pub const Object = packed union {
             //u8  => {return @intCast(u8, self.hash & 0xff);},
             else => {
                 switch (@typeInfo(T)) {
-                    .pointer => |ptrInfo| {
+                    .heap => |ptrInfo| {
                         switch (@typeInfo(ptrInfo.child)) {
                             .@"fn" => {},
                             .@"struct" => {
@@ -364,18 +321,27 @@ pub const Object = packed union {
         return .UndefinedObject;
     }
     pub inline fn hasMemoryReference(self: Object) bool {
-        return if (self.isHeapObject()) !self.equals(Object.Nil()) else @intFromEnum(self.immediate.class) <= @intFromEnum(ClassIndex.Compact.ThunkHeap);
+        return if (self.isHeapObject())
+            !self.equals(Object.Nil())
+        else switch (self.class) {
+            .ThunkReturnLocal, .ThunkReturnInstance, .ThunkReturnObject, .ThunkReturnImmediate, .ThunkLocal, .BlockAssignLocal, .ThunkInstance, .BlockAssignInstance, .ThunkHeap, .ThunkReturnCharacter, .ThunkReturnFloat => true,
+            else => false, // catches the nil case
+        };
     }
 
     pub inline fn ifHeapObject(self: Object) ?*HeapObject {
-        if (self.isTag(.pointer) and self.rawU() != 0) return @ptrFromInt(self.rawU());
+        if (self.isTag(.heap) and self.rawU() != 0) return @ptrFromInt(self.rawU());
         return null;
     }
 
-    pub inline fn asUntaggedI(i: i64) i64 {
-        return i;
+    pub inline fn asUntaggedI(i: i61) i64 {
+        return @as(i64, i) << 3;
     }
-    pub fn returnObjectClosure(self: Object, context: *Context) ?Object {
+    pub inline fn isSymbol(self: Object) bool {
+        return self.tagbits() == comptime makeImmediate(.Symbol, 0).tagbits();
+    }
+
+   pub fn returnObjectClosure(self: Object, context: *Context) ?Object {
         if (self.nativeI()) |i| {
             switch (i) {
                 -128...127 => return oImmContext(.ThunkReturnObject, context, @bitCast(@as(i8, @intCast(i)))),
@@ -402,21 +368,22 @@ pub const Object = packed union {
         };
     }
 
-    pub fn extraImmediateU(obj: Object) ?u8 {
-        if (obj.isImmediateClass(.ThunkReturnLocal) or
-            obj.isImmediateClass(.ThunkReturnInstance) or
-            obj.isImmediateClass(.ThunkReturnImmediate) or
-            obj.isImmediateClass(.ThunkReturnCharacter) or
-            obj.isImmediateClass(.ThunkReturnFloat))
-        {
-            return obj.extraU();
+    pub fn extraImmediateU(obj: Object) ?u11 {
+        switch (obj.class) {
+            .ThunkReturnLocal,
+            .ThunkReturnInstance,
+            .ThunkReturnImmediate,
+            .ThunkReturnCharacter,
+            .ThunkReturnFloat => { return obj.extraU(); },
+            else => {},
         }
         return null;
     }
 
-    pub fn extraImmediateI(obj: Object) ?i8 {
-        if (obj.isImmediateClass(.ThunkReturnObject)) {
-            return obj.extraI();
+    pub fn extraImmediateI(obj: Object) ?i11 {
+        switch (obj.class) {
+            .ThunkReturnObject => { return obj.extraI(); },
+            else => {}
         }
         return null;
     }
@@ -447,9 +414,19 @@ pub const Object = packed union {
             _ = .{ ctx, obj };
         }
     };
-    pub inline fn isSymbol(self: Object) bool {
-        return self.tagbits() == comptime makeImmediate(.Symbol, 0).tagbits();
+    pub inline fn makeThunk(class: ClassIndex.Compact, obj: anytype, tag: u8) Object {
+        return oImm(class, @truncate((@intFromPtr(obj) << 8) | tag));
     }
+    pub inline fn makeThunkNoArg(class: ClassIndex.Compact, value: u56) Object {
+        return .oImm(class, value);
+    }
+    pub inline fn extraU(self: object.Object) u8 {
+        return @intCast(self.immediate.hash & extraMask);
+    }
+    pub inline fn extraI(self: object.Object) i8 {
+        return @bitCast(self.extraU());
+    }
+
     const OF = object.ObjectFunctions;
     pub const arrayAsSlice = OF.arrayAsSlice;
     pub const asObjectArray = OF.asObjectArray;

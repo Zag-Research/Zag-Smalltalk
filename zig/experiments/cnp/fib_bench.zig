@@ -8,7 +8,7 @@ const MainExecutor = zag.execute.Execution.MainExecutor;
 const compileMethod = zag.execute.compileMethod;
 const Context = zag.Context;
 const symbol = zag.symbol;
-const Sym = zag.symbol.symbols;
+const Sym = zag.symbol.Symbols;
 const dispatch = zag.dispatch;
 
 const jitmethod = @import("jit_method.zig");
@@ -88,7 +88,7 @@ pub fn main() !void {
         fib_rounds,    if (fib_rounds != 1) "s" else "",
         warmup_rounds, if (warmup_rounds != 1) "s" else "",
     });
-    
+
     for (0..warmup_rounds) |_| {
         _ = measureSendTo(&exe, &compiled_jit);
         _ = measureNativeFib(fib_n);

@@ -116,7 +116,7 @@ fn loadSymbols() !void {
     }
 }
 fn loadClassTable() !void {
-    assert(zagImageHeader.classTable == object.Nil());
+    assert(zagImageHeader.classTable.equals(object.Nil()));
 }
 fn loadDispatchTable(file: std.fs.File) !void {
 //    execute.loadIntrinsicsDispatch();

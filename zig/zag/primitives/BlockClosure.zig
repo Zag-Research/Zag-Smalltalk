@@ -457,20 +457,20 @@ pub const threadedFns = struct {
         }
     };
 };
-pub const ThunkImmediate = struct {
-    pub fn primitive(_: PC, sp: SP, process: *Process, context: *Context, _: Extra) Result {
-        const result = sp.top.extraValue();
-        const newSp, const callerContext = context.pop(sp);
-        newSp.top = result;
-        return @call(tailCall, process.check(callerContext.getNPc()), .{ callerContext.getTPc(), newSp, process, callerContext, undefined });
-    }
-    const name = stringOf("ThunkImmediate").init().obj();
-    test "ThunkImmediate" {
-        if (true) return error.SkipZigTest;
-        var exe = zag.execute.Execution.initTest("ThunkImmediate", .{});
-        try exe.resolve(&[_]Object{ name.asObject(), zModuleName.asObject(), unreachable });
-    }
-};
+// pub const ThunkImmediate = struct {
+//     pub fn primitive(_: PC, sp: SP, process: *Process, context: *Context, _: Extra) Result {
+//         const result = sp.top.extraValue();
+//         const newSp, const callerContext = context.pop(sp);
+//         newSp.top = result;
+//         return @call(tailCall, process.check(callerContext.getNPc()), .{ callerContext.getTPc(), newSp, process, callerContext, undefined });
+//     }
+//     const name = stringOf("ThunkImmediate").init().obj();
+//     test "ThunkImmediate" {
+//         if (true) return error.SkipZigTest;
+//         var exe = zag.execute.Execution.initTest("ThunkImmediate", .{});
+//         try exe.resolve(&[_]Object{ name.asObject(), zModuleName.asObject(), unreachable });
+//     }
+// };
 pub const inlines = struct {
     pub inline fn p201(self: Object, other: Object) !Object { // value
         _ = self;
@@ -498,21 +498,21 @@ pub const inlines = struct {
         return error.primitiveError;
     }
     pub fn immutableClosure(sp: SP, process: *Process) SP {
-        const val = sp.top;
-        var newSp = sp;
-        if (true) @panic("immutableClosure");
-        if (val.isInt() and val.rawU() <= Object.from(0x3fff_ffff_ffff).rawU() and val.rawU() >= Object.from(-0x4000_0000_0000).rawU()) {
-            sp.top = Object.makeGroup(.numericThunk, @as(u47, @truncate(val.u())));
-        } else if (val.isDouble() and (val.u() & 0x1ffff) == 0) {
-            sp.top = Object.makeGroup(.numericThunk, @as(u48, 1) << 47 | @as(u48, @truncate(val.u() >> 17)));
-        } else if (val.isImmediate()) {
-            sp.top.tag = .immediateThunk;
-        } else if (val.ifHeapObject()) |_| {
-            sp.top.tag = .heapThunk;
-        } else {
-            newSp = generalClosure(sp.drop(), process, val);
-        }
-        return newSp;
+        // const val = sp.top;
+        // var newSp = sp;
+        _ = .{ sp, process, @panic("immutableClosure")};
+        // if (val.isInt() and val.rawU() <= Object.from(0x3fff_ffff_ffff).rawU() and val.rawU() >= Object.from(-0x4000_0000_0000).rawU()) {
+        //     sp.top = Object.makeGroup(.numericThunk, @as(u47, @truncate(val.u())));
+        // } else if (val.isDouble() and (val.u() & 0x1ffff) == 0) {
+        //     sp.top = Object.makeGroup(.numericThunk, @as(u48, 1) << 47 | @as(u48, @truncate(val.u() >> 17)));
+        // } else if (val.isImmediate()) {
+        //     sp.top.tag = .immediateThunk;
+        // } else if (val.ifHeapObject()) |_| {
+        //     sp.top.tag = .heapThunk;
+        // } else {
+        //     newSp = generalClosure(sp.drop(), process, val);
+        // }
+        // return newSp;
     }
     pub inline fn generalClosure(oldSp: SP, process: *Process, val: Object) SP {
         // const sp = process.allocStack(oldSp, .BlockClosure, 1, null, Object) catch @panic("unreachable"); // can't fail because preallocated
