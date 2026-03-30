@@ -72,9 +72,9 @@ ASImageHeader >> send: selector to: object [
 ]
 
 { #category : 'initialization' }
-ASImageHeader >> storeMagic: type [
+ASImageHeader >> storeMagic: magic [
 
-	storage at: 1 put: (16r616D4967615A + (type first asInteger << 48) + (type second asInteger << 56)) " magic "
+	storage at: 1 put: magic " magic "
 ]
 
 { #category : 'initialization' }

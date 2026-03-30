@@ -26,3 +26,10 @@ ASImageExporterTrial class >> inspect42 [
 	self imageFolder.
 	self new writeImageSending: #inspect to: 42
 ]
+
+{ #category : 'writing' }
+ASImageExporterTrial class >> resetImageFolder [
+
+	<script>
+	imageFolder := nil
+]

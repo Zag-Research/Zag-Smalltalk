@@ -45,6 +45,12 @@ ZagImageEncodeNan class >> literal: l class: c [
 	^ self groupImmediates + l + (c bitShift: 48)
 ]
 
+{ #category : 'magic' }
+ZagImageEncodeNan class >> magic [
+
+	^ 16r614E616D4967615A " ZagImaNa"
+]
+
 { #category : 'converting' }
 ZagImageEncodeNan class >> pointer: p [
 

@@ -31,6 +31,12 @@ ZagImageEncodeZag class >> literal: l class: c [
 	^ (l bitShift: 8) + (c bitShift: 3) + 1
 ]
 
+{ #category : 'magic' }
+ZagImageEncodeZag class >> magic [
+
+	^ 16r615A616D4967615A " ZagImaZa"
+]
+
 { #category : 'converting' }
 ZagImageEncodeZag class >> pointer: p [
 

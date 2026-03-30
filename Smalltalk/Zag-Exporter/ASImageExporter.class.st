@@ -190,7 +190,7 @@ ASImageExporter >> imageSending: aSymbol to: anObject [
 
 	| header |
 	header := ASImageHeader new.
-	header storeMagic: self encodingTag.
+	header storeMagic: encoder magic.
 	header send: (aSymbol encodedBy: self) to: (anObject encodedBy: self).
 	header symbolTable:
 		((extraSymbols asChunkedArraysOfSize: 127) encodedBy: self).
@@ -415,7 +415,10 @@ ASImageExporter >> selector: aSymbol [
 
 { #category : 'initialization' }
 ASImageExporter >> symbols [
-	" add these symbols to the dictionary, but then remove them from the extraSymbols collection because the zag runtime already knows about them "
+	" return the symbol table.
+	If there isn't one, create one and add all the pre-defined ones first.
+	But then remove them from the extraSymbols collection because the zag runtime already knows about them.
+	Must not be called until the encoder has been defined "
 
 	symbols ifNotNil: [ ^ symbols ].
 	symbols := Dictionary new.

@@ -31,6 +31,12 @@ ZagImageEncodeMix class >> literal: l class: c [
 	^ (l bitShift: 3) + (c bitShift: 59) + 1
 ]
 
+{ #category : 'magic' }
+ZagImageEncodeMix class >> magic [
+
+	^ 16r694D616D4967615A " ZagImaMi"
+]
+
 { #category : 'converting' }
 ZagImageEncodeMix class >> pointer: p [
 
