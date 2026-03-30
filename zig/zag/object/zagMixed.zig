@@ -176,7 +176,7 @@ pub const Object = packed struct(u64) {
         }
         return null;
     }
-    pub inline fn makeImmediate(cls: ClassIndex.Compact, hash: u56) object.Object {
+    pub inline fn makeImmediate(cls: ClassIndex.Compact, hash: u45) object.Object {
         return oImm(cls, hash);
     }
     pub inline fn hash24(self: object.Object) u24 {

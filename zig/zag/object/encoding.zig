@@ -40,12 +40,22 @@ pub fn module(self: anytype) type {
         .onlyFloat => @import("onlyFloat.zig"),
     };
 }
+pub fn tag(self: anytype) ?u64 {
+    return switch (self) {
+        .zag => 'Z' + ('a' << 8),
+        .zagMixed => 'Z' + ('M' << 8),
+        .nan => 'N' + ('a' << 8),
+        else => null,
+    };
+}
 test "fromName" {
     const match = Encoding.fromName;
     const expect = std.testing.expect;
     try expect(try match("zag") == .zag);
-    try expect(try match("nan") == .nan);
+    try expect(try match("zagMixed") == .zagMixed);
+    try expect(try match("zagSpur") == .zagSpur);
     try expect(try match("spur") == .spur);
+    try expect(try match("nan") == .nan);
     try expect(try match("taggedPtr") == .taggedPtr);
     try expect(try match("taggedHigh") == .taggedHigh);
     try expect(try match("taggedInt") == .taggedInt);

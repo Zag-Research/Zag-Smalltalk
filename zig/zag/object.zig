@@ -39,9 +39,15 @@ pub fn fromLE(comptime T: type, v: T) Object {
     return @bitCast(mem.readIntLittle(T, val));
 }
 pub const compareObject = Object.compare;
+const siIndex = 21;
+const noneIndex = switch (config.objectEncoding) {
+    .taggedPtr, .taggedHigh => siIndex,
+    else => 0,
+};
 pub const ClassIndex = enum(u16) {
-    SmallInteger = 0,
-    ThunkReturnLocal,
+    none = noneIndex,
+    SmallInteger = noneIndex ^ siIndex,
+    ThunkReturnLocal = 1,
     ThunkReturnInstance,
     ThunkReturnObject,
     ThunkReturnImmediate,
@@ -61,12 +67,11 @@ pub const ClassIndex = enum(u16) {
     ThunkFloat,
     LLVM,
     UndefinedObject,
-    none,
-    reserved_21,
-    reserved_22,
+    reserved_22 = 22,
     reserved_23,
     reserved_24,
     reserved_25,
+    reserved_26,
     o4,
     o3,
     o2,
@@ -109,8 +114,9 @@ pub const ClassIndex = enum(u16) {
     pub const LastSpecial = @intFromEnum(Self.Dispatch);
     const Self = @This();
     pub const Compact = enum(u5) {
-        SmallInteger = 0,
-        ThunkReturnLocal,
+        none = noneIndex,
+        SmallInteger = noneIndex ^ siIndex,
+        ThunkReturnLocal = 1,
         ThunkReturnInstance,
         ThunkReturnObject,
         ThunkReturnImmediate,
@@ -130,12 +136,11 @@ pub const ClassIndex = enum(u16) {
         ThunkFloat,
         LLVM,
         UndefinedObject,
-        none,
-        reserved_21,
-        reserved_22,
+        reserved_22 = 22,
         reserved_23,
         reserved_24,
         reserved_25,
+        reserved_26,
         o4,
         o3,
         o2,
@@ -163,7 +168,10 @@ pub const ClassIndex = enum(u16) {
     pub const lookupMethodForClass = zag.dispatch.lookupMethodForClass;
 };
 comptime {
+    std.debug.assert(@intFromEnum(ClassIndex.Compact.UndefinedObject) == 20);
+    std.debug.assert(@intFromEnum(ClassIndex.UndefinedObject) == 20);
     std.debug.assert(@intFromEnum(ClassIndex.replace0) == 0xffff);
+    std.debug.assert(@intFromEnum(ClassIndex.Compact.o0) == 0x1f);
     std.debug.assert(@intFromEnum(ClassIndex.o0) == 0x1f);
     std.testing.expectEqual(@intFromEnum(ClassIndex.ThunkReturnLocal), 1) catch @panic("unreachable");
     //    std.debug.assert(std.meta.hasUniqueRepresentation(Object));
