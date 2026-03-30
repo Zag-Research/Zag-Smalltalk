@@ -40,16 +40,13 @@ pub const Object = packed struct(u64) {
     pub inline fn Nil() Object {
         return oImm(.UndefinedObject, 34512);
     }
-
-    pub const tagged0: i64 = @as(i64, @intFromEnum(ClassIndex.SmallInteger));
     pub const LowTagType = u16;
     pub const lowTagSmallInteger: u16 = @intFromEnum(ClassIndex.SmallInteger);
     pub const HighTagType = void;
     pub const highTagSmallInteger = {};
     pub const PackedTagType = u8;
     pub const packedTagSmallInteger: u8 = 1;
-    pub const intTag: u16 = @intFromEnum(ClassIndex.SmallInteger);
-    pub const immediatesTag: u8 = 1;
+    pub const signatureTag: u8 = 1;
 
     pub inline fn tagbits(self: Self) u16 {
         return self.class;
@@ -79,14 +76,11 @@ pub const Object = packed struct(u64) {
 
     pub const fromUntaggedI = fromTaggedI;
 
-    pub inline fn isInt(self: object.Object) bool {
+    inline fn isInt(self: object.Object) bool {
         return self.class == .SmallInteger;
     }
     pub inline fn isNat(self: object.Object) bool {
         return self.isInt() and self.rawI() >= 0;
-    }
-    pub inline fn symbol40(self: object.Object) u40 {
-        return @truncate(self.toUnchecked(*InMemory.PointedObject).data.unsigned);
     }
     pub inline fn nativeI(self: object.Object) ?i64 {
         if (self.isInt()) return self.nativeI_noCheck();
@@ -214,7 +208,7 @@ pub const Object = packed struct(u64) {
                 if (self.nativeF()) |flt| return flt;
             },
             i64 => {
-                if (!check or self.isInt()) return self.nativeI_noCheck();
+                if (self.nativeI()) |int| return int;
             },
             bool => {
                 if (!check or self.isBool()) return self.toBoolNoCheck();
@@ -279,9 +273,6 @@ pub const Object = packed struct(u64) {
     pub inline fn isSymbol(self: object.Object) bool {
         return self.class == .Symbol;
     }
-    pub inline fn toBoolNoCheck(self: object.Object) bool {
-        return self.rawU() == object.Object.True().rawU();
-    }
     inline fn toDoubleFromMemory(self: object.Object) f64 {
         return self.toUnchecked(*InMemory.MemoryFloat).*.value;
     }
@@ -318,11 +309,8 @@ pub const Object = packed struct(u64) {
         if (self.isHeapObject()) return @ptrFromInt(self.heapAddr());
         return null;
     }
-    pub inline fn hasPointer(self: object.Object) bool {
-        return self.isHeapObject();
-    }
     pub inline fn asUntaggedI(i: i48) i64 {
-        return @bitCast(Object{ .intOrAddress = @bitCast(i), .class = .none });
+        return @as(i64, i) << 16;
     }
 
     pub const Scanner = struct {

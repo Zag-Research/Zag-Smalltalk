@@ -239,6 +239,9 @@ pub const ObjectFunctions = struct {
         if (self.isBool()) return self.toBoolNoCheck();
         return error.wrongType;
     }
+    inline fn toBoolNoCheck(self: Object) bool {
+        return self.equals(Object.True());
+    }
     pub inline //
     fn toNat(self: Object) !u64 {
         if (self.isNat()) return self.toNatNoCheck();
@@ -396,7 +399,9 @@ pub const PackedObject = packed struct {
         return combine(u14, tup);
     }
     pub fn classes(comptime tup: []const ClassIndex) PackedObject {
-        return @bitCast((@as(u64, combine(u14, tup)) << @bitSizeOf(Object.PackedTagType)) + Object.packedTagSmallInteger);
+        var result: PackedObject = @bitCast((@as(u64, combine(u14, tup)) << @bitSizeOf(Object.PackedTagType)));
+        result.tag = Object.packedTagSmallInteger;
+        return result;
     }
     test "combiners" {
         const expectEqual = std.testing.expectEqual;
@@ -418,7 +423,7 @@ test "from conversion" {
     //    try ee((Object.from(3.14, sp, context)).get_class(), .Float);
     try std.testing.expect((Object.from(3.14, sp, context)).isFloat());
     try ee((Object.from(3, sp, context)).get_class(), .SmallInteger);
-    try std.testing.expect((Object.from(3, sp, context)).isInt());
+    //try std.testing.expect((Object.from(3, sp, context)).isInt());
     try std.testing.expect((Object.from(false, sp, context)).isBool());
     try ee((Object.from(false, sp, context)).get_class(), .False);
     try ee((Object.from(true, sp, context)).get_class(), .True);
@@ -435,7 +440,7 @@ test "to conversion" {
     try ee((Object.from(3.14, sp, context)).to(f64), 3.14);
     //    trace("value: {}", .{@as(zag.InMemory.PointedObjectRef, @bitCast(Object.from(42, sp, context)))});
     try ee((Object.from(42, sp, context)).to(i64), 42);
-    try std.testing.expect((Object.from(42, sp, context)).isInt());
+    //try std.testing.expect((Object.from(42, sp, context)).isInt());
     try ee((Object.from(true, sp, context)).to(bool), true);
     try ee((Object.from(-0x400000, sp, context)).toUnchecked(i64), -0x400000);
 }

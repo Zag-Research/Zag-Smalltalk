@@ -22,15 +22,13 @@ pub const Object = packed struct(u64) {
         return @bitCast(@as(u64, 2));
     }
     pub const maxInt = 0x7fff_ffff_ffff_ffff;
-    pub const tagged0: i64 = 0;
     pub const LowTagType = void;
     pub const lowTagSmallInteger = {};
     pub const HighTagType = void;
     pub const highTagSmallInteger = {};
     pub const PackedTagType = u3;
     pub const packedTagSmallInteger = 1;
-    pub const intTag = @import("zag.zig").Object.intTag;
-    pub const immediatesTag = 1;
+    pub const signatureTag = 1;
     pub inline fn untaggedI(self: object.Object) ?i64 {
         return @bitCast(self);
     }
@@ -43,9 +41,6 @@ pub const Object = packed struct(u64) {
         return @bitCast(i);
     }
     pub const fromUntaggedI = fromTaggedI;
-    pub inline fn symbol40(_: object.Object) u40 {
-        return 0;
-    }
     pub inline fn asUntaggedI(i: i64) i64 {
         return i;
     }
@@ -83,20 +78,10 @@ pub const Object = packed struct(u64) {
         // there are no invalid objects in this encoding
         return null;
     }
-    pub inline fn thunkImmediate(o: Object) ?Object {
-        _ = .{ o, unreachable };
-    }
-    pub inline fn thunkImmediateValue(self: Self) Object {
-        _ = .{ self, unreachable };
-    }
     pub inline fn isImmediateClass(_: Object, comptime _: ClassIndex) bool {
         return false;
     }
-    pub inline fn isMemoryDouble(_: object.Object) bool {
-        return false;
-    }
-    pub inline //
-    fn isInt(_: Object) bool {
+    inline fn isInt(_: Object) bool {
         return true;
     }
     pub inline fn isNat(self: Object) bool {
@@ -108,17 +93,11 @@ pub const Object = packed struct(u64) {
     // pub inline fn oImm(c: ClassIndex.Compact, h: u56) Self {
     //     return Self{ .tag = .immediates, .class = c, .hash = h };
     // }
-    pub inline fn hasPointer(_: Object) bool {
-        return false;
-    }
     pub inline fn highPointer(_: Object, T: type) ?T {
         @panic("Not implemented");
     }
     pub inline fn pointer(_: Object, T: type) ?T {
         @panic("Not implemented");
-    }
-    pub inline fn toBoolNoCheck(self: Object) bool {
-        return self == Object.True();
     }
     pub inline fn toIntNoCheck(self: Object) i64 {
         return @bitCast(self);

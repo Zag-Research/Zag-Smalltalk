@@ -115,7 +115,7 @@ pub const Format = enum(u7) {
     pub inline fn hasIndexPointers(self: Self) bool {
         return self.hasPointers() and self.isIndexable();
     }
-    pub inline fn hasPointers(self: Self) bool {
+    inline fn hasPointers(self: Self) bool {
         return @intFromEnum(self) > LastPointerFree;
     }
     pub inline fn inHeapSize(self: Self, header: HeapHeader, obj: *const HeapObject) usize {

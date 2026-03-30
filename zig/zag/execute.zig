@@ -32,7 +32,7 @@ const globalArena = zag.globalArena;
 const HeapAllocationPtr = globalArena.HeapAllocationPtr;
 //const class = zag.class;
 const symbol = zag.symbol;
-const Sym = symbol.symbols;
+const Sym = symbol.Symbols;
 const threadedFn = zag.threadedFn;
 const tf = threadedFn.Enum;
 
@@ -43,7 +43,7 @@ pub const Signature = packed struct {
     numArgs: u8 = 0,
     class: ClassIndex = .none,
     prim: u8 = 0,
-    const sigTag = @as(u8, @intFromEnum(ClassIndex.Compact.Signature)) << 3 | Object.immediatesTag;
+    const sigTag = @as(u8, @intFromEnum(ClassIndex.Compact.Signature)) << 3 | Object.signatureTag;
     fn isTagged(self: Signature) bool {
         return self.tag == sigTag;
     }
@@ -66,7 +66,7 @@ pub const Signature = packed struct {
     pub fn fromPrimitive(primitiveNumber: u8) Signature {
         return .{ .prim = primitiveNumber };
     }
-    pub fn fromNameClass(name: anytype, class: ClassIndex) Signature {
+    pub fn fromNameClass(name: symbol.Symbols, class: ClassIndex) Signature {
         return .{ .numArgs = name.numArgs(), .hash = name.symbolHash().?, .class = class };
     }
     pub fn fromClassU8(class: ClassIndex, number: u8) Signature {

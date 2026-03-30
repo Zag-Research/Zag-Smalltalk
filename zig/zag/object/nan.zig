@@ -74,15 +74,13 @@ pub const Object = packed struct(u64) {
     pub inline fn Nil() Object {
         return oImm(.UndefinedObject, 0);
     }
-    pub const tagged0: i64 = 0;
     pub const LowTagType = void;
     pub const lowTagSmallInteger = {};
     pub const HighTagType = TagBaseType;
     pub const highTagSmallInteger: HighTagType = Tag.u(.smallInteger);
     pub const PackedTagType = u3;
     pub const packedTagSmallInteger = 1;
-    pub const intTag = @import("zag.zig").Object.intTag;
-    pub const immediatesTag = 1;
+    pub const signatureTag = 1;
     const TagAndClassType = u16;
     const tagAndClassBits = @bitSizeOf(Tag);
     comptime {
@@ -97,7 +95,7 @@ pub const Object = packed struct(u64) {
     inline fn asI64(self: Object) i64 {
         return @as(i64, @bitCast(self.rawU() << intTagBits)) >> intTagBits;
     }
-    pub inline fn isInt(self: Object) bool {
+    inline fn isInt(self: Object) bool {
         if (true) {
             return self.rawU() >> 48 >= Tag.u(.smallInteger);
         } else {
@@ -120,9 +118,6 @@ pub const Object = packed struct(u64) {
     pub inline fn invalidObject(_: Object) ?u64 {
         // there are no invalid objects in this implementation
         return null;
-    }
-    pub inline fn asObject(self: Object) Object {
-        return self;
     }
     pub //inline
     fn isImmediateClass(self: Object, comptime class: ClassIndex) bool {
@@ -195,9 +190,6 @@ pub const Object = packed struct(u64) {
     pub inline fn fromUntaggedI(i: i64, _: anytype, _: anytype) Object {
         return toObject(i);
     }
-    pub inline fn symbol40(self: Object) u40 {
-        return @as(u40, self.hash32()) << 8 | 1;
-    }
     pub inline fn untaggedInt(self: Object) u64 {
         return self.toNatNoCheck();
     }
@@ -208,8 +200,8 @@ pub const Object = packed struct(u64) {
     inline fn nativeI_noCheck(self: Object) i64 {
         return self.asI64();
     }
-    pub inline fn asUntaggedI(t: i51) i64 {
-        return t << 13;
+    pub inline fn asUntaggedI(i: i51) i64 {
+        return @as(i64, i) << 13;
     }
     pub inline fn fromNativeI(t: i51, _: anytype, _: anytype) Object {
         return toObjectFromNative(t);
@@ -281,9 +273,6 @@ pub const Object = packed struct(u64) {
             else => false,
         };
     }
-    pub inline fn toBoolNoCheck(self: Object) bool {
-        return self == True();
-    }
     pub fn returnObjectClosure(self: Object, context: *Context) ?Object {
         if (self.nativeI()) |i| {
             switch (i) {
@@ -353,7 +342,7 @@ pub const Object = packed struct(u64) {
                 if (self.nativeF()) |flt| return flt;
             },
             i64 => {
-                if (!check or self.isInt()) return self.nativeI_noCheck();
+                if (self.nativeI()) |int| return int;
             },
             bool => {
                 if (!check or self.isBool()) return self.toBoolNoCheck();

@@ -93,6 +93,11 @@
     "cwd": "$ZED_WORKTREE_ROOT/zig",
   },
   {
+    "label": "trace fib mix",
+    "command": "zig build -Dtrace -Dencoding=zagMixed -Doptimize=Debug -freference-trace=5 && ./zig-out/bin/fib",
+    "cwd": "$ZED_WORKTREE_ROOT/zig",
+  },
+  {
     "label": "trace fib zagAlt",
     "command": "zig build -Dtrace -Dencoding=zagAlt -Doptimize=Debug -freference-trace=5 && ./zig-out/bin/fib",
     "cwd": "$ZED_WORKTREE_ROOT/zig",
@@ -104,20 +109,22 @@
   },
   {
     "label": "time fib zag",
-    "command": "zig build -Doptimize=ReleaseFast -freference-trace=10 && ./zig-out/bin/fib",
-    //"command": "zig build -Doptimize=ReleaseFast && taskpolicy -l5 -t5 time ./zig-out/bin/fib",
+    "command": "zig build -Dencoding=zag -Doptimize=ReleaseFast -freference-trace=10 && ./zig-out/bin/fib",
+    "cwd": "$ZED_WORKTREE_ROOT/zig",
+  },
+  {
+    "label": "time fib mixed",
+    "command": "zig build -Dencoding=zagMixed -Doptimize=ReleaseFast -freference-trace=10 && ./zig-out/bin/fib",
     "cwd": "$ZED_WORKTREE_ROOT/zig",
   },
   {
     "label": "time fib onlyInt",
     "command": "zig build -Dencoding=onlyInt -Doptimize=ReleaseFast && ./zig-out/bin/fib",
-    //"command": "zig build -Doptimize=ReleaseFast && taskpolicy -l5 -t5 time ./zig-out/bin/fib",
     "cwd": "$ZED_WORKTREE_ROOT/zig",
   },
   {
     "label": "time fib onlyFloat",
     "command": "zig build -Dencoding=onlyFloat -Doptimize=ReleaseFast -freference-trace=20 && ./zig-out/bin/fib",
-    //"command": "zig build -Doptimize=ReleaseFast && taskpolicy -l5 -t5 time ./zig-out/bin/fib",
     "cwd": "$ZED_WORKTREE_ROOT/zig",
   },
   {

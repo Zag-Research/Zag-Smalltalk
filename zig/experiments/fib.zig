@@ -8,7 +8,7 @@ const Object = zag.Object;
 const MainExecutor = zag.execute.Execution.MainExecutor;
 const compileMethod = zag.execute.compileMethod;
 const tf = zag.threadedFn.Enum;
-const Sym = zag.symbol.symbols;
+const Sym = zag.symbol.Symbols;
 const SmallInteger = zag.primitives.primitives.SmallInteger;
 const Float = zag.primitives.primitives.Float;
 const PC = zag.execute.PC;
@@ -330,195 +330,6 @@ const fibIntegerCl = struct {
     }
 };
 
-const fibIntegerCnP = struct {
-    const exclude: []const Encoding = &[_]Encoding{.onlyFloat};
-    var info = Info{ .name = "IntegerCnP" };
-    const self = zag.Context.makeVariable(0, 1, .Parameter, &.{});
-    const leq = tf.@"inline<=I";
-    const plus = tf.@"inline+I";
-    const minus = tf.@"inline-I";
-    const classes = Object.PackedObject.classes;
-    const signature = zag.symbol.signature;
-    const nullMethod = zag.dispatch.nullMethod;
-    var fib align(codeAlignment) =
-        compileMethod(Sym.fibonacci, 0, .SmallInteger, .{
-            //            tf.debug,
-            tf.push,        self,
-            tf.pushLiteral, "1const",
-            leq,            tf.fail,
-            tf.fail,        tf.branchFalse,
-            "false",        tf.returnSelf,
-            ":false",       tf.push,
-            self,           tf.pushLiteral,
-            "0const",       minus,
-            tf.fail,        tf.fail,
-            tf.send,        signature(.fibonacci, 0),
-            &nullMethod,    tf.push,
-            self,           tf.pushLiteral,
-            "1const",       minus,
-            tf.fail,        tf.fail,
-            tf.send,        signature(.fibonacci, 0),
-            &nullMethod,    plus,
-            tf.fail,        tf.fail,
-            //            tf.enddebug,
-            tf.returnTop,
-        });
-    fn cps1(_pc: PC, _sp: SP, _process: *Process, _context: *Context, _extra: Extra) Result {
-        const Labels = enum {
-            lFalse,
-            lStart,
-        };
-        var pc = _pc;
-        var sp = _sp;
-        var process = _process;
-        var context = _context;
-        var extra = _extra;
-        sw: switch (Labels.lStart) {
-            .lStart => {
-                { // tf.push
-                    const variable = pc.variable();
-                    if (variable.isLocal and extra.noContext()) {
-                        if (sp.push(Nil())) |newSp| {
-                            pc = pc.next2();
-                            sp = newSp;
-                        } else {
-                            const newSp, const newContext, const newExtra = sp.spillStackAndPush(Nil(), context, extra);
-                            pc = pc.next2();
-                            sp = newSp;
-                            context = newContext;
-                            extra = newExtra;
-                        }
-                    } else {
-                        const address = variable.getAddress(sp, extra);
-                        const value = address[0];
-                        if (sp.push(value)) |newSp| {
-                            pc = pc.next2();
-                            sp = newSp;
-                        } else {
-                            const newSp, const newContext, const newExtra = sp.spillStackAndPush(value, context, extra);
-                            pc = pc.next2();
-                            sp = newSp;
-                            context = newContext;
-                            extra = newExtra;
-                        }
-                    }
-                } // end of tf.push
-                { // tf.pushLiteral
-                    const value = pc.object();
-                    if (sp.push(value)) |newSp| {
-                        pc = pc.next2();
-                        sp = newSp;
-                    } else {
-                        const newSp, const newContext, const newExtra = sp.spillStackAndPush(value, context, extra);
-                        pc = pc.next2();
-                        sp = newSp;
-                        context = newContext;
-                        extra = newExtra;
-                    }
-                } // end of tf.pushLiteral
-                { // leq
-                    const receiver = sp.next;
-                    if (!receiver.isInt()) {
-                        @panic("unreachable");
-                    }
-                    const newSp = sp.dropPut(Object.from(SmallInteger.@"<=".with(receiver, sp.top) catch
-                        @panic("inlinePrimitiveFailed"), sp, context));
-                    pc = pc.next2();
-                    sp = newSp;
-                } // end of leq
-                { // tf.branchFalse
-                    if (sp.top.equals(False())) {
-                        const newPc = pc.targetPC();
-                        pc = newPc.next();
-                        sp = sp.drop();
-                        continue :sw .lFalse;
-                    } else {
-                        pc = pc.next2();
-                        sp = sp.drop();
-                    }
-                } // end of branchFalse
-                { // returnSelf
-                    if (extra.selfAddress(sp)) |address| {
-                        const newSp: SP = @ptrCast(address);
-                        return @call(tailCall, process.check(context.npc), .{ context.tpc, newSp, process, context, Extra.fromContextData(context.contextDataPtr(sp)) });
-                    }
-                    const newSp, const callerContext = context.pop(sp);
-                    return @call(tailCall, process.branchCheck(callerContext.getNPc()), .{ callerContext.getTPc(), newSp, process, callerContext, Extra.fromContextData(callerContext.contextData) });
-                } // end of returnSelf
-            },
-            .lFalse => {},
-        }
-        @panic("falling off the end of cps1");
-    }
-    fn cps2(_pc: PC, _sp: SP, _process: *Process, _context: *Context, _extra: Extra) Result {
-        const pc = _pc;
-        const sp = _sp;
-        const process = _process;
-        const context = _context;
-        const extra = _extra;
-        _ = .{ pc, sp, process, context, extra };
-        @panic("falling off the end of cps2");
-    }
-    fn cps3(_pc: PC, _sp: SP, _process: *Process, _context: *Context, _extra: Extra) Result {
-        var pc = _pc;
-        var sp = _sp;
-        const process = _process;
-        const context = _context;
-        const extra = _extra;
-        { // plus
-            const receiver = sp.next;
-            if (!receiver.isInt()) {
-                @panic("unreachable");
-            }
-            const newSp = sp.dropPut(Object.from(SmallInteger.@"+".with(receiver, sp.top) catch
-                @panic("inlinePrimitiveFailed"), process));
-            pc = pc.next2();
-            sp = newSp;
-        } // end of plus
-        { // tf.returnTop
-            const top = sp.top;
-            if (extra.selfAddress(sp)) |address| {
-                const newSp: SP = @ptrCast(address);
-                newSp.top = top;
-                return @call(tailCall, process.check(context.npc), .{ context.tpc, newSp, process, context, Extra.fromContextData(context.contextDataPtr(sp)) });
-            }
-            const newSp, const callerContext = context.pop(process, sp);
-            newSp.top = top;
-            return @call(tailCall, process.branchCheck(callerContext.npc), .{ callerContext.tpc, newSp, process, callerContext, Extra.fromContextData(callerContext.contextDataPtr(sp)) });
-        } // end of tf.returnTop
-    }
-    var exe: MainExecutor = undefined;
-    var one_: Object.StaticObject = undefined;
-    var two_: Object.StaticObject = undefined;
-    fn init(fibN: u32) void {
-        exe = MainExecutor.new();
-        const one = one_.init(1);
-        const two = two_.init(2);
-        fib.resolve(&[_]Object{ one, two }) catch @panic("Failed to resolve");
-        fib.executeFn = &cps1;
-        zag.dispatch.addMethod(@ptrCast(&fib));
-        if (zag.config.show_trace) {
-            std.log.err("\n", .{});
-            fib.dump();
-        } else {
-            const threaded = runIt(fibN, 0);
-            const native = fibCheck(fibN);
-            if (threaded != native) {
-                std.log.err("threaded={}, native={}\n", .{ threaded, native });
-                @panic("mismatch");
-            }
-        }
-    }
-    fn runIt(fibN: u32, proof: usize) usize {
-        const obj = exe.sendTo(Sym.fibonacci.asObject(), exe.object(fibN)) catch unreachable;
-        if (obj.nativeI()) |result| {
-            return @as(u64, @bitCast(result)) + proof;
-        }
-        std.log.err("fib object: {f}\n", .{obj});
-        unreachable;
-    }
-};
-
 const fibFloat = struct {
     const exclude: []const Encoding = &[_]Encoding{.onlyInt};
     var info = Info{ .name = "Float" };
@@ -633,7 +444,7 @@ pub fn timing(args: []const []const u8, nRuns: usize, fibN: u32, default: bool) 
             print("          Median   Mean   StdDev  SD/Mean GeomMean({} run{s}, {} warmup{s})\n", .{ stat.runs, if (stat.runs != 1) "s" else "", stat.warmups, if (stat.warmups != 1) "s" else "" });
         } else {
             var anyRun = false;
-            inline for (&.{ fibNative, fibNativeFloat, fibInteger, fibInteger0, fibIntegerBr, fibFloat, fibIntegerCnP, fibIntegerCl }) |benchmark| {
+            inline for (&.{ fibNative, fibNativeFloat, fibInteger, fibInteger0, fibIntegerBr, fibFloat, fibIntegerCl }) |benchmark| {
                 if (includeFor(benchmark) and std.mem.eql(u8, name(arg), benchmark.info.name)) {
                     anyRun = true;
                     print("{s:>9}", .{benchmark.info.name});

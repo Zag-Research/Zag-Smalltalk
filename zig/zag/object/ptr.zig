@@ -42,15 +42,13 @@ pub const Object = packed struct(u64) {
         return Object.fromAddress(&InMemory.Nil);
     }
     pub const maxInt = 0x7fff_ffff_ffff_ffff;
-    pub const tagged0: i64 = 0;
     pub const LowTagType = void;
     pub const lowTagSmallInteger = {};
     pub const HighTagType = void;
     pub const highTagSmallInteger = {};
     pub const PackedTagType = u3;
     pub const packedTagSmallInteger = 1;
-    pub const intTag = @import("zag.zig").Object.intTag;
-    pub const immediatesTag = 1;
+    pub const signatureTag = 1;
     pub inline fn untaggedI(self: object.Object) ?i64 {
         if (self.isInt()) return self.untaggedI_noCheck();
         return null;
@@ -64,9 +62,6 @@ pub const Object = packed struct(u64) {
         return InMemory.int(i, sp, context);
     }
     pub const fromUntaggedI = fromTaggedI;
-    pub inline fn symbol40(self: object.Object) u40 {
-        return @truncate(self.ref.data.unsigned);
-    }
     pub inline //
     fn nativeI(self: object.Object) ?i64 {
         if (self.isInt()) return self.rawI();
@@ -121,12 +116,6 @@ pub const Object = packed struct(u64) {
     pub fn immediateClosure(_: anytype, _: anytype, _: anytype) ?Object {
         return null;
     }
-    pub inline fn thunkImmediate(o: Object) ?Object {
-        _ = .{ o, unreachable };
-    }
-    pub inline fn thunkImmediateValue(self: Self) Object {
-        _ = .{ self, unreachable };
-    }
     pub inline fn isImmediateClass(_: Object, comptime _: ClassIndex) bool {
         return false;
     }
@@ -135,11 +124,11 @@ pub const Object = packed struct(u64) {
         if (value == 0) return null;
         return @constCast(@ptrCast(self.ref));
     }
-    pub inline fn isMemoryDouble(self: object.Object) bool {
-        if (memObject(self)) |ptr| {
-            return ptr.getClass() == .Float;
-        }
-        return false;
+    inline fn isMemoryDouble(self: object.Object) bool {
+        return if (self.ifHeapObject()) |ptr|
+            ptr.getClass() == .Float
+        else
+            false;
     }
     pub inline fn isMemoryInt(self: object.Object) bool {
         if (memObject(self)) |ptr| {
@@ -147,8 +136,7 @@ pub const Object = packed struct(u64) {
         }
         return false;
     }
-    pub inline //
-    fn isInt(self: Object) bool {
+    inline fn isInt(self: Object) bool {
         if (memObject(self)) |ptr| {
             return ptr.getClass() == .SmallInteger;
         }
@@ -163,18 +151,12 @@ pub const Object = packed struct(u64) {
     // pub inline fn oImm(c: ClassIndex.Compact, h: u56) Self {
     //     return Self{ .tag = .immediates, .class = c, .hash = h };
     // }
-    pub inline fn hasPointer(self: Object) bool {
-        return self.hasMemoryReference();
-    }
     pub inline fn highPointer(self: Object, T: type) ?T {
         return @ptrCast(self.ref.data.objects);
     }
     pub inline fn pointer(self: Object, T: type) ?T {
         if (self.hasMemoryReference()) return @constCast(@ptrCast(self.ref));
         return null;
-    }
-    pub inline fn toBoolNoCheck(self: Object) bool {
-        return self == Object.True();
     }
     pub inline fn toIntNoCheck(self: Object) i64 {
         return self.ref.data.int;
@@ -242,7 +224,7 @@ pub const Object = packed struct(u64) {
                 if (self.nativeF()) |flt| return flt;
             },
             i64 => {
-                if (!check or self.isInt()) return self.toIntNoCheck();
+                if (self.nativeI()) |int| return int;
             },
             u64 => {
                 if (!check or self.isNat()) return self.toNatNoCheck();
