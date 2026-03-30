@@ -190,6 +190,7 @@ ASImageExporter >> imageSending: aSymbol to: anObject [
 
 	| header |
 	header := ASImageHeader new.
+	header storeMagic: self encodingTag.
 	header send: (aSymbol encodedBy: self) to: (anObject encodedBy: self).
 	header symbolTable:
 		((extraSymbols asChunkedArraysOfSize: 127) encodedBy: self).
