@@ -54,8 +54,14 @@ ASImageHeader >> filename [
 { #category : 'initialization' }
 ASImageHeader >> initializeStorage [
 
+	freeIndex := storage size + 1
+]
+
+{ #category : 'initialization' }
+ASImageHeader >> initializeStorage: type [
+
 	freeIndex := storage size + 1.
-	storage at: 1 put: 16r6567616D4967615A " magic "
+	storage at: 1 put: (16r616D4967615A + (type first asInteger << 48) + (type second asInteger << 56)) " magic "
 ]
 
 { #category : 'private - testing' }
@@ -63,6 +69,12 @@ ASImageHeader >> send: selector to: object [
 
 	storage at: 2 put: object.
 	storage at: 3 put: selector
+]
+
+{ #category : 'initialization' }
+ASImageHeader >> storeMagic: type [
+
+	storage at: 1 put: (16r616D4967615A + (type first asInteger << 48) + (type second asInteger << 56)) " magic "
 ]
 
 { #category : 'initialization' }
