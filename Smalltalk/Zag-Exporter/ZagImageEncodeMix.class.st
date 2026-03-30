@@ -20,15 +20,15 @@ ZagImageEncodeMix class >> double: aFloat for: anImage [
 
 	| fullFloat tag |
 	fullFloat := ((aFloat at: 1) bitShift: 32) + (aFloat at: 2).
-	tag := fullFloat >> 60 + 2.
-	tag & 6 = 0 ifTrue: [ ^ anImage objectHeapFloat: fullFloat ].
-	^ fullFloat & 16rfffffffffffffff << 4 + tag
+	tag := (fullFloat bitSize: 64 rotate: 5) - 3.
+	(tag & 6) = 4 ifTrue: [ ^ tag ].
+	^ anImage objectHeapFloat: fullFloat
 ]
 
 { #category : 'converting' }
 ZagImageEncodeMix class >> literal: l class: c [
 
-	^ (l bitShift: 8) + (c bitShift: 3) + 1
+	^ (l bitShift: 3) + (c bitShift: 59) + 1
 ]
 
 { #category : 'converting' }
@@ -40,9 +40,12 @@ ZagImageEncodeMix class >> pointer: p [
 { #category : 'converting' }
 ZagImageEncodeMix class >> smallInteger: anInteger [
 
-	^ self
-		  literal: (anInteger bitAnd: 16r00ffffffffffffff)
-		  class: ClassSmallInteger
+	^ ((anInteger bitAnd: 16r3fffffffffffffff) bitShift: 2) + 2
+]
+
+{ #category : 'convertin' }
+ZagImageEncodeMix class >> symbolArity: arity hash: hash [ 
+	^ self literal: (hash bitShift: 5) + arity + arity class: ClassSymbol
 ]
 
 { #category : 'converting' }

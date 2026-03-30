@@ -46,6 +46,11 @@ ZagImageEncodeZag class >> smallInteger: anInteger [
 ]
 
 { #category : 'converting' }
+ZagImageEncodeZag class >> symbolArity: arity hash: hash [ 
+	^ self literal: (arity bitShift: 24) + hash class: ClassSymbol
+]
+
+{ #category : 'converting' }
 ZagImageEncodeZag class >> undefinedObject [
 
 	^ 0

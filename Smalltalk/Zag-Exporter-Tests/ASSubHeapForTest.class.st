@@ -26,3 +26,9 @@ ASSubHeapForTest >> array [
 
 	^ storage first: freeIndex -1
 ]
+
+{ #category : 'initialization' }
+ASSubHeapForTest >> initializeStorage [
+
+	freeIndex := 1
+]

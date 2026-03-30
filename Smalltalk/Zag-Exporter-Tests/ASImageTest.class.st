@@ -2,7 +2,7 @@ Class {
 	#name : 'ASImageTest',
 	#superclass : 'TestCase',
 	#instVars : [
-		'constants'
+		'encoder'
 	],
 	#category : 'Zag-Exporter-Tests-Tests',
 	#package : 'Zag-Exporter-Tests',
@@ -19,7 +19,7 @@ ASImageTest >> encoderClass [
 ASImageTest >> image: aBlock equals: value [
 
 	| result image |
-	image := ASImageExporterForTest new constants: constants.
+	image := ASImageExporterForTest new encoder: encoder.
 	result := aBlock value: image.
 	self assert: result hexString equals: value hexString
 ]
@@ -28,15 +28,15 @@ ASImageTest >> image: aBlock equals: value [
 ASImageTest >> image: aBlock equals: value withHeap: aHeap [
 
 	| result image heap |
-	image := ASImageExporterForTest new constants: constants.
+	image := ASImageExporterForTest new encoder: encoder.
 	result := aBlock value: image.
 	heap := image currentHeap array.
-	self
+	"self
 		assert: heap first hexString
-		equals: image currentHeap address hexString.
+		equals: image currentHeap address hexString."
 	self assert: result hexString equals: value hexString.
 	self
-		assert: ((heap allButFirst: 17) collect: #hexString as: Array)
+		assert: (heap collect: #hexString as: Array)
 		equals: (aHeap collect: #hexString)
 ]
 
@@ -45,7 +45,7 @@ ASImageTest >> setUp [
 
 	super setUp.
 	ASAllocationInfo reset.
-	constants := self encoderClass
+	encoder := self encoderClass
 ]
 
 { #category : 'tests' }
@@ -91,9 +91,9 @@ ASImageTest >> testU64Array [
 ASImageTest >> threaded: ast equals: converted [
 
 	| image |
-	image := ASImageExporter test constants: constants; on: (ReadWriteStream on: #[  ]).
+	image := ASImageExporter test encoder: encoder; on: (ReadWriteStream on: #[  ]).
 	ASImageThreadedOutput new
-		constants: constants;
+		encoder: encoder;
 		context: (ASImageFileContext with: image);
 		generateCode: ast.
 	converted withIndexDo: [ :each :idx |
@@ -102,7 +102,7 @@ ASImageTest >> threaded: ast equals: converted [
 		each isSymbol
 			ifTrue: [
 				self
-					assert: code = (constants perform: each)
+					assert: code = (encoder perform: each)
 					description: [
 					'expected: ' , each , ' but found: ' , code hexString ] ]
 			ifFalse: [

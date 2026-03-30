@@ -48,6 +48,12 @@ ZagImageEncoder class >> smallInteger: aNumber [
 ]
 
 { #category : 'converting' }
+ZagImageEncoder class >> symbolArity: arity hash: hash [
+
+	^ self subclassResponsibility
+]
+
+{ #category : 'converting' }
 ZagImageEncoder class >> undefinedObject [
 	^ self subclassResponsibility
 ]

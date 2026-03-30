@@ -14,14 +14,14 @@ Class {
 		'symbolTableRef',
 		'classTableRef',
 		'currentHeap',
-		'constants',
 		'requireThreadedCode',
 		'extraSymbols',
 		'classIndices',
 		'classes',
 		'lastClassIndex',
 		'subHeaps',
-		'dispatchTable'
+		'dispatchTable',
+		'encoder'
 	],
 	#pools : [
 		'ZagConstants'
@@ -144,17 +144,6 @@ ASImageExporter >> compileMethod: aMethod [
 	self halt
 ]
 
-{ #category : 'accessing' }
-ASImageExporter >> constants [
-	^ constants
-]
-
-{ #category : 'initialization' }
-ASImageExporter >> constants: constantsClass [
-
-	constants := constantsClass
-]
-
 { #category : 'writing' }
 ASImageExporter >> createClassTable [
 
@@ -169,6 +158,17 @@ ASImageExporter >> createClassTable [
 ASImageExporter >> currentHeap [
 
 	^ currentHeap
+]
+
+{ #category : 'accessing' }
+ASImageExporter >> encoder [
+	^ encoder
+]
+
+{ #category : 'initialization' }
+ASImageExporter >> encoder: constantsClass [
+
+	encoder := constantsClass
 ]
 
 { #category : 'adding' }
@@ -259,7 +259,7 @@ ASImageExporter >> initClasses [
 ASImageExporter >> initialize [
 
 	super initialize.
-	constants := ZagImageEncodeZag.
+	encoder := ZagImageEncodeZag.
 	objects := IdentityDictionary new.
 	classes := IdentityDictionary new.
 	methods := IdentityDictionary new.
@@ -270,7 +270,7 @@ ASImageExporter >> initialize [
 	dispatchTable := OrderedCollection new.
 	requireThreadedCode := false.
 	self addSubHeap.
-	self symbols.
+	"self symbols."
 	self initClasses
 ]
 
@@ -282,13 +282,13 @@ ASImageExporter >> methods [
 { #category : 'writing' }
 ASImageExporter >> objectBoolean: value [
 
-	^ constants boolean: value
+	^ encoder boolean: value
 ]
 
 { #category : 'writing' }
 ASImageExporter >> objectCharacter: aCharacter [
 
-	^ constants literal: aCharacter asInteger class: ClassCharacter
+	^ encoder literal: aCharacter asInteger class: ClassCharacter
 ]
 
 { #category : 'adding' }
@@ -310,7 +310,7 @@ ASImageExporter >> objectClass: aClass [
 { #category : 'writing' }
 ASImageExporter >> objectFloat: aFloat [
 
-	^ constants double: aFloat for: self
+	^ encoder double: aFloat for: self
 ]
 
 { #category : 'writing' }
@@ -357,7 +357,7 @@ ASImageExporter >> objectObject: anObject [
 { #category : 'writing' }
 ASImageExporter >> objectSmallInteger: anInteger [
 
-	^ constants smallInteger: anInteger
+	^ encoder smallInteger: anInteger
 ]
 
 { #category : 'adding' }
@@ -383,22 +383,21 @@ ASImageExporter >> objectSymbol: aString [
 	aString isSymbol ifFalse: [ ^ self objectSymbol: aString asSymbol ].
 	^ self symbols at: aString ifAbsentPut: [
 		  extraSymbols add: aString.
-		  constants
-			  literal: aString numArgs << 24
-				  + (symbols size + 1 * 10368889 bitAnd: 16rffffff)
-			  class: ClassSymbol ]
+		  encoder
+			  symbolArity: aString numArgs
+			  hash:  (symbols size + 1 * 10368889 bitAnd: 16rffffff) ]
 ]
 
 { #category : 'writing' }
 ASImageExporter >> objectUndefinedObject [
 
-	^ constants undefinedObject
+	^ encoder undefinedObject
 ]
 
 { #category : 'adding' }
 ASImageExporter >> pointer: p [
 
-	^ constants pointer: p
+	^ encoder pointer: p
 ]
 
 { #category : 'enumerating' }
