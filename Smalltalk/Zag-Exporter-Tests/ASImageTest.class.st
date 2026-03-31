@@ -4,6 +4,9 @@ Class {
 	#instVars : [
 		'encoder'
 	],
+	#pools : [
+		'ZagConstants'
+	],
 	#category : 'Zag-Exporter-Tests-Tests',
 	#package : 'Zag-Exporter-Tests',
 	#tag : 'Tests'

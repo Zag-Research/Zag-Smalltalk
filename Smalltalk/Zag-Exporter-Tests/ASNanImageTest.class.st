@@ -63,9 +63,9 @@ ASNanImageTest >> test_simple1 [
 	| ast |
 	ast := ASPharoCompiler new astFor: ASCompileTestClass1 >> #simple1.
 	self threaded: ast equals: {
-			encoder tPushLiteral.
+			#T_PushLiteral.
 			42.
-			encoder tReturnTop }
+			#T_ReturnTop }
 ]
 
 { #category : 'tests' }
@@ -74,5 +74,5 @@ ASNanImageTest >> test_simple1_noreturn [
 	| ast |
 	ast := ASPharoCompiler new astFor:
 		       ASCompileTestClass1 >> #simple1_noreturn.
-	self halt threaded: ast equals: { encoder tPushLiteral . 42 . encoder tDrop . encoder tReturnSelf }
+	self threaded: ast equals: { #T_PushLiteral . 42 . #T_Drop . #T_ReturnSelf }
 ]
