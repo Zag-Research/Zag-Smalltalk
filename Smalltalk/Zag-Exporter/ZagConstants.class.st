@@ -175,49 +175,27 @@ ZagConstants class >> generateInitializeThreadedConstants [
 		variable isReferenced ifFalse: [ self removeClassVariable: variable ] ].
 	itc := WriteStream on: ''.
 	itc
-		<< 'initializeThreadedConstants';
-		cr.
-	itc
-		<< $";
-		<< ' - do not edit - instead `do` the following comment ';
-		<< $";
-		cr.
-	itc
-		<< $";
-		<< ' self generateInitializeThreadedConstants ';
-		<< $";
-		cr.
+		<< 'initializeThreadedConstants'.
 	adwa := WriteStream on: ''.
 	adwa
-		<< 'asArray';
-		cr.
-	adwa
-		<< $";
-		<< ' - do not edit - instead `do` the following comment ';
-		<< $";
-		cr.
-	adwa
-		<< $";
-		<< ' self generateInitializeThreadedConstants ';
-		<< $";
-		cr.
+		<< 'asArray'.
+	ltc := WriteStream on: ''.
+	ltc
+		<< 'loadThreadedConstants: array'.
+	{ itc. adwa. ltc } do: [ : stream |
+		stream
+			cr;
+			<< $";
+			<< ' - do not edit - instead `do` the following comment ';
+			<< $";
+			cr;
+			<< $";
+			<< ' self generateInitializeThreadedConstants ';
+			<< $";
+			cr ].
 	adwa
 		tab;
 		<< '^ {';
-		cr.
-	ltc := WriteStream on: ''.
-	ltc
-		<< 'loadThreadedConstants: array';
-		cr.
-	ltc
-		<< $";
-		<< ' - do not edit - instead `do` the following comment ';
-		<< $";
-		cr.
-	ltc
-		<< $";
-		<< ' self generateInitializeThreadedConstants ';
-		<< $";
 		cr.
 	self api methodDictionary keys sorted withIndexDo: [
 		:key

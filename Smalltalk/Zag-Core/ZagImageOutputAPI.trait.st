@@ -46,13 +46,13 @@ ZagImageOutputAPI >> classCase [
 { #category : 'threaded words' }
 ZagImageOutputAPI >> classCase24 [
 	" jump to one of a series of addresses based on the class of the TOS.
-	reserved in case we have a system with more than 16K classes
+	reserved in case we have a system with more than 32K classes and their metaclasses
 	- uses 28 bits to encode a class, so works with millions of classes "
 
 	^ self explicitRequirement
 ]
 
-{ #category : 'threaded words' }
+{ #category : 'eval' }
 ZagImageOutputAPI >> cullColon [
 	" `cull:` recognizes special cases
 	Falls back to fast-dispatch through the reserve location in the target's `Dispatch` table. "
@@ -319,7 +319,7 @@ ZagImageOutputAPI >> tailSendNoContext [
 	^ self explicitRequirement
 ]
 
-{ #category : 'threaded words' }
+{ #category : 'evaluating' }
 ZagImageOutputAPI >> value [
 	" `value` recognizes special cases
 	Falls back to fast-dispatch through the reserve location in the target's `Dispatch` table. "
@@ -327,7 +327,7 @@ ZagImageOutputAPI >> value [
 	^ self explicitRequirement
 ]
 
-{ #category : 'threaded words' }
+{ #category : 'evalua' }
 ZagImageOutputAPI >> valueColon [
 	" `value:` recognizes special cases
 	Falls back to fast-dispatch through the reserve location in the target's `Dispatch` table. "

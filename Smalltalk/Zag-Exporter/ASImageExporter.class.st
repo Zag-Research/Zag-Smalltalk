@@ -270,7 +270,6 @@ ASImageExporter >> initialize [
 	dispatchTable := OrderedCollection new.
 	requireThreadedCode := false.
 	self addSubHeap.
-	"self symbols."
 	self initClasses
 ]
 
