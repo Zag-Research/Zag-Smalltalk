@@ -4,7 +4,11 @@ noinline fn foo(i: u64) f64 {
     return @floatFromInt(i);
 }
 comptime {
-    std.debug.assert(0x7ff8000000000000 == @as(u64,@bitCast(-0.0/foo(0))));
+    switch (@as(u64,@bitCast(0.0/foo(0)))) {
+        0x7ff8000000000000,
+        0xfff8000000000000 => {},
+        else => @compileError("generated nan is unexpected"),
+    }
 }
 pub fn main() void {
     std.debug.print("0.0/0.0 = {x}\n", .{@as(u64,@bitCast(0.0/foo(0)))});

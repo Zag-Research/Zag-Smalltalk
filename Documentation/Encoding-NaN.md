@@ -22,7 +22,7 @@ So this leaves us with the following encoding based on the **S**ign+**E**xponent
 | `7FF5`          | `aaaa` | `aaaa` | `aaaa` | `BlockAssignLocal`     |
 | `7FF6`          | `aaaa` | `aaaa` | `aaaa` | `ThunkInstance`        |
 | `7FF7`          | `aaaa` | `aaaa` | `aaaa` | `BlockAssignInstance`  |
-| `7FF8`          | `0000` | `0000` | `0000` | NaN                    |
+| `7FF8`          | `0000` | `0000` | `0000` | NaN - generated on ARM |
 | `7FF8`          | `aaaa` | `aaaa` | `aaaa` | `ThunkHeap`            |
 | `7FF9`          | `xxxx` | `xxxx` | `xxxx` | `ThunkImmediate`       |
 | `7FFA`          | `0000` | `hhhh` | `hhhh` | `Symbol`               |
@@ -35,7 +35,9 @@ So this leaves us with the following encoding based on the **S**ign+**E**xponent
 | `8000`-`FFEF`   | `xxxx` | `xxxx` | `xxxx` | double (negative)      |
 | `FFF0`          | `0000` | `0000` | `0000` | -inf                   |
 | `FFF0` - `FFF7` | `xxxx` | `xxxx` | `xxxx` | NaN (unused)           |
-| `FFF8` + `iii`  | `iiii` | `iiii` | `iiii` | `SmallInteger` values  |
+| `FFF8`          | `0000` | `0000` | `0000` | NaN - generated on x86 |
+| `FFF8` - `FFFB` | `xxxx` | `xxxx` | `xxxx` | NaN (unused)           |
+| `FFFC` + `ii`   | `iiii` | `iiii` | `iiii` | `SmallInteger` values  |
 
 So, interpreted as a u64, any value that is less than or equal to -inf is a double. Else, the top 4 bits of the mantissa are a class grouping. For group B, the next 16 bits are a class number so the first 8 classes have (and all classes can have) a compressed representation. 
 Groups 0 through A have the low 48 bits being the address of an object.
