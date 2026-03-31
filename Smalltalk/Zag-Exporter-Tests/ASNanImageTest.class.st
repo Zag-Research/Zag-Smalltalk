@@ -41,9 +41,9 @@ ASNanImageTest >> testObjects [
 { #category : 'tests' }
 ASNanImageTest >> testSimple [
 
-	self image: [ :i | i encodingOf: 42 ] equals: 16rfffc00000000002A.
-	self image: [ :i | i encodingOf: 1 ] equals: 16rfffc000000000001.
-	self image: [ :i | i encodingOf: -1 ] equals: 16rfffbffffffffffff.
+	self image: [ :i | i encodingOf: 42 ] equals: 16rfff800000000002A.
+	self image: [ :i | i encodingOf: 1 ] equals: 16rfff8000000000001.
+	self image: [ :i | i encodingOf: -1 ] equals: 16rffffffffffffffff.
 	self image: [ :i | i encodingOf: true ] equals: 16r7ffc000000000000.
 	self image: [ :i | i encodingOf: false ] equals: 16r7ffb000000000000.
 	self image: [ :i | i encodingOf: nil ] equals: 16r7FFF000000000000.

@@ -21,28 +21,10 @@ ZagImageEncodeNan class >> double: n for: ignored [
 	^ ('16r' , n hex) asNumber
 ]
 
-{ #category : 'private - constants' }
-ZagImageEncodeNan class >> groupHeap [
-
-	^ 16r7fff000000000000
-]
-
-{ #category : 'private - constants' }
-ZagImageEncodeNan class >> groupImmediates [
-
-	^ 16r7fef000000000000
-]
-
-{ #category : 'private - constants' }
-ZagImageEncodeNan class >> groupSmallInt0 [
-
-	^ 16rfffc000000000000
-]
-
 { #category : 'converting' }
 ZagImageEncodeNan class >> literal: l class: c [
 
-	^ self groupImmediates + l + (c bitShift: 48)
+	^ 16r7fef000000000000 + l + (c bitShift: 48)
 ]
 
 { #category : 'magic' }
@@ -54,13 +36,13 @@ ZagImageEncodeNan class >> magic [
 { #category : 'converting' }
 ZagImageEncodeNan class >> pointer: p [
 
-	^ self groupHeap + p
+	^ 16r7fff000000000000 + p
 ]
 
 { #category : 'converting' }
 ZagImageEncodeNan class >> smallInteger: n [
 
-	^ self groupSmallInt0 + n
+	^ 16rfff8000000000000 + (n bitAnd: 16r7ffffffffffff)
 ]
 
 { #category : 'converting' }
