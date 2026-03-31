@@ -59,3 +59,4 @@ c/sacTest
 *.dSYM
 zig/zag/returnAddress
 zig/zag/jit
+/image

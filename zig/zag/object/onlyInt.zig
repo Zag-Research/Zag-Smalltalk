@@ -32,11 +32,7 @@ pub const Object = packed struct(u64) {
     pub inline fn untaggedI(self: object.Object) ?i64 {
         return @bitCast(self);
     }
-    pub inline fn untaggedI_noCheck(self: object.Object) i64 {
-        return @bitCast(self);
-    }
     pub const taggedI = untaggedI;
-    pub const taggedI_noCheck = untaggedI_noCheck;
     pub inline fn fromTaggedI(i: i64, _: anytype, _: anytype) object.Object {
         return @bitCast(i);
     }

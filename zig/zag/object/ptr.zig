@@ -50,14 +50,10 @@ pub const Object = packed struct(u64) {
     pub const packedTagSmallInteger = 1;
     pub const signatureTag = 1;
     pub inline fn untaggedI(self: object.Object) ?i64 {
-        if (self.isInt()) return self.untaggedI_noCheck();
+        if (self.isInt()) return self.ref.data.int;
         return null;
     }
-    pub inline fn untaggedI_noCheck(self: object.Object) i64 {
-        return self.ref.data.int;
-    }
     pub const taggedI = untaggedI;
-    pub const taggedI_noCheck = untaggedI_noCheck;
     pub inline fn fromTaggedI(i: i64, sp: SP, context: *Context) object.Object {
         return InMemory.int(i, sp, context);
     }

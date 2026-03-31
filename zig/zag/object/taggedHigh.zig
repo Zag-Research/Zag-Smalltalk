@@ -55,7 +55,7 @@ pub const Object = packed struct(u64) {
         return null;
     }
 
-    pub inline fn untaggedI_noCheck(self: object.Object) i64 {
+    inline fn untaggedI_noCheck(self: object.Object) i64 {
         return @bitCast(@as(u64, @bitCast(self)) << 16);
     }
 
@@ -64,7 +64,7 @@ pub const Object = packed struct(u64) {
         return null;
     }
 
-    pub const taggedI_noCheck = untaggedI_noCheck;
+    const taggedI_noCheck = untaggedI_noCheck;
 
     pub inline fn fromTaggedI(i: i64, _: anytype, _: anytype) object.Object {
         return @bitCast(@as(u64, @bitCast(i)) >> 16);

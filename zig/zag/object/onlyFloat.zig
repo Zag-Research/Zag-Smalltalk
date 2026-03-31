@@ -39,12 +39,7 @@ pub const Object = packed struct(u64) {
         @panic("not implemented");
     }
 
-    inline fn untaggedI_noCheck(_: Object) i64 {
-        @panic("not implemented");
-    }
-
     pub const taggedI = untaggedI;
-    const taggedI_noCheck = untaggedI_noCheck;
 
     pub inline fn fromTaggedI(_: i64, _: anytype, _: anytype) Object {
         @panic("not implemented");

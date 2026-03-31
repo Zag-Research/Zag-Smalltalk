@@ -79,7 +79,7 @@ pub const Object = packed union {
         return null;
     }
 
-    pub inline fn untaggedI_noCheck(self: Object) i64 {
+    inline fn untaggedI_noCheck(self: Object) i64 {
         return @bitCast(self.rawU() - SmallIntegerTag);
     }
 
@@ -88,7 +88,7 @@ pub const Object = packed union {
         return null;
     }
 
-    pub inline fn taggedI_noCheck(self: Object) i64 {
+    inline fn taggedI_noCheck(self: Object) i64 {
         return @bitCast(self);
     }
 

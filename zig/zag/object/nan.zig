@@ -89,12 +89,6 @@ pub const Object = packed struct(u64) {
     const extraMask = 7;
     const intTagBits = 13;
     const integerTag = @intFromEnum(Tag.smallInteger) >> 3;
-    inline fn untagged(obj: Object) i64 {
-        return @bitCast(@as(u64, @bitCast(obj)) << intTagBits);
-    }
-    inline fn asI64(self: Object) i64 {
-        return @as(i64, @bitCast(self.rawU() << intTagBits)) >> intTagBits;
-    }
     inline fn isInt(self: Object) bool {
         if (true) {
             return self.rawU() >> 48 >= Tag.u(.smallInteger);
@@ -104,9 +98,6 @@ pub const Object = packed struct(u64) {
     }
     inline fn toObject(int: i64) Object {
         return @bitCast(std.math.rotr(u64, @as(u64, @bitCast(int)) + integerTag, intTagBits));
-    }
-    inline fn toObjectFromNative(int: i64) Object {
-        return toObject(int << intTagBits);
     }
     pub const testU = rawU;
     inline fn rawU(self: Object) u64 {
@@ -124,10 +115,14 @@ pub const Object = packed struct(u64) {
         return self.tag == Tag.from(class);
     }
     //inline
-    fn oImm(c: ClassIndex, h: u32) Object {
+    fn oImm(c: ClassIndex, h: u48) Object {
         if (c == .UndefinedObject)
             return .{ .tag = .heap, .data = 0 };
         return .{ .tag = Tag.from(c), .data = h };
+    }
+    pub inline //
+    fn oImmSymbol(arity: u4, hash: u24) Object {
+        return oImm(.Symbol, (@as(u32, hash) << 8) + arity);
     }
     pub inline fn isSymbol(self: Object) bool {
         return self.tag == .Symbol;
@@ -178,33 +173,30 @@ pub const Object = packed struct(u64) {
         if (self.isInt()) return self.untaggedI_noCheck();
         return null;
     }
-    pub inline fn untaggedI_noCheck(self: Object) i64 {
-        return self.untagged();
+    inline fn untaggedI_noCheck(self: Object) i64 {
+        return @bitCast(@as(u64, @bitCast(self)) << intTagBits);
     }
     pub inline fn taggedI(self: Object) ?i64 {
         if (self.isInt()) return taggedI_noCheck(self);
         return null;
     }
-    pub const taggedI_noCheck = untaggedI_noCheck;
+    const taggedI_noCheck = untaggedI_noCheck;
     pub const fromTaggedI = fromUntaggedI;
     pub inline fn fromUntaggedI(i: i64, _: anytype, _: anytype) Object {
         return toObject(i);
-    }
-    pub inline fn untaggedInt(self: Object) u64 {
-        return self.toNatNoCheck();
     }
     pub inline fn nativeI(self: Object) ?i64 {
         if (self.isInt()) return self.nativeI_noCheck();
         return null;
     }
     inline fn nativeI_noCheck(self: Object) i64 {
-        return self.asI64();
+        return @as(i64, @bitCast(self.rawU() << intTagBits)) >> intTagBits;
     }
-    pub inline fn asUntaggedI(i: i51) i64 {
-        return @as(i64, i) << 13;
+    pub inline fn asUntaggedI(int: i51) i64 {
+        return @as(i64, int) << intTagBits;
     }
-    pub inline fn fromNativeI(t: i51, _: anytype, _: anytype) Object {
-        return toObjectFromNative(t);
+    pub inline fn fromNativeI(int: i51, _: anytype, _: anytype) Object {
+        return toObject(@as(i64, int) << intTagBits);
     }
     pub inline fn nativeF(self: Object) ?f64 {
         if (self.isImmediateDouble()) return @bitCast(self);

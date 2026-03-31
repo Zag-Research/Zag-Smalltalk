@@ -82,7 +82,7 @@ pub const Object = packed struct(u64) {
         return null;
     }
 
-    pub inline fn untaggedI_noCheck(self: object.Object) i64 {
+    inline fn untaggedI_noCheck(self: object.Object) i64 {
         return @bitCast(self.rawU() >> tagAndClassBits << tagAndClassBits);
     }
 
@@ -91,7 +91,7 @@ pub const Object = packed struct(u64) {
         return null;
     }
 
-    pub inline fn taggedI_noCheck(self: object.Object) i64 {
+    inline fn taggedI_noCheck(self: object.Object) i64 {
         return @bitCast(self);
     }
 

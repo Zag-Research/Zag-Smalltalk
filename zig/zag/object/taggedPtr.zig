@@ -57,7 +57,7 @@ pub const Object = packed struct(u64) {
         return null;
     }
 
-    pub inline fn untaggedI_noCheck(self: object.Object) i64 {
+    inline fn untaggedI_noCheck(self: object.Object) i64 {
         std.debug.assert(@intFromEnum(ClassIndex.SmallInteger) == 0);
         return @bitCast(self);
     }
@@ -67,7 +67,7 @@ pub const Object = packed struct(u64) {
         return null;
     }
 
-    pub const taggedI_noCheck = untaggedI_noCheck;
+    const taggedI_noCheck = untaggedI_noCheck;
 
     pub inline fn fromTaggedI(i: i64, _: anytype, _: anytype) object.Object {
         std.debug.assert(@intFromEnum(ClassIndex.SmallInteger) == 0);
