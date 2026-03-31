@@ -22,6 +22,7 @@ So this leaves us with the following encoding based on the **S**ign+**E**xponent
 | `7FF5`          | `aaaa` | `aaaa` | `aaaa` | `BlockAssignLocal`     |
 | `7FF6`          | `aaaa` | `aaaa` | `aaaa` | `ThunkInstance`        |
 | `7FF7`          | `aaaa` | `aaaa` | `aaaa` | `BlockAssignInstance`  |
+| `7FF8`          | `0000` | `0000` | `0000` | NaN                    |
 | `7FF8`          | `aaaa` | `aaaa` | `aaaa` | `ThunkHeap`            |
 | `7FF9`          | `xxxx` | `xxxx` | `xxxx` | `ThunkImmediate`       |
 | `7FFA`          | `0000` | `hhhh` | `hhhh` | `Symbol`               |
