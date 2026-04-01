@@ -32,9 +32,8 @@ ASIContext >> contextData: aContextData [
 ]
 
 { #category : 'accessing' }
-ASIContext >> createContextData: anInterpreter [
-   method ifNil: [ ^nil ].
-	^anInterpreter createContextData: method
+ASIContext >> method [
+	^ method 
 ]
 
 { #category : 'accessing' }

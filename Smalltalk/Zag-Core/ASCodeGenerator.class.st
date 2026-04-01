@@ -38,7 +38,7 @@ Class {
 { #category : 'API' }
 ASCodeGenerator >> addBlock: aBasicBlock [
 
-	aBasicBlock label: self blockLabel.
+	aBasicBlock label: self blockLabel asSymbol.
 	^ basicBlocks add: aBasicBlock
 ]
 
