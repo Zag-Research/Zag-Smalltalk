@@ -61,9 +61,13 @@ ASemanticInterpreter >> basicBlocks [
 ]
 
 { #category : 'as yet unclassified' }
-ASemanticInterpreter >> beforeTailSend [
+ASemanticInterpreter >> beforeTailSend: aSelector [
 
-	stackArray := self createStackForCall
+	stackArray := self createStackForCall: aSelector numArgs.
+	stackPointer := 11 - aSelector numArgs - 1.
+	pc basicBlock hasContext ifFalse: [ ^ self ].
+	context := context sendingContext.
+	contextData := context contextData
 ]
 
 { #category : 'primitive execution' }
@@ -128,9 +132,37 @@ Locals do not need to be factored into the creation of a context."
 
 	"copy the current calls data into a contextData"
 	context := ASIContext new
+					method: aCompiledMethodOrBlock;
 		           contextData: (context createContextData: self);
 		           returnPC: pc;
-		           method: aCompiledMethodOrBlock;
+		           
+		           sendingContext: context.
+	"why nil out the stack? visual"
+	"contextPtr + 1 to: contextPtr + locals do: [ :idx |
+	stackArray at: idx put: nil ]"
+	stackArray := newStackArray.
+	stackPointer := 10 - aCompiledMethodOrBlock arguments
+
+
+]
+
+{ #category : 'interpreting' }
+ASemanticInterpreter >> createContext: blockToReturnTo [
+	"A context will be dynamically created before every a pop of a local or a send operation occurs.
+Only one context will be created for every method.
+Reading of a local before a context is created will result in a nil.
+Locals do not need to be factored into the creation of a context."
+
+	| aCompiledMethodOrBlock newStackArray |
+
+
+	aCompiledMethodOrBlock := pc basicBlock.
+	newStackArray := self createStackForCall.
+	"copy the current calls data into a contextData"
+	context := ASIContext new
+					  method: blockToReturnTo sourceBlock;
+		           contextData: (self createContextData: blockToReturnTo sourceBlock );
+		           returnPC: (ASIProgramCounter new forBasicBlock: blockToReturnTo);
 		           sendingContext: context.
 	"why nil out the stack? visual"
 	"contextPtr + 1 to: contextPtr + locals do: [ :idx |
@@ -166,12 +198,12 @@ ASemanticInterpreter >> createContext: locals extra: extra [
 
 { #category : 'interpreting' }
 ASemanticInterpreter >> createContextData: aMethod [
-	contextDataMethod == aMethod ifTrue: [ ^ contextData ].
+
+	(aMethod notNil and: contextDataMethod == aMethod) ifTrue: [ ^ contextData ].
 
 	contextDataMethod := aMethod.
 	contextData := Array new: aMethod arguments + aMethod locals + 1.
-	stackPointer to: 10 by: 1 do: [ :idx |
-			| element |
+	(11 - contextData size) to: 10 by: 1 do: [ :idx |
 			contextData at: 11 - idx put: (stackArray at: idx) ].
 
 	^ contextData
@@ -190,12 +222,34 @@ ASemanticInterpreter >> createStackForCall [
 	^ newStackArray
 ]
 
+{ #category : 'accessing' }
+ASemanticInterpreter >> createStackForCall: numArgs [
+
+	"copy the arguments to the call into a newStack"
+	| newStackArray size |
+	"calculate the size of the stack to copy over, locals should not be on the stack at this time"
+	size := numArgs + 1.
+	newStackArray := Array new: 10.
+	size to: 1 by: -1 do: [ :idx |
+		newStackArray at: 11 - idx put: self pop ].
+	^ newStackArray
+]
+
 { #category : 'private - testing' }
 ASemanticInterpreter >> dispatchFor: aCompileMethod [ 
 
 	| class |
 	class := self getClass: aCompileMethod methodClass.
 	^ (dispatch at: class ifAbsent: [ ^ nil ]) at: aCompileMethod selector ifAbsent: [ nil ]
+]
+
+{ #category : 'as yet unclassified' }
+ASemanticInterpreter >> dropContext [
+	
+	context sendingContext ifNotNil: [ 
+		context := context sendingContext.
+		contextData := context contextData ].
+	pc := context returnPC
 ]
 
 { #category : 'handling' }
@@ -249,7 +303,7 @@ ASemanticInterpreter >> installContextIfNone [
 ]
 
 { #category : 'interpreting' }
-ASemanticInterpreter >> installContextIfNone: argsOnStack [
+ASemanticInterpreter >> installContextIfNone: blockToReturnTo [
 	""""
 
 	"| newContext |
@@ -258,7 +312,7 @@ ASemanticInterpreter >> installContextIfNone: argsOnStack [
 	newContext populateFrom: self.
 	context := newContext."
 
-	self createContext
+	self createContext: blockToReturnTo
 ]
 
 { #category : 'interpreting' }
@@ -438,10 +492,11 @@ ASemanticInterpreter >> returnNonLocal: anObject [
 	pc := blockDefiningContext returnPC
 ]
 
-{ #category : 'accessing' }
-ASemanticInterpreter >> returnTo: aBasicBlock [
-
-	^ context returnPC: (ASIProgramCounter new forBasicBlock: aBasicBlock)
+{ #category : 'API' }
+ASemanticInterpreter >> self [
+	contextData ifNotNil: [ ^ contextData last ].
+	^ stackArray at: 10
+	
 ]
 
 { #category : 'interpreting' }
@@ -531,7 +586,6 @@ ASemanticInterpreter >> unary: aBlock [
 { #category : 'accessing' }
 ASemanticInterpreter >> varAt: aStackElement [ 
 	contextData ifNotNil: [
-		self halt. 
 	 ^ self contextDataAt: aStackElement offset
 	].
 	^self stackAt: aStackElement offset.

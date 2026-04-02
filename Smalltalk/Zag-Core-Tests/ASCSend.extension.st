@@ -4,7 +4,6 @@ Extension { #name : 'ASCSend' }
 ASCSend >> interpretFor: anInterpreter [
 
 	^ anInterpreter
-		  returnTo: blockToReturnTo;
 		  send: selector;
-		  installContextIfNone
+		  installContextIfNone: blockToReturnTo
 ]

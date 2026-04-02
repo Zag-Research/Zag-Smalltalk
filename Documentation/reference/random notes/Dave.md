@@ -27,3 +27,6 @@ See [this blog](https://ziggit.dev/t/debugging-zig-with-a-debugger/7160) which [
 [Wiring Together the Rust and Zig Build Systems](https://www.youtube.com/watch?v=zRM_vOxbAx8)
 
 [Great pictures for slides](https://simonoya.com/drawings/)
+
+## SICP Lectures
+[Where it all starts](https://akovantsev.github.io/corpus/sicp#) click on the timeline

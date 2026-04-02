@@ -495,6 +495,20 @@ ASCompilerInlineTest >> testFoo2Inlined [
 ]
 
 { #category : 'tests' }
+ASCompilerInlineTest >> testFoo3 [
+	"foo3
+	self bar"
+
+	"bar
+	^ 42"
+
+	self
+		assertEquivalentSending: #foo3
+		arguments: {  }
+		to: ASCompileTestClass1 new
+]
+
+{ #category : 'tests' }
 ASCompilerInlineTest >> testFoo3Inlined [
 	"foo3
 	self bar"
@@ -511,7 +525,19 @@ ASCompilerInlineTest >> testFoo3Inlined [
 
 { #category : 'tests' }
 ASCompilerInlineTest >> testFooCallsBarCallsBlat [
+"
+fooCallsBarCallsBlat
 
+	self barCallsBlat
+	
+barCallsBlat
+
+	self blat: 50
+
+blat: aNumber
+
+	(aNumber < 0) ifTrue: [  aNumber ] ifFalse: [ aNumber negated ]
+"
 
 	self assertEquivalentSending: #fooCallsBarCallsBlat to: ASCompileTestClass1 new.
 	self assert: interpreter basicBlocks size equals: 1.
@@ -667,6 +693,16 @@ ASCompilerInlineTest >> testWhileTrueInlined [
 	dirty ] whileTrue"
 
 	(ASNoOutput withInlining compileMethod: ASCompileTestClass1 >> #whileTrue) inspect
+]
+
+{ #category : 'tests' }
+ASCompilerInlineTest >> testYourself [
+	"testYourself
+	   ^ #yourself yourself
+	"
+
+	self assertEquivalentSending: #testYourself to: ASCompileTestClass1 new
+
 ]
 
 { #category : 'hand compiled' }

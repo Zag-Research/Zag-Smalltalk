@@ -41,7 +41,7 @@ ASCodeGenerator >> inlineMethod: aMethodAST for: inlinedTargetClass from: anASCS
 		self branch: inlineBlock.
 		
 		code := inlineBlock.
-		returnBlock := self makeReturnBlock.
+		returnBlock := anASCSend nextBasicBlocks. "self makeReturnBlock."
 		(ASPharoCompiler new astFor: aMethodAST) zigWalkMethod: self ]
 		ensure: [ "when you hit a return while walking the method you need to not do returnTop you need to return to returnBlock""self can hold the return block"
 				code := returnBlock.
