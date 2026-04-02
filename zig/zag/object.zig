@@ -417,38 +417,35 @@ pub const PackedObject = packed struct {
         try expectEqual(0x2C014, combine14([_]ClassIndex{ .SmallInteger, .Symbol }));
     }
 };
-
-test "from conversion" {
+fn isInt(obj: Object) bool {
+    if (obj.nativeI()) |_| return true;
+    return false;
+}
+test "encoding" {
     try config.skipNotZag();
     const ee = std.testing.expectEqual;
+    const expect = std.testing.expect;
     var process: Process align(Process.alignment) = undefined;
     process.init();
     const sp = process.getSp();
     const context = process.getContext();
     if (config.objectEncoding == .nan)
         try ee(@as(f64, @bitCast((Object.from(3.14, sp, context)))), 3.14);
-    try std.testing.expect(!std.math.isNan(@as(f64, @bitCast(Object.from(3.14, sp, context)))));
-    //    try ee((Object.from(3.14, sp, context)).get_class(), .Float);
-    try std.testing.expect((Object.from(3.14, sp, context)).isFloat());
+    try expect(!std.math.isNan(@as(f64, @bitCast(Object.from(3.14, sp, context)))));
+    try ee((Object.from(3.14, sp, context)).get_class(), .Float);
+    try expect((Object.from(3.14, sp, context)).isFloat());
     try ee((Object.from(3, sp, context)).get_class(), .SmallInteger);
-    //try std.testing.expect((Object.from(3, sp, context)).isInt());
-    try std.testing.expect((Object.from(false, sp, context)).isBool());
+    try expect(isInt(Object.from(3, sp, context)));
+    try expect((Object.from(false, sp, context)).isBool());
     try ee((Object.from(false, sp, context)).get_class(), .False);
     try ee((Object.from(true, sp, context)).get_class(), .True);
-    try std.testing.expect((Object.from(true, sp, context)).isBool());
+    try expect((Object.from(true, sp, context)).isBool());
     try ee((Object.from(null, sp, context)).get_class(), .UndefinedObject);
-    try std.testing.expect((Object.from(null, sp, context)).isNil());
-}
-test "to conversion" {
-    var process: Process align(Process.alignment) = undefined;
-    process.init();
-    const sp = process.getSp();
-    const context = process.getContext();
-    const ee = std.testing.expectEqual;
+    try expect((Object.from(null, sp, context)).isNil());
     try ee((Object.from(3.14, sp, context)).to(f64), 3.14);
     //    trace("value: {}", .{@as(zag.InMemory.PointedObjectRef, @bitCast(Object.from(42, sp, context)))});
     try ee((Object.from(42, sp, context)).to(i64), 42);
-    //try std.testing.expect((Object.from(42, sp, context)).isInt());
+    //try expect((Object.from(42, sp, context)).isInt());
     try ee((Object.from(true, sp, context)).to(bool), true);
     try ee((Object.from(-0x400000, sp, context)).toUnchecked(i64), -0x400000);
 }

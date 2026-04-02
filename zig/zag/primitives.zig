@@ -38,7 +38,7 @@ const Context = zag.Context;
 const Extra = Context.Extra;
 const stringOf = zag.heap.CompileTimeString;
 const tf = zag.threadedFn.Enum;
-const Sym = zag.symbol.symbols;
+const Sym = zag.symbol.Symbols;
 
 pub const primitives = struct {
     pub const Float = @import("primitives/Float.zig");
@@ -176,7 +176,7 @@ const testModule = if (config.is_test) struct {
             }
         }
         pub fn primitiveError(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
-            std.debug.print("primitiveError255: {} {}", .{sp.next.get_class(), sp.top.get_class()});
+            std.debug.print("primitiveError255: {} {}", .{ sp.next.get_class(), sp.top.get_class() });
             if (sp.next.get_class() != sp.top.get_class()) {
                 const newSp = sp.push(Sym.value.asObject());
                 return @call(tailCall, Extra.primitiveFailed, .{ pc, newSp.?, process, context, extra });

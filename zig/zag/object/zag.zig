@@ -114,7 +114,7 @@ pub const Object = packed struct(u64) {
         return null;
     }
     inline fn nativeI_noCheck(self: object.Object) i64 {
-        return @as(i64,@bitCast(self)) >> @bitSizeOf(TagAndClassType);
+        return @as(i64, @bitCast(self)) >> @bitSizeOf(TagAndClassType);
     }
     pub inline fn fromNativeI(t: i56, _: anytype, _: anytype) Object {
         return oImm(.SmallInteger, @as(u56, @bitCast(t)));
@@ -244,7 +244,7 @@ pub const Object = packed struct(u64) {
         }
         @compileError("Can't convert \"" ++ @typeName(T) ++ "\"");
     }
-    
+
     pub fn toWithCheck(self: object.Object, comptime T: type, comptime check: bool) T {
         switch (T) {
             f64 => {
@@ -512,14 +512,12 @@ pub const Object = packed struct(u64) {
             else => null,
         };
     }
-    
+
     pub fn extraImmediateU(obj: Object) ?u11 {
         switch (obj.class) {
-            .ThunkReturnLocal,
-            .ThunkReturnInstance,
-            .ThunkReturnImmediate,
-            .ThunkReturnCharacter,
-            .ThunkReturnFloat => { return obj.extraU(); },
+            .ThunkReturnLocal, .ThunkReturnInstance, .ThunkReturnImmediate, .ThunkReturnCharacter, .ThunkReturnFloat => {
+                return obj.extraU();
+            },
             else => {},
         }
         return null;
@@ -527,8 +525,10 @@ pub const Object = packed struct(u64) {
 
     pub fn extraImmediateI(obj: Object) ?i11 {
         switch (obj.class) {
-            .ThunkReturnObject => { return obj.extraI(); },
-            else => {}
+            .ThunkReturnObject => {
+                return obj.extraI();
+            },
+            else => {},
         }
         return null;
     }
@@ -583,6 +583,7 @@ pub const Object = packed struct(u64) {
     pub const getField = OF.getField;
     pub const get_class = OF.get_class;
     pub const isBool = OF.isBool;
+    pub const toBoolNoCheck = OF.isBool;
     pub const isIndexable = OF.isIndexable;
     pub const isNil = OF.isNil;
     pub const isUnmoving = OF.isUnmoving;

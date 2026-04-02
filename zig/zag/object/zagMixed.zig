@@ -58,7 +58,7 @@ pub const Object = packed struct(u64) {
     pub const packedTagSmallInteger = Tag.smallinteger;
     pub const signatureTag = Tag.u(.immediates);
     inline fn tagbits(self: Object) u64 {
-        return @as(u64,@bitCast(self)) & 0xf800_0000_0000_0007;
+        return @as(u64, @bitCast(self)) & 0xf800_0000_0000_0007;
     }
 
     pub inline fn untaggedI(self: object.Object) ?i64 {
@@ -81,13 +81,13 @@ pub const Object = packed struct(u64) {
         return @bitCast(i + @intFromEnum(Tag.smallinteger));
     }
     pub inline fn fromNativeI(i: i62, _: anytype, _: anytype) Object {
-        return @bitCast((@as(i64,i) << 2) + @intFromEnum(Tag.smallinteger));
+        return @bitCast((@as(i64, i) << 2) + @intFromEnum(Tag.smallinteger));
     }
     pub inline fn asUntaggedI(i: i62) i64 {
         return @as(i64, i) << 2;
     }
     inline fn isInt(self: object.Object) bool {
-        return @as(u64,@bitCast(self)) & @intFromEnum(Tag.smallinteger) != 0;
+        return @as(u64, @bitCast(self)) & @intFromEnum(Tag.smallinteger) != 0;
     }
     pub inline fn isNat(self: object.Object) bool {
         return self.isInt() and self.rawI() >= 0;
@@ -162,8 +162,8 @@ pub const Object = packed struct(u64) {
     inline fn oImmContextI(c: ClassIndex.Compact, context: *Context, e: i11) Self {
         return oImmAddr(c, context, @bitCast(e));
     }
-    inline fn oImmContextCE(c: ClassIndex.Compact, context: *Context, c2: ClassIndex.Compact,  e: u6) Self {
-        return oImmAddr(c, context, (@as(u11, @intFromEnum(c2)) << 6) | e );
+    inline fn oImmContextCE(c: ClassIndex.Compact, context: *Context, c2: ClassIndex.Compact, e: u6) Self {
+        return oImmAddr(c, context, (@as(u11, @intFromEnum(c2)) << 6) | e);
     }
     pub inline fn pointer(self: object.Object, T: type) ?T {
         switch (self.tag) {
@@ -264,16 +264,21 @@ pub const Object = packed struct(u64) {
     }
     pub inline fn which_class(self: object.Object) ClassIndex {
         const u: u64 = @bitCast(self);
-        switch (@as(u3,@truncate(u))) {
-            2, 3, 6, 7 => { return .SmallInteger;},
-            4, 5 => { return .Float;},
-            1 => { return self.class.classIndex();},
+        switch (@as(u3, @truncate(u))) {
+            2, 3, 6, 7 => {
+                return .SmallInteger;
+            },
+            4, 5 => {
+                return .Float;
+            },
+            1 => {
+                return self.class.classIndex();
+            },
             0 => {
                 const class = self.class;
                 if (class == .none) {
                     return self.toUnchecked(*HeapObject).*.getClass();
-                } else
-                    return self.class.classIndex();
+                } else return self.class.classIndex();
             },
         }
     }
@@ -329,11 +334,9 @@ pub const Object = packed struct(u64) {
 
     pub fn extraImmediateU(obj: Object) ?u11 {
         switch (obj.class) {
-            .ThunkReturnLocal,
-            .ThunkReturnInstance,
-            .ThunkReturnImmediate,
-            .ThunkReturnCharacter,
-            .ThunkReturnFloat => { return obj.extraU(); },
+            .ThunkReturnLocal, .ThunkReturnInstance, .ThunkReturnImmediate, .ThunkReturnCharacter, .ThunkReturnFloat => {
+                return obj.extraU();
+            },
             else => {},
         }
         return null;
@@ -341,8 +344,10 @@ pub const Object = packed struct(u64) {
 
     pub fn extraImmediateI(obj: Object) ?i11 {
         switch (obj.class) {
-            .ThunkReturnObject => { return obj.extraI(); },
-            else => {}
+            .ThunkReturnObject => {
+                return obj.extraI();
+            },
+            else => {},
         }
         return null;
     }
@@ -383,6 +388,7 @@ pub const Object = packed struct(u64) {
     pub const getField = OF.getField;
     pub const get_class = OF.get_class;
     pub const isBool = OF.isBool;
+    pub const toBoolNoCheck = OF.isBool;
     pub const isIndexable = OF.isIndexable;
     pub const isNil = OF.isNil;
     pub const isUnmoving = OF.isUnmoving;

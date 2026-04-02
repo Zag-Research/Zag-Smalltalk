@@ -103,7 +103,7 @@ pub const Object = packed union {
         return @bitCast(i + @intFromEnum(Tag.smallInteger));
     }
     pub inline fn fromNativeI(i: i61, _: anytype, _: anytype) Object {
-        return @bitCast((@as(i64,i) << 3) + @intFromEnum(Tag.smallInteger));
+        return @bitCast((@as(i64, i) << 3) + @intFromEnum(Tag.smallInteger));
     }
     pub inline fn asUntaggedI(i: i61) i64 {
         return @as(i64, i) << 3;
@@ -191,7 +191,7 @@ pub const Object = packed union {
             else => {},
         }
         return null;
-   }
+    }
     pub inline fn makeImmediate(cls: ClassIndex.Compact, hash: u56) Object {
         return oImm(cls, hash);
     }
@@ -341,11 +341,9 @@ pub const Object = packed union {
 
     pub fn extraImmediateU(obj: Object) ?u11 {
         switch (obj.immediate.class) {
-            .ThunkReturnLocal,
-            .ThunkReturnInstance,
-            .ThunkReturnImmediate,
-            .ThunkReturnCharacter,
-            .ThunkReturnFloat => { return obj.extraU(); },
+            .ThunkReturnLocal, .ThunkReturnInstance, .ThunkReturnImmediate, .ThunkReturnCharacter, .ThunkReturnFloat => {
+                return obj.extraU();
+            },
             else => {},
         }
         return null;
@@ -353,8 +351,10 @@ pub const Object = packed union {
 
     pub fn extraImmediateI(obj: Object) ?i11 {
         switch (obj.immediate.class) {
-            .ThunkReturnObject => { return obj.extraI(); },
-            else => {}
+            .ThunkReturnObject => {
+                return obj.extraI();
+            },
+            else => {},
         }
         return null;
     }
@@ -410,6 +410,7 @@ pub const Object = packed union {
     pub const getField = OF.getField;
     pub const get_class = OF.get_class;
     pub const isBool = OF.isBool;
+    pub const toBoolNoCheck = OF.isBool;
     pub const isIndexable = OF.isIndexable;
     pub const isNil = OF.isNil;
     pub const isUnmoving = OF.isUnmoving;

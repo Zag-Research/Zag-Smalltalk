@@ -37,7 +37,7 @@ pub const Tag = enum(TagBaseType) {
     Character,
     Signature,
     heap,
-    smallInteger = 0xfff8,
+    smallInteger = 0xfffc,
     _,
     inline fn u(cg: Tag) TagBaseType {
         return @intFromEnum(cg);
@@ -48,7 +48,7 @@ pub const Tag = enum(TagBaseType) {
     // inline
     fn from(c: ClassIndex) Tag {
         const cls = @intFromEnum(c);
-        assert(cls <= 31);
+        assert(cls <= 15);
         return @enumFromInt(cls + @intFromEnum(Tag.ThunkReturnLocal) - 1);
     }
     inline fn class(t: Tag) ClassIndex {
@@ -87,7 +87,7 @@ pub const Object = packed struct(u64) {
         assert(tagAndClassBits == @bitSizeOf(TagAndClassType));
     }
     const extraMask = 7;
-    const intTagBits = 13;
+    const intTagBits = 14;
     const integerTag = @intFromEnum(Tag.smallInteger) >> 3;
     inline fn isInt(self: Object) bool {
         if (true) {
@@ -131,14 +131,14 @@ pub const Object = packed struct(u64) {
     inline fn indexNumber(self: Object) u24 {
         return @truncate(self.rawU() & nonIndexSymbol >> 8);
     }
-    pub inline fn withPrimitive(self: Object, prim: u64) Object {
+    pub inline fn withPrimitive(self: Object, prim: u8) Object {
         return @bitCast(self.rawU() | prim << 40);
     }
     pub inline fn makeImmediate(cls: ClassIndex, low32: u32) Object {
         return oImm(cls, low32);
     }
     pub inline fn hash24(self: Object) u24 {
-        return @truncate(self.rawU());
+        return @truncate(self.rawU() >> 8);
     }
     pub inline fn hash32(self: Object) u32 {
         return @truncate(self.rawU());
@@ -166,9 +166,6 @@ pub const Object = packed struct(u64) {
         return @bitCast(self.extraU());
     }
 
-    pub inline fn symbolDirectHash(self: Object) u32 {
-        return @truncate(self.rawU());
-    }
     pub inline fn untaggedI(self: Object) ?i64 {
         if (self.isInt()) return self.untaggedI_noCheck();
         return null;
@@ -186,17 +183,14 @@ pub const Object = packed struct(u64) {
         return toObject(i);
     }
     pub inline fn nativeI(self: Object) ?i64 {
-        if (self.isInt()) return self.nativeI_noCheck();
+        if (self.untaggedI()) |int| return int >> intTagBits;
         return null;
     }
-    inline fn nativeI_noCheck(self: Object) i64 {
-        return @as(i64, @bitCast(self.rawU() << intTagBits)) >> intTagBits;
-    }
-    pub inline fn asUntaggedI(int: i51) i64 {
+    pub inline fn asUntaggedI(int: i50) i64 {
         return @as(i64, int) << intTagBits;
     }
-    pub inline fn fromNativeI(int: i51, _: anytype, _: anytype) Object {
-        return toObject(@as(i64, int) << intTagBits);
+    pub inline fn fromNativeI(int: i50, _: anytype, _: anytype) Object {
+        return toObject(asUntaggedI(int));
     }
     pub inline fn nativeF(self: Object) ?f64 {
         if (self.isImmediateDouble()) return @bitCast(self);
@@ -365,36 +359,64 @@ pub const Object = packed struct(u64) {
                 }
             },
         }
+        std.debug.print("\nclass={}\n", .{self.which_class()});
         @panic("Trying to convert Object to " ++ @typeName(T));
     }
     inline fn nanPointerAsInt(self: Object) usize {
         return @as(u48, @truncate(@as(usize, @bitCast(self))));
     }
     pub inline fn which_class(self: Object) ClassIndex {
-        if (self.isInt()) {
-            @branchHint(.likely);
-            return .SmallInteger;
-        }
-        if (!std.math.isNan(@as(f64, @bitCast(self)))) {
-            @branchHint(.likely);
-            return .Float;
-        }
-        switch (self.tag) {
-            .heap => {
-                @branchHint(.likely);
-                if (self == Nil()) {
+        if (true) {
+            switch (self.tag) {
+                .heap => {
+                    if (self.data == 0) {
+                        @branchHint(.unlikely);
+                        return .UndefinedObject;
+                    }
+                    return self.toUnchecked(*HeapObject).*.getClass();
+                },
+                .ThunkReturnLocal, .ThunkHeap => |tag| {
                     @branchHint(.unlikely);
-                    return .UndefinedObject;
-                }
-                return self.toUnchecked(*HeapObject).*.getClass();
-            },
-            else => |tag| {
-                if (self.rawU() == NaN) {
+                    if (self.data == 0) return .Float;
+                    return tag.class();
+                },
+                .ThunkReturnInstance, .ThunkReturnObject, .ThunkReturnImmediate, .ThunkLocal, .BlockAssignLocal, .ThunkInstance, .BlockAssignInstance, .ThunkImmediate, .Signature => |tag| {
                     @branchHint(.unlikely);
+                    return tag.class();
+                },
+                .Symbol, .False, .True, .Character => |tag| return tag.class(),
+                else => |tag| {
+                    @branchHint(.likely);
+                    if (@intFromEnum(tag) >= @intFromEnum(Tag.smallInteger)) return .SmallInteger;
                     return .Float;
-                }
-                return tag.class();
-            },
+                },
+            }
+        } else {
+            if (self.isInt()) {
+                @branchHint(.likely);
+                return .SmallInteger;
+            }
+            if (!std.math.isNan(@as(f64, @bitCast(self)))) {
+                @branchHint(.likely);
+                return .Float;
+            }
+            switch (self.tag) {
+                .heap => {
+                    @branchHint(.likely);
+                    if (self == Nil()) {
+                        @branchHint(.unlikely);
+                        return .UndefinedObject;
+                    }
+                    return self.toUnchecked(*HeapObject).*.getClass();
+                },
+                else => |tag| {
+                    if (self.rawU() == NaN) {
+                        @branchHint(.unlikely);
+                        return .Float;
+                    }
+                    return tag.class();
+                },
+            }
         }
     }
     pub inline fn isHeapObject(self: Object) bool {
@@ -415,6 +437,7 @@ pub const Object = packed struct(u64) {
     pub const getField = OF.getField;
     pub const get_class = OF.get_class;
     pub const isBool = OF.isBool;
+    pub const toBoolNoCheck = OF.isBool;
     pub const isIndexable = OF.isIndexable;
     pub const isNil = OF.isNil;
     pub const isUnmoving = OF.isUnmoving;

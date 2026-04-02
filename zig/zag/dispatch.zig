@@ -24,7 +24,7 @@ const Context = zag.Context;
 const Extra = Context.Extra;
 const globalArena = zag.globalArena;
 const symbol = zag.symbol;
-const symbols = symbol.symbols;
+const symbols = symbol.Symbols;
 const HeapHeader = zag.heap.HeapHeader;
 const smallestPrimeAtLeast = @import("utilities.zig").smallestPrimeAtLeast;
 // note that self and other could become invalid after any method call if they are heap objects, so will need to be re-loaded from context.fields if needed thereafter

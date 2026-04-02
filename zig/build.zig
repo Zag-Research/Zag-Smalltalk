@@ -299,6 +299,10 @@ fn createTestStep(
             });
 
         enc_tests.root_module.addOptions("options", enc_options);
+        const filter = b.option([]const u8, "filter", "Skip tests that do not match this filter");
+        if (filter) |f| {
+            enc_tests.filters = &.{f};
+        }
         const run_enc_tests = b.addRunArtifact(enc_tests);
         test_step.dependOn(&run_enc_tests.step);
     }
