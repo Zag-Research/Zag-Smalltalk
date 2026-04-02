@@ -231,23 +231,6 @@ fn createExperimentExecutables(
     const run_cnp_fib_bench_step = b.step("cnp-fib-bench", "Run CNP JIT fibonacci benchmarks");
     run_cnp_fib_bench_step.dependOn(&run_cnp_fib_bench.step);
 
-    const cnp_fib_bench_obj = b.addObject(.{
-        .name = "cnp-fib-bench",
-        .root_module = b.createModule(.{
-            .root_source_file = b.path("experiments/cnp/fib_bench.zig"),
-            .target = target,
-            .optimize = optimize,
-            .imports = &.{
-                .{ .name = "zag", .module = zag },
-            },
-            .omit_frame_pointer = build_options.omit_frame_pointer,
-        }),
-        .use_llvm = true,
-    });
-    const install_cnp_fib_bench_obj = b.addInstallLibFile(cnp_fib_bench_obj.getEmittedBin(), "cnp-fib-bench.o");
-    const cnp_fib_bench_obj_step = b.step("cnp-fib-bench-obj", "Build object file for CNP JIT fibonacci benchmark");
-    cnp_fib_bench_obj_step.dependOn(&install_cnp_fib_bench_obj.step);
-
     const fib_check = b.addExecutable(.{
         .name = "fib",
         .root_module = b.createModule(.{
