@@ -120,15 +120,15 @@ fn bench50(mode: Mode) !void {
 fn benchArith(mode: Mode) !void {
     const tup = .{
         tf.pushLiteral, "0const", // base = 0
-        tf.pushLiteral, "1const", tf.@"inline+I", tf.fail,tf.fail, // + 1
-        tf.pushLiteral, "2const", tf.@"inline+I", tf.fail,tf.fail, // + 2
-        tf.pushLiteral, "3const", tf.@"inline+I", tf.fail,tf.fail, // + 3
-        tf.pushLiteral, "4const", tf.@"inline+I", tf.fail,tf.fail, // + 4
-        tf.pushLiteral, "5const", tf.@"inline+I", tf.fail,tf.fail, // + 5
-        tf.pushLiteral, "6const", tf.@"inline+I", tf.fail,tf.fail, // + 6
-        tf.pushLiteral, "7const", tf.@"inline+I", tf.fail,tf.fail, // + 7
-        tf.pushLiteral, "8const", tf.@"inline+I", tf.fail,tf.fail, // + 8
-        tf.pushLiteral, "9const", tf.@"inline+I", tf.fail,tf.fail, // + 9
+        tf.pushLiteral, "1const", tf.@"inline+I", tf.fail, tf.fail, // + 1
+        tf.pushLiteral, "2const", tf.@"inline+I", tf.fail, tf.fail, // + 2
+        tf.pushLiteral, "3const", tf.@"inline+I", tf.fail, tf.fail, // + 3
+        tf.pushLiteral, "4const", tf.@"inline+I", tf.fail, tf.fail, // + 4
+        tf.pushLiteral, "5const", tf.@"inline+I", tf.fail, tf.fail, // + 5
+        tf.pushLiteral, "6const", tf.@"inline+I", tf.fail, tf.fail, // + 6
+        tf.pushLiteral, "7const", tf.@"inline+I", tf.fail, tf.fail, // + 7
+        tf.pushLiteral, "8const", tf.@"inline+I", tf.fail, tf.fail, // + 8
+        tf.pushLiteral, "9const", tf.@"inline+I", tf.fail, tf.fail, // + 9
         tf.returnTop,
     };
     try runBench("arith", tup, &[_]usize{ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 }, mode);
@@ -139,11 +139,12 @@ fn benchLoop(mode: Mode) !void {
         tf.pushLiteral,  "0const",
         ":loop",         tf.dup,
         tf.pushLiteral,  "1const",
-        tf.@"inline<=I", tf.fail,tf.fail,
-        tf.branchFalse,  "cont",
-        tf.returnTop,    ":cont",
-        tf.pushLiteral,  "2const",
-        tf.@"inline-I",  tf.fail,tf.fail,
+        tf.@"inline<=I", tf.fail,
+        tf.fail,         tf.branchFalse,
+        "cont",          tf.returnTop,
+        ":cont",         tf.pushLiteral,
+        "2const",        tf.@"inline-I",
+        tf.fail,         tf.fail,
         tf.branch,       "loop",
     };
     try runBench("loop", tup, &[_]usize{ 50000, 0, 1 }, mode);

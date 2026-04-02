@@ -23,7 +23,7 @@ pub inline fn symbolIndex(obj: object.Object) u24 {
     return unhash(obj.hash24());
 }
 pub inline fn symbolArity(obj: object.Object) u4 {
-    std.debug.print("symbolArity: {x}\n", .{obj.testU()});
+    // std.debug.print("symbolArity: {x}\n", .{obj.testU()});
     return @intCast(obj.hash32() >> 24);
 }
 inline fn hash_of(index: u24, arity: u4) u32 {

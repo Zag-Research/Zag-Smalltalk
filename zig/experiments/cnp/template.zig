@@ -6,7 +6,7 @@ const Extra = Context.Extra;
 const PC = zag.execute.PC;
 const SP = Process.SP;
 const Result = zag.execute.Result;
-const Arm64 = @import("arm64.zig").Arm64;
+const TemplateScan = @import("template_scan.zig");
 
 pub const ThreadedFn = *const fn (PC, SP, *Process, *Context, Extra) Result;
 
@@ -17,12 +17,28 @@ pub const TemplateInfo = struct {
     br_count: usize,
     last_branch_offset: ?usize,
 
-    /// Scans native code to find template boundaries and branch locations.
-    /// Detects function end by looking for:
-    /// 1. RET instruction
-    /// 2. Next function's prologue (after seeing at least one branch)
+    fn nextKnownTemplateStart(func: ThreadedFn) ?usize {
+        const start_addr = @intFromPtr(func);
+        var next_addr: usize = std.math.maxInt(usize);
+        var found = false;
+
+        for (zag.threadedFn.functions) |candidate| {
+            const addr = @intFromPtr(candidate);
+            if (addr > start_addr and addr < next_addr) {
+                next_addr = addr;
+                found = true;
+            }
+        }
+
+        return if (found) next_addr else null;
+    }
+
+    /// Scans native code with CFG-based traversal (no prologue heuristics).
+    /// Preferred boundary is the next known threaded function symbol.
     pub fn analyze(func: ThreadedFn) TemplateInfo {
         const ptr: [*]const u8 = @ptrCast(func);
+        const start_addr = @intFromPtr(func);
+        const next_addr = nextKnownTemplateStart(func);
         var info = TemplateInfo{
             .start = ptr,
             .size = 0,
@@ -31,33 +47,16 @@ pub const TemplateInfo = struct {
             .last_branch_offset = null,
         };
 
-        var i: usize = 0;
-        const maxBytes: usize = 2048;
+        const hard_max_bytes: usize = 32 * 1024;
+        const max_bytes =
+            if (next_addr) |next| @min(next - start_addr, hard_max_bytes) else hard_max_bytes;
 
-        while (i < maxBytes) : (i += 4) {
-            const inst = std.mem.readInt(u32, ptr[i..][0..4], .little);
-
-            // If we've seen at least one branch and hit a prologue,
-            // we've entered the next function - stop here
-            // subject to change 
-            if (info.br_count > 0 and Arm64.isLikelyPrologue(inst)) {
-                info.size = i;
-                break;
-            }
-
-            if (Arm64.isBranchRegister(inst)) {
-                if (info.br_count < info.br_offsets.len) {
-                    info.br_offsets[info.br_count] = i;
-                    info.br_count += 1;
-                }
-                info.last_branch_offset = i;
-            }
-
-            if (Arm64.isRet(inst)) {
-                info.size = i + 4;
-                break;
-            }
-        }
+        const scan = TemplateScan.scan(ptr, max_bytes) catch
+            @panic("Template scan failed");
+        info.size = scan.size;
+        info.br_count = scan.br_count;
+        info.br_offsets = scan.br_offsets;
+        info.last_branch_offset = scan.last_branch_offset;
 
         return info;
     }

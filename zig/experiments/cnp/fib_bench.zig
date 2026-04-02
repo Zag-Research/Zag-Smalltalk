@@ -17,7 +17,7 @@ const opsInfo = jitmethod.opsInfo;
 const harness = @import("test_harness.zig");
 const print = std.debug.print;
 
-const fib_n = 40;
+const fib_n = 36;
 const fib_rounds = 5;
 const warmup_rounds = 3;
 
