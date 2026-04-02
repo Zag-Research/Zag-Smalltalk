@@ -33,8 +33,6 @@ pub const TemplateInfo = struct {
         return if (found) next_addr else null;
     }
 
-    /// Scans native code with CFG-based traversal (no prologue heuristics).
-    /// Preferred boundary is the next known threaded function symbol.
     pub fn analyze(func: ThreadedFn) TemplateInfo {
         const ptr: [*]const u8 = @ptrCast(func);
         const start_addr = @intFromPtr(func);
@@ -51,8 +49,7 @@ pub const TemplateInfo = struct {
         const max_bytes =
             if (next_addr) |next| @min(next - start_addr, hard_max_bytes) else hard_max_bytes;
 
-        const scan = TemplateScan.scan(ptr, max_bytes) catch
-            @panic("Template scan failed");
+        const scan = TemplateScan.scan(ptr, max_bytes) catch @panic("Template scan failed");
         info.size = scan.size;
         info.br_count = scan.br_count;
         info.br_offsets = scan.br_offsets;
