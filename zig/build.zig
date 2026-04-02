@@ -35,7 +35,6 @@ fn createBuildOptions(b: *std.Build) BuildOptions {
     const max_classes = b.option(u16, "maxClasses", "Maximum number of classes") orelse 255;
     const trace = b.option(bool, "trace", "trace execution") orelse false;
     const quit_on_first_failure = b.option(bool, "quitOnFirstFailure", "Stop after first error");
-    const test_filter = b.option([]const u8, "filter", "Forwarded to zig test --test-filter");
     const omit_frame_pointer = false;
 
     return .{
@@ -46,7 +45,6 @@ fn createBuildOptions(b: *std.Build) BuildOptions {
         .max_classes = max_classes,
         .trace = trace,
         .quit_on_first_failure = quit_on_first_failure,
-        .test_filter = test_filter,
         .omit_frame_pointer = omit_frame_pointer,
     };
 }
@@ -233,24 +231,6 @@ fn createExperimentExecutables(
     const run_cnp_fib_bench_step = b.step("cnp-fib-bench", "Run CNP JIT fibonacci benchmarks");
     run_cnp_fib_bench_step.dependOn(&run_cnp_fib_bench.step);
 
-    const cnp_sieve_bench = b.addExecutable(.{
-        .name = "cnp-sieve-bench",
-        .root_module = b.createModule(.{
-            .root_source_file = b.path("experiments/cnp/sieve_bench.zig"),
-            .target = target,
-            .optimize = optimize,
-            .imports = &.{
-                .{ .name = "zag", .module = zag },
-            },
-            .omit_frame_pointer = build_options.omit_frame_pointer,
-        }),
-        .use_llvm = true,
-    });
-    b.installArtifact(cnp_sieve_bench);
-    const run_cnp_sieve_bench = b.addRunArtifact(cnp_sieve_bench);
-    const run_cnp_sieve_bench_step = b.step("cnp-sieve-bench", "Run CNP JIT sieve-like benchmarks");
-    run_cnp_sieve_bench_step.dependOn(&run_cnp_sieve_bench.step);
-
     const cnp_fib_bench_obj = b.addObject(.{
         .name = "cnp-fib-bench",
         .root_module = b.createModule(.{
@@ -337,9 +317,6 @@ fn createTestStep(
 
         enc_tests.root_module.addOptions("options", enc_options);
         const run_enc_tests = b.addRunArtifact(enc_tests);
-        if (build_options.test_filter) |filter| {
-            run_enc_tests.addArgs(&.{ "--test-filter", filter });
-        }
         test_step.dependOn(&run_enc_tests.step);
     }
 }
@@ -499,6 +476,5 @@ const BuildOptions = struct {
     max_classes: u16,
     trace: bool,
     quit_on_first_failure: ?bool,
-    test_filter: ?[]const u8,
     omit_frame_pointer: bool,
 };
