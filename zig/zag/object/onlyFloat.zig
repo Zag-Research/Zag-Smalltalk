@@ -50,6 +50,9 @@ pub const Object = packed struct(u64) {
     pub inline fn nativeI(_: Object) ?i64 {
         @panic("not implemented");
     }
+    pub inline fn fromNativeI(_: i64, _: anytype, _: anytype) Object {
+        @panic("not implemented");
+    }
 
     pub inline fn nativeF(self: Object) ?f64 {
         return @bitCast(self);
@@ -203,10 +206,6 @@ pub const Object = packed struct(u64) {
     pub inline fn hasMemoryReference(_: Object) bool {
         return false;
     }
-
-    pub inline fn isHeapObject(_: Object) bool {
-        return false;
-    }
     pub inline fn ifHeapObject(_: object.Object) ?*HeapObject {
         return null;
     }
@@ -222,7 +221,7 @@ pub const Object = packed struct(u64) {
     pub const getField = OF.getField;
     pub const get_class = OF.get_class;
     pub const isBool = OF.isBool;
-    pub const toBoolNoCheck = OF.isBool;
+    pub const toBoolNoCheck = OF.toBoolNoCheck;
     pub const isIndexable = OF.isIndexable;
     pub const isNil = OF.isNil;
     pub const isUnmoving = OF.isUnmoving;

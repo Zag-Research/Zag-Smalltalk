@@ -22,16 +22,12 @@ pub const Symbols = SymbolsEnum;
 pub inline fn symbolIndex(obj: object.Object) u24 {
     return unhash(obj.hash24());
 }
-pub inline fn symbolArity(obj: object.Object) u4 {
-    //std.debug.print("symbolArity: {x}\n", .{obj.testU()});
-    return @intCast(obj.hash32() >> 24);
-}
 inline fn hash_of(index: u24, arity: u4) u32 {
     return @as(u32, hash(index)) | (@as(u32, arity) << 24);
 }
 pub const signature = SymbolsEnum.signature;
-pub fn fromHash(aHash: u64) Object {
-    const index = unhash(@truncate(aHash));
+pub fn fromHash(aHash: u24) Object {
+    const index = unhash(aHash);
     return @as(SymbolsEnum, @enumFromInt(index)).asObject();
 }
 const SymbolsEnum = enum(u32) {
@@ -268,14 +264,14 @@ test "symbols match initialized symbol table" {
             trace("ss[{}] {x} {x}", .{ i, ss.header.hash, ss.data.unsigned });
     }
     try expectEqual(1, symbolIndex(Symbols.value.asObject()));
-    try expectEqual(0, symbolArity(Symbols.value.asObject()));
+    try expectEqual(0, Symbols.value.asObject().numArgs());
     try expectEqual(2, symbolIndex(Symbols.@"=".asObject()));
-    try expectEqual(1, symbolArity(Symbols.@"=".asObject()));
-    try expectEqual(0, symbolArity(Symbols.Object.asObject()));
-    try expectEqual(2, symbolArity(Symbols.@"at:put:".asObject()));
-    try expectEqual(1, symbolArity(Symbols.@"<=".asObject()));
+    try expectEqual(1, Symbols.@"=".asObject().numArgs());
+    try expectEqual(0, Symbols.Object.asObject().numArgs());
+    try expectEqual(2, Symbols.@"at:put:".asObject().numArgs());
+    try expectEqual(1, Symbols.@"<=".asObject().numArgs());
     try expectEqual(Symbols.lastPredefinedSymbol, symbolIndex(Symbols.Object.asObject()));
-    try expectEqual(0, symbolArity(Symbols.Object.asObject()));
+    try expectEqual(0, Symbols.Object.asObject().numArgs());
     switch (config.objectEncoding) {
         .zag => {
             try expectEqual(0x5FB38659, Symbols.Object.asObject().testU());

@@ -136,9 +136,6 @@ pub const Object = packed struct(u64) {
         if (self.isImmediateClass(.Symbol)) return @truncate(self.hash);
         return null;
     }
-    pub inline fn isHeapObject(self: Object) bool {
-        return self.tag == .heap;
-    }
 
     pub inline fn extraValue(self: object.Object) object.Object {
         return @bitCast(self.nativeI_noCheck() >> 8);
@@ -462,14 +459,14 @@ pub const Object = packed struct(u64) {
     }
     pub inline fn hasMemoryReference(self: Object) bool {
         return if (self.ifHeapObject()) |_|
-            true
+            self != Nil()
         else switch (self.class) {
             .ThunkReturnLocal, .ThunkReturnInstance, .ThunkReturnObject, .ThunkReturnImmediate, .ThunkLocal, .BlockAssignLocal, .ThunkInstance, .BlockAssignInstance, .ThunkHeap, .ThunkReturnCharacter, .ThunkReturnFloat => true,
             else => false, // catches the nil case
         };
     }
     pub inline fn ifHeapObject(self: object.Object) ?*HeapObject {
-        if (self.tag == .heap) return @ptrFromInt(@as(u64, @bitCast(self)));
+        if (self.tag == .heap and self != Nil()) return @ptrFromInt(@as(u64, @bitCast(self)));
         return null;
     }
 
@@ -583,7 +580,7 @@ pub const Object = packed struct(u64) {
     pub const getField = OF.getField;
     pub const get_class = OF.get_class;
     pub const isBool = OF.isBool;
-    pub const toBoolNoCheck = OF.isBool;
+    pub const toBoolNoCheck = OF.toBoolNoCheck;
     pub const isIndexable = OF.isIndexable;
     pub const isNil = OF.isNil;
     pub const isUnmoving = OF.isUnmoving;

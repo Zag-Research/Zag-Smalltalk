@@ -63,6 +63,9 @@ pub const Object = packed struct(u64) {
         if (self.isInt()) return self.rawI();
         return null;
     }
+    pub inline fn fromNativeI(t: i64, sp: SP, context: *Context) object.Object {
+        return from(t, sp, context);
+    }
     pub inline fn nativeF(self: object.Object) ?f64 {
         if (self.isMemoryDouble()) return self.toDoubleFromMemory();
         return null;
@@ -258,7 +261,7 @@ pub const Object = packed struct(u64) {
         return self.ref.header.classIndex;
     }
     pub inline fn hasMemoryReference(self: Object) bool {
-        return @intFromPtr(self.ref) & 0x7 == 0 and self != Object.Nil();
+        return @intFromPtr(self.ref) & 0x7 == 0 and self != Nil();
     }
     pub const Scanner = struct {
         ptr: *anyopaque,
@@ -275,9 +278,6 @@ pub const Object = packed struct(u64) {
     };
     pub inline fn isSymbol(self: Object) bool {
         return self.isImmediateClass(.Symbol);
-    }
-    pub inline fn isHeapObject(_: Object) bool {
-        return true;
     }
     pub inline fn ifHeapObject(self: object.Object) ?*HeapObject {
         return @ptrFromInt(@as(u64, @bitCast(self)));
@@ -299,7 +299,7 @@ pub const Object = packed struct(u64) {
     pub const getField = OF.getField;
     pub const get_class = OF.get_class;
     pub const isBool = OF.isBool;
-    pub const toBoolNoCheck = OF.isBool;
+    pub const toBoolNoCheck = OF.toBoolNoCheck;
     pub const isIndexable = OF.isIndexable;
     pub const isNil = OF.isNil;
     pub const isUnmoving = OF.isUnmoving;

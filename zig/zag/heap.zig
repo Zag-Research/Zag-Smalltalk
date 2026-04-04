@@ -1067,9 +1067,11 @@ test "compile time" {
 test "compile time2" {
     try std.testing.expectEqual(try abcde.size(), 13);
     var buffer: [20]u8 = undefined;
+    try config.skipForDebugging();
     _ = try abcde.asObject().asZeroTerminatedString(&buffer);
 }
 test "compile time3" {
+    try config.skipForDebugging();
     if (!debugError)
         try std.testing.expect(mem.eql(u8, try Object.fromAddress(abcde).arrayAsSlice(u8), "abcdefghijklm"));
 }

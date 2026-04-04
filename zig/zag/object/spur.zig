@@ -150,7 +150,7 @@ pub const Object = packed union {
         return null;
     }
 
-    pub inline fn isHeapObject(self: Object) bool {
+    inline fn isHeapObject(self: Object) bool {
         return self.isTag(.pointer);
     }
 
@@ -306,9 +306,7 @@ pub const Object = packed union {
         return self.ref.getClass();
     }
 
-    pub inline fn hasMemoryReference(self: Object) bool {
-        return self.isHeapObject();
-    }
+    pub const hasMemoryReference = isHeapObject;
 
     pub inline fn ifHeapObject(self: Object) ?*HeapObject {
         if (self.isHeapObject()) return @ptrFromInt(self.rawU());
@@ -377,7 +375,7 @@ pub const Object = packed union {
     pub const getField = OF.getField;
     pub const get_class = OF.get_class;
     pub const isBool = OF.isBool;
-    pub const toBoolNoCheck = OF.isBool;
+    pub const toBoolNoCheck = OF.toBoolNoCheck;
     pub const isIndexable = OF.isIndexable;
     pub const isNil = OF.isNil;
     pub const isUnmoving = OF.isUnmoving;
@@ -391,7 +389,7 @@ pub const Object = packed union {
     pub const tests = OF.tests;
 };
 
-test "float from/to conversion" {
+test "spur" {
     std.log.err("running test", .{});
 
     // Test immediate float conversion

@@ -78,16 +78,16 @@ pub const Object = packed struct(u64) {
         return @bitCast(i);
     }
     pub inline fn fromUntaggedI(i: i64, _: anytype, _: anytype) object.Object {
-        return @bitCast(i + @intFromEnum(Tag.smallinteger));
+        return @bitCast(i + Tag.u(.smallinteger));
     }
     pub inline fn fromNativeI(i: i62, _: anytype, _: anytype) Object {
-        return @bitCast((@as(i64, i) << 2) + @intFromEnum(Tag.smallinteger));
+        return fromUntaggedI(asUntaggedI(i), null, null);
     }
     pub inline fn asUntaggedI(i: i62) i64 {
         return @as(i64, i) << 2;
     }
     inline fn isInt(self: object.Object) bool {
-        return @as(u64, @bitCast(self)) & @intFromEnum(Tag.smallinteger) != 0;
+        return @as(u64, @bitCast(self)) & Tag.u(.smallinteger) != 0;
     }
     pub inline fn isNat(self: object.Object) bool {
         return self.isInt() and self.rawI() >= 0;
@@ -123,10 +123,6 @@ pub const Object = packed struct(u64) {
     pub inline fn symbolHash(self: object.Object) ?u24 {
         if (self.isImmediateClass(.Symbol)) return @truncate(self.hash);
         return null;
-    }
-
-    pub inline fn isHeapObject(self: Object) bool {
-        return self.tag == .heap;
     }
 
     pub inline fn extraValue(self: object.Object) object.Object {
@@ -180,10 +176,10 @@ pub const Object = packed struct(u64) {
         return oImm(cls, hash);
     }
     pub inline fn hash24(self: object.Object) u24 {
-        return @truncate(self.hash);
+        return @truncate(self.hash >> 3);
     }
     pub inline fn hash32(self: object.Object) u32 {
-        return @truncate(self.hash);
+        return @truncate(self.rawU());
     }
 
     pub fn fromAddress(value: anytype) Object {
@@ -264,34 +260,32 @@ pub const Object = packed struct(u64) {
     }
     pub inline fn which_class(self: object.Object) ClassIndex {
         const u: u64 = @bitCast(self);
-        switch (@as(u3, @truncate(u))) {
-            2, 3, 6, 7 => {
-                return .SmallInteger;
-            },
-            4, 5 => {
-                return .Float;
-            },
-            1 => {
-                return self.class.classIndex();
+        const shift: u4 = @intCast((u & 6) << 1); // depends on SmallInteger only using 2 (i.e. 3,6,7 unused)
+        const offset = @min(ClassIndex.u(.Float),ClassIndex.u(.SmallInteger)) - 1;
+        const key = ((ClassIndex.u(.Float)-offset)<<8)+((ClassIndex.u(.SmallInteger)-offset)<<4);
+        switch ((key >> shift) & 15) {
+            else => |tag| {
+                @branchHint(.likely);
+                return @enumFromInt(tag+offset);
             },
             0 => {
                 const class = self.class;
                 if (class == .none) {
+                    if (u == 0) {
+                        @branchHint(.unlikely);
+                        return .UndefinedObject;
+                    }
                     return self.toUnchecked(*HeapObject).*.getClass();
                 } else return self.class.classIndex();
             },
         }
     }
+
     pub inline fn hasMemoryReference(self: Object) bool {
-        return if (self.ifHeapObject()) |_|
-            true
-        else switch (self.class) {
-            .ThunkReturnLocal, .ThunkReturnInstance, .ThunkReturnObject, .ThunkReturnImmediate, .ThunkLocal, .BlockAssignLocal, .ThunkInstance, .BlockAssignInstance, .ThunkHeap, .ThunkReturnCharacter, .ThunkReturnFloat => true,
-            else => false, // catches the nil case
-        };
+        return self.tag == .heap and self != Nil();
     }
     pub inline fn ifHeapObject(self: object.Object) ?*HeapObject {
-        if (self.tag == .heap) return @ptrFromInt(@as(u64, @bitCast(self)));
+        if (self.tag == .heap and self != Nil()) return @ptrFromInt(@as(u64, @bitCast(self)));
         return null;
     }
 
@@ -388,7 +382,7 @@ pub const Object = packed struct(u64) {
     pub const getField = OF.getField;
     pub const get_class = OF.get_class;
     pub const isBool = OF.isBool;
-    pub const toBoolNoCheck = OF.isBool;
+    pub const toBoolNoCheck = OF.toBoolNoCheck;
     pub const isIndexable = OF.isIndexable;
     pub const isNil = OF.isNil;
     pub const isUnmoving = OF.isUnmoving;

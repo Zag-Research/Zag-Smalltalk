@@ -146,10 +146,6 @@ pub const Object = packed union {
         return null;
     }
 
-    pub inline fn isHeapObject(self: Object) bool {
-        return self.isTag(.heap);
-    }
-
     pub inline fn extraValue(self: Object) Object {
         return @bitCast(self.nativeI_noCheck() >> 8);
     }
@@ -296,8 +292,8 @@ pub const Object = packed union {
         return .UndefinedObject;
     }
     pub inline fn hasMemoryReference(self: Object) bool {
-        return if (self.isHeapObject())
-            !self.equals(Object.Nil())
+        return if (self.isTag(.heap))
+            self.rawU() != 0
         else switch (self.immediate.class) {
             .ThunkReturnLocal, .ThunkReturnInstance, .ThunkReturnObject, .ThunkReturnImmediate, .ThunkLocal, .BlockAssignLocal, .ThunkInstance, .BlockAssignInstance, .ThunkHeap, .ThunkReturnCharacter, .ThunkReturnFloat => true,
             else => false, // catches the nil case
@@ -410,7 +406,7 @@ pub const Object = packed union {
     pub const getField = OF.getField;
     pub const get_class = OF.get_class;
     pub const isBool = OF.isBool;
-    pub const toBoolNoCheck = OF.isBool;
+    pub const toBoolNoCheck = OF.toBoolNoCheck;
     pub const isIndexable = OF.isIndexable;
     pub const isNil = OF.isNil;
     pub const isUnmoving = OF.isUnmoving;

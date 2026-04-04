@@ -117,7 +117,7 @@ pub const Object = packed union {
         return @bitCast((@as(u64, @bitCast(@as(i64, i))) << 1) + SmallIntegerTag);
     }
 
-    pub inline fn isHeapObject(self: Object) bool {
+    inline fn isHeapObject(self: Object) bool {
         return Tag.isSet(self, .pointer);
     }
     pub inline fn pointer(self: Object, T: type) ?T {
@@ -143,7 +143,7 @@ pub const Object = packed union {
     }
 
     pub inline fn isBool(self: Object) bool {
-        return self.rawU() == Object.True().rawU() or self.rawU() == Object.False().rawU();
+        return self.equals(Object.True()) or self.equals(Object.False());
     }
     pub inline fn isSymbol(self: Object) bool {
         // symbols are heap objects
@@ -299,10 +299,7 @@ pub const Object = packed union {
         }
         return self.addr().header.classIndex;
     }
-    pub inline fn hasMemoryReference(self: object.Object) bool {
-        return self.isHeapObject();
-    }
-
+    pub const hasMemoryReference = isHeapObject;
     pub inline fn ifHeapObject(self: Object) ?*HeapObject {
         if (self.isHeapObject()) return @constCast(@ptrCast(self.addr()));
         return null;
@@ -379,6 +376,7 @@ pub const Object = packed union {
     pub const format = OF.format;
     pub const getField = OF.getField;
     pub const get_class = OF.get_class;
+    pub const toBoolNoCheck = OF.toBoolNoCheck;
     pub const isIndexable = OF.isIndexable;
     pub const isNil = OF.isNil;
     pub const isUnmoving = OF.isUnmoving;

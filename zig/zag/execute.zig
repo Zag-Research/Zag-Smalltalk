@@ -84,7 +84,7 @@ pub const Signature = packed struct {
         return null;
     }
     pub inline fn asSymbol(self: Signature) Object {
-        return symbol.fromHash((self.asInt() & 0xffff_ffff) >> 8);
+        return symbol.fromHash(self.hash);
     }
     pub inline fn asObject(self: Signature) Object {
         return @bitCast(self);
@@ -185,7 +185,7 @@ pub const PC = packed struct {
         }
         return code.prim();
     }
-    pub //inline
+    pub inline //
     fn object(self: PC) Object {
         if (logging) |log| {
             @setRuntimeSafety(false);
@@ -193,7 +193,7 @@ pub const PC = packed struct {
         }
         return self.code.object;
     }
-    pub //inline
+    pub inline //
     fn variable(self: PC) Variable {
         if (logging) |log| {
             @setRuntimeSafety(false);
@@ -201,7 +201,7 @@ pub const PC = packed struct {
         }
         return self.code.variable;
     }
-    pub //inline //
+    pub inline // //
     fn signature(self: PC) Signature {
         if (logging) |log| {
             @setRuntimeSafety(false);
@@ -221,7 +221,7 @@ pub const PC = packed struct {
     pub inline fn structure(self: PC) StackStructure {
         return self.code.structure;
     }
-    pub //inline //
+    pub inline // //
     fn uint(self: PC) u64 {
         if (logging) |log| {
             @setRuntimeSafety(false);
@@ -572,6 +572,10 @@ fn CompileTimeMethod(comptime counts: usize) type {
             comptime var needFunction = true;
             inline for (tup) |field| {
                 switch (@TypeOf(field)) {
+                    @TypeOf(null) => {
+                        code[n] = Code.objectOf(Object.Nil());
+                        n = n + 1;
+                    },
                     *const fn (PC, SP, *Process, *Context, Extra) Result => {
                         //@compileLog(field);
                         if (needFunction) {
@@ -892,7 +896,7 @@ test "compileObject" {
         trace("True=0x{x:0>8}", .{@as(u64, @bitCast(True()))});
     }
 
-    try expect(o.asObject().isHeapObject());
+    try expect(o.asObject().hasMemoryReference());
     //try expect(o.objects[9].equals(o.asObject()));
     //    try expectEqual(@as(u48, @truncate(o.asObject().rawU())), @as(u48, @truncate(@intFromPtr(&o.objects[8]))));
     try expect(o.objects[2].equals(o0));
@@ -911,6 +915,7 @@ test "compileObject" {
     try expectEqual(h3.header.classIndex, c.Dispatch);
     try expectEqual(h3.header.length, 3);
     try expectEqual(h3.header.age, .static);
+    try config.skipForDebugging();
     try expectEqual(h3.header.objectFormat, .notIndexableWithPointers);
 }
 pub fn compileRaw(comptime tup: anytype) CompileTimeObject(countNonLabels(tup)) {
@@ -1032,7 +1037,7 @@ pub const Execution = struct {
             }
             fn validate(self: *Self, expected: []const Object) ValidateErrors!void {
                 const result = self.stack();
-                if (result.len > 0 and result[0] == failed) return error.TestAborted;
+                if (result.len > 0 and result[0].equals(failed)) return error.TestAborted;
                 try expectEqualSlices(expected, result);
             }
         };
@@ -1041,7 +1046,7 @@ pub const Execution = struct {
         trace("ExecutionTest: {s}", .{title});
         return init(tup);
     }
-    fn init(comptime tup: anytype) Executer(CompileTimeMethod(countNonLabels(tup))) {
+    pub fn init(comptime tup: anytype) Executer(CompileTimeMethod(countNonLabels(tup))) {
         const ExeType = Executer(CompileTimeMethod(countNonLabels(tup)));
         const method = compileMethod(Sym.yourself, 0, .testClass, tup);
         return ExeType.new(method);

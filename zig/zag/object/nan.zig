@@ -88,7 +88,7 @@ pub const Object = packed struct(u64) {
     }
     const extraMask = 7;
     const intTagBits = 14;
-    const integerTag = @intFromEnum(Tag.smallInteger) >> 3;
+    const integerTag = Tag.u(.smallInteger) >> 2;
     inline fn isInt(self: Object) bool {
         if (true) {
             return self.rawU() >> 48 >= Tag.u(.smallInteger);
@@ -110,11 +110,11 @@ pub const Object = packed struct(u64) {
         // there are no invalid objects in this implementation
         return null;
     }
-    pub //inline
+    pub inline //
     fn isImmediateClass(self: Object, comptime class: ClassIndex) bool {
         return self.tag == Tag.from(class);
     }
-    //inline
+    inline //
     fn oImm(c: ClassIndex, h: u48) Object {
         if (c == .UndefinedObject)
             return .{ .tag = .heap, .data = 0 };
@@ -167,17 +167,10 @@ pub const Object = packed struct(u64) {
     }
 
     pub inline fn untaggedI(self: Object) ?i64 {
-        if (self.isInt()) return self.untaggedI_noCheck();
+        if (self.isInt()) return @bitCast(@as(u64, @bitCast(self)) << intTagBits);
         return null;
     }
-    inline fn untaggedI_noCheck(self: Object) i64 {
-        return @bitCast(@as(u64, @bitCast(self)) << intTagBits);
-    }
-    pub inline fn taggedI(self: Object) ?i64 {
-        if (self.isInt()) return taggedI_noCheck(self);
-        return null;
-    }
-    const taggedI_noCheck = untaggedI_noCheck;
+    pub const taggedI = untaggedI;
     pub const fromTaggedI = fromUntaggedI;
     pub inline fn fromUntaggedI(i: i64, _: anytype, _: anytype) Object {
         return toObject(i);
@@ -244,7 +237,7 @@ pub const Object = packed struct(u64) {
     }
     pub inline fn hasMemoryReference(self: Object) bool {
         return switch (self.tag) {
-            .heap => self == Nil(),
+            .heap => self != Nil(),
             .ThunkReturnLocal, .ThunkReturnInstance, .ThunkReturnObject, .ThunkReturnImmediate, .ThunkLocal, .ThunkInstance, .ThunkHeap => true,
             else => false,
         };
@@ -301,7 +294,8 @@ pub const Object = packed struct(u64) {
             }
         }
     };
-    pub inline fn from(value: anytype, _: anytype, _: anytype) Object {
+    pub inline //
+    fn from(value: anytype, _: anytype, _: anytype) Object {
         //     return fromWithError(value) catch @panic("unreachable");
         // }
         // pub inline fn fromWithError(value: anytype) !Object {
@@ -359,7 +353,7 @@ pub const Object = packed struct(u64) {
                 }
             },
         }
-        std.debug.print("\nclass={}\n", .{self.which_class()});
+        std.debug.print("\nclass={} {x}\n", .{self.which_class(), self.rawU()});
         @panic("Trying to convert Object to " ++ @typeName(T));
     }
     inline fn nanPointerAsInt(self: Object) usize {
@@ -419,11 +413,8 @@ pub const Object = packed struct(u64) {
             }
         }
     }
-    pub inline fn isHeapObject(self: Object) bool {
-        return self.tag == .heap;
-    }
     pub inline fn ifHeapObject(self: object.Object) ?*HeapObject {
-        if (self.tag == .heap) return self.highPointer(*HeapObject);
+        if (self.tag == .heap and self != Nil()) return self.highPointer(*HeapObject);
         return null;
     }
     const OF = object.ObjectFunctions;
@@ -437,7 +428,7 @@ pub const Object = packed struct(u64) {
     pub const getField = OF.getField;
     pub const get_class = OF.get_class;
     pub const isBool = OF.isBool;
-    pub const toBoolNoCheck = OF.isBool;
+    pub const toBoolNoCheck = OF.toBoolNoCheck;
     pub const isIndexable = OF.isIndexable;
     pub const isNil = OF.isNil;
     pub const isUnmoving = OF.isUnmoving;
@@ -452,35 +443,10 @@ pub const Object = packed struct(u64) {
     pub const primitive = @import("zag.zig").Object.primitive;
     pub const symbol = @import("zag.zig").Object.symbol;
     pub const signature = zag.execute.Signature.signature;
-    pub const tests = OF.tests;
 };
 test "all generated NaNs are positive" {
     // test that all things that generate NaN generate positive ones
     // otherwise we'd need to check in any primitive that could create a NaN
     // because a negative one could look like one of our tags (in particular a large positive SmallInteger)
-    const inf = @as(f64, 1.0) / 0.0;
-    const zero = @as(f64, 0);
-    const one = @as(f64, 1);
-    const fns = struct {
-        const nanU: u64 = @bitCast(math.nan(f64));
-        fn d(x: anytype) !void {
-            try std.testing.expect(Object.from(x, null, null).isDouble());
-        }
-        fn v(x: anytype) !void {
-            try d(x);
-            try std.testing.expectEqual(nanU, @as(u64, @bitCast(x)));
-        }
-    };
-    const d = fns.d;
-    const v = fns.v;
-    try v(@sqrt(-one));
-    try v(@log(-one));
-    try v(zero / zero);
-    try v((-inf) * 0.0);
-    try d((-inf) * inf);
-    try v((-inf) + inf);
-    try v(inf - inf);
-    try v(inf * 0.0);
-    try v(std.math.nan(f64));
+    // no longer needed, because the range of SmallInteger has ben reduced because x86 *always* generated negative NaNs
 }
-test "test of test-all-encodings" {}

@@ -181,7 +181,7 @@ const testModule = if (config.is_test) struct {
                 const newSp = sp.push(Sym.value.asObject());
                 return @call(tailCall, Extra.primitiveFailed, .{ pc, newSp.?, process, context, extra });
             } else {
-                const newSp = sp.dropPut(Object.from(sp.next == sp.top, sp, context));
+                const newSp = sp.dropPut(Object.from(sp.next.equals(sp.top), sp, context));
                 return @call(tailCall, process.check(context.npc), .{ context.tpc, newSp, process, context, Extra.fromContextData(context.contextDataPtr(sp)) });
             }
         }
@@ -189,7 +189,7 @@ const testModule = if (config.is_test) struct {
             if (sp.next.get_class() != sp.top.get_class()) {
                 return @call(tailCall, inlinePrimitiveFailed, .{ pc, sp, process, context, extra });
             } else {
-                const newSp = sp.dropPut(Object.from(sp.next == sp.top, sp, context));
+                const newSp = sp.dropPut(Object.from(sp.next.equals(sp.top), sp, context));
                 return @call(tailCall, process.check(pc.prim2()), .{ pc.next2(), newSp, process, context, extra });
             }
         }
@@ -236,7 +236,7 @@ pub const threadedFunctions = struct {
             return @call(tailCall, method.executeFn, .{ pc, sp, process, context, extra });
         }
         test "primitive found" {
-            if (true) return config.skipForDebugging;
+            try config.skipForDebugging();
             var exe = Execution.initTest("primitive: found", .{
                 tf.primitive,
                 comptime fromPrimitive(255),
@@ -320,7 +320,7 @@ pub const threadedFunctions = struct {
                 tf.pushLiteral,
                 o0,
             });
-            if (true) return config.skipForDebugging;
+            try config.skipForDebugging();
             try exe.runTest(
                 &[_]Object{
                     exe.object(42),
@@ -338,7 +338,7 @@ pub const threadedFunctions = struct {
                 tf.pushLiteral,
                 o0,
             });
-            if (true) return config.skipForDebugging;
+            try config.skipForDebugging();
             try exe.runTest(
                 &[_]Object{
                     True(),
@@ -359,7 +359,7 @@ pub const threadedFunctions = struct {
                 tf.pushLiteral,
                 o0,
             });
-            if (true) return config.skipForDebugging;
+            try config.skipForDebugging();
             try exe.runTest(
                 &[_]Object{
                     exe.object(42),
@@ -401,7 +401,7 @@ pub const threadedFunctions = struct {
         const primitive255 = testModule.zName;
         const primitiveNotDefined = testModule.primitiveNotDefined;
         test "primitive:module: found" {
-            if (true) return config.skipForDebugging;
+            try config.skipForDebugging();
             var exe = Execution.initTest("primitive:module: found", .{
                 tf.primitiveModule,
                 "0name",
@@ -484,7 +484,7 @@ pub const threadedFunctions = struct {
         const primitive255 = testModule.zName;
         const primitiveNotDefined = testModule.primitiveNotDefined;
         test "primitive:module:error: found" {
-            if (true) return config.skipForDebugging;
+            try config.skipForDebugging();
             var exe = Execution.initTest("primitive:module:error: found", .{
                 tf.primitiveModuleError,
                 "0name",
@@ -502,7 +502,7 @@ pub const threadedFunctions = struct {
             }, exe.stack());
         }
         test "primitive:module:error: with error" {
-            if (true) return config.skipForDebugging;
+            try config.skipForDebugging();
             var exe = Execution.initTest("primitive:module:error: with error", .{
                 tf.primitiveModuleError,
                 "0name",
@@ -542,113 +542,6 @@ pub const threadedFunctions = struct {
                 exe.object(42),
                 exe.object(17),
             }, exe.stack());
-        }
-    };
-    pub const inlinePrimitiveX = struct {
-        pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
-            sp.traceStack("inlinePrimitive", context, extra);
-            const obj = pc.signature();
-            const primNumber = obj.primitive();
-            trace("inlinePrimitive: {f} {}", .{ obj, primNumber });
-            if (Module.findNumberedPrimitive(primNumber)) |prim| {
-                if (prim.inlinePrimitive) |p| {
-                    pc.prev().patchPtr().patchPrim(p);
-                    trace("inlinePrimitive found: {} {f}", .{ primNumber, extra });
-                    return @call(tailCall, p, .{ pc, sp, process, context, extra });
-                }
-                trace("primitive {} ({f}) doesn't have an inline primitive", .{ primNumber, obj });
-            } else {
-                trace("no primitive numbered: {}", .{primNumber});
-            }
-            @panic("couldn't find inlinePrimitive:");
-        }
-        test "inlinePrimitive found" {
-            var exe = Execution.initTest("inlinePrimitive: found", .{
-                tf.inlinePrimitive,
-                "0prim",
-                tf.inlinePrimitive,
-                "0prim",
-                tf.pushLiteral,
-                o0,
-            });
-            try exe.resolve(&[_]Object{Sym.value.withPrimitive(255)});
-            exe.execute(&[_]Object{
-                exe.object(42),
-                exe.object(17),
-                False(),
-            });
-            try expectEqualSlices(&[_]Object{
-                o0,
-                True(),
-            }, exe.stack());
-        }
-        test "inlinePrimitive not found" {
-            if (true) return error.SkipZigTest;
-            var exe = Execution.initTest("inlinePrimitive: not found", .{
-                tf.inlinePrimitive,
-                fromPrimitive(255),
-            });
-            try exe.runTest(
-                &[_]Object{
-                    exe.object(42),
-                    exe.object(17),
-                },
-                &[_]Object{
-                    o0,
-                    exe.object(42),
-                    exe.object(17),
-                },
-            );
-        }
-    };
-    pub const inlinePrimitiveModule = struct {
-        pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
-            const primNumber = pc.signature().primitive();
-            if (Module.findNumberedPrimitive(primNumber)) |prim| {
-                if (prim.inlinePrimitive) |p| {
-                    @constCast(pc.prev().asCodePtr()).patchPrim(p);
-                    return @call(tailCall, p, .{ pc, sp, process, context, extra });
-                }
-            }
-            @panic("found primitive:error: need primitive:");
-        }
-        test "inlinePrimitiveModule found" {
-            var exe = Execution.initTest("inlinePrimitiveModule: found", .{
-                tf.inlinePrimitiveModule,
-                "0prim",
-                tf.inlinePrimitiveModule,
-                "0prim",
-                tf.pushLiteral,
-                o0,
-            });
-            try exe.resolve(&[_]Object{Sym.value.withPrimitive(255)});
-            exe.execute(&[_]Object{
-                exe.object(42),
-                exe.object(17),
-                False(),
-            });
-            try expectEqualSlices(&[_]Object{
-                o0,
-                True(),
-            }, exe.stack());
-        }
-        test "inlinePrimitiveModule not found" {
-            if (true) return error.SkipZigTest;
-            var exe = Execution.initTest("inlinePrimitiveModule: not found", .{
-                tf.inlinePrimitiveModule,
-                fromPrimitive(255),
-            });
-            try exe.runTest(
-                &[_]Object{
-                    exe.object(42),
-                    exe.object(17),
-                },
-                &[_]Object{
-                    o0,
-                    exe.object(42),
-                    exe.object(17),
-                },
-            );
         }
     };
 };

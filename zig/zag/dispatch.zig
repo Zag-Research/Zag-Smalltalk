@@ -12,6 +12,7 @@ const Object = object.Object;
 const True = object.True;
 const False = object.False;
 const ClassIndex = object.ClassIndex;
+const o0 = object.testObjects[0];
 const execute = zag.execute;
 const PC = execute.PC;
 const SP = Process.SP;
@@ -270,7 +271,7 @@ pub const threadedFunctions = struct {
             return @call(tailCall, process.branchCheck(callerContext.getNPc()), .{ callerContext.getTPc(), newSp, process, callerContext, Extra.fromContextData(callerContext.contextData) });
         }
         test {
-            if (true) return config.skipForDebugging;
+            if (true) return config.skipForDebugging();
             var exe = Execution.initTest("returnSelf", .{
                 tf.pushLiteral,
                 91,
@@ -303,12 +304,12 @@ pub const threadedFunctions = struct {
             return @call(tailCall, process.branchCheck(callerContext.npc), .{ callerContext.tpc, newSp, process, callerContext, Extra.fromContextData(callerContext.contextDataPtr(sp)) });
         }
         test {
-            if (true) return config.skipForDebugging;
+            if (true) return config.skipForDebugging();
             var exe = Execution.initTest("returnTopNoContext", .{
                 tf.pushLiteral,
                 91,
                 tf.pushLiteral,
-                Object.tests[0],
+                o0,
                 tf.returnTop,
                 2,
                 tf.pushLiteral,

@@ -240,7 +240,7 @@ pub const Object = packed struct(u64) {
         return self.class;
     }
 
-    pub inline fn isHeapObject(self: object.Object) bool {
+    inline fn isHeapObject(self: object.Object) bool {
         switch (self.class) {
             .SmallInteger, .True, .False, .UndefinedObject, .Symbol => return false,
             .Float => {
@@ -255,9 +255,7 @@ pub const Object = packed struct(u64) {
         if (self.isHeapObject()) return @ptrFromInt(self.heapAddr());
         return null;
     }
-    pub inline fn hasMemoryReference(self: object.Object) bool {
-        return self.isHeapObject();
-    }
+    pub const hasMemoryReference = isHeapObject;
     pub inline fn isImmediateClass(self: object.Object, comptime class: ClassIndex.Compact) bool {
         return self.class == class.classIndex();
     }
@@ -338,7 +336,7 @@ pub const Object = packed struct(u64) {
     pub const getField = OF.getField;
     pub const get_class = OF.get_class;
     pub const isBool = OF.isBool;
-    pub const toBoolNoCheck = OF.isBool;
+    pub const toBoolNoCheck = OF.toBoolNoCheck;
     pub const isIndexable = OF.isIndexable;
     pub const isNil = OF.isNil;
     pub const isUnmoving = OF.isUnmoving;
