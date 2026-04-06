@@ -64,8 +64,8 @@ pub const Object = packed union {
     }
     pub const LowTagType = TagAndClassType;
     pub const lowTagSmallInteger = makeImmediate(.SmallInteger, 0).tagbits();
-    pub const HighTagType = void;
-    pub const highTagSmallInteger = {};
+    pub const HighTagType = u0;
+    pub const highTagSmallInteger = 0;
     pub const PackedTagType = Tag;
     pub const packedTagSmallInteger = Tag.smallInteger;
     pub const signatureTag = Tag.u(.immediates);
@@ -145,16 +145,21 @@ pub const Object = packed union {
         if (self.isImmediateClass(.Symbol)) return @truncate(self.immediate.hash);
         return null;
     }
+    pub inline fn numArgs(self: Object) u4 {
+        return @truncate(self.rawU() >> 32);
+    }
+    pub fn makeSymbol(class: ClassIndex.Compact, hash: u24, arity: u4) Object {
+        return makeImmediate(class, @as(u32, hash) | (@as(u32, arity) << 24));
+    }
+    pub inline fn isSymbol(self: Object) bool {
+        return self.tagbits() == comptime makeImmediate(.Symbol, 0).tagbits();
+    }
 
     pub inline fn extraValue(self: Object) Object {
         return @bitCast(self.nativeI_noCheck() >> 8);
     }
     pub inline fn highPointer(self: Object, T: type) ?T {
         return @ptrFromInt(self.rawU() >> 16);
-    }
-    pub inline fn withPrimitive(self: Object, prim: u64) Object {
-        // This is only done for signature objects, which already aren't quite valid
-        return @bitCast(self.rawU() | prim << 40);
     }
     pub const testU = rawU;
     pub const testI = rawI;
@@ -304,10 +309,6 @@ pub const Object = packed union {
         return null;
     }
 
-    pub inline fn isSymbol(self: Object) bool {
-        return self.tagbits() == comptime makeImmediate(.Symbol, 0).tagbits();
-    }
-
     pub fn returnObjectClosure(self: Object, context: *Context) ?Object {
         if (self.nativeI()) |i| {
             switch (i) {
@@ -410,7 +411,6 @@ pub const Object = packed union {
     pub const isIndexable = OF.isIndexable;
     pub const isNil = OF.isNil;
     pub const isUnmoving = OF.isUnmoving;
-    pub const numArgs = OF.numArgs;
     pub const promoteToUnmovable = OF.promoteToUnmovable;
     pub const rawFromU = OF.rawFromU;
     pub const setField = OF.setField;

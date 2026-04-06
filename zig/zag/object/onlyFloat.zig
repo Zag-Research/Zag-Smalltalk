@@ -27,10 +27,10 @@ pub const Object = packed struct(u64) {
     }
 
     pub const maxInt = 0x7fff_ffff_ffff_ffff;
-    pub const LowTagType = void;
-    pub const lowTagSmallInteger = {};
-    pub const HighTagType = void;
-    pub const highTagSmallInteger = {};
+    pub const LowTagType = u0;
+    pub const lowTagSmallInteger = 0;
+    pub const HighTagType = u0;
+    pub const highTagSmallInteger = 0;
     pub const PackedTagType = u3;
     pub const packedTagSmallInteger = 0;
     pub const signatureTag = 0;
@@ -66,8 +66,17 @@ pub const Object = packed struct(u64) {
         return @bitCast(f);
     }
 
-    pub inline fn symbolHash(self: Object) ?u24 {
+    pub inline fn symbolHash(self: object.Object) ?u24 {
+        return @truncate(self.hash32() >> 8);
+    }
+    pub inline fn numArgs(self: object.Object) u4 {
         return @truncate(self.hash32());
+    }
+    pub fn makeSymbol(class: ClassIndex.Compact, hash: u24, arity: u4) Object {
+        return makeImmediate(class, (@as(u32, hash) << 8) | @as(u32, arity));
+    }
+    pub inline fn isSymbol(_: object.Object) bool {
+        return true;
     }
 
     pub inline fn extraValue(self: Object) Object {
@@ -126,10 +135,6 @@ pub const Object = packed struct(u64) {
         @panic("not implemented");
     }
 
-    pub inline fn withPrimitive(self: Object, prim: u64) Object {
-        return @bitCast(self.rawU() | prim << 40);
-    }
-
     inline fn toDoubleFromMemory(_: Object) f64 {
         @panic("Not implemented");
     }
@@ -157,10 +162,6 @@ pub const Object = packed struct(u64) {
 
     pub inline fn hash32(self: Object) u32 {
         return @truncate(self.rawU());
-    }
-
-    pub inline fn isSymbol(_: Object) bool {
-        return true;
     }
 
     pub inline fn fromAddress(value: anytype) Object {
@@ -225,7 +226,6 @@ pub const Object = packed struct(u64) {
     pub const isIndexable = OF.isIndexable;
     pub const isNil = OF.isNil;
     pub const isUnmoving = OF.isUnmoving;
-    pub const numArgs = OF.numArgs;
     pub const promoteToUnmovable = OF.promoteToUnmovable;
     pub const rawFromU = OF.rawFromU;
     pub const setField = OF.setField;

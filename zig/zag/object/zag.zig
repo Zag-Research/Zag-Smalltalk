@@ -8,6 +8,7 @@ const zag = @import("../zag.zig");
 const trace = zag.config.trace;
 const object = zag.object;
 const ClassIndex = object.ClassIndex;
+const Compact = ClassIndex.Compact;
 const Process = zag.Process;
 const SP = Process.SP;
 const Context = zag.Context;
@@ -35,7 +36,7 @@ pub const Tag = enum(u3) {
 };
 pub const Object = packed struct(u64) {
     tag: Tag,
-    class: ClassIndex.Compact,
+    class: Compact,
     hash: u56,
     const Self = @This();
     pub const maxInt = 0x7f_ffff_ffff_ffff;
@@ -51,13 +52,13 @@ pub const Object = packed struct(u64) {
     }
     pub const LowTagType = TagAndClassType;
     pub const lowTagSmallInteger = makeImmediate(.SmallInteger, 0).tagbits();
-    pub const HighTagType = void;
-    pub const highTagSmallInteger = {};
+    pub const HighTagType = u0;
+    pub const highTagSmallInteger = 0;
     pub const PackedTagType = u8;
     pub const packedTagSmallInteger = oImm(.SmallInteger, 0).tagbits();
     pub const signatureTag = Tag.u(.immediates);
     const TagAndClassType = u8;
-    const tagAndClassBits = @bitSizeOf(Tag) + @bitSizeOf(ClassIndex.Compact);
+    const tagAndClassBits = @bitSizeOf(Tag) + @bitSizeOf(Compact);
     comptime {
         assert(tagAndClassBits == @bitSizeOf(TagAndClassType));
     }
@@ -73,7 +74,7 @@ pub const Object = packed struct(u64) {
             return self.data;
         }
     };
-    pub inline fn tagbits(self: Self) TagAndClassType {
+    inline fn tagbits(self: Self) TagAndClassType {
         return @truncate(self.rawU());
     }
 
@@ -136,15 +137,21 @@ pub const Object = packed struct(u64) {
         if (self.isImmediateClass(.Symbol)) return @truncate(self.hash);
         return null;
     }
+    pub inline fn numArgs(self: Object) u4 {
+        return @truncate(self.rawU() >> 32);
+    }
+    pub fn makeSymbol(class: Compact, hash: u24, arity: u4) Object {
+        return makeImmediate(class, @as(u32, hash) | (@as(u32, arity) << 24));
+    }
+    pub inline fn isSymbol(self: object.Object) bool {
+        return self.tagbits() == comptime makeImmediate(.Symbol, 0).tagbits();
+    }
 
     pub inline fn extraValue(self: object.Object) object.Object {
         return @bitCast(self.nativeI_noCheck() >> 8);
     }
     pub inline fn highPointer(self: object.Object, T: type) ?T {
         return @ptrFromInt(self.rawU() >> 16);
-    }
-    pub inline fn withPrimitive(self: Self, prim: u64) object.Object {
-        return @bitCast(self.rawU() | prim << 40);
     }
     pub const testU = rawU;
     pub const testI = rawI;
@@ -158,7 +165,7 @@ pub const Object = packed struct(u64) {
         // there are no invalid objects in this encoding
         return null;
     }
-    pub inline fn isImmediateClass(self: object.Object, comptime class: ClassIndex.Compact) bool {
+    pub inline fn isImmediateClass(self: object.Object, comptime class: Compact) bool {
         return self.tagbits() == oImm(class, 0).tagbits();
     }
     inline fn isImmediateDouble(self: object.Object) bool {
@@ -173,10 +180,10 @@ pub const Object = packed struct(u64) {
     inline fn toDoubleFromMemory(self: object.Object) f64 {
         return self.toUnchecked(*InMemory.MemoryFloat).*.value;
     }
-    inline fn oImm(c: ClassIndex.Compact, h: u56) Self {
+    inline fn oImm(c: Compact, h: u56) Self {
         return Self{ .tag = .immediates, .class = c, .hash = h };
     }
-    inline fn oImmContext(c: ClassIndex.Compact, context: *Context, e: u8) Self {
+    inline fn oImmContext(c: Compact, context: *Context, e: u8) Self {
         return Self{ .tag = .immediates, .class = c, .hash = @as(u56, @intCast(@intFromPtr(context))) << 8 | e };
     }
     inline fn hasPointer(self: object.Object) bool {
@@ -194,7 +201,7 @@ pub const Object = packed struct(u64) {
         }
         return null;
     }
-    pub inline fn makeImmediate(cls: ClassIndex.Compact, hash: u56) object.Object {
+    pub inline fn makeImmediate(cls: Compact, hash: u56) object.Object {
         return oImm(cls, hash);
     }
     pub inline fn hash24(self: object.Object) u24 {
@@ -327,7 +334,7 @@ pub const Object = packed struct(u64) {
                 return class;
             },
             .bigSwitch => {
-                const t = ClassIndex.Compact.tag;
+                const t = Compact.tag;
                 switch (@as(u8, @truncate(self.rawU()))) {
                     0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x70, 0x78, 0x80, 0x88, 0x90, 0x98, 0xA0, 0xA8, 0xB0, 0xB8, 0xC0, 0xC8, 0xD0, 0xD8, 0xE0, 0xE8, 0xF0, 0xF8 => {
                         if (self.rawU() == 0) {
@@ -473,9 +480,6 @@ pub const Object = packed struct(u64) {
     pub inline fn asUntaggedI(i: i56) i64 {
         return @as(i64, i) << tagAndClassBits;
     }
-    pub inline fn isSymbol(self: object.Object) bool {
-        return self.tagbits() == comptime makeImmediate(.Symbol, 0).tagbits();
-    }
 
     pub fn returnObjectClosure(self: Object, context: *Context) ?Object {
         if (self.nativeI()) |i| {
@@ -557,10 +561,10 @@ pub const Object = packed struct(u64) {
             _ = .{ ctx, obj };
         }
     };
-    pub inline fn makeThunk(class: ClassIndex.Compact, obj: anytype, tag: u8) Object {
+    pub inline fn makeThunk(class: Compact, obj: anytype, tag: u8) Object {
         return oImm(class, @intCast((@intFromPtr(obj) << 8) | tag));
     }
-    pub inline fn makeThunkNoArg(class: ClassIndex.Compact, value: u56) Object {
+    pub inline fn makeThunkNoArg(class: Compact, value: u56) Object {
         return .oImm(class, value);
     }
     pub inline fn extraU(self: object.Object) u8 {
@@ -584,7 +588,6 @@ pub const Object = packed struct(u64) {
     pub const isIndexable = OF.isIndexable;
     pub const isNil = OF.isNil;
     pub const isUnmoving = OF.isUnmoving;
-    pub const numArgs = OF.numArgs;
     pub const promoteToUnmovable = OF.promoteToUnmovable;
     pub const rawFromU = OF.rawFromU;
     pub const setField = OF.setField;

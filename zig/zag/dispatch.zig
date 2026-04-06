@@ -432,7 +432,7 @@ const DispatchMethod = struct {
         const method = self.method;
         if (method.signature.equals(signature))
             return method;
-        trace("match {*} {f} {f}", .{ self, method.signature, signature });
+        trace("match {*} {f} {f} ({x} {x})", .{ self, method.signature, signature, @as(u64,@bitCast(method.signature)), @as(u64,@bitCast(signature)) });
         return null;
     }
     inline //

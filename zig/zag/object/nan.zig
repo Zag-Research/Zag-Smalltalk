@@ -74,8 +74,8 @@ pub const Object = packed struct(u64) {
     pub inline fn Nil() Object {
         return oImm(.UndefinedObject, 0);
     }
-    pub const LowTagType = void;
-    pub const lowTagSmallInteger = {};
+    pub const LowTagType = u0;
+    pub const lowTagSmallInteger = 0;
     pub const HighTagType = TagBaseType;
     pub const highTagSmallInteger: HighTagType = Tag.u(.smallInteger);
     pub const PackedTagType = u3;
@@ -120,19 +120,21 @@ pub const Object = packed struct(u64) {
             return .{ .tag = .heap, .data = 0 };
         return .{ .tag = Tag.from(c), .data = h };
     }
-    pub inline //
-    fn oImmSymbol(arity: u4, hash: u24) Object {
-        return oImm(.Symbol, (@as(u32, hash) << 8) + arity);
+    pub inline fn symbolHash(self: Object) ?u24 {
+        if (self.isImmediateClass(.Symbol)) return @truncate(self.rawU() >> 8);
+        return null;
+    }
+    pub inline fn numArgs(self: Object) u4 {
+        return @truncate(self.rawU());
+    }
+    pub fn makeSymbol(class: ClassIndex, hash: u24, arity: u4) Object {
+        return makeImmediate(class, (@as(u32, hash) << 8) | @as(u32, arity));
     }
     pub inline fn isSymbol(self: Object) bool {
         return self.tag == .Symbol;
     }
-    const nonIndexSymbol = 0xffffffff800000ff;
     inline fn indexNumber(self: Object) u24 {
-        return @truncate(self.rawU() & nonIndexSymbol >> 8);
-    }
-    pub inline fn withPrimitive(self: Object, prim: u8) Object {
-        return @bitCast(self.rawU() | prim << 40);
+        return @truncate(self.rawU() >> 8);
     }
     pub inline fn makeImmediate(cls: ClassIndex, low32: u32) Object {
         return oImm(cls, low32);
@@ -194,10 +196,6 @@ pub const Object = packed struct(u64) {
     }
     pub inline fn fromNativeF(t: f64, _: anytype, _: anytype) Object {
         return @bitCast(t);
-    }
-    pub inline fn symbolHash(self: Object) ?u24 {
-        if (self.isImmediateClass(.Symbol)) return @truncate(self.hash32());
-        return null;
     }
     pub inline fn extraValue(self: Object) Object {
         _ = self;
@@ -432,7 +430,6 @@ pub const Object = packed struct(u64) {
     pub const isIndexable = OF.isIndexable;
     pub const isNil = OF.isNil;
     pub const isUnmoving = OF.isUnmoving;
-    pub const numArgs = OF.numArgs;
     pub const promoteToUnmovable = OF.promoteToUnmovable;
     pub const rawFromU = OF.rawFromU;
     pub const setField = OF.setField;

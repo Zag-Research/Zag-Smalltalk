@@ -76,14 +76,14 @@ pub const Object = packed union {
     }
     pub const LowTagType = TagAndClassType;
     pub const lowTagSmallInteger = makeImmediate(.SmallInteger, 0).tagbits();
-    pub const HighTagType = void;
-    pub const highTagSmallInteger = {};
+    pub const HighTagType = u0;
+    pub const highTagSmallInteger = 0;
     pub const PackedTagType = Tag;
     pub const packedTagSmallInteger = Tag.smallInteger;
     pub const signatureTag = Tag.u(.smallInteger);
     const TagAndClassType = u3;
 
-    pub inline fn tagbits(self: Self) TagAndClassType {
+    inline fn tagbits(self: Self) TagAndClassType {
         return @truncate(self.rawU());
     }
 
@@ -146,8 +146,18 @@ pub const Object = packed union {
         });
     }
     pub inline fn symbolHash(self: Object) ?u24 {
-        if (self.isSymbol()) return @truncate(self.hash32());
+        if (self.isSymbol()) return @truncate(self.hash32() >> 8);
         return null;
+    }
+    pub inline fn numArgs(self: Object) u4 {
+        return @truncate(self.hash32());
+    }
+    pub fn makeSymbol(_: anytype, _: anytype, _: anytype) Object {
+        @panic("not implemented");
+    }
+    pub inline fn isSymbol(self: Object) bool {
+        // Spur-encoded symbols are heap objects
+        return self.isHeapObject() and self.ref.header.classIndex == .Symbol;
     }
 
     inline fn isHeapObject(self: Object) bool {
@@ -159,10 +169,6 @@ pub const Object = packed union {
     }
     pub inline fn highPointer(_: Object, T: type) ?T {
         @panic("Not implemented");
-    }
-    pub inline fn withPrimitive(self: Object, prim: u64) Object {
-        // This is only done for signature objects, which already aren't quite valid
-        return @bitCast(self.rawU() | prim << 40);
     }
     pub const testU = rawU;
     pub const testI = rawI;
@@ -316,10 +322,6 @@ pub const Object = packed union {
     pub inline fn asUntaggedI(i: i61) i64 {
         return @as(i64, i) << 3;
     }
-    pub inline fn isSymbol(self: Object) bool {
-        // Spur-encoded symbols are heap objects
-        return self.isHeapObject() and self.ref.header.classIndex == .Symbol;
-    }
 
     pub fn returnObjectClosure(_: Object, _: anytype) ?Object {
         return null;
@@ -379,7 +381,6 @@ pub const Object = packed union {
     pub const isIndexable = OF.isIndexable;
     pub const isNil = OF.isNil;
     pub const isUnmoving = OF.isUnmoving;
-    pub const numArgs = OF.numArgs;
     pub const promoteToUnmovable = OF.promoteToUnmovable;
     pub const rawFromU = OF.rawFromU;
     pub const to = OF.to;

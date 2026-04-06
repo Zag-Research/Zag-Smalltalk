@@ -42,10 +42,10 @@ pub const Object = packed struct(u64) {
         return Object.fromAddress(&InMemory.Nil);
     }
     pub const maxInt = 0x7fff_ffff_ffff_ffff;
-    pub const LowTagType = void;
-    pub const lowTagSmallInteger = {};
-    pub const HighTagType = void;
-    pub const highTagSmallInteger = {};
+    pub const LowTagType = u0;
+    pub const lowTagSmallInteger = 0;
+    pub const HighTagType = u0;
+    pub const highTagSmallInteger = 0;
     pub const PackedTagType = u3;
     pub const packedTagSmallInteger = 1;
     pub const signatureTag = 1;
@@ -76,9 +76,19 @@ pub const Object = packed struct(u64) {
     pub inline fn fromNativeF(t: f64, sp: SP, context: *Context) object.Object {
         return from(t, sp, context);
     }
-    pub inline fn symbolHash(self: object.Object) ?u24 {
-        if (self.isImmediateClass(.Symbol)) return self.ref.header.hash;
+    pub inline fn symbolHash(self: Object) ?u24 {
+        if (self.isSymbol()) return @truncate(self.hash32() >> 8);
         return null;
+    }
+    pub inline fn numArgs(self: Object) u4 {
+        return @truncate(self.hash32());
+    }
+    pub fn makeSymbol(_: anytype, _: anytype, _: anytype) Object {
+        @panic("not implemented");
+    }
+    pub inline fn isSymbol(self: Object) bool {
+        // ptr-encoded symbols are heap objects
+        return self.ref.header.classIndex == .Symbol;
     }
     pub inline fn extraValue(self: object.Object) object.Object {
         return @bitCast(self.rawU() >> 8);
@@ -162,9 +172,6 @@ pub const Object = packed struct(u64) {
     }
     pub inline fn toNatNoCheck(self: Object) u64 {
         return self.ref.data.unsigned;
-    }
-    pub inline fn withPrimitive(self: object.Object, prim: u64) object.Object {
-        return @bitCast(self.rawU() | prim << 40);
     }
     inline fn toDoubleFromMemory(self: object.Object) f64 {
         return self.to(*InMemory.MemoryFloat).*.value;
@@ -276,9 +283,6 @@ pub const Object = packed struct(u64) {
             _ = .{ ctx, obj };
         }
     };
-    pub inline fn isSymbol(self: Object) bool {
-        return self.isImmediateClass(.Symbol);
-    }
     pub inline fn ifHeapObject(self: object.Object) ?*HeapObject {
         return @ptrFromInt(@as(u64, @bitCast(self)));
     }
@@ -303,7 +307,6 @@ pub const Object = packed struct(u64) {
     pub const isIndexable = OF.isIndexable;
     pub const isNil = OF.isNil;
     pub const isUnmoving = OF.isUnmoving;
-    pub const numArgs = OF.numArgs;
     pub const promoteToUnmovable = OF.promoteToUnmovable;
     pub const rawFromU = OF.rawFromU;
     pub const setField = OF.setField;

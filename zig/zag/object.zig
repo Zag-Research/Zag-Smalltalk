@@ -190,18 +190,6 @@ pub const testObjects = blk: {
     }
     break :blk testArray;
 };
-// const ints = blk: {
-//     var osArray: [4]Object.StaticObject = undefined;
-//     var objs: [4]Object = undefined;
-//     for (0..4) |i| {
-//         objs[i] = Object.initStaticObject(i, &osArray[i]);
-//     }
-//     break :blk .{ objs, osArray };
-//     };
-// pub const zero = ints[0][0];
-// pub const one = ints[0][1];
-// pub const two = ints[0][2];
-// pub const three = ints[0][3];
 
 pub const ObjectFunctions = struct {
     pub const empty = &[0]Object{};
@@ -211,9 +199,6 @@ pub const ObjectFunctions = struct {
     }
     pub inline fn asCharacter(int: u32) Object {
         return Object.makeImmediate(.Character, int);
-    }
-    pub inline fn numArgs(self: Object) u4 {
-        return @intCast(self.hash32() >> 24);
     }
     pub inline //
     fn setField(self: Object, field: usize, value: Object) void {
@@ -326,7 +311,7 @@ pub const ObjectFunctions = struct {
         }
         @panic("unreachable");
     }
-    pub inline //
+    pub inline//
     fn get_class(self: Object) ClassIndex {
         return self.which_class();
     }
@@ -482,6 +467,8 @@ const tests = struct {
             try ee(i, nativeI(fromNativeI(i)));
             try ee(i, nativeI(fromUntaggedI(try untaggedI(from(i)))));
         }
+        try ee(12345,Object.makeSymbol(.Symbol,12345,3).symbolHash());
+        try ee(3,Object.makeSymbol(.Symbol,12345,3).numArgs());
     }
     test "encoding: get_class" {
         //try config.skipNotZag();
@@ -499,6 +486,7 @@ const tests = struct {
         try ee(.True, True().get_class());
         try ee(.False, False().get_class());
         try ee(.UndefinedObject, Nil().get_class());
+        try ee(.Symbol,Object.makeSymbol(.Symbol, 0, 0).get_class());
     }
     test "printing" {
         init();

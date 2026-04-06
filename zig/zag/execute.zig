@@ -57,11 +57,11 @@ pub const Signature = packed struct {
     pub fn fullHash(self: Signature) u32 {
         return @truncate(self.asInt());
     }
-    pub fn from(selector: Object, class: ClassIndex) Signature {
-        return .{ .hash = @truncate(selector.hash24()), .numArgs = selector.numArgs(), .class = class };
+    pub fn from(hash: u24, arity: u4, class: ClassIndex) Signature {
+        return .{ .hash = hash, .numArgs = arity, .class = class };
     }
-    pub fn fromHashPrimitive(selector: u32, primitiveNumber: u8) Signature {
-        return .{ .hash = @truncate(selector), .numArgs = @intCast(selector >> 24), .prim = primitiveNumber };
+    pub fn fromHashPrimitive(hash: u24, arity: u4, primitiveNumber: u8) Signature {
+        return .{ .hash = hash, .numArgs = arity, .prim = primitiveNumber };
     }
     pub fn fromPrimitive(primitiveNumber: u8) Signature {
         return .{ .prim = primitiveNumber };
@@ -1067,7 +1067,7 @@ pub const Execution = struct {
             exe.getContext().setReturn(PC.exit());
             trace("SendTo: context {*} {*} {f}", .{ exe.getContext(), exe.getContext().npc, exe.getContext().tpc });
             const class = receiver.get_class();
-            const signature = Signature.from(selector, class);
+            const signature = if (selector.symbolHash()) |hsh| Signature.from(hsh, selector.numArgs(), class) else unreachable;
             exe.method = class.lookupMethodForClass(signature);
             exe.execute(&[_]Object{receiver});
             return exe.fullStack()[0];

@@ -38,15 +38,15 @@ pub const Object = packed struct(u64) {
     pub inline fn Nil() Object {
         return oImm(.UndefinedObject, 34512);
     }
-    pub const LowTagType = void;
-    pub const lowTagSmallInteger = {};
+    pub const LowTagType = u0;
+    pub const lowTagSmallInteger = 0;
     pub const HighTagType = u16;
     pub const highTagSmallInteger: u16 = @intFromEnum(ClassIndex.SmallInteger);
     pub const PackedTagType = u8;
     pub const packedTagSmallInteger: u8 = 1;
     pub const signatureTag: u8 = 1;
 
-    pub inline fn tagbits(self: Self) u16 {
+    inline fn tagbits(self: Self) u16 {
         return self.class;
     }
 
@@ -103,14 +103,20 @@ pub const Object = packed struct(u64) {
     }
 
     pub inline fn symbolHash(self: object.Object) ?u24 {
-        if (self.isSymbol()) return @truncate(self.intOrAddress);
+        if (self.isSymbol()) return @truncate(self.intOrAddress >> 8);
         return null;
+    }
+    pub inline fn numArgs(self: Object) u4 {
+        return @truncate(self.intOrAddress);
+    }
+    pub fn makeSymbol(class: ClassIndex.Compact, hash: u24, arity: u4) Object {
+        return makeImmediate(class, @as(u32, hash) << 8 | arity);
+    }
+    pub inline fn isSymbol(self: object.Object) bool {
+        return self.class == .Symbol;
     }
     pub inline fn extraValue(_: object.Object) object.Object {
         @panic("extraValue not implemented for taggedHigh");
-    }
-    pub inline fn withPrimitive(self: Self, prim: u64) object.Object {
-        return @bitCast(self.rawU() | prim << 40);
     }
     pub const testU = rawU;
     pub const testI = rawI;
@@ -267,9 +273,6 @@ pub const Object = packed struct(u64) {
     inline fn isMemoryDouble(self: object.Object) bool {
         return self.class == .Float and !self.isImmediateDouble() and self.intOrAddress != 0;
     }
-    pub inline fn isSymbol(self: object.Object) bool {
-        return self.class == .Symbol;
-    }
     inline fn toDoubleFromMemory(self: object.Object) f64 {
         return self.toUnchecked(*InMemory.MemoryFloat).*.value;
     }
@@ -340,7 +343,6 @@ pub const Object = packed struct(u64) {
     pub const isIndexable = OF.isIndexable;
     pub const isNil = OF.isNil;
     pub const isUnmoving = OF.isUnmoving;
-    pub const numArgs = OF.numArgs;
     pub const promoteToUnmovable = OF.promoteToUnmovable;
     pub const rawFromU = OF.rawFromU;
     pub const setField = OF.setField;
