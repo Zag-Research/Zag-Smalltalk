@@ -91,7 +91,7 @@ pub const Object = packed struct(u64) {
     const integerTag = Tag.u(.smallInteger) >> 2;
     inline fn isInt(self: Object) bool {
         if (true) {
-            return self.rawU() >> 48 >= Tag.u(.smallInteger);
+            return self.rawU() >> (64 - intTagBits) >= integerTag;
         } else {
             return self.rawU() >= Tag.g(.smallInteger);
         }
@@ -387,12 +387,10 @@ pub const Object = packed struct(u64) {
             if (self.isInt()) {
                 @branchHint(.likely);
                 return .SmallInteger;
-            }
-            if (!std.math.isNan(@as(f64, @bitCast(self)))) {
-                @branchHint(.likely);
+            } else if (!std.math.isNan(@as(f64, @bitCast(self)))) {
+                @branchHint(.none);
                 return .Float;
-            }
-            switch (self.tag) {
+            } else switch (self.tag) {
                 .heap => {
                     @branchHint(.likely);
                     if (self == Nil()) {

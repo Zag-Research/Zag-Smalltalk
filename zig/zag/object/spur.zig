@@ -88,21 +88,19 @@ pub const Object = packed union {
     }
 
     pub inline fn untaggedI(self: Object) ?i64 {
-        if (self.isInt()) return untaggedI_noCheck(self);
+        if (self.isInt()) {
+            @branchHint(.likely);
+            return @bitCast(Tag.unsetFromObject(self, .smallInteger));
+        }
         return null;
-    }
-
-    inline fn untaggedI_noCheck(self: Object) i64 {
-        return @bitCast(Tag.unsetFromObject(self, .smallInteger));
     }
 
     pub inline fn taggedI(self: Object) ?i64 {
-        if (self.isInt()) return taggedI_noCheck(self);
+        if (self.isInt()) {
+            @branchHint(.likely);
+            return @bitCast(self);
+        }
         return null;
-    }
-
-    inline fn taggedI_noCheck(self: Object) i64 {
-        return @bitCast(self);
     }
 
     pub inline fn fromTaggedI(i: i64, _: anytype, _: anytype) Object {
@@ -123,11 +121,11 @@ pub const Object = packed union {
         return self.isInt() and self.rawI() >= 0;
     }
     pub inline fn nativeI(self: Object) ?i64 {
-        if (self.isInt()) return self.nativeI_noCheck();
+        if (self.isInt()) {
+            @branchHint(.likely);
+            return @bitCast(Tag.shiftFromObject(self));
+        }
         return null;
-    }
-    inline fn nativeI_noCheck(self: Object) i64 {
-        return @bitCast(Tag.shiftFromObject(self));
     }
     pub inline fn fromNativeI(i: i61, _: anytype, _: anytype) Object {
         return Tag.shiftToObject(@bitCast(@as(i64, i)), .smallInteger);
@@ -303,7 +301,7 @@ pub const Object = packed union {
             @branchHint(.likely);
             return .SmallInteger;
         } else if (self.isTag(.float)) {
-            @branchHint(.likely);
+            @branchHint(.none);
             return .Float;
         } else if (self.isCharacter()) {
             @branchHint(.unlikely);

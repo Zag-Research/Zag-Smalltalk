@@ -1,0 +1,165 @@
+\documentclass[manuscript,screen,review,sigplan]{acmart}
+\settopmatter{printfolios=true}
+
+%%
+%% \BibTeX command to typeset BibTeX logo in the docs
+\AtBeginDocument{%
+  \providecommand\BibTeX{{%
+    Bib\TeX}}}
+
+%% Rights management information.  This information is sent to you
+%% when you complete the rights form.  These commands have SAMPLE
+%% values in them; it is your responsibility as an author to replace
+%% the commands and values with those provided to you when you
+%% complete the rights form.
+\setcopyright{acmlicensed}
+\copyrightyear{2026}
+\acmYear{2026}
+\acmDOI{XXXXXXX.XXXXXXX}
+%% These commands are for a PROCEEDINGS abstract or paper.
+\acmConference[MPLR2026]{The 23rd International Conference on Managed Programming Languages \& Runtimes}{Mon 29 June - Fri 3 July 2026}{Brussels, Belgium}
+%%
+%%  Uncomment \acmBooktitle if the title of the proceedings is different
+%%  from ``Proceedings of ...''!
+%%
+%%\acmBooktitle{Woodstock '18: ACM Symposium on Neural Gaze Detection,
+%%  June 03--05, 2018, Woodstock, NY}
+\acmISBN{XXXXXXX}
+
+
+\usepackage{listings}
+%% auto break lines
+\lstset{breaklines=true}
+
+\usepackage{xspace}
+\usepackage{pgfplots}
+\usepackage[endianness=big]{bytefield}
+\usetikzlibrary{patterns}
+\pgfplotsset{compat=1.18}
+
+\newcommand{\bitfieldwidth}{0.045\columnwidth}
+
+\newcommand{\code}[1]{\colorbox{gray!10}{\texttt{$#1$}}}
+\newcommand{\st}[1]{\code{#1}}
+\newcommand{\js}{JavaScript\xspace}
+\newcommand{\IV}{\emph{InstVar}\xspace}
+\newcommand{\IVs}{\emph{InstVars}\xspace}
+\input{aarch64}
+\input{x86}
+\input{pareto}
+\newcommand{\benchmarkBarChart}[3]{%
+\begin{tikzpicture}
+\begin{axis}[
+    ybar,
+    bar width=5pt,
+    width=\columnwidth,
+    height=\columnwidth,
+    ylabel={Execution Time (ms)},
+%    xlabel={Benchmark},
+    symbolic x coords={IntegerBr, Float},
+    xtick=data,
+    ymin=0,
+    ymax=4900, %#1,
+    legend style={
+        at={(0.02,0.98)},
+        anchor=north west,
+        legend columns=5,
+        font=\tiny,
+        draw=black,
+    },
+    grid=major,
+    grid style={line width=0.2pt, draw=gray!30},
+    ymajorgrids=true,
+    xmajorgrids=false,
+    enlarge x limits=0.4,
+]
+#3
+\legend{#2}
+\end{axis}
+\end{tikzpicture}
+}
+
+\begin{document}
+\section{Experimental Design and Results}\label{results}
+\subsection{Results}
+\iftrue
+Table~\ref{tab:aarch64T} shows the total execution time of the various encodings to execute the benchmark  (\code{40~fibonacci}) for integer and floating-point values on the Apple M1.
+
+\begin{table}[htbp]
+    \centering
+    \aarchTotal
+    \caption{AArch64 (Apple M1) total timing for encodings}
+    \label{tab:aarch64T}
+\end{table}
+
+\begin{figure}[htbp]
+    \centering
+    \aarchBarChart
+    \caption{AArch64 benchmark results}
+    \label{fig:aarch64}
+\end{figure}
+\begin{figure}[htbp]
+    \centering
+    \xBarChart
+    \caption{x86\_64 benchmark results}
+    \label{fig:x86}
+\end{figure}
+
+Figures \ref{fig:aarch64} and \ref{fig:x86} show at a glance the relative performance of the various encodings on the two architectures.
+
+  All timings are the median of 10 runs following 3 runs of warmups.
+They are run on Linux systems running in console mode.
+We calculate the mean, median and geometric mean for each example and they are essentially equal in all cases.
+
+\begin{table*}[htbp]
+      \centering
+      \begin{minipage}{0.48\textwidth}
+          \centering
+          \aarchSummary
+          \caption{AArch64 (Apple M1) net timing for encodings}
+          \label{tab:aarch64}
+      \end{minipage}
+      \hfill
+      \begin{minipage}{0.48\textwidth}
+          \centering
+          \xSummary
+          \caption{x86-64 (Linux) net timing for encodings}
+          \label{tab:x86}
+      \end{minipage}
+\end{table*}
+
+Tables~\ref{tab:aarch64} and ~\ref{tab:x86} present the net execution times for each encoding across the two benchmark configurations on AArch64 (Apple M1) and x86-64 respectively. Each row reports the time for a single encoding under two conditions: \textbf{IntegerBr} (inlined branching integer Fibonacci), and \textbf{Float} (inlined float Fibonacci).
+\fi
+\subsubsection{Pareto Analysis}
+The Pareto frontier contains the points that represent optimal trade-offs between two parameters.
+In this case, we are looking at integer versus floating-point performance in figure~\ref{pareto}.
+The Pareto frontiers don't intersect, showing that the Aarch64 dominates the x86-64 in this experiment.
+\begin{figure}[htbp]
+    \centering
+    \aarchScatterPlot
+    \caption{IntegerBr vs Float - AARCH64}
+    \label{paretoA}
+\end{figure}
+\begin{figure}[htbp]
+    \centering
+    \xScatterPlot
+    \caption{IntegerBr vs Float - X86-64}
+    \label{paretoX}
+\end{figure}
+\begin{figure}[htbp]
+    \centering
+    \scatterPlotRaw
+    \caption{IntegerBr vs Float}
+    \label{pareto}
+\end{figure}
+\iffalse
+\newpage
+\appendix
+\section{Appendix - Raw samples}
+\subsection*{AARCH64 raw execution}
+\aarchAppendix
+\subsection*{X86-64 raw execution}
+\xAppendix
+\fi
+\end{document}
+\endinput

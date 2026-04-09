@@ -40,8 +40,7 @@ pub const Object = packed struct(u64) {
     pub inline fn asUntaggedI(i: i64) i64 {
         return i;
     }
-    pub inline //
-    fn nativeI(self: object.Object) ?i64 {
+    pub inline fn nativeI(self: object.Object) ?i64 {
         return @bitCast(self);
     }
     pub inline fn fromNativeI(t: i64, _: anytype, _: anytype) object.Object {
@@ -51,7 +50,7 @@ pub const Object = packed struct(u64) {
         @panic("not implemented");
     }
     pub inline fn isFloat(_: object.Object) bool {
-        return false;
+        @panic("not implemented");
     }
     pub inline fn fromNativeF(_: f64, _: anytype, _: anytype) object.Object {
         @panic("not implemented");
@@ -112,9 +111,6 @@ pub const Object = packed struct(u64) {
     }
     pub inline fn toNatNoCheck(self: Object) u64 {
         return @bitCast(self);
-    }
-    inline fn toDoubleFromMemory(_: object.Object) f64 {
-        @panic("Not implemented");
     }
     pub fn returnObjectClosure(_: Object, _: anytype) ?Object {
         return null;

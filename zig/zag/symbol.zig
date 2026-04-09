@@ -301,7 +301,7 @@ pub const QuickSelectorsMatch = 0x18046000;
 pub fn findQuickSelector(obj: Object) ?u2 {
     if (config.immediateSymbols and (obj.testU() & QuickSelectorsMask) == QuickSelectorsMatch) {
         for (QuickSelectors,0..) |qs,i| {
-            if (obj.equals(qs)) return i;
+            if (obj.equals(qs)) return @truncate(i);
         }
     }
     return null;

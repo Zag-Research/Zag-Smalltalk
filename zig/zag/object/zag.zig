@@ -79,29 +79,25 @@ pub const Object = packed struct(u64) {
     }
 
     pub inline fn untaggedI(self: object.Object) ?i64 {
-        if (self.isInt()) return untaggedI_noCheck(self);
+        if (self.isInt()) {
+            @branchHint(.likely);
+            return @bitCast(self.rawU() >> tagAndClassBits << tagAndClassBits);
+        }
         return null;
     }
-
-    inline fn untaggedI_noCheck(self: object.Object) i64 {
-        return @bitCast(self.rawU() >> tagAndClassBits << tagAndClassBits);
+    pub inline fn fromUntaggedI(i: i64, _: anytype, _: anytype) object.Object {
+        return @bitCast(i + oImm(.SmallInteger, 0).tagbits());
     }
 
     pub inline fn taggedI(self: object.Object) ?i64 {
-        if (self.isInt()) return taggedI_noCheck(self);
+        if (self.isInt()) {
+            @branchHint(.likely);
+            return @bitCast(self);
+        }
         return null;
     }
-
-    inline fn taggedI_noCheck(self: object.Object) i64 {
-        return @bitCast(self);
-    }
-
     pub inline fn fromTaggedI(i: i64, _: anytype, _: anytype) object.Object {
         return @bitCast(i);
-    }
-
-    pub inline fn fromUntaggedI(i: i64, _: anytype, _: anytype) object.Object {
-        return @bitCast(i + oImm(.SmallInteger, 0).tagbits());
     }
 
     inline fn isInt(self: object.Object) bool {
@@ -111,11 +107,11 @@ pub const Object = packed struct(u64) {
         return self.isInt() and self.rawI() >= 0;
     }
     pub inline fn nativeI(self: object.Object) ?i64 {
-        if (self.isInt()) return self.nativeI_noCheck();
+        if (self.isInt()) {
+            @branchHint(.likely);
+            return @as(i64, @bitCast(self)) >> @bitSizeOf(TagAndClassType);
+        }
         return null;
-    }
-    inline fn nativeI_noCheck(self: object.Object) i64 {
-        return @as(i64, @bitCast(self)) >> @bitSizeOf(TagAndClassType);
     }
     pub inline fn fromNativeI(t: i56, _: anytype, _: anytype) Object {
         return oImm(.SmallInteger, @as(u56, @bitCast(t)));
@@ -148,7 +144,7 @@ pub const Object = packed struct(u64) {
     }
 
     pub inline fn extraValue(self: object.Object) object.Object {
-        return @bitCast(self.nativeI_noCheck() >> 8);
+        return @bitCast(@as(i64, @bitCast(self)) >> @bitSizeOf(TagAndClassType) >> 8);
     }
     pub inline fn highPointer(self: object.Object, T: type) ?T {
         return @ptrFromInt(self.rawU() >> 16);
