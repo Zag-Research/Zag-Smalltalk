@@ -215,8 +215,8 @@ def scatter_points(results):
     base_float = get_base("Float", results)
     if not base_int or not base_float:
         raise ValueError("Missing onlyInt/onlyFloat baselines for scatter plot.")
-    base_int = {"median": 0}
-    base_float = {"median": 0}
+    # base_int = {"median": 0}
+    # base_float = {"median": 0}
     points = {}
     for enc in SCATTER_ENCODINGS:
         entry = results.get(enc, {})
@@ -293,8 +293,8 @@ def scatter_plot_raw(results_a, arch_a, results_b=None, arch_b=None):
     lines.append("    height=\\columnwidth,")
     lines.append("    xlabel={IntegerBr (ms)},")
     lines.append("    ylabel={Float (ms)},")
-    lines.append(f"    xmin={xmin}, xmax={xmax},")
-    lines.append(f"    ymin={ymin}, ymax={ymax},")
+    lines.append(f"    xmin={min(0, xmin)}, xmax={xmax},")
+    lines.append(f"    ymin={min(0, ymin)}, ymax={ymax},")
     lines.append("    grid=major,")
     lines.append("    grid style={line width=0.2pt, draw=gray!30},")
     lines.append("    legend style={")

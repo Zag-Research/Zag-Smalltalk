@@ -65,3 +65,4 @@ zig/experiments/Benchmarks/test.pdf
 *.out
 zig/experiments/Benchmarks/pareto.tex
 zig/experiments/Benchmarks/x86.tex
+zig/experiments/Benchmarks/aarch64.tex

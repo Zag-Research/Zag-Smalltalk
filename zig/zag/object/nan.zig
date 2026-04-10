@@ -3,7 +3,8 @@ const std = @import("std");
 const builtin = @import("builtin");
 const mem = std.mem;
 const math = std.math;
-const NaN: u64 = @bitCast(std.math.nan(f64));
+const NaN: u64 = @bitCast(math.nan(f64));
+const Inf: u64 = @bitCast(math.inf(f64));
 const zag = @import("../zag.zig");
 const config = zag.config;
 const assert = std.debug.assert;
@@ -90,10 +91,15 @@ pub const Object = packed struct(u64) {
     const intTagBits = 14;
     const integerTag = Tag.u(.smallInteger) >> 2;
     inline fn isInt(self: Object) bool {
-        if (true) {
-            return self.rawU() >> (64 - intTagBits) >= integerTag;
-        } else {
-            return self.rawU() >= Tag.g(.smallInteger);
+        switch (builtin.target.cpu.arch) {
+            .x86_64 => {
+                return self.rawU() >= Tag.g(.smallInteger);
+                // return self.rawU() >> (64 - intTagBits) >= integerTag;
+            },
+            .aarch64 => {
+                return (self.rawI() >> 64 - intTagBits) + 1 == 0;
+            },
+            else => @compileError("unsupported target cpu"),
         }
     }
     inline fn toObject(int: i64) Object {
@@ -172,11 +178,11 @@ pub const Object = packed struct(u64) {
         if (self.isInt()) return @bitCast(@as(u64, @bitCast(self)) << intTagBits);
         return null;
     }
-    pub const taggedI = untaggedI;
-    pub const fromTaggedI = fromUntaggedI;
     pub inline fn fromUntaggedI(i: i64, _: anytype, _: anytype) Object {
         return toObject(i);
     }
+    pub const taggedI = untaggedI;
+    pub const fromTaggedI = fromUntaggedI;
     pub inline fn nativeI(self: Object) ?i64 {
         if (self.untaggedI()) |int| return int >> intTagBits;
         return null;
@@ -358,55 +364,63 @@ pub const Object = packed struct(u64) {
         return @as(u48, @truncate(@as(usize, @bitCast(self))));
     }
     pub inline fn which_class(self: Object) ClassIndex {
-        if (true) {
-            switch (self.tag) {
-                .heap => {
-                    if (self.data == 0) {
+        switch (builtin.target.cpu.arch) {
+            .x86_64 => {
+                switch (self.tag) {
+                    .heap => {
+                        if (self.data == 0) {
+                            @branchHint(.unlikely);
+                            return .UndefinedObject;
+                        }
+                        return self.toUnchecked(*HeapObject).*.getClass();
+                    },
+                    .ThunkReturnLocal, .ThunkHeap => |tag| {
                         @branchHint(.unlikely);
-                        return .UndefinedObject;
-                    }
-                    return self.toUnchecked(*HeapObject).*.getClass();
-                },
-                .ThunkReturnLocal, .ThunkHeap => |tag| {
-                    @branchHint(.unlikely);
-                    if (self.data == 0) return .Float;
-                    return tag.class();
-                },
-                .ThunkReturnInstance, .ThunkReturnObject, .ThunkReturnImmediate, .ThunkLocal, .BlockAssignLocal, .ThunkInstance, .BlockAssignInstance, .ThunkImmediate, .Signature => |tag| {
-                    @branchHint(.unlikely);
-                    return tag.class();
-                },
-                .Symbol, .False, .True, .Character => |tag| return tag.class(),
-                else => |tag| {
-                    @branchHint(.likely);
-                    if (@intFromEnum(tag) >= @intFromEnum(Tag.smallInteger)) return .SmallInteger;
-                    return .Float;
-                },
-            }
-        } else {
-            if (self.isInt()) {
-                @branchHint(.likely);
-                return .SmallInteger;
-            } else if (!std.math.isNan(@as(f64, @bitCast(self)))) {
-                @branchHint(.none);
-                return .Float;
-            } else switch (self.tag) {
-                .heap => {
-                    @branchHint(.likely);
-                    if (self == Nil()) {
+                        if (self.data == 0) return .Float;
+                        return tag.class();
+                    },
+                    .ThunkReturnInstance, .ThunkReturnObject, .ThunkReturnImmediate, .ThunkLocal, .BlockAssignLocal, .ThunkInstance, .BlockAssignInstance, .ThunkImmediate, .Signature => |tag| {
                         @branchHint(.unlikely);
-                        return .UndefinedObject;
-                    }
-                    return self.toUnchecked(*HeapObject).*.getClass();
-                },
-                else => |tag| {
-                    if (self.rawU() == NaN) {
-                        @branchHint(.unlikely);
+                        return tag.class();
+                    },
+                    .Symbol, .False, .True, .Character => |tag| return tag.class(),
+                    else => |tag| {
+                        @branchHint(.likely);
+                        if (@intFromEnum(tag) >= @intFromEnum(Tag.smallInteger)) return .SmallInteger;
                         return .Float;
+                    },
+                }
+            },
+            .aarch64 => {
+                const tagBits = (self.rawI() >> 64 - intTagBits) + 1;
+                if (tagBits == 0) {
+                    @branchHint(.likely);
+                    return .SmallInteger;
+                } else if (tagBits <= 0x7FF0 >> 2) {
+                    @branchHint(.none);
+                    return .Float;
+                } else {
+                    @branchHint(.unlikely);
+                    switch (self.tag) {
+                        .heap => {
+                            @branchHint(.likely);
+                            if (self == Nil()) {
+                                @branchHint(.unlikely);
+                                return .UndefinedObject;
+                            }
+                            return self.toUnchecked(*HeapObject).*.getClass();
+                        },
+                        else => |tag| {
+                            if (self.rawU() == NaN or self.rawU() == Inf) {
+                                @branchHint(.unlikely);
+                                return .Float;
+                            }
+                            return tag.class();
+                        },
                     }
-                    return tag.class();
-                },
-            }
+                }
+            },
+            else => @compileError("unsupported target cpu"),
         }
     }
     pub inline fn ifHeapObject(self: object.Object) ?*HeapObject {
