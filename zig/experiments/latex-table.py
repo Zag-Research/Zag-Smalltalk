@@ -246,10 +246,12 @@ def axis_limits(points):
     xs = [p[0] for p in points]
     ys = [p[1] for p in points]
     max_x = max(xs)
-    max_y = max(ys)
+    pad_x = max(10, int(math.ceil(max_x * 0.03)))
     min_y = min(ys)
-    pad_x = max(10, int(math.ceil(max_x * 0.06)))
-    pad_y = max(10, int(math.ceil(max_y * 0.06)))
+    max_y = max(ys)
+    pad_y = max(10, int(math.ceil(max_y * 0.05)))
+    xmin = min(int(math.floor((min_x - pad_x) / 10.0) * 10), 0)
+    ymin = int(math.floor((min_y - pad_y) / 10.0) * 10)
     xmax = int(math.ceil((max_x + pad_x) / 10.0) * 10)
     ymax = int(math.ceil((max_y + pad_y) / 10.0) * 10)
     ymin = int(math.floor((min_y - pad_y) / 10.0) * 10)
