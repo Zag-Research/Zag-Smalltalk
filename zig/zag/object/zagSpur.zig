@@ -64,8 +64,8 @@ pub const Object = packed union {
     }
     pub const LowTagType = TagAndClassType;
     pub const lowTagSmallInteger = makeImmediate(.SmallInteger, 0).tagbits();
-    pub const HighTagType = void;
-    pub const highTagSmallInteger = {};
+    pub const HighTagType = u0;
+    pub const highTagSmallInteger = 0;
     pub const PackedTagType = Tag;
     pub const packedTagSmallInteger = Tag.smallInteger;
     pub const signatureTag = Tag.u(.immediates);
@@ -103,7 +103,7 @@ pub const Object = packed union {
         return @bitCast(i + @intFromEnum(Tag.smallInteger));
     }
     pub inline fn fromNativeI(i: i61, _: anytype, _: anytype) Object {
-        return @bitCast((@as(i64,i) << 3) + @intFromEnum(Tag.smallInteger));
+        return @bitCast((@as(i64, i) << 3) + @intFromEnum(Tag.smallInteger));
     }
     pub inline fn asUntaggedI(i: i61) i64 {
         return @as(i64, i) << 3;
@@ -145,9 +145,14 @@ pub const Object = packed union {
         if (self.isImmediateClass(.Symbol)) return @truncate(self.immediate.hash);
         return null;
     }
-
-    pub inline fn isHeapObject(self: Object) bool {
-        return self.isTag(.heap);
+    pub inline fn numArgs(self: Object) u4 {
+        return @truncate(self.rawU() >> 32);
+    }
+    pub fn makeSymbol(class: ClassIndex.Compact, hash: u24, arity: u4) Object {
+        return makeImmediate(class, @as(u32, hash) | (@as(u32, arity) << 24));
+    }
+    pub inline fn isSymbol(self: Object) bool {
+        return self.tagbits() == comptime makeImmediate(.Symbol, 0).tagbits();
     }
 
     pub inline fn extraValue(self: Object) Object {
@@ -155,10 +160,6 @@ pub const Object = packed union {
     }
     pub inline fn highPointer(self: Object, T: type) ?T {
         return @ptrFromInt(self.rawU() >> 16);
-    }
-    pub inline fn withPrimitive(self: Object, prim: u64) Object {
-        // This is only done for signature objects, which already aren't quite valid
-        return @bitCast(self.rawU() | prim << 40);
     }
     pub const testU = rawU;
     pub const testI = rawI;
@@ -191,7 +192,7 @@ pub const Object = packed union {
             else => {},
         }
         return null;
-   }
+    }
     pub inline fn makeImmediate(cls: ClassIndex.Compact, hash: u56) Object {
         return oImm(cls, hash);
     }
@@ -296,8 +297,8 @@ pub const Object = packed union {
         return .UndefinedObject;
     }
     pub inline fn hasMemoryReference(self: Object) bool {
-        return if (self.isHeapObject())
-            !self.equals(Object.Nil())
+        return if (self.isTag(.heap))
+            self.rawU() != 0
         else switch (self.immediate.class) {
             .ThunkReturnLocal, .ThunkReturnInstance, .ThunkReturnObject, .ThunkReturnImmediate, .ThunkLocal, .BlockAssignLocal, .ThunkInstance, .BlockAssignInstance, .ThunkHeap, .ThunkReturnCharacter, .ThunkReturnFloat => true,
             else => false, // catches the nil case
@@ -306,10 +307,6 @@ pub const Object = packed union {
     pub inline fn ifHeapObject(self: Object) ?*HeapObject {
         if (self.isTag(.heap) and self.rawU() != 0) return @ptrFromInt(self.rawU());
         return null;
-    }
-
-    pub inline fn isSymbol(self: Object) bool {
-        return self.tagbits() == comptime makeImmediate(.Symbol, 0).tagbits();
     }
 
     pub fn returnObjectClosure(self: Object, context: *Context) ?Object {
@@ -341,11 +338,9 @@ pub const Object = packed union {
 
     pub fn extraImmediateU(obj: Object) ?u11 {
         switch (obj.immediate.class) {
-            .ThunkReturnLocal,
-            .ThunkReturnInstance,
-            .ThunkReturnImmediate,
-            .ThunkReturnCharacter,
-            .ThunkReturnFloat => { return obj.extraU(); },
+            .ThunkReturnLocal, .ThunkReturnInstance, .ThunkReturnImmediate, .ThunkReturnCharacter, .ThunkReturnFloat => {
+                return obj.extraU();
+            },
             else => {},
         }
         return null;
@@ -353,8 +348,10 @@ pub const Object = packed union {
 
     pub fn extraImmediateI(obj: Object) ?i11 {
         switch (obj.immediate.class) {
-            .ThunkReturnObject => { return obj.extraI(); },
-            else => {}
+            .ThunkReturnObject => {
+                return obj.extraI();
+            },
+            else => {},
         }
         return null;
     }
@@ -410,10 +407,10 @@ pub const Object = packed union {
     pub const getField = OF.getField;
     pub const get_class = OF.get_class;
     pub const isBool = OF.isBool;
+    pub const toBoolNoCheck = OF.toBoolNoCheck;
     pub const isIndexable = OF.isIndexable;
     pub const isNil = OF.isNil;
     pub const isUnmoving = OF.isUnmoving;
-    pub const numArgs = OF.numArgs;
     pub const promoteToUnmovable = OF.promoteToUnmovable;
     pub const rawFromU = OF.rawFromU;
     pub const setField = OF.setField;

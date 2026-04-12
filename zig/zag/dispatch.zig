@@ -12,6 +12,7 @@ const Object = object.Object;
 const True = object.True;
 const False = object.False;
 const ClassIndex = object.ClassIndex;
+const o0 = object.testObjects[0];
 const execute = zag.execute;
 const PC = execute.PC;
 const SP = Process.SP;
@@ -24,7 +25,7 @@ const Context = zag.Context;
 const Extra = Context.Extra;
 const globalArena = zag.globalArena;
 const symbol = zag.symbol;
-const symbols = symbol.symbols;
+const symbols = symbol.Symbols;
 const HeapHeader = zag.heap.HeapHeader;
 const smallestPrimeAtLeast = @import("utilities.zig").smallestPrimeAtLeast;
 // note that self and other could become invalid after any method call if they are heap objects, so will need to be re-loaded from context.fields if needed thereafter
@@ -270,7 +271,7 @@ pub const threadedFunctions = struct {
             return @call(tailCall, process.branchCheck(callerContext.getNPc()), .{ callerContext.getTPc(), newSp, process, callerContext, Extra.fromContextData(callerContext.contextData) });
         }
         test {
-            if (true) return config.skipForDebugging;
+            if (true) return config.skipForDebugging();
             var exe = Execution.initTest("returnSelf", .{
                 tf.pushLiteral,
                 91,
@@ -303,12 +304,12 @@ pub const threadedFunctions = struct {
             return @call(tailCall, process.branchCheck(callerContext.npc), .{ callerContext.tpc, newSp, process, callerContext, Extra.fromContextData(callerContext.contextDataPtr(sp)) });
         }
         test {
-            if (true) return config.skipForDebugging;
+            if (true) return config.skipForDebugging();
             var exe = Execution.initTest("returnTopNoContext", .{
                 tf.pushLiteral,
                 91,
                 tf.pushLiteral,
-                Object.tests[0],
+                o0,
                 tf.returnTop,
                 2,
                 tf.pushLiteral,
@@ -431,7 +432,7 @@ const DispatchMethod = struct {
         const method = self.method;
         if (method.signature.equals(signature))
             return method;
-        trace("match {*} {f} {f}", .{ self, method.signature, signature });
+        trace("match {*} {f} {f} ({x} {x})", .{ self, method.signature, signature, @as(u64,@bitCast(method.signature)), @as(u64,@bitCast(signature)) });
         return null;
     }
     inline //

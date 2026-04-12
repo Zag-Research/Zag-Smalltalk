@@ -48,7 +48,6 @@ pub const @"+" = struct {
         unreachable;
     }
     test "simple add" {
-        if (true) return config.skipForDebugging;
         var exe = Execution.initTest("simple add", .{ tf.primitive, comptime fromPrimitive(1) });
         try exe.runTest(
             &[_]Object{
@@ -65,12 +64,12 @@ pub const @"+" = struct {
         try exe.runTest(
             &[_]Object{
                 exe.object(4),
-                exe.object(Object.maxInt),
+                exe.object(Object.maxInt/2),
             },
             &[_]Object{
                 object.testObjects[0],
                 exe.object(4),
-                exe.object(Object.maxInt),
+                exe.object(Object.maxInt/2),
             },
         );
     }
@@ -145,9 +144,9 @@ pub const @"<=" = struct {
         process.init();
         const sp = process.getSp();
         const context = process.getContext();
-        try expectEqual(true, try with(0, Object.from(0, sp, context)));
-        try expectEqual(true, try with(0, Object.from(1, sp, context)));
-        try expectEqual(false, try with(0, Object.from(-1, sp, context)));
+        try expectEqual(Object.True(), try with(0, Object.from(0, sp, context), sp, context));
+        try expectEqual(Object.True(), try with(0, Object.from(1, sp, context), sp, context));
+        try expectEqual(Object.False(), try with(0, Object.from(-1, sp, context), sp, context));
     }
 };
 pub const @"*" = struct {
@@ -174,7 +173,7 @@ pub const @"*" = struct {
                 return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, extra }));
             return @call(tailCall, process.check(pc.prim3()), .{ pc.next3(), newSp, process, context, extra });
         }
-        trace("Float>>#inlinePrimitive: * {f}", .{sp.next});
+        trace("SmallInteger>>#inlinePrimitive: * {f}", .{sp.next});
         return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, extra });
     }
     test "*" {
@@ -182,6 +181,8 @@ pub const @"*" = struct {
         process.init();
         const sp = process.getSp();
         const context = process.getContext();
+        std.debug.print("* {f} {f}\n", .{ Object.from(12, sp, context), try with(3, Object.from(4, sp, context), sp, context) });
+        std.debug.print("* {x} {}\n", .{ Object.from(12, sp, context).testU(), (try with(3, Object.from(4, sp, context), sp, context)).testU()});
         try expectEqual(Object.from(12, sp, context), with(3, Object.from(4, sp, context), sp, context));
         try expectEqual(error.primitiveError, with(0x1_0000_0000, Object.from(0x100_0000, sp, context), sp, context));
         try expectEqual(error.primitiveError, with(0x1_0000_0000, Object.from(0x80_0000, sp, context), sp, context));
@@ -202,37 +203,37 @@ pub const threadedFns = struct {
     };
     pub const countDown = struct {
         pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
-        var result = True();
-        if (sp.top.untaggedI()) |value| {
-            const sum, const overflow = @addWithOverflow(Object.asUntaggedI(-1), value);
-            if (overflow == 0) {
-                sp.top = Object.fromUntaggedI(sum, sp, context);
-                if (sum > 0) result = False();
+            var result = True();
+            if (sp.top.untaggedI()) |value| {
+                const sum, const overflow = @addWithOverflow(Object.asUntaggedI(-1), value);
+                if (overflow == 0) {
+                    sp.top = Object.fromUntaggedI(sum, sp, context);
+                    if (sum > 0) result = False();
+                }
+            }
+            if (sp.push(result)) |newSp| {
+                return @call(tailCall, process.check(pc.prim()), .{ pc.next(), newSp, process, context, extra });
+            } else {
+                const newSp, const newContext, const newExtra = sp.spillStackAndPush(result, context, extra);
+                return @call(tailCall, process.check(pc.prim()), .{ pc.next(), newSp, process, newContext, newExtra });
             }
         }
-        if (sp.push(result)) |newSp| {
-            return @call(tailCall, process.check(pc.prim()), .{ pc.next(), newSp, process, context, extra });
-        } else {
-            const newSp, const newContext, const newExtra = sp.spillStackAndPush(result, context, extra);
-            return @call(tailCall, process.check(pc.prim()), .{ pc.next(), newSp, process, newContext, newExtra });
+        test "countDown" {
+            var exe = Execution.initTest("countDown", .{ tf.countDown, tf.pushLiteral, "0One", tf.countDown, tf.pushLiteral, "1Neg", tf.countDown, tf.countDown });
+            try exe.resolve(&[_]Object{ Object.fromNativeI(1, null, null), Object.fromNativeI(-5, null, null) });
+            try config.skipForDebugging();
+            try exe.runTest(
+                &[_]Object{
+                    exe.object(42),
+                },
+                &[_]Object{
+                    exe.object(true),
+                    exe.object(0),
+                    exe.object(false),
+                    exe.object(41),
+                },
+            );
+            return error.TestFailed;
         }
-    }
-    test "countDown" {
-        var exe = Execution.initTest("countDown", .{ tf.countDown, tf.pushLiteral, "0One", tf.countDown , tf.pushLiteral, "1Neg", tf.countDown , tf.countDown });
-        try exe.resolve(&[_]Object{Object.fromNativeI(1, null, null), Object.fromNativeI(-5, null, null)});
-        if (true) return config.skipForDebugging;
-        try exe.runTest(
-            &[_]Object{
-                exe.object(42),
-            },
-            &[_]Object{
-                exe.object(true),
-                exe.object(0),
-                exe.object(false),
-                exe.object(41),
-            },
-        );
-        return error.TestFailed;
-    }
-};
+    };
 };

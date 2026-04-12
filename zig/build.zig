@@ -263,6 +263,8 @@ fn createTestStep(
 
     const test_step = b.step("test", "Run tests for all encoding types");
     const sequential = b.option(bool, "sequential", "sequential test") orelse false;
+    const encoding_tests = b.option(bool, "encodingTests", "just tests with 'encoding:' in them") orelse false;
+    const just_tests = b.option(bool, "justTests", "just tests with 'just:' in them") orelse false;
 
     for (test_encodings) |enc| {
         const enc_options = b.addOptions();
@@ -299,6 +301,10 @@ fn createTestStep(
             });
 
         enc_tests.root_module.addOptions("options", enc_options);
+        if (encoding_tests)
+            enc_tests.filters = &.{ "encoding:" };
+        if (just_tests)
+            enc_tests.filters = &.{ "just:" };
         const run_enc_tests = b.addRunArtifact(enc_tests);
         test_step.dependOn(&run_enc_tests.step);
     }
@@ -319,8 +325,10 @@ fn createBenchStep(
                 .nan,
                 .zag,
                 .zagSpur,
+                .zagMixed,
                 .spur,
                 .taggedInt,
+                .taggedSMI,
                 .taggedPtr,
                 .taggedHigh,
                 .cachedPtr,

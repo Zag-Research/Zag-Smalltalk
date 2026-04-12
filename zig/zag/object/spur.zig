@@ -76,33 +76,31 @@ pub const Object = packed union {
     }
     pub const LowTagType = TagAndClassType;
     pub const lowTagSmallInteger = makeImmediate(.SmallInteger, 0).tagbits();
-    pub const HighTagType = void;
-    pub const highTagSmallInteger = {};
+    pub const HighTagType = u0;
+    pub const highTagSmallInteger = 0;
     pub const PackedTagType = Tag;
     pub const packedTagSmallInteger = Tag.smallInteger;
     pub const signatureTag = Tag.u(.smallInteger);
     const TagAndClassType = u3;
 
-    pub inline fn tagbits(self: Self) TagAndClassType {
+    inline fn tagbits(self: Self) TagAndClassType {
         return @truncate(self.rawU());
     }
 
     pub inline fn untaggedI(self: Object) ?i64 {
-        if (self.isInt()) return untaggedI_noCheck(self);
+        if (self.isInt()) {
+            @branchHint(.likely);
+            return @bitCast(Tag.unsetFromObject(self, .smallInteger));
+        }
         return null;
-    }
-
-    inline fn untaggedI_noCheck(self: Object) i64 {
-        return @bitCast(Tag.unsetFromObject(self, .smallInteger));
     }
 
     pub inline fn taggedI(self: Object) ?i64 {
-        if (self.isInt()) return taggedI_noCheck(self);
+        if (self.isInt()) {
+            @branchHint(.likely);
+            return @bitCast(self);
+        }
         return null;
-    }
-
-    inline fn taggedI_noCheck(self: Object) i64 {
-        return @bitCast(self);
     }
 
     pub inline fn fromTaggedI(i: i64, _: anytype, _: anytype) Object {
@@ -123,11 +121,11 @@ pub const Object = packed union {
         return self.isInt() and self.rawI() >= 0;
     }
     pub inline fn nativeI(self: Object) ?i64 {
-        if (self.isInt()) return self.nativeI_noCheck();
+        if (self.isInt()) {
+            @branchHint(.likely);
+            return @bitCast(Tag.shiftFromObject(self));
+        }
         return null;
-    }
-    inline fn nativeI_noCheck(self: Object) i64 {
-        return @bitCast(Tag.shiftFromObject(self));
     }
     pub inline fn fromNativeI(i: i61, _: anytype, _: anytype) Object {
         return Tag.shiftToObject(@bitCast(@as(i64, i)), .smallInteger);
@@ -146,11 +144,21 @@ pub const Object = packed union {
         });
     }
     pub inline fn symbolHash(self: Object) ?u24 {
-        if (self.isSymbol()) return @truncate(self.hash32());
+        if (self.isSymbol()) return @truncate(self.hash32() >> 8);
         return null;
     }
+    pub inline fn numArgs(self: Object) u4 {
+        return @truncate(self.hash32());
+    }
+    pub fn makeSymbol(_: anytype, _: anytype, _: anytype) Object {
+        @panic("not implemented");
+    }
+    pub inline fn isSymbol(self: Object) bool {
+        // Spur-encoded symbols are heap objects
+        return self.isHeapObject() and self.ref.header.classIndex == .Symbol;
+    }
 
-    pub inline fn isHeapObject(self: Object) bool {
+    inline fn isHeapObject(self: Object) bool {
         return self.isTag(.pointer);
     }
 
@@ -159,10 +167,6 @@ pub const Object = packed union {
     }
     pub inline fn highPointer(_: Object, T: type) ?T {
         @panic("Not implemented");
-    }
-    pub inline fn withPrimitive(self: Object, prim: u64) Object {
-        // This is only done for signature objects, which already aren't quite valid
-        return @bitCast(self.rawU() | prim << 40);
     }
     pub const testU = rawU;
     pub const testI = rawI;
@@ -297,7 +301,7 @@ pub const Object = packed union {
             @branchHint(.likely);
             return .SmallInteger;
         } else if (self.isTag(.float)) {
-            @branchHint(.likely);
+            @branchHint(.none);
             return .Float;
         } else if (self.isCharacter()) {
             @branchHint(.unlikely);
@@ -306,9 +310,7 @@ pub const Object = packed union {
         return self.ref.getClass();
     }
 
-    pub inline fn hasMemoryReference(self: Object) bool {
-        return self.isHeapObject();
-    }
+    pub const hasMemoryReference = isHeapObject;
 
     pub inline fn ifHeapObject(self: Object) ?*HeapObject {
         if (self.isHeapObject()) return @ptrFromInt(self.rawU());
@@ -317,10 +319,6 @@ pub const Object = packed union {
 
     pub inline fn asUntaggedI(i: i61) i64 {
         return @as(i64, i) << 3;
-    }
-    pub inline fn isSymbol(self: Object) bool {
-        // Spur-encoded symbols are heap objects
-        return self.isHeapObject() and self.ref.header.classIndex == .Symbol;
     }
 
     pub fn returnObjectClosure(_: Object, _: anytype) ?Object {
@@ -377,10 +375,10 @@ pub const Object = packed union {
     pub const getField = OF.getField;
     pub const get_class = OF.get_class;
     pub const isBool = OF.isBool;
+    pub const toBoolNoCheck = OF.toBoolNoCheck;
     pub const isIndexable = OF.isIndexable;
     pub const isNil = OF.isNil;
     pub const isUnmoving = OF.isUnmoving;
-    pub const numArgs = OF.numArgs;
     pub const promoteToUnmovable = OF.promoteToUnmovable;
     pub const rawFromU = OF.rawFromU;
     pub const to = OF.to;
@@ -390,7 +388,7 @@ pub const Object = packed union {
     pub const tests = OF.tests;
 };
 
-test "float from/to conversion" {
+test "spur" {
     std.log.err("running test", .{});
 
     // Test immediate float conversion
