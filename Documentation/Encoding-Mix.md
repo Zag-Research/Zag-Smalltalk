@@ -10,35 +10,35 @@ We extend this slightly, by using 5 of the 8 possible tag values:
 - 1: immediate values for immutable classes. Recognized by u  & 7 == 1.  For the classes `Character`, `Symbol`, `True`, `False`. The high 5 bits are the class number, and the middle 56 bits are the information (the character Unicode value or the symbol hash code).
 
 
-| High 16 bits       |                   | Tag        | Type                   |
-| ------------------ | ----------------- | ---------- | ---------------------- |
-| `0000000000000000` | `00000000...0000` | `00000000` | `nil`                  |
-| `0000000000000000` | `aaaaaaaa...aaaa` | `aaaaa000` | (heap) pointer         |
-| `00001lllllllllll` | `aaaaaaaa...aaaa` | `aaaaa000` | `ThunkReturnLocal`     |
-| `00010iiiiiiiiiii` | `aaaaaaaa...aaaa` | `aaaaa001` | `ThunkReturnInstance`  |
-| `00011nnnnnnnnnnn` | `aaaaaaaa...aaaa` | `aaaaa001` | `ThunkReturnObject`    |
-| `00100iiiiiiiiiii` | `aaaaaaaa...aaaa` | `aaaaa001` | `ThunkReturnImmediate` |
-| `00101000llllllll` | `aaaaaaaa...aaaa` | `aaaaa001` | `ThunkLocal`           |
-| `00110000llllllll` | `aaaaaaaa...aaaa` | `aaaaa001` | `BlockAssignLocal`     |
-| `00111iiiiiiiiiii` | `aaaaaaaa...aaaa` | `aaaaa001` | `ThunkInstance`        |
-| `01000iiiiiiiiiii` | `aaaaaaaa...aaaa` | `aaaaa001` | `BlockAssignInstance`  |
-| `0100100000000000` | `aaaaaaaa...aaaa` | `aaaaa001` | `ThunkHeap`            |
-| `01010cccccxxxxxx` | `xxxxxxxx...xxxx` | `xxttt001` | `ThunkImmediate`       |
-| `0101100000000000` | `00...hhhhh...hh` | `hhhhh001` | `Symbol`               |
-| `0110000000000000` | `00000000...0000` | `10010001` | `False`                |
-| `0110100000000000` | `00000000...0000` | `10011001` | `True`                 |
-| `0111000000000000` | `0...uuuuuuuuuuu` | `uuuuu001` | `Character`            |
-| `01111000cccccccc` | `cc...hhhhh...hh` | `hhhhh001` | `Signature`            |
-| `10000000cccccccc` | `aaaaaaaa...aaaa` | `aaaaa001` | `ThunkReturnCharacter` |
-| `10001000seeemmmm` | `aaaaaaaa...aaaa` | `aaaaa001` | `ThunkReturnFloat`     |
-| `10010seeeeeeeeee` | `emmmmmmm...mmmm` | `mmmmm001` | `ThunkFloat`           |
-| `10011ttttttttttt` | `aaaaaaaa...aaaa` | `aaaaa001` | `LLVM`                 |
-| `iiiiiiiiiiiiiiii` | `iiiiiiii...iiii` | `iiiii010` | `SmallInteger`         |
-| `xxxxxxxxxxxxxxxx` | `xxxxxxxx...xxxx` | `xxxxx011` | unused                 |
-| `ffffffffffffffff` | `ffffffff...ffff` | `fffff100` | `Float`                |
-| `ffffffffffffffff` | `ffffffff...ffff` | `fffff101` | `Float`                |
-| `xxxxxxxxxxxxxxxx` | `xxxxxxxx...xxxx` | `xxxxx110` | unused                 |
-| `xxxxxxxxxxxxxxxx` | `xxxxxxxx...xxxx` | `xxxxx111` | unused                 |
+| High 16 bits       |                   | Tag        | Type                          |
+| ------------------ | ----------------- | ---------- | ----------------------------- |
+| `0000000000000000` | `00000000...0000` | `00000000` | `nil`                         |
+| `0000000000000000` | `aaaaaaaa...aaaa` | `aaaaa000` | native (C) pointer            |
+| `00001lllllllllll` | `aaaaaaaa...aaaa` | `aaaaa000` | `ThunkReturnLocal`            |
+| `00010iiiiiiiiiii` | `aaaaaaaa...aaaa` | `aaaaa000` | `ThunkReturnInstance`         |
+| `00011nnnnnnnnnnn` | `aaaaaaaa...aaaa` | `aaaaa000` | `ThunkReturnObject`           |
+| `00100iiiiiiiiiii` | `aaaaaaaa...aaaa` | `aaaaa000` | `ThunkReturnImmediate`        |
+| `00101000llllllll` | `aaaaaaaa...aaaa` | `aaaaa000` | `ThunkLocal`                  |
+| `00110000llllllll` | `aaaaaaaa...aaaa` | `aaaaa000` | `BlockAssignLocal`            |
+| `00111iiiiiiiiiii` | `aaaaaaaa...aaaa` | `aaaaa000` | `ThunkInstance`               |
+| `01000iiiiiiiiiii` | `aaaaaaaa...aaaa` | `aaaaa000` | `BlockAssignInstance`         |
+| `0100100000000000` | `aaaaaaaa...aaaa` | `aaaaa000` | `ThunkHeap`                   |
+| `01010cccccxxxxxx` | `xxxxxxxx...xxxx` | `xxttt001` | `ThunkImmediate`              |
+| `0101100000000000` | `00...hhhhh...hh` | `hhhhh001` | `Symbol`                      |
+| `0110000000000000` | `00000000...0000` | `10010001` | `False`                       |
+| `0110100000000000` | `00000000...0000` | `10011001` | `True`                        |
+| `0111000000000000` | `0...uuuuuuuuuuu` | `uuuuu001` | `Character`                   |
+| `01111000cccccccc` | `cc...hhhhh...hh` | `hhhhh011` | `Signature` (special integer) |
+| `10000000cccccccc` | `aaaaaaaa...aaaa` | `aaaaa000` | `ThunkReturnCharacter`        |
+| `10001000seeemmmm` | `aaaaaaaa...aaaa` | `aaaaa000` | `ThunkReturnFloat`            |
+| `1001100000000000` | `aaaaaaaa...aaaa` | `aaaaa000` | heap object pointer           |
+| `10100ttttttttttt` | `aaaaaaaa...aaaa` | `aaaaa000` | `LLVM`                        |
+| `10010seeeeeeeeee` | `emmmmmmm...mmmm` | `mmmmm001` | `ThunkFloat`                  |
+| `iiiiiiiiiiiiiiii` | `iiiiiiii...iiii` | `iiiii010` | `SmallInteger`                |
+| `ffffffffffffffff` | `ffffffff...ffff` | `fffff100` | `Float`                       |
+| `ffffffffffffffff` | `ffffffff...ffff` | `fffff101` | `Float`                       |
+| `xxxxxxxxxxxxxxxx` | `xxxxxxxx...xxxx` | `xxxxx110` | unused (special integer)      |
+| `xxxxxxxxxxxxxxxx` | `xxxxxxxx...xxxx` | `xxxxx111` | unused (special integer)      |
 
 Getting the class looks at the low 3 bits:
 - 0: it's `nil` or it's a heap object and need to look at the header and the class is in the high 5 bits, unless they are zero, in which case the class is fetched from the object header ,
