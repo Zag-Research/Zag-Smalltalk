@@ -2,15 +2,14 @@
 //
 [
   {
-    "label": "grep",
-    "command": "grep -rne \"$ZED_SELECTED_TEXT\" *|grep zig:",
-    "cwd": "$ZED_WORKTREE_ROOT/zig/zag",
+    "label": "bench",
+    "command": "zig build bench",
+    "cwd": "$ZED_WORKTREE_ROOT/zig",
   },
   {
-    "label": "bench",
-    "command": "experiments/bench",
-    //    "command": "zig build bench -Doptimize=ReleaseFast --summary all -freference-trace=20",
-    "cwd": "$ZED_WORKTREE_ROOT/zig",
+    "label": "bench targets",
+    "command": "zig build bench -Dtarget=x86_64-linux; zig build bench -Dtarget=aarch64-linux;for i in aarch64 x86_64;do tar zcf $i.tgz $i;done;ls -l *.tgz",
+    "cwd": "$ZED_WORKTREE_ROOT/zig/zig-out",
   },
   {
     "label": "test-current",

@@ -468,7 +468,7 @@ pub fn timing(args: []const []const u8, nRuns: usize, fibN: u32, default: bool) 
 pub fn main() !void {
     const do_all = [_][]const u8{
         "Config",            "Header",
-        "Native",            "NativeF",
+        //"Native",            "NativeF",
         //"Integer",
         "IntegerBr?Integer",
         //"Integer0?Integer",

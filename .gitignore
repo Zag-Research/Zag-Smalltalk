@@ -60,3 +60,9 @@ c/sacTest
 zig/zag/returnAddress
 zig/zag/jit
 /image
+zig/experiments/Benchmarks/test.pdf
+*.aux
+*.out
+zig/experiments/Benchmarks/pareto.tex
+zig/experiments/Benchmarks/x86.tex
+zig/experiments/Benchmarks/aarch64.tex

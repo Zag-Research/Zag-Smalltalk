@@ -297,7 +297,7 @@ pub inline fn contextDataPtr(self: *const Context, sp: SP) *ContextData {
 pub inline fn isOnStack(self: *const Self, sp: SP) bool {
     return sp.contains(self);
 }
-pub //inline
+pub inline //
 fn endOfStack(self: *const Context, sp: SP) SP {
     if (self.ifOnStack(sp)) |contextOnStack| {
         return contextOnStack.endOfStack();
@@ -344,7 +344,7 @@ pub inline fn callerStack(self: *const Context, sp: SP) ?SP {
         return contextOnStack.callerStack();
     return null;
 }
-pub //inline
+pub inline //
 fn selfAddress(self: *const Context, sp: SP) [*]Object {
     if (self.ifOnStack(sp)) |contextOnStack|
         return contextOnStack.selfAddress();
@@ -446,7 +446,7 @@ pub const threadedFunctions = struct {
             return @call(tailCall, process.check(pc.prim()), .{ pc.next(), sp, process, context, extra });
         }
         test "pushContext" {
-            if (true) return config.skipForDebugging;
+            try config.skipForDebugging();
             var exe = Execution.initTest("pushContext", .{
                 tf.pushContext,
                 tf.pushLiteral,
