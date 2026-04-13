@@ -6,7 +6,7 @@ This continues our philosophy that as many objects as possible should be immedia
 We extend this slightly, by using 5 of the 8 possible tag values:
 - 2: `SmallInteger`. Recognized by `u & 2 != 0`. This provides 62-bit `SmallInteger` values in the high bits. (note this test also matches 3,6,7 - which are not used)
 - 4 and 5: `Float`. Recognized by u  & 6 == 4. By using 2 tags we can encode all 64-bit floats in the ranges 0..3.8e-270, 5.9e-39..6.8e38, and 1.1e270..1.8e308 as well as NaN and Inf. Any other values will be heap allocated. For the vast majority of applications this range will allow all values to be coded as immediate values. Encoding is a left rotate by 5 bits and subtract 3, then a check if the bottom 3 bits are 4 or 5. These are both several instructions shorter than Spur and involve no conditional code on decode.
-- 0: Pointer or `nil`. Recognized by u  & 7 == 0. This is compatible with native 8-byte-aligned pointers, so no conversion is required. This compatibility extends to `nil` being equivalent to `null` in C, C++, Rust, or Zig. If the high 5 bits non-zero then this is an immediate pointer to a `BlockClosure`  that takes 0 or 1 parameters (and this doesn't even need to be removed for AARCH64).
+- 0: Pointer or `nil`. Recognized by u  & 7 == 0. This is compatible with native 8-byte-aligned pointers, so no conversion is required. This compatibility extends to `nil` being equivalent to `null` in C, C++, Rust, or Zig. If the high 5 bits are zero then this is a native pointer (but of course completely unmanaged). If the high 5 bits are non-zero then this is a pointer to some heap object. If that tag is `heap` then this is a pointer to a generic heap object and we must look at the header to get the class. Other values are directly a class number and the pointer points to some object but the interpretation is from the immediate class number. For example if the class is `ThunkLocal` then the pointer points to a `ContextData` object from which we will evaluate a given local. If the class is `ThunkReturnLocal` then the pointer is to a `Context`  we will do a non-local return from.
 - 1: immediate values for immutable classes. Recognized by u  & 7 == 1.  For the classes `Character`, `Symbol`, `True`, `False`. The high 5 bits are the class number, and the middle 56 bits are the information (the character Unicode value or the symbol hash code).
 
 
@@ -24,37 +24,38 @@ We extend this slightly, by using 5 of the 8 possible tag values:
 | `01000iiiiiiiiiii` | `aaaaaaaa...aaaa` | `aaaaa000` | `BlockAssignInstance`         |
 | `0100100000000000` | `aaaaaaaa...aaaa` | `aaaaa000` | `ThunkHeap`                   |
 | `01010cccccxxxxxx` | `xxxxxxxx...xxxx` | `xxttt001` | `ThunkImmediate`              |
-| `0101100000000000` | `00...hhhhh...hh` | `hhhhh001` | `Symbol`                      |
+| `0101100000000000` | `00...hhhhh...hh` | `aaaaa001` | `Symbol`                      |
 | `0110000000000000` | `00000000...0000` | `10010001` | `False`                       |
 | `0110100000000000` | `00000000...0000` | `10011001` | `True`                        |
-| `0111000000000000` | `0...uuuuuuuuuuu` | `uuuuu001` | `Character`                   |
-| `01111000cccccccc` | `cc...hhhhh...hh` | `hhhhh011` | `Signature` (special integer) |
+| `0111000000000000` | `0...uuuuuu...uu` | `00000001` | `Character`                   |
+| `01111xxxxxxxxxxx` | `xx...xxxxxxxxxx` | `xxxxxx11` | `Signature` (special integer) |
 | `10000000cccccccc` | `aaaaaaaa...aaaa` | `aaaaa000` | `ThunkReturnCharacter`        |
 | `10001000seeemmmm` | `aaaaaaaa...aaaa` | `aaaaa000` | `ThunkReturnFloat`            |
 | `1001100000000000` | `aaaaaaaa...aaaa` | `aaaaa000` | heap object pointer           |
 | `10100ttttttttttt` | `aaaaaaaa...aaaa` | `aaaaa000` | `LLVM`                        |
 | `10010seeeeeeeeee` | `emmmmmmm...mmmm` | `mmmmm001` | `ThunkFloat`                  |
 | `iiiiiiiiiiiiiiii` | `iiiiiiii...iiii` | `iiiii010` | `SmallInteger`                |
+| `ppppppppcccccccc` | `cc...hhhhh...hh` | `aaaaa011` | `Signature` (special integer) |
 | `ffffffffffffffff` | `ffffffff...ffff` | `fffff100` | `Float`                       |
 | `ffffffffffffffff` | `ffffffff...ffff` | `fffff101` | `Float`                       |
 | `xxxxxxxxxxxxxxxx` | `xxxxxxxx...xxxx` | `xxxxx110` | unused (special integer)      |
 | `xxxxxxxxxxxxxxxx` | `xxxxxxxx...xxxx` | `xxxxx111` | unused (special integer)      |
 
 Getting the class looks at the low 3 bits:
-- 0: it's `nil` or it's a heap object and need to look at the header and the class is in the high 5 bits, unless they are zero, in which case the class is fetched from the object header ,
+- 0: it's `nil` or it's a heap object and need to look at the header and the class is in the high 5 bits, unless they are zero, in which case this is a native pointer,
 - 1: it's an immediate and the high 5 bits are the class,
 - 2: it's a `SmallInteger`
 - 4, 5: it's a `Float`
 - 3,6,7: reserved as false-positives for `SmallInteger`
 
-`basicHash` for any of the non-pointer-containing values  is the high 32 bits `xor` with the low 32 bits, encoded as a `SmallInteger`. The hash value for any pointer value is accessed from the object header, encoded as a `SmallInteger`.
+`basicHash` for any of the non-pointer-containing values  is the high 32 bits `xor` with the low 32 bits, encoded as a `SmallInteger`. The hash value for any `heap` pointer value is accessed from the object header, encoded as a `SmallInteger`.
 ### Immediates
 
 Any selection of zero-sized objects could be encoded in the Object value if they had unique hash values (as otherwise two instances would be identically equal), so need not reside on the heap. About 6% of the classes in a current Pharo image have zero-sized instances, but most have no discernible unique hash values. They also mostly have very few instances, so aren't likely to be usefully optimized. The currently identified ones that do  are `True`, `False`, `Character`, and `Symbol`, as well as `SmallInteger`. By restricting to only 5 bits for the class, we significantly increase the range of useful values we can encode into immediate values.
 
-Immediates are interpreted similarly to a header word for heap objects. That is, they contain a class index and a hash code. The class index is 5 bits and the hash code is 24-56 bits. Some immediate classes use the hash24 value which is the 24 bits after the tag. Others contain a pointer in the low 48 bits with some other data in the other 11 bits.
+Immediates are interpreted similarly to a header word for heap objects. That is, they contain a class index and a hash code. The class index is 5 bits and the hash code is 24-56 bits. Some immediate classes use the hash24 value which is the high 24 bits of the lower u32.
 #### Class numbers
-For Mixed immediate encoding any address (`Context` or `ContextData`) is encoded in the low 48 bits. The extra field is the 11 bits below the class, which limits the immediate form to 2048 possible extra values. For non-immediate versions, the bits of the object form the address of an in-memory object, of which the first word is the address and the second word is the extra value.
+For Mixed immediate encoding any address (`Context` or `ContextData`) is encoded in the low 48 bits. The extra field is the 11 bits below the class, which limits the immediate form to 2048 possible extra values. For non-immediate versions, the bits of the object form the address of an in-heap object, of which the first word is the address and the second word is the extra value.
 1. `ThunkReturnLocal`: This and the following 4 classes encode thunks that do non-local returns of a value. The address is the address of the `Context`. This class returns a value from the `Context` (a local, parameter, or the `self` object - 0 is unused, 1 is `self`, 2 is the first parameter or local, etc.). The local index is encoded in the extra field .
 2. `ThunkReturnInstance`: This encodes a non-local return of an instance variable. The variable index is encoded in the extra field. The `self` field of the `Context` is the referenced object.
 3. `ThunkReturnObject`: This encodes a non-local return of an object. In the immediate version, this is an 11-bit signed integer, encoded in the extra field.
@@ -71,7 +72,7 @@ For Mixed immediate encoding any address (`Context` or `ContextData`) is encoded
 12. `False`: This encodes the singleton value `false`. The `False` and `True` classes only differ by 1 bit so they can be tested easily if that is appropriate (in code generation).
 13. `True`: This encodes the singleton value `true`.
 14. `Character`: The hash code contains the full Unicode value for the character/code-point. This allows orders of magnitude more possible character values than the 294,645 allocated code points as of [Unicode](https://www.unicode.org/versions/stats/)16 and even the 1,112,064 possible Unicode code points.
-15. `Signature`: This is a superset of [Symbol](Symbol.md) with a `ClassIndex` and a possible 8-bit primitive number.
+15. `Signature`: This is a superset of [Symbol](Symbol.md) with a `ClassIndex` and a possible 8-bit primitive number. It is encoded as a special integer value, but it is never visible to Smalltalk code, so never tested, except by the garbage collector and method loader. **placeholder**
 16. `ThunkReturnCharacter`: This encodes a non-local return of an immediate 11-bit `Character` encoded in the extra field. This doesn't encode all characters, but it encompasses the first 2,048 code points, which are primarily used for Latin-based languages, European languages, Middle Eastern languages, and common symbols. This is never used for in-memory closures as it is subsumed by `ThunkReturnObject`.
 17. `ThunkReturnFloat`: This encodes a non-local return of a limited floating-point value, with the value encoded in the extra field. This only encodes 256... values, but it encodes all the integral values from 0 to 8, all the powers of 2 up to 128 and their inverses, powers of 2 times 10 up to 320, 1/8 to 7/8, `nan` and `inf`. And it has negative and positives for all of them. This is never used for in-memory closures as it is subsumed by `ThunkReturnObject`.
 18. `ThunkFloat`: This encodes  a thunk that evaluates to an immediate `Float` value.... This is never used for in-memory closures as it is subsumed by `ThunkInstance`.
@@ -100,6 +101,7 @@ The additional classes that are hard-coded (because they are referenced by Zig c
 49. `ContextData`: 
 50. `SelectorException`:
 51. `PrimitiveFailed`:
+52. `NativePointer`:
 
 ### Thunks and Closures
 Full block closures are relatively expensive. Even though many will typically be discarded quickly, they take dozens of instructions to create. They are allocated on the stack (because most have LIFO behaviour) which puts pressure on the stack which may force the stack to overflow more quickly and need to be spilled to the heap, and some will put pressure on the heap directly - both causing garbage collections to be more frequent. There are many common blocks that don't actually need access to method local variables, `self` or parameters. These can be encoded as immediate values with special subclasses of BlockClosure and obviate the need for heap allocation. 
