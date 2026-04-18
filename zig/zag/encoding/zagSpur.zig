@@ -16,8 +16,8 @@ const HeapHeader = zag.heap.HeapHeader;
 const HeapObject = zag.heap.HeapObject;
 const HeapObjectConstPtr = zag.heap.HeapObjectConstPtr;
 const InMemory = zag.InMemory;
-const encode = @import("floatSpur.zig").encode;
-const decode = @import("floatSpur.zig").decode;
+const encode = @import("floatSpur.zig").Fast.encode;
+const decode = @import("floatSpur.zig").Fast.decode;
 
 const Tag = enum(u3) {
     heap = 0,

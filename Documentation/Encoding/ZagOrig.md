@@ -1,15 +1,11 @@
 ### ZagOrig Tagged Encoding
-This is an encoding that tags the low bits of a word to represent various immediate values. It was originally a modification of Spur encoding.
-
-Spur is the encoding used by [OpenSmalltalkVM](https://github.com/OpenSmalltalk) and was designed by Elliot Miranda and Clement Bera. They tagged only a few kinds of immediate values because their philosophy is that most objects should be in memory (i.e. heap) whereas our philosophy is that as many objects as possible should be immediate values. This reduces memory traffic, allows for more efficient dispatch, and encodes a significant set of block closures to not require any memory allocation.
+This is an encoding that tags the low bits of a word to represent various immediate values. It was originally a modification of [Spur encoding].
 
 This is evolved from an earlier attempt [[Encoding-Modified-Spur-Old]] and a departure from [[NaN]] which was promising (there is still a switch to enable it, but it's not been kept up to date, and there are optimizations that depend on this encoding instead - so it's essentially a dead end).
 
-Spur uses the [following format](https://clementbera.wordpress.com/2018/11/09/64-bits-immediate-floats/):
-![[Pasted image 20240115082827.png]]
-This provides 61-bit SmallInteger and immediate floats that have an exponent range equivalent to 32-bit floats (approximately 1e-77 to 1e77) with the full 64-bit float mantissa. Determining which of the 4 types is a simple bit-test. Decoding the float is a test for the zero case and then a shift, add a 64-bit constant, and a rotate.
+Spur encodes `SmallInteger`, `Float`, and `Character` as immediate values, with everything else being an object in memory, whereas our philosophy is that as many objects as possible should be immediate values. This reduces memory traffic, allows for more efficient dispatch, and encodes a significant set of block closures to not require any memory allocation.
 
-We extend this slightly, by using all 8 possible tag values:
+We extend Spur slightly, by using all 8 possible tag values:
 - 0: Pointer or `nil`. This is compatible with native 8-byte-aligned pointers, so no conversion is required. This compatibility extends to `nil` being equivalent to `null` in C, C++, Rust, or Zig.
 - 1: immediate values for the classes `SmallInteger`, `Character`, `Symbol`, `True`, `False` as well as several forms of immediate `BlockClosure`s that take 0 or 1 parameters. The next 5 bits are the class number, and the top 56 bits are the information (the integer value or the character Unicode value or the symbol hash code). In some cases, the top 48 bits provide a 48-bit address allowing capture of heap objects, including contexts.
 - 2-7: `Float`. By using 6 tags we can encode all 64-bit floats less than 2.68e154. Any value larger than that will be heap allocated. For the vast majority of applications this range will allow all values except `+inf`, `-inf`, and `nan` to be coded as immediate values. Because those values may occur, we save the heap allocation by recognizing them and using a reference to a statically allocated value. Decoding doesn't need to handle zero specially, and is simply: subtract 2, and rotate right 4 bits. Encoding is similarly: rotate left 4 bits and add 2; if the result anded with 6 is zero, immediate encoding is not possible, so a reference to a static (`+inf`, `-inf`, or `nan`) or heap-allocated memory object is used. These are both several instructions shorter than Spur and involve no conditional code on decode.

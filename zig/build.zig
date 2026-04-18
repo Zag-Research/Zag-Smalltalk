@@ -1,5 +1,5 @@
 const std = @import("std");
-const Encoding = @import("zag/object/encoding.zig").Encoding;
+const Encoding = @import("zag/encoding/encoding.zig").Encoding;
 
 pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
