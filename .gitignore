@@ -57,8 +57,6 @@ zig-out/
 c/sacTest
 .claude
 *.dSYM
-!zig/experiments/cnp/tf-asm/
-!zig/experiments/cnp/tf-asm/**/*.s
 zig/zag/returnAddress
 zig/zag/jit
 /image
