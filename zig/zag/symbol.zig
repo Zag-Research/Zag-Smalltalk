@@ -20,18 +20,12 @@ pub var globalAllocator = std.heap.page_allocator; //@import("globalArena.zig").
 
 pub const Symbols = SymbolsEnum;
 pub inline fn symbolIndex(obj: object.Object) u24 {
-    return unhash(obj.hash24());
-}
-pub inline fn symbolArity(obj: object.Object) u4 {
-    // std.debug.print("symbolArity: {x}\n", .{obj.testU()});
-    return @intCast(obj.hash32() >> 24);
-}
-inline fn hash_of(index: u24, arity: u4) u32 {
-    return @as(u32, hash(index)) | (@as(u32, arity) << 24);
+    if (obj.symbolHash()) |hsh| return unhash(hsh);
+    unreachable;
 }
 pub const signature = SymbolsEnum.signature;
-pub fn fromHash(aHash: u64) Object {
-    const index = unhash(@truncate(aHash));
+pub fn fromHash(aHash: u24) Object {
+    const index = unhash(aHash);
     return @as(SymbolsEnum, @enumFromInt(index)).asObject();
 }
 const SymbolsEnum = enum(u32) {
@@ -103,7 +97,7 @@ const SymbolsEnum = enum(u32) {
     fn initSymbol(sym: *PointedObject, symbol: SymbolsEnum) void {
         const s_hash = symbol.symbolHash().?;
         sym.header = HeapHeader{ .classIndex = .Symbol, .hash = s_hash, .objectFormat = .notIndexable, .age = .static, .length = 1 };
-        sym.data.unsigned = s_hash | @as(u64, symbol.numArgs()) << 24;
+        sym.data.unsigned = @as(u64, s_hash) << 8 | symbol.numArgs();
     }
     pub inline fn numArgs(self: SymbolsEnum) u4 {
         return @intCast(@intFromEnum(self) >> 24);
@@ -117,20 +111,17 @@ const SymbolsEnum = enum(u32) {
     pub fn asObject(self: SymbolsEnum) Object {
         const index: u24 = @truncate(@intFromEnum(self));
         if (config.immediateSymbols) {
-            return Object.makeImmediate(.Symbol, hash_of(index, @intCast(@intFromEnum(self) >> 24)));
+            return Object.makeSymbol(.Symbol, hash(index), @intCast(@intFromEnum(self) >> 24));
         }
         return Object.fromAddress(&staticSymbols[index - 1]);
     }
-    pub fn withPrimitive(sym: SymbolsEnum, primitive: u8) Object {
-        return sym.signature(primitive).asObject();
-    }
     fn signature(sym: SymbolsEnum, primitive: u8) Signature {
         const int = @intFromEnum(sym);
-        return Signature.fromHashPrimitive(hash_of(@truncate(int), @intCast(int >> 24)), primitive);
+        return Signature.fromHashPrimitive(hash(@truncate(int)), @intCast(int >> 24), primitive);
     }
     inline fn symbol_of(index: u24, nArgs: u4) Object {
         if (config.immediateSymbols) {
-            return Object.makeImmediate(.Symbol, hash_of(index, nArgs));
+            return Object.makeSymbol(.Symbol, hash(index), nArgs);
         }
         return Object.fromAddress(&staticSymbols[index - 1]);
     }
@@ -152,7 +143,7 @@ pub fn asStringFromHash(h: u24) Object {
 pub fn loadSymbols(strs: []const heap.HeapObjectConstPtr) void {
     symbolTable.loadSymbols(strs);
 }
-pub inline fn lookup(string: Object) Object {
+pub inline fn lookup(string: Object) ?Object {
     return symbolTable.lookup(string);
 }
 pub inline fn intern(string: Object) Object {
@@ -197,7 +188,7 @@ pub const SymbolTable = struct {
             self.allocator.free(self.mem);
             self.mem = memory;
         }
-        self.loadSymbols(initialSymbolStrings[0..initialSymbolStrings.len]);
+        self.loadSymbols(&initialSymbolStrings);
         return &self.treap;
     }
     fn deinit(self: *Self) void {
@@ -207,10 +198,10 @@ pub const SymbolTable = struct {
     fn asString(self: *Self, index: u32) Object {
         return self.theTreap(0).getKey(index);
     }
-    pub fn lookup(self: *Self, string: Object) Object {
+    pub fn lookup(self: *Self, string: Object) ?Object {
         return lookupDirect(self.theTreap(0), string);
     }
-    fn lookupDirect(trp: *SymbolTreap, string: Object) Object {
+    fn lookupDirect(trp: *SymbolTreap, string: Object) ?Object {
         const index = trp.lookup(string);
         if (index > 0) {
             if (config.immediateSymbols) {
@@ -219,23 +210,20 @@ pub const SymbolTable = struct {
             }
             return @bitCast(@intFromPtr(trp.getValue(index)));
         }
-        return Nil();
+        return null;
     }
     fn intern(self: *Self, string: Object) Object {
         const trp = self.theTreap(1);
         while (true) {
-            const lu = lookupDirect(trp, string);
-            if (!lu.isNil()) return lu;
-            const result = internDirect(self, trp, string);
-            if (!result.isNil()) return result;
+            if (lookupDirect(trp, string)) |result| return result;
+            if (internDirect(self, trp, string)) |result| return result;
             @panic("unreachable"); // out of space
         }
         @panic("unreachable");
     }
-    fn internDirect(self: *Self, trp: *SymbolTreap, string: Object) Object {
-        const result = lookupDirect(trp, string);
-        if (!result.isNil()) return result;
-        const str = string.promoteToUnmovable() catch return Nil();
+    fn internDirect(self: *Self, trp: *SymbolTreap, string: Object) ?Object {
+        if (lookupDirect(trp, string)) |result| return result;
+        const str = string.promoteToUnmovable() catch @panic("immovable");
         const index = trp.insert(str) catch @panic("unreachable");
         if (config.immediateSymbols)
             return SymbolsEnum.symbol_of(@truncate(index), numArgs(string));
@@ -261,21 +249,21 @@ test "symbols match initialized symbol table" {
     const expectEqual = std.testing.expectEqual;
     var symbol = SymbolTable.init(&globalAllocator);
     defer symbol.deinit();
-    symbol.loadSymbols(initialSymbolStrings[0 .. initialSymbolStrings.len - 1]);
+    symbol.loadSymbols(&initialSymbolStrings);
     const debugging = false;
     if (debugging) {
         for (&Symbols.staticSymbols, 0..) |ss, i|
             trace("ss[{}] {x} {x}", .{ i, ss.header.hash, ss.data.unsigned });
     }
     try expectEqual(1, symbolIndex(Symbols.value.asObject()));
-    try expectEqual(0, symbolArity(Symbols.value.asObject()));
+    try expectEqual(0, Symbols.value.asObject().numArgs());
     try expectEqual(2, symbolIndex(Symbols.@"=".asObject()));
-    try expectEqual(1, symbolArity(Symbols.@"=".asObject()));
-    try expectEqual(0, symbolArity(Symbols.Object.asObject()));
-    try expectEqual(2, symbolArity(Symbols.@"at:put:".asObject()));
-    try expectEqual(1, symbolArity(Symbols.@"<=".asObject()));
+    try expectEqual(1, Symbols.@"=".asObject().numArgs());
+    try expectEqual(0, Symbols.Object.asObject().numArgs());
+    try expectEqual(2, Symbols.@"at:put:".asObject().numArgs());
+    try expectEqual(1, Symbols.@"<=".asObject().numArgs());
     try expectEqual(Symbols.lastPredefinedSymbol, symbolIndex(Symbols.Object.asObject()));
-    try expectEqual(0, symbolArity(Symbols.Object.asObject()));
+    try expectEqual(0, Symbols.Object.asObject().numArgs());
     switch (config.objectEncoding) {
         .zag => {
             try expectEqual(0x5FB38659, Symbols.Object.asObject().testU());
@@ -310,8 +298,16 @@ test "symbols match initialized symbol table" {
 pub const QuickSelectors = [_]Object{ Symbols.@"=".asObject(), Symbols.value.asObject(), Symbols.@"value:".asObject(), Symbols.@"cull:".asObject() };
 pub const QuickSelectorsMask = 0x19046000;
 pub const QuickSelectorsMatch = 0x18046000;
+pub fn findQuickSelector(obj: Object) ?u2 {
+    if (config.immediateSymbols and (obj.testU() & QuickSelectorsMask) == QuickSelectorsMatch) {
+        for (QuickSelectors,0..) |qs,i| {
+            if (obj.equals(qs)) return @truncate(i);
+        }
+    }
+    return null;
+}
 test "find key value for quick selectors" {
-    try config.skipNotZag();
+    if (!config.immediateSymbols) return error.SkipZigTest;
     var mask: u64 = 0;
     var match: u64 = 0;
     outer: for (8..32) |bit| {
@@ -325,6 +321,9 @@ test "find key value for quick selectors" {
     }
     try std.testing.expectEqual(mask, QuickSelectorsMask);
     try std.testing.expectEqual(match, QuickSelectorsMatch);
+    for (QuickSelectors) |obj| {
+        try std.testing.expect(findQuickSelector(obj)!=null);
+    }
 }
 test "force second allocation of symbol treap" {
     if (true) return error.SkipZigTest;
@@ -340,5 +339,7 @@ test "force second allocation of symbol treap" {
     defer symbol.deinit();
     symbol.loadSymbols(&initialSymbolStrings);
     symbol.loadSymbols(&moreSymbolStrings);
+    try std.testing.expect(lookup(initialSymbolStrings[1]) != null);
+    try std.testing.expect(lookup(moreSymbolStrings[1]) != null);
     //_ = symbol.allocator.allocArray(49,480,u8);
 }

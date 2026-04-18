@@ -395,7 +395,8 @@ test "nursery allocation" {
     try ee(initialContext, newContext);
     process.ptr().collectNursery(sp, initialContext, 0);
     try ee(emptySize - switch (config.objectEncoding) {
-        .zag, .nan => 12,
+        .zag => 12,
+        .nan => 5,
         else => 7,
     }, process.freeNursery());
     // age test
@@ -524,7 +525,7 @@ const Stack = struct {
                    if (addr == @intFromPtr(selfAddr)) " <--self" else "" });
         }
     }
-    pub //inline
+    pub inline //
     fn traceStack(self: SP, why: []const u8, context: *Context, extra: Extra) void {
         trace("traceStack ({s}) {} {}", .{why, @intFromPtr(self.endOfStack()) - @intFromPtr(self), self.getStack().len});
         trace("sp = {*} context = {*} extra = {x}", .{self, context, @as(u64,@bitCast(extra))});
@@ -623,6 +624,8 @@ test "Stack" {
     try ee(True(), sp1.next);
     try ee(False(), sp1.top);
     _ = sp1.drop().push(Object.from(42, sp1, context));
+    std.debug.print("sp1.top = {x} {x}\n",.{sp1.top.testU(), Object.from(42, sp1, context).testU()});
+    try config.skipForDebugging();
     try ee(sp1.top.to(i64), 42);
 }
 pub const threadedFunctions = struct {

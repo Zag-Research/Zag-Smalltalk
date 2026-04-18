@@ -22,10 +22,10 @@ pub const Object = packed struct(u64) {
         return @bitCast(@as(u64, 2));
     }
     pub const maxInt = 0x7fff_ffff_ffff_ffff;
-    pub const LowTagType = void;
-    pub const lowTagSmallInteger = {};
-    pub const HighTagType = void;
-    pub const highTagSmallInteger = {};
+    pub const LowTagType = u0;
+    pub const lowTagSmallInteger = 0;
+    pub const HighTagType = u0;
+    pub const highTagSmallInteger = 0;
     pub const PackedTagType = u3;
     pub const packedTagSmallInteger = 1;
     pub const signatureTag = 1;
@@ -40,21 +40,32 @@ pub const Object = packed struct(u64) {
     pub inline fn asUntaggedI(i: i64) i64 {
         return i;
     }
-    pub inline //
-    fn nativeI(self: object.Object) ?i64 {
+    pub inline fn nativeI(self: object.Object) ?i64 {
         return @bitCast(self);
+    }
+    pub inline fn fromNativeI(t: i64, _: anytype, _: anytype) object.Object {
+        return @bitCast(t);
     }
     pub inline fn nativeF(_: object.Object) ?f64 {
         @panic("not implemented");
     }
     pub inline fn isFloat(_: object.Object) bool {
-        return false;
+        @panic("not implemented");
     }
     pub inline fn fromNativeF(_: f64, _: anytype, _: anytype) object.Object {
         @panic("not implemented");
     }
     pub inline fn symbolHash(self: object.Object) ?u24 {
+        return @truncate(self.hash32() >> 8);
+    }
+    pub inline fn numArgs(self: object.Object) u4 {
         return @truncate(self.hash32());
+    }
+    pub fn makeSymbol(class: ClassIndex.Compact, hash: u24, arity: u4) Object {
+        return makeImmediate(class, (@as(u32, hash) << 8) | @as(u32, arity));
+    }
+    pub inline fn isSymbol(_: object.Object) bool {
+        return true;
     }
     pub inline fn extraValue(self: object.Object) object.Object {
         return @bitCast(self.rawU() >> 8);
@@ -101,12 +112,6 @@ pub const Object = packed struct(u64) {
     pub inline fn toNatNoCheck(self: Object) u64 {
         return @bitCast(self);
     }
-    pub inline fn withPrimitive(self: object.Object, prim: u64) object.Object {
-        return @bitCast(self.rawU() | prim << 40);
-    }
-    inline fn toDoubleFromMemory(_: object.Object) f64 {
-        @panic("Not implemented");
-    }
     pub fn returnObjectClosure(_: Object, _: anytype) ?Object {
         return null;
     }
@@ -129,9 +134,6 @@ pub const Object = packed struct(u64) {
         return @truncate(self.rawU());
     }
 
-    pub inline fn isSymbol(_: object.Object) bool {
-        return true;
-    }
     pub inline //
     fn fromAddress(value: anytype) Object {
         return @bitCast(@intFromPtr(value));
@@ -177,9 +179,6 @@ pub const Object = packed struct(u64) {
     pub inline fn hasMemoryReference(_: Object) bool {
         return false;
     }
-    pub inline fn isHeapObject(_: Object) bool {
-        return false;
-    }
     pub inline fn ifHeapObject(_: object.Object) ?*HeapObject {
         return null;
     }
@@ -200,10 +199,10 @@ pub const Object = packed struct(u64) {
     pub const getField = OF.getField;
     pub const get_class = OF.get_class;
     pub const isBool = OF.isBool;
+    pub const toBoolNoCheck = OF.toBoolNoCheck;
     pub const isIndexable = OF.isIndexable;
     pub const isNil = OF.isNil;
     pub const isUnmoving = OF.isUnmoving;
-    pub const numArgs = OF.numArgs;
     pub const promoteToUnmovable = OF.promoteToUnmovable;
     pub const rawFromU = OF.rawFromU;
     pub const setField = OF.setField;

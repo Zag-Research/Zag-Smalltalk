@@ -48,7 +48,7 @@ pub const @"+" = struct {
         unreachable;
     }
     test "simple add" {
-        if (true) return config.skipForDebugging;
+        try config.skipForDebugging();
         var exe = Execution.initTest("simple add", .{ tf.primitive, comptime fromPrimitive(1) });
         try exe.runTest(
             &[_]Object{

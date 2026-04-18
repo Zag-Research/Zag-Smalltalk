@@ -64,13 +64,13 @@ pub const Object = packed union {
 
     pub const LowTagType = TagAndClassType;
     pub const lowTagSmallInteger = makeImmediate(.SmallInteger, 0).tagbits();
-    pub const HighTagType = void;
-    pub const highTagSmallInteger = {};
+    pub const HighTagType = u0;
+    pub const highTagSmallInteger = 0;
     pub const PackedTagType = u3;
     pub const packedTagSmallInteger = 1;
     pub const signatureTag = Tag.u(.smallInteger);
     const TagAndClassType = u1;
-    pub inline fn tagbits(self: Self) TagAndClassType {
+    inline fn tagbits(self: Self) TagAndClassType {
         return @truncate(self.rawU());
     }
 
@@ -117,7 +117,7 @@ pub const Object = packed union {
         return @bitCast((@as(u64, @bitCast(@as(i64, i))) << 1) + SmallIntegerTag);
     }
 
-    pub inline fn isHeapObject(self: Object) bool {
+    inline fn isHeapObject(self: Object) bool {
         return Tag.isSet(self, .pointer);
     }
     pub inline fn pointer(self: Object, T: type) ?T {
@@ -143,11 +143,7 @@ pub const Object = packed union {
     }
 
     pub inline fn isBool(self: Object) bool {
-        return self.rawU() == Object.True().rawU() or self.rawU() == Object.False().rawU();
-    }
-    pub inline fn isSymbol(self: Object) bool {
-        // symbols are heap objects
-        return self.isImmediateClass(.Symbol);
+        return self.equals(Object.True()) or self.equals(Object.False());
     }
 
     inline fn oImm(c: Tag, h: u61) Self {
@@ -173,6 +169,21 @@ pub const Object = packed union {
     }
     pub inline fn fromNativeF(t: f64, sp: SP, context: *Context) object.Object {
         return memoryFloat(t, sp, context);
+    }
+
+    pub inline fn symbolHash(self: Object) ?u24 {
+        if (self.isSymbol()) return @truncate(self.hash32() >> 8);
+        return null;
+    }
+    pub inline fn numArgs(self: Object) u4 {
+        return @truncate(self.hash32());
+    }
+    pub fn makeSymbol(_: anytype, _: anytype, _: anytype) Object {
+        @panic("not implemented");
+    }
+    pub inline fn isSymbol(self: Object) bool {
+        // symbols are heap objects
+        return self.isImmediateClass(.Symbol);
     }
 
     // Hash helpers
@@ -299,10 +310,7 @@ pub const Object = packed union {
         }
         return self.addr().header.classIndex;
     }
-    pub inline fn hasMemoryReference(self: object.Object) bool {
-        return self.isHeapObject();
-    }
-
+    pub const hasMemoryReference = isHeapObject;
     pub inline fn ifHeapObject(self: Object) ?*HeapObject {
         if (self.isHeapObject()) return @constCast(@ptrCast(self.addr()));
         return null;
@@ -337,12 +345,6 @@ pub const Object = packed union {
         return 0;
     }
 
-    // Add symbolHash method
-    pub inline fn symbolHash(self: Object) ?u24 {
-        if (self.isImmediateClass(.Symbol)) return self.addr().header.hash;
-        return null;
-    }
-
     // Add missing methods
     pub inline fn signature(_: Object) ?zag.execute.Signature {
         // Spur doesn't use immediate signatures like other encodings
@@ -351,12 +353,6 @@ pub const Object = packed union {
 
     pub inline fn isDouble(self: Object) bool {
         return self.isMemoryDouble();
-    }
-
-    pub inline fn withPrimitive(self: Object, prim: u64) Object {
-        // For spur encoding, we can't easily embed primitives in objects
-        // However, this is only done for signature objects, which already aren't quite valid
-        return @bitCast(self.rawU() | prim << 40);
     }
 
     pub inline fn extraValue(self: Object) Object {
@@ -379,10 +375,10 @@ pub const Object = packed union {
     pub const format = OF.format;
     pub const getField = OF.getField;
     pub const get_class = OF.get_class;
+    pub const toBoolNoCheck = OF.toBoolNoCheck;
     pub const isIndexable = OF.isIndexable;
     pub const isNil = OF.isNil;
     pub const isUnmoving = OF.isUnmoving;
-    pub const numArgs = OF.numArgs;
     pub const promoteToUnmovable = OF.promoteToUnmovable;
     pub const rawFromU = OF.rawFromU;
     pub const to = OF.to;

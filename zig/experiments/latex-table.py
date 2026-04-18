@@ -32,6 +32,8 @@ def parse(file_content):
             enc = "max"
         elif enc == "zagSpur":
             enc = "maxSpur"
+        elif enc == "zagMixed":
+            enc = "ultra"
         elif enc == "taggedPtr":
             enc = "taggedLow"
         results[enc] = {}
@@ -50,9 +52,11 @@ def parse(file_content):
 
 
 def get_base(benchmark, results):
+    if False:
+        return {"median": 0, "mean": 0, "geomean": 0}
     if benchmark.startswith("Integer"):
         return results.get("onlyInt", {}).get(benchmark)
-    if benchmark == "Float":
+    if benchmark.startswith("Float"):
         return results.get("onlyFloat", {}).get(benchmark)
     return None
 
@@ -90,7 +94,6 @@ def per_encoding_tables(results, benchmark_order):
         rows = []
         for bm in benchmark_order:
             entry = benchmarks.get(bm)
-            base = get_base(bm, results)
             cells = (
                 ["N/A"] * len(METRICS)
                 if entry is None
@@ -107,17 +110,18 @@ summary_order = [
     "nan",
     "max",
     "maxSpur",
+    "ultra",
     "spur",
     "taggedLow",
     "taggedHigh",
     "taggedInt",
+    "taggedSMI",
     "cachedPtr",
     "ptr",
 ]
 
 
-def median_summary(results, benchmark_order):
-    total = "Native" in benchmark_order
+def median_summary(results, benchmark_order, total=False):
     rows = []
     for enc in results.keys() if total else summary_order:
         if enc not in results:
@@ -148,11 +152,13 @@ colours = [
     "olive!70",
     "red!60",
     "teal!40",
+    "cyan!50!black",
+    "green!60",
 ]
 
 
 def median_graph(results, benchmark_order):
-    result = "\\benchmarkBarChart{}{%"
+    result = f"\\benchmarkBarChart{{}}{{{','.join(summary_order)}}}{{%"
     for enc, colour in zip(summary_order, colours):
         if enc not in results:
             continue
@@ -181,10 +187,12 @@ SCATTER_ENCODINGS = [
     "ptr",
     "spur",
     "taggedInt",
-    "taggedLow",
+    #    "taggedSMI",
+    #    "taggedLow",
     "taggedHigh",
     "max",
-    "maxSpur",
+    #    "maxSpur",
+    "ultra",
 ]
 
 
@@ -201,10 +209,14 @@ def latex_arch_label(arch):
 
 
 def scatter_points(results):
-    base_int = results.get("onlyInt", {}).get("IntegerBr")
-    base_float = results.get("onlyFloat", {}).get("Float")
+    if not results:
+        return {}
+    base_int = get_base("IntegerBr", results)
+    base_float = get_base("Float", results)
     if not base_int or not base_float:
         raise ValueError("Missing onlyInt/onlyFloat baselines for scatter plot.")
+    # base_int = {"median": 0}
+    # base_float = {"median": 0}
     points = {}
     for enc in SCATTER_ENCODINGS:
         entry = results.get(enc, {})
@@ -245,17 +257,17 @@ def pareto_frontier(all_points):
 def axis_limits(points):
     xs = [p[0] for p in points]
     ys = [p[1] for p in points]
+    min_x = min(xs)
     max_x = max(xs)
-    max_y = max(ys)
+    pad_x = max(10, int(math.ceil(max_x * 0.03)))
     min_y = min(ys)
-    pad_x = max(10, int(math.ceil(max_x * 0.06)))
-    pad_y = max(10, int(math.ceil(max_y * 0.06)))
+    max_y = max(ys)
+    pad_y = max(10, int(math.ceil(max_y * 0.05)))
+    xmin = min(int(math.floor((min_x - pad_x) / 10.0) * 10), 0)
+    ymin = int(math.floor((min_y - pad_y) / 10.0) * 10)
     xmax = int(math.ceil((max_x + pad_x) / 10.0) * 10)
     ymax = int(math.ceil((max_y + pad_y) / 10.0) * 10)
-    ymin = int(math.floor((min_y - pad_y) / 10.0) * 10)
-    if ymin < 0:
-        ymin = 0
-    return 0, xmax, ymin, ymax
+    return xmin, xmax, ymin, ymax
 
 
 def label_anchor(y, ymin, ymax):
@@ -266,7 +278,7 @@ def label_anchor(y, ymin, ymax):
     return "south west"
 
 
-def scatter_plot_raw(results_a, arch_a, results_b, arch_b):
+def scatter_plot_raw(results_a, arch_a, results_b=None, arch_b=None):
     points_a = scatter_points(results_a)
     points_b = scatter_points(results_b)
     all_points = list(points_a.values()) + list(points_b.values())
@@ -275,16 +287,14 @@ def scatter_plot_raw(results_a, arch_a, results_b, arch_b):
     frontier_b = pareto_frontier(list(points_b.values()))
 
     lines = []
-    lines.append("% ── Scatter plot (raw ms) ──")
-    lines.append("\\newcommand{\\scatterPlotRaw}{%")
     lines.append("\\begin{tikzpicture}")
     lines.append("\\begin{axis}[")
     lines.append("    width=\\columnwidth,")
     lines.append("    height=\\columnwidth,")
     lines.append("    xlabel={IntegerBr (ms)},")
     lines.append("    ylabel={Float (ms)},")
-    lines.append(f"    xmin={xmin}, xmax={xmax},")
-    lines.append(f"    ymin={ymin}, ymax={ymax},")
+    lines.append(f"    xmin={min(0, xmin)}, xmax={xmax},")
+    lines.append(f"    ymin={min(0, ymin)}, ymax={ymax},")
     lines.append("    grid=major,")
     lines.append("    grid style={line width=0.2pt, draw=gray!30},")
     lines.append("    legend style={")
@@ -316,19 +326,20 @@ def scatter_plot_raw(results_a, arch_a, results_b, arch_b):
         + "\n    };"
     )
     lines.append(f"    \\addlegendentry{{{latex_arch_label(arch_a)}}}")
-    lines.append(
-        "    \\addplot[only marks, mark=*, mark size=3pt, red!70!black] coordinates {"
-    )
-    lines.append(
-        "        "
-        + " ".join(
-            f"({points_b[e][0]},{points_b[e][1]})"
-            for e in SCATTER_ENCODINGS
-            if e in points_b
+    if arch_b:
+        lines.append(
+            "    \\addplot[only marks, mark=*, mark size=3pt, red!70!black] coordinates {"
         )
-        + "\n    };"
-    )
-    lines.append(f"    \\addlegendentry{{{latex_arch_label(arch_b)}}}")
+        lines.append(
+            "        "
+            + " ".join(
+                f"({points_b[e][0]},{points_b[e][1]})"
+                for e in SCATTER_ENCODINGS
+                if e in points_b
+            )
+            + "\n    };"
+        )
+        lines.append(f"    \\addlegendentry{{{latex_arch_label(arch_b)}}}")
     lines.append(
         "    \\addplot[gray!60, thick, dashed] coordinates {(-100,-100) (-100,-100)};"
     )
@@ -342,18 +353,18 @@ def scatter_plot_raw(results_a, arch_a, results_b, arch_b):
         lines.append(
             f"    \\node[font=\\tiny, blue!80!black, anchor={anchor}] at (axis cs:{x + 2},{y + 3}) {{{enc}}};"
         )
-    lines.append(f"    % {latex_arch_label(arch_b)} labels")
-    for enc in SCATTER_ENCODINGS:
-        if enc not in points_b:
-            continue
-        x, y = points_b[enc]
-        anchor = label_anchor(y, ymin, ymax)
-        lines.append(
-            f"    \\node[font=\\tiny, red!70!black, anchor={anchor}] at (axis cs:{x + 2},{y + 3}) {{{enc}}};"
-        )
+    if arch_b:
+        lines.append(f"    % {latex_arch_label(arch_b)} labels")
+        for enc in SCATTER_ENCODINGS:
+            if enc not in points_b:
+                continue
+            x, y = points_b[enc]
+            anchor = label_anchor(y, ymin, ymax)
+            lines.append(
+                f"    \\node[font=\\tiny, red!70!black, anchor={anchor}] at (axis cs:{x + 2},{y + 3}) {{{enc}}};"
+            )
     lines.append("\\end{axis}")
     lines.append("\\end{tikzpicture}")
-    lines.append("}")
     return "\n".join(lines)
 
 
@@ -368,7 +379,7 @@ def main():
         print(per_encoding_tables(results, benchmark_order))
         print("}")
         print("\\newcommand{\\" + arch + "Total}{")
-        print(median_summary(results, benchmark_order))
+        print(median_summary(results, benchmark_order, True))
         print("}")
         benchmark_summary = [item for item in benchmark_order if item not in NATIVES]
         print("\\newcommand{\\" + arch + "Summary}{")
@@ -377,12 +388,18 @@ def main():
         print("\\newcommand{\\" + arch + "BarChart}{")
         print(median_graph(results, benchmark_summary))
         print("}")
+        print("\\newcommand{\\" + arch + "ScatterPlot}{")
+        print(scatter_plot_raw(results, arch))
+        print("}")
     elif len(args.filename) == 2:
         with open(args.filename[0]) as f:
             results_a, _, arch_a = parse(f.read())
         with open(args.filename[1]) as f:
             results_b, _, arch_b = parse(f.read())
+        print("\\newcommand{\\scatterPlotRaw}{")
+        print("% ── Scatter plot (raw ms) ──")
         print(scatter_plot_raw(results_a, arch_a, results_b, arch_b))
+        print("}")
     else:
         raise SystemExit("Provide one file (tables) or two files (scatter plot).")
 
