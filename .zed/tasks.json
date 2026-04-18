@@ -3,7 +3,7 @@
 [
   {
     "label": "bench",
-    "command": "zig build bench",
+    "command": "date;time zig build bench;date",
     "cwd": "$ZED_WORKTREE_ROOT/zig",
   },
   {

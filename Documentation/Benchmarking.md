@@ -3,6 +3,8 @@
 - threadring 
 - binarytrees
 
+[Scheme R7RS Benchmarks](github.com/ecraven/r7rs-benchmarks) 60 Scheme benchmarks
+
 Integer benchmarks (fibonacci, integer benchmarks),
 
  [Clément Béra](https://clementbera.wordpress.com/ "Clément Béra") [on Cog optimizations](https://clementbera.wordpress.com/2014/08/12/arithmetic-inlined-and-special-selectors/) including how to turn them off (for benchmarking comparisons)
@@ -27,7 +29,8 @@ ifLast: [block] = (
 )
 )
 ```
-
+## Data Sources
+[Public BI benchmark](https://github.com/cwida/public_bi_benchmark) has some very large user-donated datasets
 ## Benchmarking Encodings
 There are currently two runs of the `bench` script on an [Apple M1](benchmarking/bench-m1) and an [X86-64](benchmarking/bench-x86).
 

@@ -1,9 +1,9 @@
-### Zag Tagged Encoding
+### ZagOrig Tagged Encoding
 This is an encoding that tags the low bits of a word to represent various immediate values. It was originally a modification of Spur encoding.
 
 Spur is the encoding used by [OpenSmalltalkVM](https://github.com/OpenSmalltalk) and was designed by Elliot Miranda and Clement Bera. They tagged only a few kinds of immediate values because their philosophy is that most objects should be in memory (i.e. heap) whereas our philosophy is that as many objects as possible should be immediate values. This reduces memory traffic, allows for more efficient dispatch, and encodes a significant set of block closures to not require any memory allocation.
 
-This is evolved from an earlier attempt [[Encoding-Modified-Spur-Old]] and a departure from [[Encoding-NaN]] which was promising (there is still a switch to enable it, but it's not been kept up to date, and there are optimizations that depend on this encoding instead - so it's essentially a dead end).
+This is evolved from an earlier attempt [[Encoding-Modified-Spur-Old]] and a departure from [[NaN]] which was promising (there is still a switch to enable it, but it's not been kept up to date, and there are optimizations that depend on this encoding instead - so it's essentially a dead end).
 
 Spur uses the [following format](https://clementbera.wordpress.com/2018/11/09/64-bits-immediate-floats/):
 ![[Pasted image 20240115082827.png]]

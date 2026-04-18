@@ -102,9 +102,6 @@ pub const Object = packed struct(u64) {
             else => @compileError("unsupported target cpu"),
         }
     }
-    inline fn toObject(int: i64) Object {
-        return @bitCast(std.math.rotr(u64, @as(u64, @bitCast(int)) + integerTag, intTagBits));
-    }
     pub const testU = rawU;
     inline fn rawU(self: Object) u64 {
         return @bitCast(self);
@@ -178,8 +175,8 @@ pub const Object = packed struct(u64) {
         if (self.isInt()) return @bitCast(@as(u64, @bitCast(self)) << intTagBits);
         return null;
     }
-    pub inline fn fromUntaggedI(i: i64, _: anytype, _: anytype) Object {
-        return toObject(i);
+    pub inline fn fromUntaggedI(int: i64, _: anytype, _: anytype) Object {
+        return @bitCast(std.math.rotr(u64, @as(u64, @bitCast(int)) + integerTag, intTagBits));
     }
     pub const taggedI = untaggedI;
     pub const fromTaggedI = fromUntaggedI;
@@ -191,7 +188,7 @@ pub const Object = packed struct(u64) {
         return @as(i64, int) << intTagBits;
     }
     pub inline fn fromNativeI(int: i50, _: anytype, _: anytype) Object {
-        return toObject(asUntaggedI(int));
+        return fromUntaggedI(asUntaggedI(int), null, null);
     }
     pub inline fn nativeF(self: Object) ?f64 {
         if (self.isImmediateDouble()) return @bitCast(self);

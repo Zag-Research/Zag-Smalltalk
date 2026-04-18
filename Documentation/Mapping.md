@@ -3,7 +3,7 @@
 
 ## Object encoding
 
-We use an immediate [[Encoding]] that is somewhat based on the  [SPUR](http://www.mirandabanda.org/cogblog/2013/09/05/a-spur-gear-for-cog/)  encoding used by  [OpenSmalltalk VM](https://github.com/OpenSmalltalk), but with a strong bias toward immediate values. As such it supports immediate representations for many more immediate types as well as a larger range of 64-bit floats.  (The only trade off is 56-bit instead of 61-bit `SmallInteger`.)
+We use an immediate [[Encodings]] that is somewhat based on the  [SPUR](http://www.mirandabanda.org/cogblog/2013/09/05/a-spur-gear-for-cog/)  encoding used by  [OpenSmalltalk VM](https://github.com/OpenSmalltalk), but with a strong bias toward immediate values. As such it supports immediate representations for many more immediate types as well as a larger range of 64-bit floats.  (The only trade off is 56-bit instead of 61-bit `SmallInteger`.)
 
 ### Object in Memory
 This encoding was initially inspired by some of the basic ideas from the [SPUR](http://www.mirandabanda.org/cogblog/2013/09/05/a-spur-gear-for-cog/) encoding for objects on the heap, used by the [OpenSmalltalk VM](https://github.com/OpenSmalltalk).
