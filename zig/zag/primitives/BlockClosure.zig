@@ -81,7 +81,7 @@ pub const threadedFns = struct {
                 .heap => return Object.makeThunk(.ThunkHeap, obj.to(*HeapObject), 0),
                 .immediates => {
                     const original: i64 = @bitCast(obj);
-                    const signExtended: i56 = @truncate(original << 8 >> 8);
+                    const signExtended: i45 = @truncate(original << 8 >> 8);
                     if (signExtended == original)
                         return Object.makeThunkNoArg(.ThunkImmediate, @bitCast(signExtended));
                 },

@@ -16,8 +16,9 @@ const HeapHeader = zag.heap.HeapHeader;
 const HeapObject = zag.heap.HeapObject;
 const HeapObjectConstPtr = zag.heap.HeapObjectConstPtr;
 const InMemory = zag.InMemory;
-const encode = @import("floatSpur.zig").Fast.encode;
-const decode = @import("floatSpur.zig").Fast.decode;
+const floatEncoding = @import("floatEncoding.zig").Fst1;
+const encode = floatEncoding.encode;
+const decode = floatEncoding.decode;
 
 const Tag = enum(u3) {
     heap = 0,
@@ -122,6 +123,7 @@ pub const Object = packed union {
     }
     pub inline fn fromNativeF(t: f64, sp: SP, context: *Context) Object {
         return @bitCast(encode(t) catch {
+            std.debug.print("inMemory {}\n",.{t});
             return InMemory.float(t, sp, context);
         });
     }
@@ -142,7 +144,7 @@ pub const Object = packed union {
     }
 
     pub inline fn symbolHash(self: Object) ?u24 {
-        if (self.isImmediateClass(.Symbol)) return @truncate(self.immediate.hash);
+        if (self.isSymbol()) return self.hash24();
         return null;
     }
     pub inline fn numArgs(self: Object) u4 {

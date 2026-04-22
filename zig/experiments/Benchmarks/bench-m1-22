@@ -1,0 +1,218 @@
+Linux dmason-m1 6.17.9+deb13-asahi #1 SMP PREEMPT Debian 6.17.9-1-1~deb13u1 (2025-11-26) aarch64 GNU/Linux
+CPUs isolated: 
+CPU4 info:
+ Related cpus    : 4 5 6 7
+ SetSpeed        : <unsupported>
+ Governor        : schedutil
+ Max Freq        : 2988000
+./aarch64/run-benchmarks: 38: CPU4: not found
+Using prefix: setarch --addr-no-randomize 
+
+Config:
+  compile_date   = 2026-04-22T09:07:52-0400
+  git_version    = 2026-04-18T15:45:20-04:00-a630b6c0
+  cpu            = generic (.aarch64)
+  objectEncoding = .cachedPtr
+  max_classes    = 255
+  stack/nursery  = 511w/3831w (8192w)
+for '40 fibonacci'
+          Median   Mean   StdDev  SD/Mean GeomMean(10 runs, 3 warmups)
+IntegerBr 3220ms  3220ms   0.49ms   0.0%  3220ms
+    Float 5115ms  5114ms   8.21ms   0.2%  5114ms
+
+Config:
+  compile_date   = 2026-04-22T09:07:52-0400
+  git_version    = 2026-04-18T15:45:20-04:00-a630b6c0
+  cpu            = generic (.aarch64)
+  objectEncoding = .compact
+  max_classes    = 255
+  stack/nursery  = 511w/3831w (8192w)
+for '40 fibonacci'
+          Median   Mean   StdDev  SD/Mean GeomMean(10 runs, 3 warmups)
+IntegerBr 3009ms  3009ms   0.30ms   0.0%  3009ms
+    Float 2941ms  2941ms   1.33ms   0.0%  2941ms
+
+Config:
+  compile_date   = 2026-04-22T09:07:52-0400
+  git_version    = 2026-04-18T15:45:20-04:00-a630b6c0
+  cpu            = generic (.aarch64)
+  objectEncoding = .compact6
+  max_classes    = 255
+  stack/nursery  = 511w/3831w (8192w)
+for '40 fibonacci'
+          Median   Mean   StdDev  SD/Mean GeomMean(10 runs, 3 warmups)
+IntegerBr 2978ms  2978ms   0.00ms   0.0%  2977ms
+    Float 2991ms  2990ms   1.20ms   0.0%  2990ms
+
+Config:
+  compile_date   = 2026-04-22T09:07:52-0400
+  git_version    = 2026-04-18T15:45:20-04:00-a630b6c0
+  cpu            = generic (.aarch64)
+  objectEncoding = .compactI
+  max_classes    = 255
+  stack/nursery  = 511w/3831w (8192w)
+for '40 fibonacci'
+          Median   Mean   StdDev  SD/Mean GeomMean(10 runs, 3 warmups)
+IntegerBr 2900ms  2900ms   0.63ms   0.0%  2899ms
+    Float 2992ms  2991ms   0.49ms   0.0%  2991ms
+
+Config:
+  compile_date   = 2026-04-22T09:07:52-0400
+  git_version    = 2026-04-18T15:45:20-04:00-a630b6c0
+  cpu            = generic (.aarch64)
+  objectEncoding = .compactI6
+  max_classes    = 255
+  stack/nursery  = 511w/3831w (8192w)
+for '40 fibonacci'
+          Median   Mean   StdDev  SD/Mean GeomMean(10 runs, 3 warmups)
+IntegerBr 2884ms  2884ms   0.46ms   0.0%  2884ms
+    Float 3047ms  3047ms   0.45ms   0.0%  3046ms
+
+Config:
+  compile_date   = 2026-04-22T09:07:52-0400
+  git_version    = 2026-04-18T15:45:20-04:00-a630b6c0
+  cpu            = generic (.aarch64)
+  objectEncoding = .nan
+  max_classes    = 255
+  stack/nursery  = 511w/3831w (8192w)
+for '40 fibonacci'
+          Median   Mean   StdDev  SD/Mean GeomMean(10 runs, 3 warmups)
+IntegerBr 3061ms  3061ms   0.00ms   0.0%  3060ms
+    Float 3118ms  3117ms   0.40ms   0.0%  3117ms
+
+Config:
+  compile_date   = 2026-04-22T09:07:52-0400
+  git_version    = 2026-04-18T15:45:20-04:00-a630b6c0
+  cpu            = generic (.aarch64)
+  objectEncoding = .onlyFloat
+  max_classes    = 255
+  stack/nursery  = 511w/3831w (8192w)
+for '40 fibonacci'
+          Median   Mean   StdDev  SD/Mean GeomMean(10 runs, 3 warmups)
+    Float 2610ms  2609ms   0.54ms   0.0%  2609ms
+
+Config:
+  compile_date   = 2026-04-22T09:07:52-0400
+  git_version    = 2026-04-18T15:45:20-04:00-a630b6c0
+  cpu            = generic (.aarch64)
+  objectEncoding = .onlyInt
+  max_classes    = 255
+  stack/nursery  = 511w/3831w (8192w)
+for '40 fibonacci'
+          Median   Mean   StdDev  SD/Mean GeomMean(10 runs, 3 warmups)
+IntegerBr 2665ms  2665ms   4.64ms   0.2%  2665ms
+
+Config:
+  compile_date   = 2026-04-22T09:07:52-0400
+  git_version    = 2026-04-18T15:45:20-04:00-a630b6c0
+  cpu            = generic (.aarch64)
+  objectEncoding = .ptr
+  max_classes    = 255
+  stack/nursery  = 511w/3831w (8192w)
+for '40 fibonacci'
+          Median   Mean   StdDev  SD/Mean GeomMean(10 runs, 3 warmups)
+IntegerBr 4852ms  4852ms   0.40ms   0.0%  4852ms
+    Float 5196ms  5196ms   0.60ms   0.0%  5196ms
+
+Config:
+  compile_date   = 2026-04-22T09:07:52-0400
+  git_version    = 2026-04-18T15:45:20-04:00-a630b6c0
+  cpu            = generic (.aarch64)
+  objectEncoding = .spur
+  max_classes    = 255
+  stack/nursery  = 511w/3831w (8192w)
+for '40 fibonacci'
+          Median   Mean   StdDev  SD/Mean GeomMean(10 runs, 3 warmups)
+IntegerBr 2726ms  2726ms   0.00ms   0.0%  2725ms
+    Float 3342ms  3342ms   0.00ms   0.0%  3341ms
+
+Config:
+  compile_date   = 2026-04-22T09:07:52-0400
+  git_version    = 2026-04-18T15:45:20-04:00-a630b6c0
+  cpu            = generic (.aarch64)
+  objectEncoding = .taggedHigh
+  max_classes    = 255
+  stack/nursery  = 511w/3831w (8192w)
+for '40 fibonacci'
+          Median   Mean   StdDev  SD/Mean GeomMean(10 runs, 3 warmups)
+IntegerBr 2940ms  2940ms   0.00ms   0.0%  2940ms
+    Float 3684ms  3684ms   0.40ms   0.0%  3684ms
+
+Config:
+  compile_date   = 2026-04-22T09:07:52-0400
+  git_version    = 2026-04-18T15:45:20-04:00-a630b6c0
+  cpu            = generic (.aarch64)
+  objectEncoding = .taggedInt
+  max_classes    = 255
+  stack/nursery  = 511w/3831w (8192w)
+for '40 fibonacci'
+          Median   Mean   StdDev  SD/Mean GeomMean(10 runs, 3 warmups)
+IntegerBr 2726ms  2726ms   0.00ms   0.0%  2725ms
+    Float 4830ms  4829ms   1.28ms   0.0%  4829ms
+
+Config:
+  compile_date   = 2026-04-22T09:07:52-0400
+  git_version    = 2026-04-18T15:45:20-04:00-a630b6c0
+  cpu            = generic (.aarch64)
+  objectEncoding = .taggedLow
+  max_classes    = 255
+  stack/nursery  = 511w/3831w (8192w)
+for '40 fibonacci'
+          Median   Mean   StdDev  SD/Mean GeomMean(10 runs, 3 warmups)
+IntegerBr 2889ms  2889ms   0.00ms   0.0%  2889ms
+    Float 3698ms  3698ms   0.46ms   0.0%  3698ms
+
+Config:
+  compile_date   = 2026-04-22T09:07:52-0400
+  git_version    = 2026-04-18T15:45:20-04:00-a630b6c0
+  cpu            = generic (.aarch64)
+  objectEncoding = .taggedSMI
+  max_classes    = 255
+  stack/nursery  = 511w/3831w (8192w)
+for '40 fibonacci'
+          Median   Mean   StdDev  SD/Mean GeomMean(10 runs, 3 warmups)
+IntegerBr 2756ms  2756ms   0.00ms   0.0%  2756ms
+    Float 4943ms  4943ms   2.32ms   0.0%  4943ms
+
+Config:
+  compile_date   = 2026-04-22T09:07:52-0400
+  git_version    = 2026-04-18T15:45:20-04:00-a630b6c0
+  cpu            = generic (.aarch64)
+  objectEncoding = .zag
+  max_classes    = 255
+  stack/nursery  = 511w/3831w (8192w)
+for '40 fibonacci'
+          Median   Mean   StdDev  SD/Mean GeomMean(10 runs, 3 warmups)
+IntegerBr 2825ms  2824ms   0.49ms   0.0%  2824ms
+    Float 3103ms  3103ms   0.30ms   0.0%  3103ms
+
+Config:
+  compile_date   = 2026-04-22T09:07:52-0400
+  git_version    = 2026-04-18T15:45:20-04:00-a630b6c0
+  cpu            = generic (.aarch64)
+  objectEncoding = .zagOrig
+  max_classes    = 255
+  stack/nursery  = 511w/3831w (8192w)
+for '40 fibonacci'
+          Median   Mean   StdDev  SD/Mean GeomMean(10 runs, 3 warmups)
+IntegerBr 2960ms  2960ms   0.00ms   0.0%  2960ms
+    Float 3173ms  3173ms   2.41ms   0.1%  3172ms
+
+Config:
+  compile_date   = 2026-04-22T09:07:52-0400
+  git_version    = 2026-04-18T15:45:20-04:00-a630b6c0
+  cpu            = generic (.aarch64)
+  objectEncoding = .zagSpur
+  max_classes    = 255
+  stack/nursery  = 511w/3831w (8192w)
+for '40 fibonacci'
+          Median   Mean   StdDev  SD/Mean GeomMean(10 runs, 3 warmups)
+IntegerBr 2742ms  2742ms   1.25ms   0.0%  2742ms
+    Float 3066ms  3066ms   0.00ms   0.0%  3066ms
+spur time: 0.959ns 0.838ns 0.619ns covers 95.95%
+spurAlt1 time: 1.056ns 1.025ns 0.713ns covers 95.95%
+spurAlt2 time: 0.648ns 1.297ns 0.715ns covers 95.95%
+fst1 time: 0.585ns 0.492ns 0.424ns covers 94.61%
+fst2 time: 0.587ns 0.475ns 0.495ns covers 97.21%
+fst4 time: 0.458ns 0.409ns 0.438ns covers 99.11%
+zag6 time: 0.472ns 0.469ns 0.468ns covers 100.00%

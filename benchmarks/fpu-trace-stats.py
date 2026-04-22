@@ -33,6 +33,9 @@ def main():
     print("--- Final Totals ---")
     others = 0
     total = sum(column_totals)
+    if False:
+        for idx, count in enumerate(column_totals):
+            print(f"{count:13d},", end="\n" if idx & 7 == 7 else "")
     prev = 0
     column_totals.append(0)
     accum = 0

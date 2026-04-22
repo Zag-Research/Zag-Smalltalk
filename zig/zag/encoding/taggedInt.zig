@@ -172,7 +172,7 @@ pub const Object = packed union {
     }
 
     pub inline fn symbolHash(self: Object) ?u24 {
-        if (self.isSymbol()) return @truncate(self.hash32() >> 8);
+        if (self.isSymbol()) return self.hash24();
         return null;
     }
     pub inline fn numArgs(self: Object) u4 {

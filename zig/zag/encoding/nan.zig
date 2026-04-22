@@ -96,10 +96,9 @@ pub const Object = packed struct(u64) {
                 return self.rawU() >= Tag.g(.smallInteger);
                 // return self.rawU() >> (64 - intTagBits) >= integerTag;
             },
-            .aarch64 => {
+            else => {
                 return (self.rawI() >> 64 - intTagBits) + 1 == 0;
             },
-            else => @compileError("unsupported target cpu"),
         }
     }
     pub const testU = rawU;
@@ -124,7 +123,7 @@ pub const Object = packed struct(u64) {
         return .{ .tag = Tag.from(c), .data = h };
     }
     pub inline fn symbolHash(self: Object) ?u24 {
-        if (self.isImmediateClass(.Symbol)) return @truncate(self.rawU() >> 8);
+        if (self.isSymbol()) return self.hash24();
         return null;
     }
     pub inline fn numArgs(self: Object) u4 {
@@ -388,7 +387,7 @@ pub const Object = packed struct(u64) {
                     },
                 }
             },
-            .aarch64 => {
+            else => {
                 const tagBits = (self.rawI() >> 64 - intTagBits) + 1;
                 if (tagBits == 0) {
                     @branchHint(.likely);
@@ -417,7 +416,6 @@ pub const Object = packed struct(u64) {
                     }
                 }
             },
-            else => @compileError("unsupported target cpu"),
         }
     }
     pub inline fn ifHeapObject(self: object.Object) ?*HeapObject {

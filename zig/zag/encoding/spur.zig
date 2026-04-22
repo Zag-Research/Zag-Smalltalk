@@ -15,8 +15,10 @@ const HeapHeader = zag.heap.HeapHeader;
 const HeapObject = zag.heap.HeapObject;
 const HeapObjectConstPtr = zag.heap.HeapObjectConstPtr;
 const InMemory = zag.InMemory;
-const encode = @import("floatSpur.zig").Spur.encode;
-const decode = @import("floatSpur.zig").Spur.decode;
+const encode = switch (zag.config.objectEncoding) {
+    .spur => @import("floatEncoding.zig").Spur.encode,
+    else => @import("floatEncoding.zig").SpurAlt2.encode};
+const decode = @import("floatEncoding.zig").Spur.decode;
 
 const Tag = enum(u3) {
     pointer = 0,
@@ -144,7 +146,7 @@ pub const Object = packed union {
         });
     }
     pub inline fn symbolHash(self: Object) ?u24 {
-        if (self.isSymbol()) return @truncate(self.hash32() >> 8);
+        if (self.isSymbol()) return self.hash24();
         return null;
     }
     pub inline fn numArgs(self: Object) u4 {

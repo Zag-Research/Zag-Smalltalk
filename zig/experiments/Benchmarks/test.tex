@@ -36,7 +36,7 @@
 \usepackage[endianness=big]{bytefield}
 \usetikzlibrary{patterns}
 \pgfplotsset{compat=1.18}
-
+\let\shorttitle=\relax
 \newcommand{\bitfieldwidth}{0.045\columnwidth}
 
 \newcommand{\code}[1]{\colorbox{gray!10}{\texttt{$#1$}}}
@@ -44,7 +44,7 @@
 \newcommand{\js}{JavaScript\xspace}
 \newcommand{\IV}{\emph{InstVar}\xspace}
 \newcommand{\IVs}{\emph{InstVars}\xspace}
-\input{aarch64}
+\input{aarch}
 \input{x86}
 \input{pareto}
 \newcommand{\benchmarkBarChart}[3]{%
@@ -80,6 +80,8 @@
 }
 
 \begin{document}
+this page intentionally empty
+\newpage
 \section{Experimental Design and Results}\label{results}
 \subsection{Results}
 \iftrue

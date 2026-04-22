@@ -1,0 +1,43 @@
+#! /bin/sh
+case "$1" in
+	-n|--nofile|-nofile) ;;
+	*)
+	    if [ -t 0 ]; then
+		base=`hostname|sed 's/[^-]*\([-]*\)\(.*\)/bench-\2/'`
+		lastN=`ls $base* 2>/dev/null|sed 's/.*-\([0-9]*\).*/\1/'|sort -n|tail -1`
+		n=`expr "${lastN:=0}" + 1`
+		file="$HOME/$base-$n"
+		nohup "$0" "$@" >$file 2>&1 &
+		exit 0
+	    fi
+	;;
+esac
+#for tool in setarch taskset
+#do
+#	if ! command -v $tool &> /dev/null; then
+#		echo "Error: $tool is not installed."
+#		exit 1
+#	fi
+#done
+uname -a
+CPU4=false
+echo "CPUs isolated: " `cat /sys/devices/system/cpu/isolated`
+if test -d /sys/devices/system/cpu/cpu4; then
+    CPS4=true
+    echo CPU4 info:
+    echo " Related cpus    :" `cat 2>/dev/null /sys/devices/system/cpu/cpu4/cpufreq/related_cpus`
+    echo " SetSpeed        :" `cat 2>/dev/null /sys/devices/system/cpu/cpu4/cpufreq/scaling_setspeed`
+    echo " Governor        :" `cat 2>/dev/null /sys/devices/system/cpu/cpu4/cpufreq/scaling_governor`
+    echo " Max Freq        :" `cat 2>/dev/null /sys/devices/system/cpu/cpu4/cpufreq/cpuinfo_max_freq`
+    cat /proc/cpuinfo|sed -n '/processor       : 4$/,/^$/p'
+fi
+#tar zxf *.tgz 2>/dev/null && cd `expr *.tgz : '\(.*\).tgz'`
+cd `dirname $0`
+PREFIX=''
+which setarch >/dev/null && PREFIX="setarch --addr-no-randomize $PREFIX"
+CPU4 && which taskset >/dev/null && PREFIX="taskset --cpu-list 4 $PREFIX"
+echo "Using prefix: $PREFIX"
+for i in ./fib-* ./floatEncoding
+do
+	$PREFIX $i --fib 40
+done

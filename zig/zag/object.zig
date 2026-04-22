@@ -41,7 +41,7 @@ pub fn fromLE(comptime T: type, v: T) Object {
 pub const compareObject = Object.compare;
 const siIndex = 21;
 const noneIndex = switch (config.objectEncoding) {
-    .taggedPtr, .taggedHigh => siIndex,
+    .taggedLow, .taggedHigh => siIndex,
     else => 0,
 };
 pub const ClassIndex = enum(u16) {

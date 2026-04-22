@@ -8,7 +8,7 @@
   },
   {
     "label": "bench targets",
-    "command": "zig build bench -Dtarget=x86_64-linux; zig build bench -Dtarget=aarch64-linux;for i in aarch64 x86_64;do tar zcf $i.tgz $i;done;ls -l *.tgz",
+    "command": "zig build bench -Dtarget=x86_64-linux; zig build bench -Dtarget=aarch64-linux; zig build bench -Dtarget=riscv64-linux-gnu; zig build-exe ../zag/encoding/floatEncoding.zig -O ReleaseFast -target aarch64-linux-musl -femit-bin=aarch64/floatEncoding; zig build-exe ../zag/encoding/floatEncoding.zig -O ReleaseFast -target x86_64-linux-musl -femit-bin=x86_64/floatEncoding; zig build-exe ../zag/encoding/floatEncoding.zig -O ReleaseFast -target riscv64-linux-gnu -femit-bin=riscv64/floatEncoding; for i in aarch64 x86_64 riscv64;do cp ../../scripts/run-benchmarks $i && tar zcf $i.tgz $i;done;ls -l *.tgz",
     "cwd": "$ZED_WORKTREE_ROOT/zig/zig-out",
   },
   {
@@ -60,8 +60,8 @@
     //"hide": "on_success",
   },
   {
-    "label": "test taggedPtr encoding",
-    "command": "zig build test -Dencoding=taggedPtr -Dtrace --summary all -freference-trace=5",
+    "label": "test taggedLow encoding",
+    "command": "zig build test -Dencoding=taggedLow -Dtrace --summary all -freference-trace=5",
     "cwd": "$ZED_WORKTREE_ROOT/zig/zag",
     //"hide": "on_success",
   },
@@ -102,6 +102,16 @@
     "cwd": "$ZED_WORKTREE_ROOT/zig",
   },
   {
+    "label": "trace fib compact",
+    "command": "zig build -Dtrace -Dencoding=compact -Doptimize=Debug -freference-trace=5 && ./zig-out/bin/fib",
+    "cwd": "$ZED_WORKTREE_ROOT/zig",
+  },
+  {
+    "label": "trace fib compactI",
+    "command": "zig build -Dtrace -Dencoding=compactI -Doptimize=Debug -freference-trace=5 && ./zig-out/bin/fib",
+    "cwd": "$ZED_WORKTREE_ROOT/zig",
+  },
+  {
     "label": "trace fib onlyInt",
     "command": "zig build -Dtrace -Dencoding=onlyInt -Doptimize=Debug -freference-trace=5 && ./zig-out/bin/fib",
     "cwd": "$ZED_WORKTREE_ROOT/zig",
@@ -114,6 +124,16 @@
   {
     "label": "time fib mixed",
     "command": "zig build -Dencoding=zagMixed -Doptimize=ReleaseFast -freference-trace=10 && ./zig-out/bin/fib",
+    "cwd": "$ZED_WORKTREE_ROOT/zig",
+  },
+  {
+    "label": "time fib compact",
+    "command": "zig build -Dencoding=compact -Doptimize=ReleaseFast -freference-trace=10 && ./zig-out/bin/fib",
+    "cwd": "$ZED_WORKTREE_ROOT/zig",
+  },
+  {
+    "label": "time fib compactI",
+    "command": "zig build -Dencoding=compactI -Doptimize=ReleaseFast -freference-trace=10 && ./zig-out/bin/fib",
     "cwd": "$ZED_WORKTREE_ROOT/zig",
   },
   {
@@ -162,8 +182,8 @@
     "cwd": "$ZED_WORKTREE_ROOT/zig",
   },
   {
-    "label": "time fib taggedPtr",
-    "command": "zig build -Dencoding=taggedPtr -Doptimize=ReleaseFast && ./zig-out/bin/fib",
+    "label": "time fib taggedLow",
+    "command": "zig build -Dencoding=taggedLow -Doptimize=ReleaseFast && ./zig-out/bin/fib",
     "cwd": "$ZED_WORKTREE_ROOT/zig",
   },
   {

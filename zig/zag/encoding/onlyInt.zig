@@ -56,7 +56,7 @@ pub const Object = packed struct(u64) {
         @panic("not implemented");
     }
     pub inline fn symbolHash(self: object.Object) ?u24 {
-        return @truncate(self.hash32() >> 8);
+        return self.hash24();
     }
     pub inline fn numArgs(self: object.Object) u4 {
         return @truncate(self.hash32());
@@ -128,7 +128,7 @@ pub const Object = packed struct(u64) {
         _ = .{ cls, ptr, extra, unreachable };
     }
     pub inline fn hash24(self: Object) u24 {
-        return @truncate(self.rawU());
+        return @truncate(self.rawU() >> 8);
     }
     pub inline fn hash32(self: Object) u32 {
         return @truncate(self.rawU());

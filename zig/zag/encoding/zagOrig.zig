@@ -1,4 +1,4 @@
-//! This module implements Object encoding for Zag encoding
+//! This module implements Object encoding for ZagOrig encoding
 const std = @import("std");
 const expectEqual = std.testing.expectEqual;
 const expect = std.testing.expect;
@@ -18,8 +18,9 @@ const HeapObjectConstPtr = zag.heap.HeapObjectConstPtr;
 const InMemory = zag.InMemory;
 const execute = zag.execute;
 const Signature = execute.Signature;
-const encode = @import("floatZag.zig").encode;
-const decode = @import("floatZag.zig").decode;
+const floatEncoding = @import("floatEncoding.zig").Fst2;
+const encode = floatEncoding.encode;
+const decode = floatEncoding.decode;
 
 pub const Tag = enum(u3) {
     heap = 0,
@@ -130,7 +131,7 @@ pub const Object = packed struct(u64) {
         });
     }
     pub inline fn symbolHash(self: object.Object) ?u24 {
-        if (self.isImmediateClass(.Symbol)) return @truncate(self.hash);
+        if (self.isSymbol()) return self.hash24();
         return null;
     }
     pub inline fn numArgs(self: Object) u4 {

@@ -44,7 +44,7 @@ const DispatchHandler = struct {
     fn loadMethodForClass(ci: ClassIndex, signature: Signature) *const CompiledMethod {
         if (defaultForTest != void)
             return defaultForTest.loadMethodForClass(ci, signature);
-        std.log.err("loadMethodForClass({} {b} {f} {})\n", .{ ci, @as(u64, @bitCast(signature)), signature, signature.fullHash() });
+        std.log.err("loadMethodForClass({} {x} {} {f})\n", .{ ci, @as(u64, @bitCast(signature)), signature.fullHash(), signature });
         @panic("Method not found");
     }
     fn stats(index: ClassIndex) Dispatch.Stats {

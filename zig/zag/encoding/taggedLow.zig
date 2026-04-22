@@ -107,7 +107,7 @@ pub const Object = packed struct(u64) {
     }
 
     pub inline fn symbolHash(self: object.Object) ?u24 {
-        if (self.isSymbol()) return @truncate(self.intOrAddress >> 8);
+        if (self.isSymbol()) return self.hash24();
         return null;
     }
     pub inline fn numArgs(self: Object) u4 {
@@ -290,7 +290,7 @@ pub const Object = packed struct(u64) {
         return Object{ .class = cls.classIndex(), .intOrAddress = @truncate(hash) };
     }
     pub inline fn hash24(self: object.Object) u24 {
-        if (self.isSymbol()) return @truncate(self.intOrAddress);
+        if (self.isSymbol()) return @truncate(self.intOrAddress >> 8);
         if (self.ifHeapObject()) |ho| return ho.header.hash;
         return 0;
     }

@@ -13,6 +13,7 @@ DATA_RE = re.compile(
 METRICS = ["median", "mean", "stddev", "sdpct", "geomean"]
 METRIC_LABELS = ["Median", "Mean", "StdDev", r"SD\%", "GeoM"]
 NATIVES = {"Native", "NativeF"}
+MEASURE = "mean"
 
 
 def parse(file_content):
@@ -29,13 +30,11 @@ def parse(file_content):
             continue
         enc = enc_match.group(1)
         if enc == "zag":
-            enc = "max"
+            enc = "ultra"
         elif enc == "zagSpur":
             enc = "maxSpur"
         elif enc == "zagMixed":
-            enc = "ultra"
-        elif enc == "taggedPtr":
-            enc = "taggedLow"
+            enc = "max"
         results[enc] = {}
         for m in DATA_RE.finditer(block):
             name = m.group(1)
@@ -112,6 +111,11 @@ summary_order = [
     "maxSpur",
     "ultra",
     "spur",
+    "spurOpt",
+    "compact",
+    "compact6",
+    "compactI",
+    "compactI6",
     "taggedLow",
     "taggedHigh",
     "taggedInt",
@@ -121,11 +125,9 @@ summary_order = [
 ]
 
 
-def median_summary(results, benchmark_order, total=False):
+def measure_summary(results, benchmark_order, total=False):
     rows = []
     for enc in results.keys() if total else summary_order:
-        if enc not in results:
-            continue
         if enc not in results:
             continue
         benchmarks = results[enc]
@@ -136,13 +138,14 @@ def median_summary(results, benchmark_order, total=False):
             cells.append(
                 "N/A"
                 if entry is None
-                else fmt_cell("median", entry["median"], None if total else base)
+                else fmt_cell(MEASURE, entry[MEASURE], None if total else base)
             )
         rows.append((enc, cells))
     return tabular("Encoding", benchmark_order, rows)
 
 
 colours = [
+    "blue",
     "cyan!50",
     "teal!70",
     "green!60!black",
@@ -151,14 +154,18 @@ colours = [
     "blue!80!black",
     "olive!70",
     "red!60",
+    "olive!70!black",
+    "red!60!black",
+    "green!30",
+    "orange!50!black",
     "teal!40",
     "cyan!50!black",
     "green!60",
 ]
 
 
-def median_graph(results, benchmark_order):
-    result = f"\\benchmarkBarChart{{}}{{{','.join(summary_order)}}}{{%"
+def measure_graph(results, benchmark_order):
+    result = f"\\benchmarkBarChart{{}}{{{','.join([item for item in summary_order if item in results])}}}{{%"
     for enc, colour in zip(summary_order, colours):
         if enc not in results:
             continue
@@ -174,7 +181,7 @@ def median_graph(results, benchmark_order):
             base = get_base(bm, results)
             if entry and base:
                 result = (
-                    result + f"({bm},{(int(round(entry['median'] - base['median'])))})"
+                    result + f"({bm},{(int(round(entry[MEASURE] - base[MEASURE])))})"
                 )
         result = result + "};"
     result = result + "}"
@@ -186,12 +193,16 @@ SCATTER_ENCODINGS = [
     "nan",
     "ptr",
     "spur",
+    "compact",
+    "compact6",
+    "compactI",
+    "compactI6",
     "taggedInt",
     #    "taggedSMI",
     #    "taggedLow",
     "taggedHigh",
     "max",
-    #    "maxSpur",
+    "maxSpur",
     "ultra",
 ]
 
@@ -215,8 +226,8 @@ def scatter_points(results):
     base_float = get_base("Float", results)
     if not base_int or not base_float:
         raise ValueError("Missing onlyInt/onlyFloat baselines for scatter plot.")
-    # base_int = {"median": 0}
-    # base_float = {"median": 0}
+    # base_int = {MEASURE: 0}
+    # base_float = {MEASURE: 0}
     points = {}
     for enc in SCATTER_ENCODINGS:
         entry = results.get(enc, {})
@@ -224,8 +235,8 @@ def scatter_points(results):
         float_entry = entry.get("Float")
         if not int_entry or not float_entry:
             continue
-        dx = int(round(int_entry["median"] - base_int["median"]))
-        dy = int(round(float_entry["median"] - base_float["median"]))
+        dx = int(round(int_entry[MEASURE] - base_int[MEASURE]))
+        dy = int(round(float_entry[MEASURE] - base_float[MEASURE]))
         points[enc] = (dx, dy)
     return points
 
@@ -285,6 +296,9 @@ def scatter_plot_raw(results_a, arch_a, results_b=None, arch_b=None):
     xmin, xmax, ymin, ymax = axis_limits(all_points)
     frontier_a = pareto_frontier(list(points_a.values()))
     frontier_b = pareto_frontier(list(points_b.values()))
+    if not results_b:
+        xmax = 1400
+        ymax = 1400
 
     lines = []
     lines.append("\\begin{tikzpicture}")
@@ -379,14 +393,14 @@ def main():
         print(per_encoding_tables(results, benchmark_order))
         print("}")
         print("\\newcommand{\\" + arch + "Total}{")
-        print(median_summary(results, benchmark_order, True))
+        print(measure_summary(results, benchmark_order, True))
         print("}")
         benchmark_summary = [item for item in benchmark_order if item not in NATIVES]
         print("\\newcommand{\\" + arch + "Summary}{")
-        print(median_summary(results, benchmark_summary))
+        print(measure_summary(results, benchmark_summary))
         print("}")
         print("\\newcommand{\\" + arch + "BarChart}{")
-        print(median_graph(results, benchmark_summary))
+        print(measure_graph(results, benchmark_summary))
         print("}")
         print("\\newcommand{\\" + arch + "ScatterPlot}{")
         print(scatter_plot_raw(results, arch))

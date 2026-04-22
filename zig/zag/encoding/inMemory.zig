@@ -183,7 +183,7 @@ pub const fZero = static(0.0);
 pub const fOne = static(1.0);
 
 const FCache = switch (objectEncoding) {
-    .cachedPtr, .taggedPtr => true,
+    .cachedPtr, .taggedLow, .taggedHigh => true,
     else => false,
 };
 pub inline fn float(v: f64, sp: SP, context: *Context) Object {

@@ -48,14 +48,14 @@ pub const Signature = packed struct {
         return self.tag == sigTag;
     }
     pub const empty: Signature = .{};
-    inline fn asInt(self: Signature) u64 {
+    pub inline fn asInt(self: Signature) u64 {
         return @bitCast(self);
     }
     pub fn isEmpty(self: Signature) bool {
         return self.equals(empty);
     }
     pub fn fullHash(self: Signature) u32 {
-        return @truncate(self.asInt());
+        return @intCast(self.asInt() & 0xffffff00);
     }
     pub fn from(hash: u24, arity: u4, class: ClassIndex) Signature {
         return .{ .hash = hash, .numArgs = arity, .class = class };
@@ -76,7 +76,7 @@ pub const Signature = packed struct {
         return .{ .class = class, .prim = @as(u8, @bitCast(number)) };
     }
     pub fn equals(self: Signature, other: Signature) bool {
-        return self.asInt() == other.asInt();
+        return (self.asInt() ^ other.asInt()) & 0xffffff00 == 0;
     }
     pub fn signature(self: Object) ?Signature {
         const sig: Signature = @bitCast(self);
