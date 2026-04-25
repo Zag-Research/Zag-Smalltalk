@@ -94,9 +94,6 @@ pub const Object = packed struct(u64) {
     pub inline fn isNat(self: Object) bool {
         return self.isInt() and self.rawI() >= 0;
     }
-    pub inline fn isDouble(_: Object) bool {
-        return false;
-    }
     // pub inline fn oImm(c: ClassIndex.Compact, h: u56) Self {
     //     return Self{ .tag = .immediates, .class = c, .hash = h };
     // }

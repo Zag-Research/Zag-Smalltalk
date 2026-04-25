@@ -127,13 +127,7 @@ pub const Object = packed union {
             return InMemory.float(t, sp, context);
         });
     }
-    pub inline fn isFloat(self: Object) bool {
-        return self.isImmediateDouble() or self.isMemoryDouble();
-    }
-    inline fn isImmediateDouble(self: Object) bool {
-        return self.isTag(.float);
-    }
-    pub inline fn isMemoryDouble(self: Object) bool {
+    inline fn isMemoryDouble(self: Object) bool {
         return if (self.ifHeapObject()) |ptr|
             ptr.getClass() == .Float
         else

@@ -115,10 +115,6 @@ pub const Object = packed struct(u64) {
         return false;
     }
 
-    pub inline fn isDouble(_: Object) bool {
-        return true;
-    }
-
     pub inline fn highPointer(_: Object, T: type) ?T {
         @panic("Not implemented");
     }

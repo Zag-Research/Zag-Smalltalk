@@ -123,6 +123,25 @@ summary_order = [
     "cachedPtr",
     "ptr",
 ]
+colours = [
+    "blue",
+    "cyan!50",
+    "teal!70",
+    "green!60!black",
+    "orange!60",
+    "red!40",
+    "blue!80!black",
+    "olive!70",
+    "red!60",
+    "olive!70!black",
+    "red!60!black",
+    "green!30",
+    "orange!50!black",
+    "teal!40",
+    "cyan!50!black",
+    "green!60",
+    "yellow",
+]
 
 
 def measure_summary(results, benchmark_order, total=False):
@@ -142,26 +161,6 @@ def measure_summary(results, benchmark_order, total=False):
             )
         rows.append((enc, cells))
     return tabular("Encoding", benchmark_order, rows)
-
-
-colours = [
-    "blue",
-    "cyan!50",
-    "teal!70",
-    "green!60!black",
-    "orange!60",
-    "red!40",
-    "blue!80!black",
-    "olive!70",
-    "red!60",
-    "olive!70!black",
-    "red!60!black",
-    "green!30",
-    "orange!50!black",
-    "teal!40",
-    "cyan!50!black",
-    "green!60",
-]
 
 
 def measure_graph(results, benchmark_order):
@@ -193,6 +192,7 @@ SCATTER_ENCODINGS = [
     "nan",
     "ptr",
     "spur",
+    "spurOpt",
     "compact",
     "compact6",
     "compactI",

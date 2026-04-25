@@ -121,13 +121,6 @@ pub const Object = packed struct(u64) {
             return InMemory.float(t, sp, context);
         });
     }
-    pub inline fn isFloat(self: object.Object) bool {
-        return self.isImmediateDouble() or self.isMemoryDouble();
-    }
-    inline fn isImmediateDouble(self: object.Object) bool {
-        if (decode(@bitCast(self))) |_| return true;
-        return false;
-    }
     inline fn isMemoryDouble(self: object.Object) bool {
         return if (self.ifHeapObject()) |ptr|
             ptr.getClass() == .Float

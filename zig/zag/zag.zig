@@ -35,6 +35,7 @@ pub const llvm = if (config.includeLLVM) @import("llvm-build-module") else null;
 pub const threadedFn = @import("threadedFn.zig");
 pub const Stats = utilities.Stats;
 pub const dispatch = @import("dispatch.zig");
+pub const arch = @import("builtin").target.cpu.arch;
 pub fn untested() void {
     @import("std").debug.panic("Untested", .{});
 }

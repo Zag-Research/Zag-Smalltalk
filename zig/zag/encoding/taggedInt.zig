@@ -164,9 +164,6 @@ pub const Object = packed union {
         if (self.isMemoryDouble()) return self.toDoubleFromMemory();
         return null;
     }
-    pub inline fn isFloat(self: object.Object) bool {
-        return self.isMemoryDouble();
-    }
     pub inline fn fromNativeF(t: f64, sp: SP, context: *Context) object.Object {
         return memoryFloat(t, sp, context);
     }
@@ -349,10 +346,6 @@ pub const Object = packed union {
     pub inline fn signature(_: Object) ?zag.execute.Signature {
         // Spur doesn't use immediate signatures like other encodings
         return null;
-    }
-
-    pub inline fn isDouble(self: Object) bool {
-        return self.isMemoryDouble();
     }
 
     pub inline fn extraValue(self: Object) Object {

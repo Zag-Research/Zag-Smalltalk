@@ -5,8 +5,8 @@
 // zig build-exe jit.zig -lc -O Debug -fomit-frame-pointer -fno-unwind-tables && ./jit
 const std = @import("std");
 const builtin = @import("builtin");
-const native_endian = builtin.target.cpu.arch.endian();
 const zag = @import("zag.zig");
+const native_endian = zag.arch.endian();
 
 const common = struct {
     extern "c" fn pthread_jit_write_protect_np(enabled: c_int) void;
@@ -173,7 +173,7 @@ const x86_64 = struct {
     }
 };
 
-pub const arch = switch (builtin.cpu.arch) {
+pub const arch = switch (zag.arch) {
     .aarch64 => aarch64,
     .x86_64 => x86_64,
     else => unreachable,

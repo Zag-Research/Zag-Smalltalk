@@ -122,9 +122,6 @@ pub const Object = packed struct(u64) {
         if (self.isMemoryDouble()) return self.toDoubleFromMemory();
         return null;
     }
-    pub inline fn isFloat(self: object.Object) bool {
-        return self.isImmediateDouble() or self.isMemoryDouble();
-    }
     pub inline fn fromNativeF(t: f64, sp: SP, context: *Context) object.Object {
         return @bitCast(encode(t) catch {
             return InMemory.float(t, sp, context);
@@ -164,9 +161,6 @@ pub const Object = packed struct(u64) {
     }
     pub inline fn isImmediateClass(self: object.Object, comptime class: Compact) bool {
         return self.tagbits() == oImm(class, 0).tagbits();
-    }
-    inline fn isImmediateDouble(self: object.Object) bool {
-        return (self.rawU() & 6) != 0;
     }
     inline fn isMemoryDouble(self: object.Object) bool {
         return if (self.ifHeapObject()) |ptr|
@@ -430,7 +424,7 @@ pub const Object = packed struct(u64) {
                 }
             },
             .firstFloat => {
-                if (self.isImmediateDouble()) {
+                if ((self.rawU() & 6) != 0) {
                     @branchHint(.likely);
                     return .Float;
                 } else if (self.rawU() & 1 != 0) {

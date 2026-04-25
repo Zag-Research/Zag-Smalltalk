@@ -53,7 +53,7 @@ pub const Spur = struct {
     const uses = "4 (5,6,7 reserved)";
     const TAG = 0b100; // immediate float tag
     const EXPONENT_OFFS: u64 = 0x7000000000000000;
-    pub fn encode(value: f64) EncodeError!u64 {
+    pub inline fn encode(value: f64) EncodeError!u64 {
         const bits: u64 = @bitCast(value);
         const rotated = rotl(u64, bits, 1);
         if (rotated <= 1) {@branchHint(.unlikely);
@@ -73,7 +73,7 @@ pub const Spur = struct {
         }
         return shifted + TAG;
     }
-    pub fn decode(self: u64) ?f64 {
+    pub inline fn decode(self: u64) ?f64 {
         if (self & TAG == 0) return null;
         const shifted = self >> 3;
         const offset = if (shifted <= 1) shifted else shifted + EXPONENT_OFFS;
@@ -88,7 +88,7 @@ const SpurAlt1 = struct {
     const name = "spurAlt1";
     const uses = Spur.uses;
     const TAG = Spur.TAG;
-    pub fn encode(value: f64) EncodeError!u64 {
+    pub inline fn encode(value: f64) EncodeError!u64 {
         const bits: u64 = @bitCast(value);
         const rotated = rotl(u64, bits, 5);
         const inc = rotated +% 1;
@@ -110,9 +110,8 @@ pub const SpurAlt2 = struct {
     const name = "spurAlt2";
     const uses = Spur.uses;
     const TAG = Spur.TAG;
-    pub fn encode(v: f64) EncodeError!u64 {
-        const bits: u64 = @bitCast(v);
-        var y = rotl(u64, bits, 5);
+    pub inline fn encode(v: f64) EncodeError!u64 {
+        var y = rotl(u64, @bitCast(v), 5);
         if (y <= 0x10) { // probably 0
             @branchHint(.unlikely);
             if (y == 0) return TAG; // 0
@@ -127,11 +126,14 @@ pub const SpurAlt2 = struct {
             y = rotr(u64, y +% 1, 1);
 
             // handle normal immediate float
-            if ((y & 0x7) == TAG) return y;
+            if ((y & 0x7) == TAG) {
+                @branchHint(.likely);
+                return y;
+            }
         }
         return error.Unencodable;
     }
-    pub fn decode(self: u64) ?f64 {
+    pub inline fn decode(self: u64) ?f64 {
         if (self & TAG == 0) return null;
         if (self <= 0xC) {@branchHint(.unlikely);
             if (self == TAG) {
@@ -151,18 +153,18 @@ pub const Fst1 = struct {
     const name = "fst1";
     const uses = "4 (5,6,7 reserved)";
     const OFFSET: u64 = 9 << 58;
-    pub fn encode(x: f64) EncodeError!u64 {
-        const u = math.rotl(u64, @as(u64, @bitCast(x)) +% OFFSET, 5);
+    pub inline fn encode(x: f64) EncodeError!u64 {
+        const u = rotl(u64, @as(u64, @bitCast(x)) +% OFFSET, 5);
         if (u & 7 == 4) {
             @branchHint(.likely);
             return u;
         }
         return error.Unencodable;
     }
-    pub fn decode(self: u64) ?f64 {
+    pub inline fn decode(self: u64) ?f64 {
         if (self & 4 != 0) {
             @branchHint(.likely);
-            return @bitCast(math.rotr(u64, self, 5) -% OFFSET);
+            return @bitCast(rotr(u64, self, 5) -% OFFSET);
         }
         return null;
     }
@@ -175,18 +177,18 @@ pub const Fst1 = struct {
 pub const Fst2 = struct {
     const name = "fst2";
     const uses = "4,5";
-    pub fn encode(x: f64) EncodeError!u64 {
-        const u = math.rotl(u64, @bitCast(x), 5) -% 3;
+    pub inline fn encode(x: f64) EncodeError!u64 {
+        const u = rotl(u64, @bitCast(x), 5) -% 3;
         if (u & 6 == 4) {
             @branchHint(.likely);
             return u;
         }
         return error.Unencodable;
     }
-    pub fn decode(self: u64) ?f64 {
+    pub inline fn decode(self: u64) ?f64 {
         if (self & 6 == 4) {
             @branchHint(.likely);
-            return @bitCast(math.rotr(u64, self +% 3, 5));
+            return @bitCast(rotr(u64, self +% 3, 5));
         }
         return null;
     }
@@ -199,18 +201,18 @@ pub const Fst2 = struct {
 pub const Fst4 = struct {
     const name = "fst4";
     const uses = "2,3,6,7";
-    pub fn encode(x: f64) EncodeError!u64 {
-        const u = math.rotl(u64, @bitCast(x), 4) +% 3;
+    pub inline fn encode(x: f64) EncodeError!u64 {
+        const u = rotl(u64, @bitCast(x), 4) +% 3;
         if (u & 2 != 0) {
             @branchHint(.likely);
             return u;
         }
         return error.Unencodable;
     }
-    pub fn decode(self: u64) ?f64 {
+    pub inline fn decode(self: u64) ?f64 {
         if (self & 2 != 0) {
             @branchHint(.likely);
-            return @bitCast(math.rotr(u64, self -% 3, 4));
+            return @bitCast(rotr(u64, self -% 3, 4));
         }
         return null;
     }
@@ -223,18 +225,18 @@ pub const Fst4 = struct {
 pub const Zag6 = struct {
     const name = "zag6";
     const uses = "2,3,4,5,6,7";
-    pub fn encode(x: f64) EncodeError!u64 {
-        const u = math.rotl(u64, @bitCast(x), 4) + 3;
+    pub inline fn encode(x: f64) EncodeError!u64 {
+        const u = rotl(u64, @bitCast(x), 4) +% 3;
         if (u & 6 != 0) {
             @branchHint(.likely);
             return u;
         }
         return error.Unencodable;
     }
-    pub fn decode(self: u64) ?f64 {
+    pub inline fn decode(self: u64) ?f64 {
         if (self & 6 != 0) {
             @branchHint(.likely);
-            return @bitCast(math.rotr(u64, self - 3, 4));
+            return @bitCast(rotr(u64, self -% 3, 4));
         }
         return null;
     }
@@ -243,7 +245,46 @@ pub const Zag6 = struct {
       .{.low = 0x7000_0000_0000_0000, .high = 0x7FFF_FFFF_FFFF_FFFF},
     };
 };
-
+pub const NaN = struct {
+    const name = "nan";
+    const uses = "N/A";
+    const NaN_one: u64 = @bitCast(math.nan(f64));
+    pub inline fn encode(x: f64) EncodeError!u64 {
+        return @bitCast(x);
+    }
+    pub inline fn decode(self: u64) ?f64 {
+        const f: f64 = @bitCast(self);
+        if (!math.isNan(f)) {
+            @branchHint(.likely);
+            return f;
+        } else if (self == NaN_one) {
+            @branchHint(.unlikely);
+            return f;
+        }
+        return null;
+    }
+    const valid_ranges = [_]Range{
+      .{.low = 0x0000_0000_0000_0000, .high = 0x7FFF_FFFF_FFFF_FFFF},
+    };
+};
+pub const NuN = struct {
+    const name = "nun";
+    const uses = "N/A";
+    const NuN_bias = 0x0001_ffff_ffff_ffff;
+    pub inline fn encode(x: f64) EncodeError!u64 {
+        return @as(u64, @bitCast(x)) +% NuN_bias;
+    }
+    pub inline fn decode(self: u64) ?f64 {
+        if (self >= NuN_bias) {
+            @branchHint(.likely);
+            return @bitCast(self -% NuN_bias);
+        }
+        return null;
+    }
+    const valid_ranges = [_]Range{
+      .{.low = 0x0000_0000_0000_0000, .high = 0x7FFF_FFFF_FFFF_FFFF},
+    };
+};
 fn checkEqual(str: []const u8, i: usize, expected: anytype, actual: @TypeOf(expected)) !void {
     if (expectEqual(expected,actual)) |_| {
     } else |err| {
@@ -284,30 +325,6 @@ test "encode/decode" {
     }
 }
 
-
-
-fn encode_valid(iters: u64, comptime encoder: fn (_: f64) EncodeError!u64, valid_values: []const f64) void {
-    for (0..iters / valid_values.len) |_| {
-        for (valid_values) |val| {
-            std.mem.doNotOptimizeAway(encoder(val) catch 0);
-        }
-    }
-}
-fn encode_invalid(iters: u64, comptime encoder: fn (f64) EncodeError!u64, invalid_values: []const f64) void {
-    for (0..iters / invalid_values.len) |_| {
-        for (invalid_values) |val| {
-            std.mem.doNotOptimizeAway(encoder(val) catch 0);
-        }
-    }
-}
-pub fn decode_valid(iters: u64, comptime decoder: fn (u64) ?f64, decode_values: []const u64) void {
-    for (0..iters / decode_values.len) |_| {
-        for (decode_values) |val| {
-            if (decoder(val)) |decoded|
-                _ = std.mem.doNotOptimizeAway(decoded);
-        }
-    }
-}
 const iterations = if (builtin.mode == .ReleaseFast) 1_000_000_000 else 100_000_000;
 fn ns(time: u64) f64 {
     return @as(f64, @floatFromInt(time)) / @as(f64, @floatFromInt(iterations));
@@ -362,7 +379,16 @@ fn validAndNot(comptime encoding: anytype, valid_v: []f64, invalid_v: []f64, dec
             invalid_n += 1;
         }
     }
-    return .{valid_v[0..valid_n], invalid_v[0..invalid_n], decode_v[0..valid_n]};
+    for (valid_v[0..valid_v.len-valid_n],valid_v[valid_n..valid_v.len]) |v,*vp|
+        vp.* = v;
+    if (invalid_n > 0) {
+        for (invalid_v[0..invalid_v.len-invalid_n],invalid_v[invalid_n..invalid_v.len]) |v,*vp|
+            vp.* = v;
+        invalid_n = invalid_v.len;
+    }
+    for (decode_v[0..decode_v.len-valid_n],decode_v[valid_n..decode_v.len]) |v,*vp|
+        vp.* = v;
+    return .{valid_v, invalid_v[0..invalid_n], decode_v};
 }
 fn benchmark(comptime encoding: anytype) void {
     var valid_v: [likely_values.len]f64 = undefined;
@@ -373,11 +399,26 @@ fn benchmark(comptime encoding: anytype) void {
     var timer = std.time.Timer.start() catch @panic("unreachable");
 
     _ = timer.lap();
-    encode_valid(iterations,encoding.encode,validValues);
+    for (0..iterations / validValues.len) |_| {
+        for (validValues) |val| {
+            std.mem.doNotOptimizeAway(encoding.encode(val) catch 0);
+        }
+    }
     const valid_time = timer.lap();
-    encode_invalid(iterations,encoding.encode,invalidValues);
+    if (invalidValues.len > 0){
+        for (0..iterations / invalidValues.len) |_| {
+            for (invalidValues) |val| {
+                std.mem.doNotOptimizeAway(encoding.encode(val) catch 0);
+            }
+        }
+    }
     const invalid_time = timer.lap();
-    decode_valid(iterations,encoding.decode,decodeValues);
+    for (0..iterations / decodeValues.len) |_| {
+        for (decodeValues) |val| {
+            if (encoding.decode(val)) |decoded|
+                _ = std.mem.doNotOptimizeAway(decoded);
+        }
+    }
     const decode_time = timer.lap();
     var coverage: u64 = 0;
     var total: u64 = 0;
@@ -389,8 +430,17 @@ fn benchmark(comptime encoding: anytype) void {
             coverage += count;
     }
     const cover = @as(f64, @floatFromInt(coverage)) * 100.0 / @as(f64, @floatFromInt(total));
-    std.debug.print("{s} time: {d:.3}ns {d:.3}ns {d:.3}ns covers {d:.2}%\n",
-        .{ encoding.name, ns(valid_time), ns(invalid_time), ns(decode_time), cover });
+    std.debug.print("{s:<8} time: {d:.3}ns {d:.3}ns {d:.3}ns covers {d:6.2}% uses {s}\n",
+        .{ encoding.name, ns(valid_time), ns(invalid_time), ns(decode_time), cover, encoding.uses });
+    if (false) {
+        for (&encoding.valid_ranges) |range| {
+            if (range.low == range.high) {
+                std.debug.print("{e:.2}\n",.{@as(f64,@bitCast(range.low))});
+            } else {
+                std.debug.print("{e:.2} - {e:.2}\n",.{@as(f64,@bitCast(range.low)), @as(f64,@bitCast(range.high))});
+            }
+        }
+    }
 }
 // zig run -Doptimize=ReleaseFast floatSpur.zig
 pub fn main() void {
@@ -400,7 +450,7 @@ pub fn main() void {
     //     }
     // }
 
-    inline for (.{Spur, SpurAlt1, SpurAlt2, Fst1, Fst2, Fst4, Zag6 }) |encoding|
+    inline for (.{Spur, SpurAlt1, SpurAlt2, Fst1, Fst2, Fst4, Zag6, NaN, NuN }) |encoding|
         benchmark(encoding);
     // std.debug.print("spur is {d:.2}x {d:.2}x faster than check\n", .{ delta(spur_valid_time, check_valid_time), delta(spur_invalid_time, check_valid_time) });
     // std.debug.print("spurAlt1 is {d:.2}x {d:.2}x faster than check\n", .{ delta(spurAlt1_valid_time, check_valid_time), delta(spurAlt1_invalid_time, check_valid_time) });

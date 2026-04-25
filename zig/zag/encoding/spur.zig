@@ -17,7 +17,7 @@ const HeapObjectConstPtr = zag.heap.HeapObjectConstPtr;
 const InMemory = zag.InMemory;
 const encode = switch (zag.config.objectEncoding) {
     .spur => @import("floatEncoding.zig").Spur.encode,
-    else => @import("floatEncoding.zig").SpurAlt2.encode};
+    else => @import("floatEncoding.zig").FastSpur.encode};
 const decode = @import("floatEncoding.zig").Spur.decode;
 
 const Tag = enum(u3) {
@@ -137,9 +137,6 @@ pub const Object = packed union {
         if (self.isMemoryDouble()) return self.toDoubleFromMemory();
         return null;
     }
-    pub inline fn isFloat(self: Object) bool {
-        return self.isImmediateDouble() or self.isMemoryDouble();
-    }
     pub inline fn fromNativeF(t: f64, sp: SP, context: *Context) Object {
         return @bitCast(encode(t) catch {
             return InMemory.float(t, sp, context);
@@ -186,13 +183,10 @@ pub const Object = packed union {
     pub inline fn isImmediateClass(self: Object, comptime class: ClassIndex) bool {
         switch (class) {
             .SmallInteger => self.isInt(),
-            .Float => self.isImmediateDouble(),
+            .Float => self.isTag(.float),
             .Character => self.isCharacter(),
             else => false,
         }
-    }
-    inline fn isImmediateDouble(self: Object) bool {
-        return self.isTag(.float);
     }
     inline fn isMemoryDouble(self: Object) bool {
         return if (self.ifHeapObject()) |ptr|

@@ -70,9 +70,6 @@ pub const Object = packed struct(u64) {
         if (self.isMemoryDouble()) return self.toDoubleFromMemory();
         return null;
     }
-    pub inline fn isFloat(self: object.Object) bool {
-        return self.isMemoryDouble();
-    }
     pub inline fn fromNativeF(t: f64, sp: SP, context: *Context) object.Object {
         return from(t, sp, context);
     }
@@ -153,9 +150,6 @@ pub const Object = packed struct(u64) {
     }
     pub inline fn isNat(self: Object) bool {
         return self.isInt() and self.rawI() >= 0;
-    }
-    pub inline fn isDouble(self: Object) bool {
-        return self.ref.header.classIndex == .Float;
     }
     // pub inline fn oImm(c: ClassIndex.Compact, h: u56) Self {
     //     return Self{ .tag = .immediates, .class = c, .hash = h };

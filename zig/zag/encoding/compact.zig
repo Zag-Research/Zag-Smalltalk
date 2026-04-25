@@ -43,6 +43,7 @@ pub const Object = packed struct(u64) {
     const intTag = switch (zag.config.objectEncoding) {
         .compactI, .compactI6 => 1,
         else => 0};
+    const IntType = if (intTag == 1) i62 else i57;
     pub const LowTagType = u2;
     pub const lowTagSmallInteger = 0;
     pub const HighTagType = u5;
@@ -54,36 +55,57 @@ pub const Object = packed struct(u64) {
         return rotl(u64, @bitCast(self), 5) & 0x5f;
     }
 
-    pub const taggedI = untaggedI;
-    pub const fromTaggedI = fromUntaggedI;
-
+    pub inline fn taggedI(self: object.Object) ?i64 {
+        if (self.isInt()) {
+            @branchHint(.likely);
+            if (intTag == 1) {
+                return @bitCast(self);
+            } else
+                return @as(i64, @bitCast(self)) << 5;
+        }
+        return null;
+    }
+    pub inline fn fromTaggedI(i: i64, _: anytype, _: anytype) object.Object {
+        if (intTag == 1) {
+            return @bitCast(i);
+        } else
+            return @bitCast(rotr(u64, @bitCast(i | @intFromEnum(ClassIndex.Compact.SmallInteger)), 5) + intTag);
+    }
     pub inline fn untaggedI(self: object.Object) ?i64 {
         if (self.isInt()) {
             @branchHint(.likely);
-            return @bitCast((@as(u64, @bitCast(self)) - intTag) << 5);
+            if (intTag == 1) {
+                return @as(i64, @bitCast(self)) - 1;
+            } else
+                return @as(i64, @bitCast(self)) << 5;
         }
         return null;
     }
     pub inline fn fromUntaggedI(i: i64, _: anytype, _: anytype) object.Object {
-        return @bitCast(rotr(u64, @bitCast(i | @intFromEnum(ClassIndex.Compact.SmallInteger)), 5) + intTag);
+        if (intTag == 1) {
+            return @bitCast(i + 1);
+        } else
+            return @bitCast(rotr(u64, @bitCast(i | @intFromEnum(ClassIndex.Compact.SmallInteger)), 5) + intTag);
     }
 
     pub inline fn nativeI(self: object.Object) ?i64 {
         if (self.untaggedI()) |int| {
             @branchHint(.likely);
-           return int >> 7;
+           return int >> if (intTag == 1) 2 else 7;
         }
         return null;
     }
-    pub inline fn fromNativeI(i: i57, _: anytype, _: anytype) Object {
+    pub inline fn fromNativeI(i: IntType, _: anytype, _: anytype) Object {
         return fromUntaggedI(asUntaggedI(i), null, null);
     }
-    pub inline fn asUntaggedI(i: i57) i64 {
-        return @as(i64, i) << 7;
+    pub inline fn asUntaggedI(i: IntType) i64 {
+        return @as(i64, i) << if (intTag == 1) 2 else 7;
     }
     inline fn isInt(self: object.Object) bool {
         if (intTag == 1) {
-            return (self.rawU() & intTag != 0);
+            return switch (zag.arch) {
+                .x86_64 => (self.rawU() & 3) == 1,
+                else => (self.rawI() << 62 > 0)};
         } else
             return self.isImmediateClass(.SmallInteger);
     }
@@ -103,9 +125,6 @@ pub const Object = packed struct(u64) {
         return @bitCast(encode(t) catch {
             return InMemory.float(t, sp, context);
         });
-    }
-    pub inline fn isFloat(self: object.Object) bool {
-        return self.isImmediateDouble() or self.isMemoryDouble();
     }
     inline fn isImmediateDouble(self: object.Object) bool {
         if (decode(@bitCast(self))) |_| return true;
@@ -268,7 +287,7 @@ pub const Object = packed struct(u64) {
     pub inline//
     fn which_class(self: object.Object) ClassIndex {
         const u: u64 = @bitCast(self);
-        if (intTag == 1 and u & 3 == intTag) {
+        if (self.isInt()) {
             @branchHint(.likely);
             return .SmallInteger;
         } else if (u & 2 != 0) {

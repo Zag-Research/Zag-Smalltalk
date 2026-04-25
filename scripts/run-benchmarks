@@ -20,10 +20,11 @@ esac
 #	fi
 #done
 uname -a
-CPU4=false
-echo "CPUs isolated: " `cat /sys/devices/system/cpu/isolated`
+PREFIX=''
+which setarch >/dev/null && PREFIX="setarch --addr-no-randomize $PREFIX"
+echo "CPUs isolated: " `cat 2>/dev/null /sys/devices/system/cpu/isolated`
 if test -d /sys/devices/system/cpu/cpu4; then
-    CPS4=true
+    which taskset >/dev/null && PREFIX="taskset --cpu-list 4 $PREFIX"
     echo CPU4 info:
     echo " Related cpus    :" `cat 2>/dev/null /sys/devices/system/cpu/cpu4/cpufreq/related_cpus`
     echo " SetSpeed        :" `cat 2>/dev/null /sys/devices/system/cpu/cpu4/cpufreq/scaling_setspeed`
@@ -33,9 +34,6 @@ if test -d /sys/devices/system/cpu/cpu4; then
 fi
 #tar zxf *.tgz 2>/dev/null && cd `expr *.tgz : '\(.*\).tgz'`
 cd `dirname $0`
-PREFIX=''
-which setarch >/dev/null && PREFIX="setarch --addr-no-randomize $PREFIX"
-CPU4 && which taskset >/dev/null && PREFIX="taskset --cpu-list 4 $PREFIX"
 echo "Using prefix: $PREFIX"
 for i in ./fib-* ./floatEncoding
 do
