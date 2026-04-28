@@ -173,7 +173,7 @@ pub const Object = packed struct(u64) {
     fn which_class(_: Object) ClassIndex {
         return .SmallInteger;
     }
-    pub inline fn hasMemoryReference(_: Object) bool {
+    pub inline fn hasHeapReference(_: Object) bool {
         return false;
     }
     pub inline fn ifHeapObject(_: object.Object) ?*HeapObject {

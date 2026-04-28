@@ -229,7 +229,7 @@ pub const Object = packed struct(u64) {
         }
         return null;
     }
-    pub inline fn hasMemoryReference(self: Object) bool {
+    pub inline fn hasHeapReference(self: Object) bool {
         return switch (self.tag) {
             .heap => self != Nil(),
             .ThunkReturnLocal, .ThunkReturnInstance, .ThunkReturnObject, .ThunkReturnImmediate, .ThunkLocal, .ThunkInstance, .ThunkHeap => true,
@@ -332,7 +332,7 @@ pub const Object = packed struct(u64) {
                         switch (@typeInfo(ptrInfo.child)) {
                             .@"fn" => {},
                             .@"struct" => {
-                                if (!check or (self.hasMemoryReference() and (!@hasDecl(ptrInfo.child, "ClassIndex") or self.to(HeapObjectConstPtr).classIndex == ptrInfo.child.ClassIndex))) {
+                                if (!check or (self.hasHeapReference() and (!@hasDecl(ptrInfo.child, "ClassIndex") or self.to(HeapObjectConstPtr).classIndex == ptrInfo.child.ClassIndex))) {
                                     if (@hasField(ptrInfo.child, "header") or (@hasDecl(ptrInfo.child, "includesHeader") and ptrInfo.child.includesHeader)) {
                                         return @as(T, @ptrFromInt(self.nanPointerAsInt()));
                                     } else {
@@ -347,7 +347,7 @@ pub const Object = packed struct(u64) {
                 }
             },
         }
-        std.debug.print("\nclass={} {x}\n", .{self.which_class(), self.rawU()});
+        std.debug.print("\nclass={} {x}\n", .{ self.which_class(), self.rawU() });
         @panic("Trying to convert Object to " ++ @typeName(T));
     }
     inline fn nanPointerAsInt(self: Object) usize {

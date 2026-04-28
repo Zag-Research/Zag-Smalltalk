@@ -403,7 +403,7 @@ fn collect() AllocErrors!void {
     @panic("incomplete");
 }
 pub fn promote(obj: Object) !Object {
-    if (!obj.hasMemoryReference()) return obj;
+    if (!obj.hasHeapReference()) return obj;
     if (obj.header().age == Age.static) return obj;
     @panic("unreachable");
     //       @memcpy(@ptrCast([*]u8,result),@ptrCast([*]const u8,ptr),totalSize*8);

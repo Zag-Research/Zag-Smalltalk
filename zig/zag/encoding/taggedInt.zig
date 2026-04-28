@@ -281,7 +281,7 @@ pub const Object = packed union {
                         switch (@typeInfo(ptrInfo.child)) {
                             .@"fn" => {},
                             .@"struct" => {
-                                if (!check or (self.hasMemoryReference() and (!@hasDecl(ptrInfo.child, "ClassIndex") or self.to(HeapObjectConstPtr).classIndex == ptrInfo.child.ClassIndex))) {
+                                if (!check or (self.hasHeapReference() and (!@hasDecl(ptrInfo.child, "ClassIndex") or self.to(HeapObjectConstPtr).classIndex == ptrInfo.child.ClassIndex))) {
                                     if (@hasField(ptrInfo.child, "header") or (@hasDecl(ptrInfo.child, "includesHeader") and ptrInfo.child.includesHeader)) {
                                         return @as(T, @ptrCast(self.addr()));
                                     } else {
@@ -307,7 +307,7 @@ pub const Object = packed union {
         }
         return self.addr().header.classIndex;
     }
-    pub const hasMemoryReference = isHeapObject;
+    pub const hasHeapReference = isHeapObject;
     pub inline fn ifHeapObject(self: Object) ?*HeapObject {
         if (self.isHeapObject()) return @constCast(@ptrCast(self.addr()));
         return null;

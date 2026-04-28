@@ -200,7 +200,7 @@ pub const Object = packed struct(u64) {
         return .Float;
     }
 
-    pub inline fn hasMemoryReference(_: Object) bool {
+    pub inline fn hasHeapReference(_: Object) bool {
         return false;
     }
     pub inline fn ifHeapObject(_: object.Object) ?*HeapObject {

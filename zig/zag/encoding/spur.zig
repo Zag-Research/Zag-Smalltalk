@@ -17,7 +17,8 @@ const HeapObjectConstPtr = zag.heap.HeapObjectConstPtr;
 const InMemory = zag.InMemory;
 const encode = switch (zag.config.objectEncoding) {
     .spur => @import("floatEncoding.zig").Spur.encode,
-    else => @import("floatEncoding.zig").FastSpur.encode};
+    else => @import("floatEncoding.zig").FastSpur.encode,
+};
 const decode = @import("floatEncoding.zig").Spur.decode;
 
 const Tag = enum(u3) {
@@ -275,7 +276,7 @@ pub const Object = packed union {
                         switch (@typeInfo(ptrInfo.child)) {
                             .@"fn" => {},
                             .@"struct" => {
-                                if (!check or (self.hasMemoryReference() and (!@hasDecl(ptrInfo.child, "ClassIndex") or self.to(HeapObjectConstPtr).classIndex == ptrInfo.child.ClassIndex))) {
+                                if (!check or (self.hasHeapReference() and (!@hasDecl(ptrInfo.child, "ClassIndex") or self.to(HeapObjectConstPtr).classIndex == ptrInfo.child.ClassIndex))) {
                                     if (@hasField(ptrInfo.child, "header") or (@hasDecl(ptrInfo.child, "includesHeader") and ptrInfo.child.includesHeader)) {
                                         return @as(T, @ptrFromInt(@as(usize, @bitCast(self))));
                                     } else {
@@ -306,7 +307,7 @@ pub const Object = packed union {
         return self.ref.getClass();
     }
 
-    pub const hasMemoryReference = isHeapObject;
+    pub const hasHeapReference = isHeapObject;
 
     pub inline fn ifHeapObject(self: Object) ?*HeapObject {
         if (self.isHeapObject()) return @ptrFromInt(self.rawU());

@@ -3,10 +3,15 @@ pub const Encoding = enum {
     zag,
     zagSpur,
     zagOrig,
-    compact,
+    compact1,
+    compact2,
+    compact4,
     compact6,
-    compactI,
+    compactI1,
+    compactI2,
+    compactI4,
     compactI6,
+    compactZ,
     nan,
     spur,
     spurOpt,
@@ -35,7 +40,7 @@ pub fn module(self: anytype) type {
         .zag => @import("zag.zig"),
         .zagSpur => @import("zagSpur.zig"),
         .zagOrig => @import("zagOrig.zig"),
-        .compact, .compact6, .compactI, .compactI6 => @import("compact.zig"),
+        .compact1, .compact2, .compact4, .compact6, .compactI1, .compactI2, .compactI4, .compactI6, .compactZ => @import("compact.zig"),
         .nan => @import("nan.zig"),
         .spur, .spurOpt => @import("spur.zig"),
         .taggedLow => @import("taggedLow.zig"),
@@ -51,7 +56,6 @@ pub fn tag(self: anytype) ?u64 {
         .zag => 'Z' + ('a' << 8),
         .zagOrig => 'Z' + ('O' << 8),
         .nan => 'N' + ('a' << 8),
-        .compact, .compact6, .compactI, .compactI6 => 'Z' + ('C' << 8),
         else => null,
     };
 }
@@ -61,10 +65,15 @@ test "fromName" {
     try expect(try match("zag") == .zag);
     try expect(try match("zagOrig") == .zagOrig);
     try expect(try match("zagSpur") == .zagSpur);
-    try expect(try match("compact") == .compact);
+    try expect(try match("compact1") == .compact1);
+    try expect(try match("compact2") == .compact2);
+    try expect(try match("compact4") == .compact4);
     try expect(try match("compact6") == .compact6);
-    try expect(try match("compactI") == .compactI);
+    try expect(try match("compactI1") == .compactI1);
+    try expect(try match("compactI2") == .compactI2);
+    try expect(try match("compactI4") == .compactI4);
     try expect(try match("compactI6") == .compactI6);
+    try expect(try match("compactZ") == .compactZ);
     try expect(try match("spur") == .spur);
     try expect(try match("spurOpt") == .spurOpt);
     try expect(try match("nan") == .nan);

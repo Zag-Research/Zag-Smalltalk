@@ -67,3 +67,80 @@ As these are run on computers in single-user mode, and have essentially 0 varian
 ```shell
 diff spur.zig zagAlt.zig |less
 ```
+
+## Minimizing interference on Linux
+For benchmarking **CPU compute**, achieving repeatability is all about eliminating **non-deterministic** hardware and software behavior. In addition to minimizing background processes, you should focus on **CPU isolation** and **throttling prevention**. 
+
+1. CPU Isolation (Pinning your benchmark)
+
+The most effective way to ensure repeatability is to reserve specific CPU cores strictly for your benchmark, preventing the Linux kernel from scheduling any other tasks on them. 
+
+- **Isolate Cores via GRUB**: You can "hide" cores from the OS by editing `/etc/default/grub`.
+    
+    bash
+    
+    ```
+    # Example: Isolating cores 1, 2, and 3 on a 4-core system
+    GRUB_CMDLINE_LINUX_DEFAULT="... isolcpus=1-3"
+    ```
+    
+    Use code with caution.
+    
+    After updating (`sudo update-grub`) and rebooting, the OS will only use Core 0 for general tasks.
+- **Run on Isolated Cores**: Use `taskset` to force your benchmark to run only on those reserved cores.
+    
+    bash
+    
+    ```
+    taskset -c 1-3 ./your_benchmark
+    ```
+    
+    Use code with caution.
+    
+     
+
+2. Force Consistent Frequencies
+
+Modern CPUs fluctuate their clock speeds rapidly based on load and temperature. For benchmarks, you want a **fixed** frequency. 
+
+- **Disable Turbo Boost**: Turbo Boost is great for bursts but bad for consistency because it depends on thermal headroom.
+    - **Intel**: `echo 1 | sudo tee /sys/devices/system/cpu/intel_pstate/no_turbo`.
+    - **AMD**: `echo 0 | sudo tee /sys/devices/system/cpu/cpufreq/boost`.
+- **Performance Governor**: Ensure the CPU is locked at its highest base frequency.
+    
+    bash
+    
+    ```
+    echo performance | sudo tee /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor
+    ```
+
+3. Disable Hyper-Threading (SMT) 
+
+If your benchmark is highly compute-intensive, two logical threads sharing one physical core can cause "resource contention," leading to inconsistent scores. 
+
+- **Action**: Disable Hyper-Threading in your **BIOS/UEFI** before testing. This ensures each process has exclusive access to the physical core's execution units. 
+
+4. Advanced "Tickless" Kernel Settings 
+
+Even on an isolated core, the kernel usually "wakes up" the CPU 100–1000 times a second to check for tasks (the "timer tick"). You can minimize this "jitter" by telling the kernel to go "tickless" on your isolated cores: 
+
+- Add `nohz_full=1-3` to your GRUB command line (using the same core numbers as `isolcpus`). 
+
+5. Disable Address Space Layout Randomization (ASLR) 
+
+ASLR moves data around in RAM for security, which can cause slight variations in cache performance and memory access times. 
+
+- **Temporary disable**: `echo 0 | sudo tee /proc/sys/kernel/randomize_va_space`. 
+
+Summary Checklist for a "Pure" Compute Environment
+
+1. **Reboot** into a `multi-user.target` (non-GUI) environment.
+2. **Disable Turbo Boost** and set the **Performance Governor**.
+3. **Disable ASLR** to stabilize memory access patterns.
+4. **Pin your process** to specific cores using `taskset`.
+5. **Wait 5 minutes** after boot for all "startup" background noise to settle before starting the first run.
+
+## Victor Stinner blog
+[perf module](https://vstinner.github.io/perf-visualize-system-noise-with-cpu-isolation.html)
+My journey to stable benchmark, [part 1 (system)](https://vstinner.github.io/journey-to-stable-benchmark-system.html) [part 2 (deadcode)](https://vstinner.github.io/journey-to-stable-benchmark-deadcode.html)  [part 3 (average)](https://vstinner.github.io/journey-to-stable-benchmark-average.html)
+Intel CPUs: [P-state, C-state, Turbo Boost, CPU frequency, etc.](https://vstinner.github.io/intel-cpus.html) [Turbo Boost, temperature, frequency and Pstate C0 bug](https://vstinner.github.io/intel-cpus-part2.html)

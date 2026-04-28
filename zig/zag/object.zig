@@ -67,17 +67,13 @@ pub const ClassIndex = enum(u16) {
     ThunkFloat,
     LLVM,
     UndefinedObject,
-    reserved_22 = 22,
-    reserved_23,
-    reserved_24,
-    reserved_25,
-    reserved_26,
-    o4,
+    o4 = 26,
     o3,
     o2,
     o1,
     o0,
-    Context,
+    heap,
+    Context = 64,
     Float,
     ProtoObject,
     Object,
@@ -113,7 +109,7 @@ pub const ClassIndex = enum(u16) {
     pub const ReplacementIndices = Self.replace7;
     pub const LastSpecial = @intFromEnum(Self.Dispatch);
     const Self = @This();
-    pub const Compact = enum(u5) {
+    pub const Compact = enum(switch (zag.config.objectEncoding) {.compactZ => u6, else => u5}) {
         none = noneIndex,
         SmallInteger = noneIndex ^ siIndex,
         ThunkReturnLocal = 1,
@@ -136,16 +132,13 @@ pub const ClassIndex = enum(u16) {
         ThunkFloat,
         LLVM,
         UndefinedObject,
-        reserved_22 = 22,
-        reserved_23,
-        reserved_24,
-        reserved_25,
-        reserved_26,
-        o4,
+        o4 = 26,
         o3,
         o2,
         o1,
         o0,
+        heap,
+        _,
         pub inline fn classIndex(cp: Compact) ClassIndex {
             return @enumFromInt(@intFromEnum(cp));
         }
@@ -174,8 +167,8 @@ comptime {
     std.debug.assert(@intFromEnum(ClassIndex.Compact.UndefinedObject) == 20);
     std.debug.assert(@intFromEnum(ClassIndex.UndefinedObject) == 20);
     std.debug.assert(@intFromEnum(ClassIndex.replace0) == 0xffff);
-    std.debug.assert(@intFromEnum(ClassIndex.Compact.o0) == 0x1f);
-    std.debug.assert(@intFromEnum(ClassIndex.o0) == 0x1f);
+    std.debug.assert(@intFromEnum(ClassIndex.Compact.heap) == 0x1f);
+    std.debug.assert(@intFromEnum(ClassIndex.heap) == 0x1f);
     std.testing.expectEqual(@intFromEnum(ClassIndex.ThunkReturnLocal), 1) catch @panic("unreachable");
     //    std.debug.assert(std.meta.hasUniqueRepresentation(Object));
     for (@typeInfo(ClassIndex.Compact).@"enum".fields, @typeInfo(ClassIndex).@"enum".fields[0..@typeInfo(ClassIndex.Compact).@"enum".fields.len]) |ci, cci| {
@@ -224,7 +217,7 @@ pub const ObjectFunctions = struct {
     }
     pub inline //
     fn isUnmoving(self: Object) bool {
-        return !self.hasMemoryReference() or self.to(*HeapObject).isUnmoving();
+        return !self.hasHeapReference() or self.to(*HeapObject).isUnmoving();
     }
     pub inline //
     fn hash(self: Object) Object {
@@ -311,7 +304,7 @@ pub const ObjectFunctions = struct {
         }
         @panic("unreachable");
     }
-    pub inline//
+    pub inline //
     fn get_class(self: Object) ClassIndex {
         return self.which_class();
     }
@@ -327,7 +320,7 @@ pub const ObjectFunctions = struct {
         self: Object,
         writer: anytype,
     ) !void {
-        if (false) {
+        if (true) {
             try writer.print("({x})", .{@as(u64, @bitCast(self))});
             //return;
         }
@@ -349,10 +342,10 @@ pub const ObjectFunctions = struct {
             try writer.print("{d}", .{i});
         } else if (self.symbolHash()) |_| {
             try writer.print("#{s}", .{symbol.asString(self).arrayAsSlice(u8) catch "???"});
-        } else if (self.extraImmediateU()) |extra| {
-            try writer.print("{}({}) -> {*}", .{ self.which_class(), extra, self.highPointer(*zag.Context) });
-        } else if (self.extraImmediateI()) |extra| {
-            try writer.print("{}({}) -> {*}", .{ self.which_class(), extra, self.highPointer(*zag.Context) });
+            // } else if (self.extraImmediateU()) |extra| {
+            //     try writer.print("{}({}) -> {*}", .{ self.which_class(), extra, self.highPointer(*zag.Context) });
+            // } else if (self.extraImmediateI()) |extra| {
+            //     try writer.print("{}({}) -> {*}", .{ self.which_class(), extra, self.highPointer(*zag.Context) });
         } else if (self.equals(False())) {
             try writer.print("false", .{});
         } else if (self.equals(True())) {
@@ -406,7 +399,9 @@ pub const PackedObject = packed struct {
         try expectEqual(0x2C015, combine14([_]ClassIndex{ .SmallInteger, .Symbol }));
     }
 };
-test {_ = tests;}
+test {
+    _ = tests;
+}
 const tests = struct {
     var process: Process align(Process.alignment) = undefined;
     var sp: Process.SP = undefined;
@@ -463,12 +458,12 @@ const tests = struct {
         try ee(true, (from(true)).to(bool));
         try ee(-0x400000, (from(-0x400000)).toUnchecked(i64));
         for (0..200) |u| {
-            const i:iTest = @truncate(@as(i64,@bitCast(u)) - 100);
+            const i: iTest = @truncate(@as(i64, @bitCast(u)) - 100);
             try ee(i, nativeI(fromNativeI(i)));
             try ee(i, nativeI(fromUntaggedI(try untaggedI(from(i)))));
         }
-        try ee(12345,Object.makeSymbol(.Symbol,12345,3).symbolHash());
-        try ee(3,Object.makeSymbol(.Symbol,12345,3).numArgs());
+        try ee(12345, Object.makeSymbol(.Symbol, 12345, 3).symbolHash());
+        try ee(3, Object.makeSymbol(.Symbol, 12345, 3).numArgs());
     }
     test "encoding: get_class" {
         //try config.skipNotZag();
@@ -486,7 +481,7 @@ const tests = struct {
         try ee(.True, True().get_class());
         try ee(.False, False().get_class());
         try ee(.UndefinedObject, Nil().get_class());
-        try ee(.Symbol,Object.makeSymbol(.Symbol, 0, 0).get_class());
+        try ee(.Symbol, Object.makeSymbol(.Symbol, 0, 0).get_class());
     }
     test "printing" {
         init();

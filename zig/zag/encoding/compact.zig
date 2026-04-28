@@ -1,5 +1,6 @@
 //! This module implements Object encoding for Zag Mix encoding
 const std = @import("std");
+const builtin = @import("builtin");
 const expectEqual = std.testing.expectEqual;
 const expect = std.testing.expect;
 const assert = std.debug.assert;
@@ -18,17 +19,31 @@ const HeapObjectConstPtr = zag.heap.HeapObjectConstPtr;
 const InMemory = zag.InMemory;
 const execute = zag.execute;
 const Signature = execute.Signature;
-const floatEncoding = switch (zag.config.objectEncoding) {
-    .compact, .compactI => @import("floatEncoding.zig").Fst4,
-    else => @import("floatEncoding.zig").Zag6};
+const encoding = zag.config.objectEncoding;
+const floatEncoding = switch (encoding) {
+    .compact1 => @import("floatEncoding.zig").Fst1(1),
+    .compactI1 => @import("floatEncoding.zig").Fst1(2),
+    .compact2, .compactI2 => @import("floatEncoding.zig").Fst2(2),
+    .compact4, .compactI4 => @import("floatEncoding.zig").Fst4,
+    .compact6, .compactI6 => @import("floatEncoding.zig").Zag6,
+    .compactZ => @import("floatEncoding.zig").Zag4,
+    else => @compileError("No matching encoding")};
 const encode = floatEncoding.encode;
 const decode = floatEncoding.decode;
+const IntType = switch (encoding) {
+    .compactI1, .compactI2, .compactI4 => i62,
+    .compactI6 => i61,
+    .compactZ, .compact1 => i58,
+    .compact2, .compact4 => i57,
+    .compact6 => i56,
+    else => @compileError("No matching encoding")};
 
 pub const Object = packed struct(u64) {
     hash: u48 = 0,
-    extra: u11 = 0,
+    extra: ExtraType = 0,
     class: ClassIndex.Compact = @enumFromInt(0),
     const Self = @This();
+    const ExtraType = std.meta.Int(.unsigned, 16-@bitSizeOf(ClassIndex.Compact));
     pub const maxInt = 0x1ff_ffff_ffff_ffff;
     pub const ZERO: Object = @bitCast(@as(u64, 0));
     pub inline fn False() Object {
@@ -40,58 +55,59 @@ pub const Object = packed struct(u64) {
     pub inline fn Nil() Object {
         return Self{ .class = .none };
     }
-    const intTag = switch (zag.config.objectEncoding) {
-        .compactI, .compactI6 => 1,
-        else => 0};
-    const IntType = if (intTag == 1) i62 else i57;
-    pub const LowTagType = u2;
+    pub const LowTagType = switch (encoding) {.compactZ => u0, else => u2};
     pub const lowTagSmallInteger = 0;
-    pub const HighTagType = u5;
-    pub const highTagSmallInteger = @intFromEnum(ClassIndex.Compact.SmallInteger);
+    pub const HighTagType = ClassIndex.Compact;
+    pub const highTagSmallInteger = ClassIndex.Compact.SmallInteger;
     pub const PackedTagType = ClassIndex.Compact;
     pub const packedTagSmallInteger = ClassIndex.Compact.SmallInteger;
     pub const signatureTag = 1;
+    const heap:ClassIndex.Compact = if (encoding==.compactZ) .heap else .none;
     inline fn tagbits(self: Object) u64 {
-        return rotl(u64, @bitCast(self), 5) & 0x5f;
+        switch (encoding) {
+            .compact1 => return rotl(u64, @bitCast(self), 5) & 0x1f,
+            .compactZ => return @as(u64, @bitCast(self)) >> 58,
+            else => return rotl(u64, @bitCast(self), 5) & 0x5f,
+        }
     }
 
     pub inline fn taggedI(self: object.Object) ?i64 {
         if (self.isInt()) {
             @branchHint(.likely);
-            if (intTag == 1) {
-                return @bitCast(self);
-            } else
-                return @as(i64, @bitCast(self)) << 5;
+            switch (encoding) {
+                .compactI1, .compactI2, .compactI4, .compactI6 => return @bitCast(self),
+                .compactZ => return @as(i64, @bitCast(self)) << 6,
+                else => return @as(i64, @bitCast(self)) << 5}
         }
         return null;
     }
     pub inline fn fromTaggedI(i: i64, _: anytype, _: anytype) object.Object {
-        if (intTag == 1) {
-            return @bitCast(i);
-        } else
-            return @bitCast(rotr(u64, @bitCast(i | @intFromEnum(ClassIndex.Compact.SmallInteger)), 5) + intTag);
+        switch (encoding) {
+            .compactI1, .compactI2, .compactI4, .compactI6 => return @bitCast(i),
+            .compactZ => return @bitCast(rotr(u64, @bitCast(i | @intFromEnum(ClassIndex.Compact.SmallInteger)), 6)),
+            else => return @bitCast(rotr(u64, @bitCast(i | @intFromEnum(ClassIndex.Compact.SmallInteger)), 5))}
     }
     pub inline fn untaggedI(self: object.Object) ?i64 {
         if (self.isInt()) {
             @branchHint(.likely);
-            if (intTag == 1) {
-                return @as(i64, @bitCast(self)) - 1;
-            } else
-                return @as(i64, @bitCast(self)) << 5;
+            switch (encoding) {
+                .compactI1, .compactI2, .compactI4, .compactI6 => return @as(i64, @bitCast(self)) - 1,
+                .compactZ => return @as(i64, @bitCast(self)) << 5,
+                else => return @as(i64, @bitCast(self)) << 5}
         }
         return null;
     }
     pub inline fn fromUntaggedI(i: i64, _: anytype, _: anytype) object.Object {
-        if (intTag == 1) {
-            return @bitCast(i + 1);
-        } else
-            return @bitCast(rotr(u64, @bitCast(i | @intFromEnum(ClassIndex.Compact.SmallInteger)), 5) + intTag);
+        switch (encoding) {
+            .compactI1, .compactI2, .compactI4, .compactI6 => return @bitCast(i + 1),
+            .compactZ => return @bitCast(rotr(u64, @bitCast(i | @intFromEnum(ClassIndex.Compact.SmallInteger)), 6)),
+            else => return @bitCast(rotr(u64, @bitCast(i | @intFromEnum(ClassIndex.Compact.SmallInteger)), 5))}
     }
 
     pub inline fn nativeI(self: object.Object) ?i64 {
         if (self.untaggedI()) |int| {
             @branchHint(.likely);
-           return int >> if (intTag == 1) 2 else 7;
+           return int >> (64 - @bitSizeOf(IntType));
         }
         return null;
     }
@@ -99,15 +115,19 @@ pub const Object = packed struct(u64) {
         return fromUntaggedI(asUntaggedI(i), null, null);
     }
     pub inline fn asUntaggedI(i: IntType) i64 {
-        return @as(i64, i) << if (intTag == 1) 2 else 7;
+        return @as(i64, i) << (64 - @bitSizeOf(IntType));
     }
     inline fn isInt(self: object.Object) bool {
-        if (intTag == 1) {
-            return switch (zag.arch) {
-                .x86_64 => (self.rawU() & 3) == 1,
-                else => (self.rawI() << 62 > 0)};
-        } else
-            return self.isImmediateClass(.SmallInteger);
+        switch (encoding) {
+            .compactI1 => return self.rawU() & 1 != 0,
+            .compactI2, .compactI4 => return self.rawI() << 62 > 0,
+            // return asm ( // on AARCH64
+            //     "cmn xzr, %[val], lsl #62"
+            //     : [ret] "=@ccgt" (-> bool)
+            //     : [val] "r" (self.rawU()) // Pass the raw integer, not the struct
+            // );
+            .compactI6 => return (self.rawU() & 7) == 1,
+            else => return self.isImmediateClass(.SmallInteger)}
     }
     pub inline fn isNat(self: object.Object) bool {
         return self.isInt() and self.rawI() >= 0;
@@ -178,14 +198,14 @@ pub const Object = packed struct(u64) {
     inline fn oImm(c: ClassIndex.Compact, h: u45) Self {
         return Self{ .class = c, .hash = h };
     }
-    inline fn oImmAddr(c: ClassIndex.Compact, ptr: anytype, e: u11) Self {
+    inline fn oImmAddr(c: ClassIndex.Compact, ptr: anytype, e: ExtraType) Self {
         return Self{ .class = c, .hash = @truncate(@intFromPtr(ptr) >> 8), .extra = e };
     }
-    inline fn oImmContextI(c: ClassIndex.Compact, context: *Context, e: i11) Self {
+    inline fn oImmContextI(c: ClassIndex.Compact, context: *Context, e: ExtraType) Self {
         return oImmAddr(c, context, @bitCast(e));
     }
     inline fn oImmContextCE(c: ClassIndex.Compact, context: *Context, c2: ClassIndex.Compact, e: u6) Self {
-        return oImmAddr(c, context, (@as(u11, @intFromEnum(c2)) << 6) | e);
+        return oImmAddr(c, context, (@as(ExtraType, @intFromEnum(c2)) << 6) | e);
     }
     pub inline fn pointer(self: object.Object, T: type) ?T {
         switch (self.tag) {
@@ -267,7 +287,7 @@ pub const Object = packed struct(u64) {
                         switch (@typeInfo(ptrInfo.child)) {
                             .@"fn" => {},
                             .@"struct" => {
-                                if (!check or (self.hasMemoryReference() and (!@hasDecl(ptrInfo.child, "ClassIndex") or self.toUnchecked(HeapObjectConstPtr).classIndex == ptrInfo.child.ClassIndex))) {
+                                if (!check or (self.hasHeapReference() and (!@hasDecl(ptrInfo.child, "ClassIndex") or self.toUnchecked(HeapObjectConstPtr).classIndex == ptrInfo.child.ClassIndex))) {
                                     if (@hasField(ptrInfo.child, "header") or (@hasDecl(ptrInfo.child, "includesHeader") and ptrInfo.child.includesHeader)) {
                                         return @as(T, @ptrFromInt(@as(usize, @bitCast(self))));
                                     } else {
@@ -286,31 +306,73 @@ pub const Object = packed struct(u64) {
     }
     pub inline//
     fn which_class(self: object.Object) ClassIndex {
-        const u: u64 = @bitCast(self);
-        if (self.isInt()) {
-            @branchHint(.likely);
-            return .SmallInteger;
-        } else if (u & 2 != 0) {
-            @branchHint(.likely);
-            return .Float;
+        switch (encoding) {
+            .compactI2, .compactI4 => {
+                const f = @as(i64, @bitCast(self)) << 62;
+                if (f > 0) {
+                    @branchHint(.likely);
+                    return .SmallInteger;
+                } else if (f < 0) {
+                    @branchHint(.likely);
+                    return .Float;
+                }},
+            .compactI6 => {
+                const u: u64 = @bitCast(self);
+                if (decode(u)) |_| {
+                    @branchHint(.likely);
+                    return .Float;
+                } else if (u & 1 != 0) {
+                    @branchHint(.likely);
+                    return .SmallInteger;
+                }},
+            else => {
+                const u: u64 = @bitCast(self);
+                if (self.isInt()) {
+                    @branchHint(.likely);
+                    return .SmallInteger;
+                } else if (decode(u)) |_| {
+                    @branchHint(.likely);
+                    return .Float;
+                }},
         }
         const class = self.class;
-        if (class != .none) {
-            @branchHint(.likely);
-            return self.class.classIndex();
-        }
-        if (u == 0) {
-            @branchHint(.unlikely);
-            return .UndefinedObject;
-        }
-        return self.toUnchecked(*HeapObject).*.getClass();
+        switch (encoding) {
+            .compactZ => {
+                if (@intFromEnum(class) < @intFromEnum(heap)) {
+                    @branchHint(.likely);
+                    if (@as(u64, @bitCast(self)) == 0) {
+                        @branchHint(.unlikely);
+                        return .UndefinedObject;
+                    }
+                    return self.class.classIndex();
+                } else if (@intFromEnum(class) > @intFromEnum(heap)) {
+                    return .Float;
+                } else {
+                    @branchHint(.unlikely);
+                    return self.toUnchecked(*HeapObject).*.getClass();
+                }
+            },
+            else => {
+                if (class != heap) {
+                    @branchHint(.likely);
+                    return self.class.classIndex();
+                }
+                if (@as(u64, @bitCast(self)) == 0) {
+                    @branchHint(.unlikely);
+                    return .UndefinedObject;
+                }
+                return self.toUnchecked(*HeapObject).*.getClass();
+            }}
     }
 
-    pub inline fn hasMemoryReference(self: Object) bool {
-        return self.rawU() & 3 == 0 and self.class == .none and self != Nil();
+    pub inline fn hasHeapReference(self: Object) bool {
+        switch (encoding) {
+            .compactZ => return self.class == heap,
+            else => return self.rawU() & 3 == 0 and self.class == heap and self != Nil(),
+        }
     }
     pub inline fn ifHeapObject(self: object.Object) ?*HeapObject {
-        if (self.hasMemoryReference()) return @ptrFromInt(@as(u64, @bitCast(self)));
+        if (self.hasHeapReference()) return @ptrFromInt(@as(u64, @bitCast(self)));
         return null;
     }
 

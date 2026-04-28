@@ -102,16 +102,6 @@
     "cwd": "$ZED_WORKTREE_ROOT/zig",
   },
   {
-    "label": "trace fib compact",
-    "command": "zig build -Dtrace -Dencoding=compact -Doptimize=Debug -freference-trace=5 && ./zig-out/bin/fib",
-    "cwd": "$ZED_WORKTREE_ROOT/zig",
-  },
-  {
-    "label": "trace fib compactI",
-    "command": "zig build -Dtrace -Dencoding=compactI -Doptimize=Debug -freference-trace=5 && ./zig-out/bin/fib",
-    "cwd": "$ZED_WORKTREE_ROOT/zig",
-  },
-  {
     "label": "trace fib onlyInt",
     "command": "zig build -Dtrace -Dencoding=onlyInt -Doptimize=Debug -freference-trace=5 && ./zig-out/bin/fib",
     "cwd": "$ZED_WORKTREE_ROOT/zig",
@@ -127,13 +117,53 @@
     "cwd": "$ZED_WORKTREE_ROOT/zig",
   },
   {
-    "label": "time fib compact",
-    "command": "zig build -Dencoding=compact -Doptimize=ReleaseFast -freference-trace=10 && ./zig-out/bin/fib",
+    "label": "time fib compact1",
+    "command": "zig build -Dencoding=compact1 -Doptimize=ReleaseFast -freference-trace=10 && ./zig-out/bin/fib",
     "cwd": "$ZED_WORKTREE_ROOT/zig",
   },
   {
-    "label": "time fib compactI",
-    "command": "zig build -Dencoding=compactI -Doptimize=ReleaseFast -freference-trace=10 && ./zig-out/bin/fib",
+    "label": "time fib compactI1",
+    "command": "zig build -Dencoding=compactI1 -Doptimize=ReleaseFast -freference-trace=10 && ./zig-out/bin/fib",
+    "cwd": "$ZED_WORKTREE_ROOT/zig",
+  },
+  {
+    "label": "trace fib compact1",
+    "command": "zig build -Dtrace -Dencoding=compact1 -Doptimize=Debug -freference-trace=5 && ./zig-out/bin/fib",
+    "cwd": "$ZED_WORKTREE_ROOT/zig",
+  },
+  {
+    "label": "trace fib compactI1",
+    "command": "zig build -Dtrace -Dencoding=compactI1 -Doptimize=Debug -freference-trace=5 && ./zig-out/bin/fib",
+    "cwd": "$ZED_WORKTREE_ROOT/zig",
+  },
+  {
+    "label": "trace fib compact4",
+    "command": "zig build -Dtrace -Dencoding=compact4 -Doptimize=Debug -freference-trace=5 && ./zig-out/bin/fib",
+    "cwd": "$ZED_WORKTREE_ROOT/zig",
+  },
+  {
+    "label": "trace fib compactI4",
+    "command": "zig build -Dtrace -Dencoding=compactI4 -Doptimize=Debug -freference-trace=5 && ./zig-out/bin/fib",
+    "cwd": "$ZED_WORKTREE_ROOT/zig",
+  },
+  {
+    "label": "time fib compact6",
+    "command": "zig build -Dencoding=compact6 -Doptimize=ReleaseFast -freference-trace=10 && ./zig-out/bin/fib",
+    "cwd": "$ZED_WORKTREE_ROOT/zig",
+  },
+  {
+    "label": "time fib compactI6",
+    "command": "zig build -Dencoding=compactI6 -Doptimize=ReleaseFast -freference-trace=10 && ./zig-out/bin/fib",
+    "cwd": "$ZED_WORKTREE_ROOT/zig",
+  },
+  {
+    "label": "time fib compactZ",
+    "command": "zig build -Dencoding=compactZ -Doptimize=ReleaseFast -freference-trace=10 && ./zig-out/bin/fib",
+    "cwd": "$ZED_WORKTREE_ROOT/zig",
+  },
+  {
+    "label": "trace fib compactZ",
+    "command": "zig build -Dtrace -Dencoding=compactZ -Doptimize=Debug -freference-trace=5 && ./zig-out/bin/fib",
     "cwd": "$ZED_WORKTREE_ROOT/zig",
   },
   {

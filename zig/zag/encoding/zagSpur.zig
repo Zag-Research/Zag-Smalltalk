@@ -16,7 +16,7 @@ const HeapHeader = zag.heap.HeapHeader;
 const HeapObject = zag.heap.HeapObject;
 const HeapObjectConstPtr = zag.heap.HeapObjectConstPtr;
 const InMemory = zag.InMemory;
-const floatEncoding = @import("floatEncoding.zig").Fst1;
+const floatEncoding = @import("floatEncoding.zig").Fst1(4);
 const encode = floatEncoding.encode;
 const decode = floatEncoding.decode;
 
@@ -123,7 +123,7 @@ pub const Object = packed union {
     }
     pub inline fn fromNativeF(t: f64, sp: SP, context: *Context) Object {
         return @bitCast(encode(t) catch {
-            std.debug.print("inMemory {}\n",.{t});
+            std.debug.print("inMemory {}\n", .{t});
             return InMemory.float(t, sp, context);
         });
     }
@@ -259,7 +259,7 @@ pub const Object = packed union {
                         switch (@typeInfo(ptrInfo.child)) {
                             .@"fn" => {},
                             .@"struct" => {
-                                if (!check or (self.hasMemoryReference() and (!@hasDecl(ptrInfo.child, "ClassIndex") or self.to(HeapObjectConstPtr).classIndex == ptrInfo.child.ClassIndex))) {
+                                if (!check or (self.hasHeapReference() and (!@hasDecl(ptrInfo.child, "ClassIndex") or self.to(HeapObjectConstPtr).classIndex == ptrInfo.child.ClassIndex))) {
                                     if (@hasField(ptrInfo.child, "header") or (@hasDecl(ptrInfo.child, "includesHeader") and ptrInfo.child.includesHeader)) {
                                         return @as(T, @ptrFromInt(@as(usize, @bitCast(self))));
                                     } else {
@@ -292,7 +292,7 @@ pub const Object = packed union {
         }
         return .UndefinedObject;
     }
-    pub inline fn hasMemoryReference(self: Object) bool {
+    pub inline fn hasHeapReference(self: Object) bool {
         return if (self.isTag(.heap))
             self.rawU() != 0
         else switch (self.immediate.class) {

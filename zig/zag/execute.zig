@@ -40,9 +40,9 @@ pub const Result = SP;
 pub const Signature = packed struct {
     tag: u8 = sigTag,
     hash: u24 = 0,
-    numArgs: u8 = 0,
+    numArgs: u16 = 0,
     class: ClassIndex = .none,
-    prim: u8 = 0,
+    //prim: u8 = 0,
     const sigTag = @as(u8, @intFromEnum(ClassIndex.Compact.Signature)) << 3 | Object.signatureTag;
     fn isTagged(self: Signature) bool {
         return self.tag == sigTag;
@@ -839,7 +839,7 @@ fn CompileTimeObject(comptime counts: usize) type {
                     } else {
                         const ob: u64 = @bitCast(o.*);
                         o.* = if (ob & 1 != 0) Object.fromAddress(&self.objects[ob >> 1]) else replacements[ob >> 1];
-                        if (o.hasMemoryReference()) {
+                        if (o.hasHeapReference()) {
                             if (lastHeader) |h| h.objectFormat = .notIndexableWithPointers;
                         }
                     }
@@ -896,7 +896,7 @@ test "compileObject" {
         trace("True=0x{x:0>8}", .{@as(u64, @bitCast(True()))});
     }
 
-    try expect(o.asObject().hasMemoryReference());
+    try expect(o.asObject().hasHeapReference());
     //try expect(o.objects[9].equals(o.asObject()));
     //    try expectEqual(@as(u48, @truncate(o.asObject().rawU())), @as(u48, @truncate(@intFromPtr(&o.objects[8]))));
     try expect(o.objects[2].equals(o0));

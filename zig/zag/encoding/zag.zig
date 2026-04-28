@@ -18,7 +18,7 @@ const HeapObjectConstPtr = zag.heap.HeapObjectConstPtr;
 const InMemory = zag.InMemory;
 const execute = zag.execute;
 const Signature = execute.Signature;
-const floatEncoding = @import("floatEncoding.zig").Fst2;
+const floatEncoding = @import("floatEncoding.zig").Fst2(4);
 const encode = floatEncoding.encode;
 const decode = floatEncoding.decode;
 
@@ -91,7 +91,7 @@ pub const Object = packed struct(u64) {
     pub inline fn nativeI(self: object.Object) ?i64 {
         if (self.taggedI()) |int| {
             @branchHint(.likely);
-           return int >> 2;
+            return int >> 2;
         }
         return null;
     }
@@ -258,7 +258,7 @@ pub const Object = packed struct(u64) {
                         switch (@typeInfo(ptrInfo.child)) {
                             .@"fn" => {},
                             .@"struct" => {
-                                if (!check or (self.hasMemoryReference() and (!@hasDecl(ptrInfo.child, "ClassIndex") or self.toUnchecked(HeapObjectConstPtr).classIndex == ptrInfo.child.ClassIndex))) {
+                                if (!check or (self.hasHeapReference() and (!@hasDecl(ptrInfo.child, "ClassIndex") or self.toUnchecked(HeapObjectConstPtr).classIndex == ptrInfo.child.ClassIndex))) {
                                     if (@hasField(ptrInfo.child, "header") or (@hasDecl(ptrInfo.child, "includesHeader") and ptrInfo.child.includesHeader)) {
                                         return @as(T, @ptrFromInt(@as(usize, @bitCast(self))));
                                     } else {
@@ -275,7 +275,7 @@ pub const Object = packed struct(u64) {
         }
         @panic("Trying to convert Object to " ++ @typeName(T));
     }
-    pub inline//
+    pub inline //
     fn which_class(self: object.Object) ClassIndex {
         const u: u64 = @bitCast(self);
         if (true) {
@@ -287,17 +287,17 @@ pub const Object = packed struct(u64) {
                 return .Float;
             }
         } else {
-        const shift: u4 = @intCast((u & 6) << 1); // depends on SmallInteger only using 2 (i.e. 3,6,7 unused)
-        const offset = @min(ClassIndex.u(.Float),ClassIndex.u(.SmallInteger)) - 1;
-        assert(@max(ClassIndex.u(.Float),ClassIndex.u(.SmallInteger)) - 15 <= offset);
-        const key = ((ClassIndex.u(.SmallInteger)-offset)<<12)+((ClassIndex.u(.Float)-offset)<<8)+((ClassIndex.u(.SmallInteger)-offset)<<4);
-        switch ((key >> shift) & 15) {
-            else => |tag| {
-                @branchHint(.likely);
-                return @enumFromInt(tag+offset);
-            },
-            0 => {},
-        }
+            const shift: u4 = @intCast((u & 6) << 1); // depends on SmallInteger only using 2 (i.e. 3,6,7 unused)
+            const offset = @min(ClassIndex.u(.Float), ClassIndex.u(.SmallInteger)) - 1;
+            assert(@max(ClassIndex.u(.Float), ClassIndex.u(.SmallInteger)) - 15 <= offset);
+            const key = ((ClassIndex.u(.SmallInteger) - offset) << 12) + ((ClassIndex.u(.Float) - offset) << 8) + ((ClassIndex.u(.SmallInteger) - offset) << 4);
+            switch ((key >> shift) & 15) {
+                else => |tag| {
+                    @branchHint(.likely);
+                    return @enumFromInt(tag + offset);
+                },
+                0 => {},
+            }
         }
         const class = self.class;
         if (class == .none) {
@@ -309,7 +309,7 @@ pub const Object = packed struct(u64) {
         } else return self.class.classIndex();
     }
 
-    pub inline fn hasMemoryReference(self: Object) bool {
+    pub inline fn hasHeapReference(self: Object) bool {
         return self.tag == .heap and self != Nil();
     }
     pub inline fn ifHeapObject(self: object.Object) ?*HeapObject {

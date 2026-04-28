@@ -158,7 +158,7 @@ pub const Object = packed struct(u64) {
         return @ptrCast(self.ref.data.objects);
     }
     pub inline fn pointer(self: Object, T: type) ?T {
-        if (self.hasMemoryReference()) return @constCast(@ptrCast(self.ref));
+        if (self.hasHeapReference()) return @constCast(@ptrCast(self.ref));
         return null;
     }
     pub inline fn toIntNoCheck(self: Object) i64 {
@@ -240,7 +240,7 @@ pub const Object = packed struct(u64) {
                         switch (@typeInfo(ptrInfo.child)) {
                             .@"fn" => {},
                             .@"struct" => {
-                                if (!check or (self.hasMemoryReference() and (!@hasDecl(ptrInfo.child, "ClassIndex") or self.to(HeapObjectConstPtr).classIndex == ptrInfo.child.ClassIndex))) {
+                                if (!check or (self.hasHeapReference() and (!@hasDecl(ptrInfo.child, "ClassIndex") or self.to(HeapObjectConstPtr).classIndex == ptrInfo.child.ClassIndex))) {
                                     if (@hasField(ptrInfo.child, "header") or (@hasDecl(ptrInfo.child, "includesHeader") and ptrInfo.child.includesHeader)) {
                                         return @as(T, @ptrFromInt(@as(usize, @bitCast(self))));
                                     } else {
@@ -261,7 +261,7 @@ pub const Object = packed struct(u64) {
     fn which_class(self: Object) ClassIndex {
         return self.ref.header.classIndex;
     }
-    pub inline fn hasMemoryReference(self: Object) bool {
+    pub inline fn hasHeapReference(self: Object) bool {
         return @intFromPtr(self.ref) & 0x7 == 0 and self != Nil();
     }
     pub const Scanner = struct {

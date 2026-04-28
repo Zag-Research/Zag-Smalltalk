@@ -52,7 +52,7 @@ pub const module = struct {
 };
 pub const fail = struct {
     pub fn threadedFn(_: PC, _: SP, _: *Process, _: *Context, _: Extra) Result {
-        @panic("Failed");
+        @panic("executing the 'fail' threadedFn");
     }
 };
 pub const branch = struct {
