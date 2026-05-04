@@ -19,6 +19,7 @@ pub fn build(b: *std.Build) void {
 
     // Experiment executables
     createExperimentExecutables(b, target, optimize, build_options, zag);
+    // createCnpBuilds(b, target, optimize, build_options, zag);
 
     // Test and benchmark steps
     createTestStep(b, target, optimize, build_options, llvm_module);
@@ -147,21 +148,6 @@ fn createExperimentExecutables(
     });
     b.installArtifact(fib);
 
-    const cnpFib = b.addExecutable(.{
-        .name = "cnpFib",
-        .root_module = b.createModule(.{
-            .root_source_file = b.path("experiments/cnpFib.zig"),
-            .target = target,
-            .optimize = optimize,
-            .imports = &.{
-                .{ .name = "zag", .module = zag },
-            },
-            .omit_frame_pointer = build_options.omit_frame_pointer,
-        }),
-        .use_llvm = true,
-    });
-    b.installArtifact(cnpFib);
-
     const branchPrediction = b.addExecutable(.{
         .name = "branchPrediction",
         .root_module = b.createModule(.{
@@ -176,6 +162,39 @@ fn createExperimentExecutables(
         .use_llvm = true,
     });
     _ = branchPrediction;
+
+    const fib_check = b.addExecutable(.{
+        .name = "fib",
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("experiments/fib.zig"),
+            .target = target,
+            .optimize = optimize,
+            .imports = &.{
+                .{ .name = "zag", .module = zag },
+            },
+            .omit_frame_pointer = build_options.omit_frame_pointer,
+        }),
+        .use_llvm = true,
+    });
+    const check = b.step("check", "Check if foo compiles");
+    check.dependOn(&fib_check.step);
+}
+
+fn createCnpBuilds(b: *std.Build, target: std.Build.ResolvedTarget, optimize: std.builtin.OptimizeMode, build_options: BuildOptions, zag: *std.Build.Module) void {
+    const cnpFib = b.addExecutable(.{
+        .name = "cnpFib",
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("experiments/cnpFib.zig"),
+            .target = target,
+            .optimize = optimize,
+            .imports = &.{
+                .{ .name = "zag", .module = zag },
+            },
+            .omit_frame_pointer = build_options.omit_frame_pointer,
+        }),
+        .use_llvm = true,
+    });
+    b.installArtifact(cnpFib);
 
     const cnp = b.addExecutable(.{
         .name = "cnp",
@@ -230,22 +249,6 @@ fn createExperimentExecutables(
     const run_cnp_fib_bench = b.addRunArtifact(cnp_fib_bench);
     const run_cnp_fib_bench_step = b.step("cnp-fib-bench", "Run CNP JIT fibonacci benchmarks");
     run_cnp_fib_bench_step.dependOn(&run_cnp_fib_bench.step);
-
-    const fib_check = b.addExecutable(.{
-        .name = "fib",
-        .root_module = b.createModule(.{
-            .root_source_file = b.path("experiments/fib.zig"),
-            .target = target,
-            .optimize = optimize,
-            .imports = &.{
-                .{ .name = "zag", .module = zag },
-            },
-            .omit_frame_pointer = build_options.omit_frame_pointer,
-        }),
-        .use_llvm = true,
-    });
-    const check = b.step("check", "Check if foo compiles");
-    check.dependOn(&fib_check.step);
 }
 
 fn createTestStep(
@@ -302,9 +305,9 @@ fn createTestStep(
 
         enc_tests.root_module.addOptions("options", enc_options);
         if (encoding_tests)
-            enc_tests.filters = &.{ "encoding:" };
+            enc_tests.filters = &.{"encoding:"};
         if (just_tests)
-            enc_tests.filters = &.{ "just:" };
+            enc_tests.filters = &.{"just:"};
         const run_enc_tests = b.addRunArtifact(enc_tests);
         test_step.dependOn(&run_enc_tests.step);
     }
