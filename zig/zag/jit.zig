@@ -13,7 +13,6 @@ const common = struct {
     fn mmap(size: usize) ![]align(std.heap.page_size_min) u8 {
         switch (builtin.os.tag) {
             .windows => {
-                zag.untested();
                 const MEM_COMMIT = std.os.windows.MEM_COMMIT;
                 const MEM_RESERVE = std.os.windows.MEM_RESERVE;
                 const PAGE_READWRITE = std.os.windows.PAGE_READWRITE;
@@ -23,7 +22,9 @@ const common = struct {
                     MEM_COMMIT | MEM_RESERVE,
                     PAGE_READWRITE,
                 ) catch return error.OutOfMemory;
-                return @as([*]u8, @ptrCast(ptr))[0..size];
+
+                const aligned_ptr: [*]align(std.heap.page_size_min) u8 = @ptrCast(@alignCast(ptr));
+                return aligned_ptr[0..size];
             },
             .macos => {
                 const prot_rwx = std.posix.PROT.READ | std.posix.PROT.WRITE | std.posix.PROT.EXEC;
@@ -40,7 +41,6 @@ const common = struct {
     fn munmap(mem: []align(std.heap.page_size_min) u8) void {
         switch (builtin.os.tag) {
             .windows => {
-                zag.untested();
                 _ = std.os.windows.VirtualFree(mem.ptr, 0, std.os.windows.MEM_RELEASE);
             },
             .macos, .linux => std.posix.munmap(mem),
@@ -52,23 +52,17 @@ const common = struct {
         switch (builtin.os.tag) {
             .macos => pthread_jit_write_protect_np(0),
             .windows => {
-                zag.untested();
-                const PAGE_READ_WRITE = std.os.windows.PAGE_READ_WRITE;
+                const PAGE_READWRITE = std.os.windows.PAGE_READWRITE;
                 var old_prot: u32 = undefined;
-
-                // 1. Change Permissions
-                // Note: Zig's std.os.windows.VirtualProtect wrapper might be minimal,
-                // so we call the kernel32 function directly if needed, but standard library usage is:
-                const res = std.os.windows.VirtualProtect(
+                // Use 'try' as the Zig wrapper returns !void
+                try std.os.windows.VirtualProtect(
                     mem.ptr,
                     mem.len,
-                    PAGE_READ_WRITE,
+                    PAGE_READWRITE,
                     &old_prot,
                 );
-                if (res == 0) return error.AccessDenied;
             },
             .linux => {
-                // We must remove execute permission to satisfy W^X
                 const prot_rw = std.posix.PROT.READ | std.posix.PROT.WRITE;
                 return std.posix.mprotect(mem, prot_rw);
             },
@@ -91,15 +85,18 @@ const aarch64 = struct {
                 sys_icache_invalidate(mem.ptr, mem.len);
             },
             .windows => {
-                zag.untested();
-                var old_protection: std.os.windows.PROTECTION_TYPE = undefined;
-                _ = std.os.windows.VirtualProtect(mem.ptr, mem.len, std.os.windows.PAGE_EXECUTE_READ, &old_protection);
+                const kernel32 = struct {
+                    extern "kernel32" fn FlushInstructionCache(
+                        hProcess: std.os.windows.HANDLE,
+                        lpBaseAddress: ?*const anyopaque,
+                        dwSize: usize,
+                    ) callconv(.winapi) std.os.windows.BOOL;
+                };
+
+                var old_protection: u32 = undefined;
+                try std.os.windows.VirtualProtect(mem.ptr, mem.len, std.os.windows.PAGE_EXECUTE_READ, &old_protection);
                 const process = std.os.windows.GetCurrentProcess();
-                _ = std.os.windows.kernel32.FlushInstructionCache(
-                    process,
-                    mem.ptr,
-                    mem.len,
-                );
+                _ = kernel32.FlushInstructionCache(process, mem.ptr, mem.len);
             },
             .linux => {
                 try std.posix.mprotect(mem, std.posix.PROT.READ | std.posix.PROT.EXEC);
@@ -119,57 +116,66 @@ const aarch64 = struct {
         return @ptrCast(mem);
     }
 };
+
 const x86_64 = struct {
     const mmap = common.mmap;
     const munmap = common.munmap;
     pub const enable_write_permission = common.enable_write_permission;
     extern "c" fn pthread_jit_write_protect_np(enabled: c_int) void;
-    pub fn prepare_to_execute(mem: []align(std.heap.page_size_min) u8) !void {
-        switch (builtin.os.tag) {
-            .macos => pthread_jit_write_protect_np(1),
-            .windows => {
-                zag.untested();
-                const PAGE_EXECUTE_READ = std.os.windows.PAGE_EXECUTE_READ;
-                var old_prot: u32 = undefined;
 
-                // 1. Change Permissions
-                // Note: Zig's std.os.windows.VirtualProtect wrapper might be minimal,
-                // so we call the kernel32 function directly if needed, but standard library usage is:
-                const res = std.os.windows.VirtualProtect(
-                    mem.ptr,
-                    mem.len,
-                    PAGE_EXECUTE_READ,
-                    &old_prot,
-                );
-                if (res == 0) return error.AccessDenied;
+    const is_windows = builtin.os.tag == .windows;
 
-                // 2. Flush Cache (Required for AARCH64, good practice for x64)
-                // -1 as process handle means "current process"
-                _ = std.os.windows.kernel32.FlushInstructionCache(
-                    std.os.windows.GetCurrentProcess(),
-                    mem.ptr,
-                    mem.len,
-                );
-            },
-            .linux => {
-                // We must remove Write permission to satisfy W^X
-                const prot_rx = std.posix.PROT.READ | std.posix.PROT.EXEC;
-                return std.posix.mprotect(mem, prot_rx);
-            },
-            else => unreachable,
-        }
-    }
+    // On Windows x64, we must:
+    // 1. sub rsp, 40 (32 bytes shadow space + 8 bytes to re-align the stack from the previous call)
+    // 2. call the function
+    // 3. add rsp, 40
+    // 4. ret
+    const call_prefix = if (is_windows)
+        [_]u8{ 0x48, 0x83, 0xEC, 0x28, 0x49, 0xBB } // sub rsp, 40; mov r11, ...
+    else
+        [_]u8{ 0x49, 0xBB }; // mov r11, ...
 
-    const call_prefix = [_]u8{ 0x49, 0xBB };
-    const call_suffix = [_]u8{ 0x41, 0xFF, 0xD3 };
-    pub const threaded_code_offset = 3;
+    const call_suffix = if (is_windows)
+        [_]u8{ 0x41, 0xFF, 0xD3, 0x48, 0x83, 0xC4, 0x28, 0xC3 } // call r11; add rsp, 40; ret
+    else
+        [_]u8{ 0x41, 0xFF, 0xD3 }; // call r11
+
+    // threaded_code_offset is the distance from the return address (byte after call)
+    // to the start of the data section (the next 8-byte boundary).
+    pub const threaded_code_offset = if (is_windows) @as(usize, 7) else @as(usize, 3);
+
     const header_length = call_prefix.len + @sizeOf(usize) + call_suffix.len;
+
     pub fn write_call_code(ptr: anytype, mem: [*]align(@alignOf(@TypeOf(ptr))) u8) @TypeOf(ptr) {
         @memcpy(mem[0..call_prefix.len], &call_prefix);
         const suffix_offset = call_prefix.len + @sizeOf(usize);
         std.mem.writeInt(u64, mem[call_prefix.len..suffix_offset], @intFromPtr(ptr), native_endian);
         @memcpy(mem[suffix_offset .. suffix_offset + call_suffix.len], &call_suffix);
         return @ptrCast(mem);
+    }
+
+    pub fn prepare_to_execute(mem: []align(std.heap.page_size_min) u8) !void {
+        switch (builtin.os.tag) {
+            .macos => pthread_jit_write_protect_np(1),
+            .windows => {
+                // Ensure correct naming and handle result as error union/BOOL depending on Zig version
+                const PAGE_EXECUTE_READ = std.os.windows.PAGE_EXECUTE_READ;
+                var old_prot: u32 = undefined;
+
+                // Use a manual declaration if kernel32 wrapper is missing in your Zig version
+                const kernel32 = struct {
+                    extern "kernel32" fn FlushInstructionCache(h: std.os.windows.HANDLE, base: ?*const anyopaque, sz: usize) callconv(.winapi) std.os.windows.BOOL;
+                };
+
+                try std.os.windows.VirtualProtect(mem.ptr, mem.len, PAGE_EXECUTE_READ, &old_prot);
+                _ = kernel32.FlushInstructionCache(std.os.windows.GetCurrentProcess(), mem.ptr, mem.len);
+            },
+            .linux => {
+                const prot_rx = std.posix.PROT.READ | std.posix.PROT.EXEC;
+                return std.posix.mprotect(mem, prot_rx);
+            },
+            else => unreachable,
+        }
     }
 };
 
