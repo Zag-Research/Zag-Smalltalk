@@ -537,6 +537,7 @@ const Stack = struct {
                    if (addr == @intFromPtr(self)) " <--sp" else "",
                    if (addr == @intFromPtr(context)) " <--ctx" else "",
                    if (addr == @intFromPtr(selfAddr)) " <--self" else "" });
+            if (addr == @intFromPtr(context)) break;
         }
     }
     inline fn theProcess(self: SP) *Process {

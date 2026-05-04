@@ -327,7 +327,7 @@ pub const threadedFunctions = struct {
         }
     };
     inline fn getMethod(pc: PC, signature: Signature, receiver: Object) *const CompiledMethod {
-        const class = receiver.get_class();
+        const class = receiver.which_class();
         const requiredSignature = signature.withClass(class);
         trace("getMethod: {} {f} {f} {f}\n", .{ class, signature, receiver, requiredSignature });
         if (signature == requiredSignature) {
@@ -346,7 +346,7 @@ pub const threadedFunctions = struct {
         pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
             sp.traceStack("send", context, extra);
             const signature = pc.signature();
-            const numArgs = signature.numArgs;
+            const numArgs = signature.numArgs();
             const selfAddr = sp.unreserve(numArgs);
             const method = getMethod(pc, signature, selfAddr.top);
             const newPc = method.codePc();
@@ -382,7 +382,7 @@ pub const threadedFunctions = struct {
     pub const tailSend = struct {
         pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
             const signature = pc.signature();
-            const method = getMethod(pc, signature, sp.at(signature.numArgs));
+            const method = getMethod(pc, signature, sp.at(signature.numArgs()));
             const newPc = method.codePc();
             _ = extra; // have to move parameters to self position
             if (true) @panic("unreachable");
@@ -432,7 +432,7 @@ const DispatchMethod = struct {
         const method = self.method;
         if (method.signature.equals(signature))
             return method;
-        trace("match {*} {f} {f} ({x} {x})", .{ self, method.signature, signature, @as(u64,@bitCast(method.signature)), @as(u64,@bitCast(signature)) });
+        trace("match {*} {f} {f} ({x} {x})", .{ self, method.signature, signature, @as(u64, @bitCast(method.signature)), @as(u64, @bitCast(signature)) });
         return null;
     }
     inline //

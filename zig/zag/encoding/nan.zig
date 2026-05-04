@@ -81,7 +81,9 @@ pub const Object = packed struct(u64) {
     pub const highTagSmallInteger: HighTagType = Tag.u(.smallInteger);
     pub const PackedTagType = u3;
     pub const packedTagSmallInteger = 1;
-    pub const signatureTag = 1;
+    pub const signatureTag = 0;
+    pub const LowTag = u8;
+    pub const HighTag = u0;
     const TagAndClassType = u16;
     const tagAndClassBits = @bitSizeOf(Tag);
     comptime {
@@ -428,7 +430,6 @@ pub const Object = packed struct(u64) {
     pub const equals = OF.equals;
     pub const format = OF.format;
     pub const getField = OF.getField;
-    pub const get_class = OF.get_class;
     pub const isBool = OF.isBool;
     pub const toBoolNoCheck = OF.toBoolNoCheck;
     pub const isIndexable = OF.isIndexable;
@@ -440,10 +441,8 @@ pub const Object = packed struct(u64) {
     pub const to = OF.to;
     pub const toUnchecked = OF.toUnchecked;
     pub const asVariable = zag.Context.asVariable;
-    pub const PackedObject = object.PackedObject;
     pub const primitive = @import("zag.zig").Object.primitive;
     pub const symbol = @import("zag.zig").Object.symbol;
-    pub const signature = zag.execute.Signature.signature;
 };
 test "all generated NaNs are positive" {
     // test that all things that generate NaN generate positive ones

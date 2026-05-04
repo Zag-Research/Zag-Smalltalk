@@ -77,7 +77,7 @@ test "fromName" {
     try expect(try match("spur") == .spur);
     try expect(try match("spurOpt") == .spurOpt);
     try expect(try match("nan") == .nan);
-    try expect(try match("taggedPtr") == .taggedPtr);
+    try expect(try match("taggedLow") == .taggedLow);
     try expect(try match("taggedHigh") == .taggedHigh);
     try expect(try match("taggedInt") == .taggedInt);
     try expect(try match("cachedPtr") == .cachedPtr);

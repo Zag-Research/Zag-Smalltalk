@@ -34,6 +34,8 @@ pub const Object = packed struct(u64) {
     pub const PackedTagType = u3;
     pub const packedTagSmallInteger = 0;
     pub const signatureTag = 0;
+    pub const LowTag = u0;
+    pub const HighTag = u8;
 
     pub inline fn untaggedI(_: Object) ?i64 {
         @panic("not implemented");
@@ -216,7 +218,6 @@ pub const Object = packed struct(u64) {
     pub const equals = OF.equals;
     pub const format = OF.format;
     pub const getField = OF.getField;
-    pub const get_class = OF.get_class;
     pub const isBool = OF.isBool;
     pub const toBoolNoCheck = OF.toBoolNoCheck;
     pub const isIndexable = OF.isIndexable;
@@ -228,7 +229,5 @@ pub const Object = packed struct(u64) {
     pub const to = OF.to;
     pub const toUnchecked = OF.toUnchecked;
     pub const asVariable = zag.Context.asVariable;
-    pub const PackedObject = object.PackedObject;
-    pub const signature = zag.execute.Signature.signature;
     pub const tests = OF.tests;
 };

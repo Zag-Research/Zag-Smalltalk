@@ -79,7 +79,7 @@ pub const classCase = struct {
         sp.traceStack("classCase", context, extra);
         var newPc = pc;
         const top = sp.top;
-        const match = @intFromEnum(top.get_class());
+        const match = @intFromEnum(top.which_class());
         while (true) {
             var classes = newPc.packedObject().asU64();
             newPc = newPc.next();
@@ -104,7 +104,7 @@ pub const classCase = struct {
         }
     }
     test "classCase match" {
-        const classes = Object.PackedObject.classes;
+        const classes = object.PackedObject.classes;
         var exe = Execution.initTest("classCase match", .{
             tf.classCase,
             comptime classes(&.{.True}),
@@ -124,7 +124,7 @@ pub const classCase = struct {
         );
     }
     test "classCase no match" {
-        const classes = Object.PackedObject.classes;
+        const classes = object.PackedObject.classes;
         var exe = Execution.initTest("classCase no match", .{
             tf.classCase,
             comptime classes(&.{ .True, .False }),
@@ -150,7 +150,7 @@ pub const classCase = struct {
         );
     }
     test "classCase no match - leave" {
-        const classes = Object.PackedObject.classes;
+        const classes = object.PackedObject.classes;
         var exe = Execution.initTest("classCase no match - leave", .{
             tf.classCase,
             comptime classes(&.{ .True, .leaveObjectOnStack }),

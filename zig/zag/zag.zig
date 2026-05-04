@@ -39,3 +39,6 @@ pub const arch = @import("builtin").target.cpu.arch;
 pub fn untested() void {
     @import("std").debug.panic("Untested", .{});
 }
+pub fn UInt(n: usize) type {
+    return @import("std").meta.Int(.unsigned, n);
+}

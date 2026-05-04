@@ -58,7 +58,9 @@ pub const Object = packed struct(u64) {
     pub const highTagSmallInteger = 0;
     pub const PackedTagType = Tag;
     pub const packedTagSmallInteger = Tag.smallinteger;
-    pub const signatureTag = Tag.u(.immediates);
+    pub const signatureTag = 0;
+    pub const LowTag = u0;
+    pub const HighTag = u8;
     inline fn tagbits(self: u64) u64 {
         return math.rotl(u64, @bitCast(self), 5) & 0xff;
     }
@@ -404,7 +406,6 @@ pub const Object = packed struct(u64) {
     pub const equals = OF.equals;
     pub const format = OF.format;
     pub const getField = OF.getField;
-    pub const get_class = OF.get_class;
     pub const isBool = OF.isBool;
     pub const toBoolNoCheck = OF.toBoolNoCheck;
     pub const isIndexable = OF.isIndexable;
@@ -417,6 +418,4 @@ pub const Object = packed struct(u64) {
     pub const toUnchecked = OF.toUnchecked;
     pub const header = OF.header;
     pub const asVariable = zag.Context.asVariable;
-    pub const PackedObject = object.PackedObject;
-    pub const signature = zag.execute.Signature.signature;
 };

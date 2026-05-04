@@ -48,7 +48,9 @@ pub const Object = packed struct(u64) {
     pub const highTagSmallInteger = 0;
     pub const PackedTagType = u3;
     pub const packedTagSmallInteger = 1;
-    pub const signatureTag = 1;
+    pub const signatureTag = @as(u8, @intFromEnum(ClassIndex.Compact.Signature)) << 3 | 1;
+    pub const LowTag = u8;
+    pub const HighTag = u8;
     pub inline fn untaggedI(self: object.Object) ?i64 {
         if (self.isInt()) return self.ref.data.int;
         return null;
@@ -151,9 +153,6 @@ pub const Object = packed struct(u64) {
     pub inline fn isNat(self: Object) bool {
         return self.isInt() and self.rawI() >= 0;
     }
-    // pub inline fn oImm(c: ClassIndex.Compact, h: u56) Self {
-    //     return Self{ .tag = .immediates, .class = c, .hash = h };
-    // }
     pub inline fn highPointer(self: Object, T: type) ?T {
         return @ptrCast(self.ref.data.objects);
     }
@@ -295,7 +294,6 @@ pub const Object = packed struct(u64) {
     pub const equals = OF.equals;
     pub const format = OF.format;
     pub const getField = OF.getField;
-    pub const get_class = OF.get_class;
     pub const isBool = OF.isBool;
     pub const toBoolNoCheck = OF.toBoolNoCheck;
     pub const isIndexable = OF.isIndexable;
@@ -307,6 +305,4 @@ pub const Object = packed struct(u64) {
     pub const to = OF.to;
     pub const toUnchecked = OF.toUnchecked;
     pub const asVariable = zag.Context.asVariable;
-    pub const PackedObject = object.PackedObject;
-    pub const signature = zag.execute.Signature.signature;
 };

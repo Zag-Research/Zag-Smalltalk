@@ -57,7 +57,9 @@ pub const Object = packed struct(u64) {
     pub const highTagSmallInteger = 0;
     pub const PackedTagType = u8;
     pub const packedTagSmallInteger = oImm(.SmallInteger, 0).tagbits();
-    pub const signatureTag = Tag.u(.immediates);
+    pub const signatureTag = @as(u8, @intFromEnum(ClassIndex.Compact.Signature)) << 3 | Tag.u(.immediates);
+    pub const LowTag = u8;
+    pub const HighTag = u8;
     const TagAndClassType = u8;
     const tagAndClassBits = @bitSizeOf(Tag) + @bitSizeOf(Compact);
     comptime {
@@ -573,7 +575,6 @@ pub const Object = packed struct(u64) {
     pub const equals = OF.equals;
     pub const format = OF.format;
     pub const getField = OF.getField;
-    pub const get_class = OF.get_class;
     pub const isBool = OF.isBool;
     pub const toBoolNoCheck = OF.toBoolNoCheck;
     pub const isIndexable = OF.isIndexable;
@@ -586,6 +587,4 @@ pub const Object = packed struct(u64) {
     pub const toUnchecked = OF.toUnchecked;
     pub const header = OF.header;
     pub const asVariable = zag.Context.asVariable;
-    pub const PackedObject = object.PackedObject;
-    pub const signature = zag.execute.Signature.signature;
 };

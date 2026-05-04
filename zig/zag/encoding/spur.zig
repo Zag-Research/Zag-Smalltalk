@@ -83,7 +83,9 @@ pub const Object = packed union {
     pub const highTagSmallInteger = 0;
     pub const PackedTagType = Tag;
     pub const packedTagSmallInteger = Tag.smallInteger;
-    pub const signatureTag = Tag.u(.smallInteger);
+    pub const signatureTag = @as(u8, @intFromEnum(ClassIndex.Compact.Signature)) << 3 | Tag.u(.smallInteger);
+    pub const LowTag = u8;
+    pub const HighTag = u8;
     const TagAndClassType = u3;
 
     inline fn tagbits(self: Self) TagAndClassType {
@@ -361,7 +363,6 @@ pub const Object = packed union {
         return null;
     }
     const OF = object.ObjectFunctions;
-    pub const PackedObject = object.PackedObject;
     pub const arrayAsSlice = OF.arrayAsSlice;
     pub const asObjectArray = OF.asObjectArray;
     pub const asZeroTerminatedString = OF.asZeroTerminatedString;
@@ -370,7 +371,6 @@ pub const Object = packed union {
     pub const equals = OF.equals;
     pub const format = OF.format;
     pub const getField = OF.getField;
-    pub const get_class = OF.get_class;
     pub const isBool = OF.isBool;
     pub const toBoolNoCheck = OF.toBoolNoCheck;
     pub const isIndexable = OF.isIndexable;

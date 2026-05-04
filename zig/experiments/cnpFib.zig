@@ -36,7 +36,7 @@ const cnpThreaded = struct {
     const leq = SmallInteger.@"<=".inlined;
     const plus = SmallInteger.@"+".inlined;
     const minus = SmallInteger.@"-".inlined;
-    const classes = Object.PackedObject.classes;
+    const classes = object.PackedObject.classes;
     const signature = zag.symbol.signature;
     const nullMethod = zag.dispatch.nullMethod;
     var cnp align(codeAlignment) =

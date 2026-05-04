@@ -38,16 +38,25 @@ const tf = threadedFn.Enum;
 
 pub const Result = SP;
 pub const Signature = packed struct {
-    tag: u8 = sigTag,
-    hash: u24 = 0,
-    numArgs: u16 = 0,
+    low: Object.LowTag = Object.signatureTag,
+    _filler1: zag.UInt(8 - @bitSizeOf(Object.LowTag)) = 0,
+    hash: zag.UInt(32 - @max(8, @bitSizeOf(Object.LowTag))) = 0,
+    high: Object.HighTag = 0,
     class: ClassIndex = .none,
-    //prim: u8 = 0,
-    const sigTag = @as(u8, @intFromEnum(ClassIndex.Compact.Signature)) << 3 | Object.signatureTag;
+    _filler2: zag.UInt(16 - @bitSizeOf(Object.HighTag)) = 0,
     fn isTagged(self: Signature) bool {
-        return self.tag == sigTag;
+        switch (Object.signatureTag) {
+            0 => return @as(Object,@bitCast(self)).isImmediateClass(.Signature),
+            else => |tag| return self.low == tag,
+        }
     }
-    pub const empty: Signature = .{};
+    pub const empty = new();
+    fn new() Signature {
+        switch (Object.signatureTag) {
+            0 => return @bitCast(Object.makeImmediate(.Signature, 0)),
+            else => return .{},
+        }
+    }
     pub inline fn asInt(self: Signature) u64 {
         return @bitCast(self);
     }
@@ -57,28 +66,43 @@ pub const Signature = packed struct {
     pub fn fullHash(self: Signature) u32 {
         return @intCast(self.asInt() & 0xffffff00);
     }
-    pub fn from(hash: u24, arity: u4, class: ClassIndex) Signature {
-        return .{ .hash = hash, .numArgs = arity, .class = class };
+    pub inline fn numArgs(self: Signature) u4 {
+        if (Object.HighTag != u0) {
+            return @intCast(self.high);
+        }
+        return @intCast(self.low);
     }
-    pub fn fromHashPrimitive(hash: u24, arity: u4, primitiveNumber: u8) Signature {
-        return .{ .hash = hash, .numArgs = arity, .prim = primitiveNumber };
+    pub fn from(hash: u24, arity: u4, class: ClassIndex) Signature {
+        var result = fromHash(hash, arity);
+        result.class = class;
+        return result;
+    }
+    pub inline fn fromHash(hash: u24, arity: u4) Signature {
+        var result = new();
+        result.hash = hash;
+        if (Object.HighTag != u0) {
+            result.high = arity;
+        } else result.low = arity;
+        return result;
     }
     pub fn fromPrimitive(primitiveNumber: u8) Signature {
-        return .{ .prim = primitiveNumber };
+        var result = new();
+        result.hash = primitiveNumber;
+        return result;
     }
     pub fn fromNameClass(name: symbol.Symbols, class: ClassIndex) Signature {
-        return .{ .numArgs = name.numArgs(), .hash = name.symbolHash().?, .class = class };
+        return from(name.symbolHash().?, name.numArgs(), class);
     }
-    pub fn fromClassU8(class: ClassIndex, number: u8) Signature {
-        return .{ .class = class, .prim = number };
+    pub fn fromClassU8X(class: ClassIndex, number: u8) Signature {
+        return .{ .class = class, .hash = number };
     }
-    pub fn fromClassI8(class: ClassIndex, number: i8) Signature {
-        return .{ .class = class, .prim = @as(u8, @bitCast(number)) };
+    pub fn fromClassI8X(class: ClassIndex, number: i8) Signature {
+        return .{ .class = class, .hash = @as(u8, @bitCast(number)) };
     }
     pub fn equals(self: Signature, other: Signature) bool {
         return (self.asInt() ^ other.asInt()) & 0xffffff00 == 0;
     }
-    pub fn signature(self: Object) ?Signature {
+    pub fn ifSignature(self: Object) ?Signature {
         const sig: Signature = @bitCast(self);
         if (sig.isTagged()) return sig;
         return null;
@@ -90,7 +114,7 @@ pub const Signature = packed struct {
         return @bitCast(self);
     }
     pub inline fn primitive(self: Signature) u8 {
-        return self.prim;
+        return @intCast(self.hash);
     }
     pub inline fn getClassIndex(self: Signature) u16 {
         return @intFromEnum(self.getClass());
@@ -109,7 +133,7 @@ pub const Signature = packed struct {
             try writer.print("Signature{{empty}}", .{});
         } else {
             switch (self.getClass()) {
-                .none => switch (self.primitive()) {
+                .none => switch (0) { // FIXME self.primitive()) {
                     0 => try writer.print("?", .{}),
                     else => |prim| try writer.print("{}", .{prim}),
                 },
@@ -393,10 +417,10 @@ pub const Code = union(enum) {
 };
 pub const StackStructure = packed struct {
     tag: Object.LowTagType = Object.lowTagSmallInteger,
-    _fillerLow: std.meta.Int(.unsigned, 16 - @bitSizeOf(Object.LowTagType)) = 0,
+    _fillerLow: zag.UInt(16 - @bitSizeOf(Object.LowTagType)) = 0,
     locals: u16 = 0,
     selfOffset: u16 = 0,
-    _fillerHigh: std.meta.Int(.unsigned, 64 - 48 - @bitSizeOf(Object.HighTagType)) = 0,
+    _fillerHigh: zag.UInt(64 - 48 - @bitSizeOf(Object.HighTagType)) = 0,
     highTag: Object.HighTagType = Object.highTagSmallInteger,
 };
 pub const endMethod = CompiledMethod.init(Sym.value, Code.end);
@@ -658,7 +682,7 @@ fn CompileTimeMethod(comptime counts: usize) type {
                         const index: usize = @bitCast(c.offset);
                         if (resolution) |literals| {
                             if (index >= literals.len) return error.Unresolved;
-                            if (literals[index].signature()) |signature| {
+                            if (Signature.ifSignature(literals[index])) |signature| {
                                 c.* = Code.signatureOf(signature);
                             } else c.* = Code.objectOf(literals[index]);
                             offset.* = .none;
@@ -834,7 +858,7 @@ fn CompileTimeObject(comptime counts: usize) type {
                         if (@intFromEnum(header.classIndex) >= @intFromEnum(ClassIndex.ReplacementIndices)) {
                             header.classIndex = classes[@intFromEnum(ClassIndex.replace0) - @intFromEnum(header.classIndex)];
                         }
-                        header.hash ^= zag.utilities.ProspectorHash.hash24(@truncate(@intFromPtr(o)));
+                        header.hash ^= zag.utilities.ProspectorHash.hash24(@truncate(@intFromPtr(o) >> 3));
                         lastHeader = header;
                     } else {
                         const ob: u64 = @bitCast(o.*);
@@ -1066,7 +1090,7 @@ pub const Execution = struct {
             exe.init(Object.empty);
             exe.getContext().setReturn(PC.exit());
             trace("SendTo: context {*} {*} {f}", .{ exe.getContext(), exe.getContext().npc, exe.getContext().tpc });
-            const class = receiver.get_class();
+            const class = receiver.which_class();
             const signature = if (selector.symbolHash()) |hsh| Signature.from(hsh, selector.numArgs(), class) else unreachable;
             exe.method = class.lookupMethodForClass(signature);
             exe.execute(&[_]Object{receiver});

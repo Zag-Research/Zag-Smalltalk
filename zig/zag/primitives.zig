@@ -168,7 +168,7 @@ const testModule = if (config.is_test) struct {
     pub const primitive255 = struct {
         pub const number = 255;
         pub fn primitive(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
-            if (sp.next.get_class() != sp.top.get_class()) {
+            if (sp.next.which_class() != sp.top.which_class()) {
                 return @call(tailCall, Extra.primitiveFailed, .{ pc, sp, process, context, extra });
             } else {
                 const newSp = sp.dropPut(Object.from(sp.next.equals(sp.top), sp, context));
@@ -176,8 +176,8 @@ const testModule = if (config.is_test) struct {
             }
         }
         pub fn primitiveError(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
-            std.debug.print("primitiveError255: {} {}", .{ sp.next.get_class(), sp.top.get_class() });
-            if (sp.next.get_class() != sp.top.get_class()) {
+            std.debug.print("primitiveError255: {} {}", .{ sp.next.which_class(), sp.top.which_class() });
+            if (sp.next.which_class() != sp.top.which_class()) {
                 const newSp = sp.push(Sym.value.asObject());
                 return @call(tailCall, Extra.primitiveFailed, .{ pc, newSp.?, process, context, extra });
             } else {
@@ -186,7 +186,7 @@ const testModule = if (config.is_test) struct {
             }
         }
         pub fn inlinePrimitive(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
-            if (sp.next.get_class() != sp.top.get_class()) {
+            if (sp.next.which_class() != sp.top.which_class()) {
                 return @call(tailCall, inlinePrimitiveFailed, .{ pc, sp, process, context, extra });
             } else {
                 const newSp = sp.dropPut(Object.from(sp.next.equals(sp.top), sp, context));

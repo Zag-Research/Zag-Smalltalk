@@ -35,7 +35,7 @@ fn createBuildOptions(b: *std.Build) BuildOptions {
     const max_classes = b.option(u16, "maxClasses", "Maximum number of classes") orelse 255;
     const trace = b.option(bool, "trace", "trace execution") orelse false;
     const quit_on_first_failure = b.option(bool, "quitOnFirstFailure", "Stop after first error");
-    const omit_frame_pointer = false;
+    const omit_frame_pointer = b.option(bool, "omitFramePointer", "Omit frame pointers") orelse false;
 
     return .{
         .include_llvm = include_llvm,
@@ -45,7 +45,7 @@ fn createBuildOptions(b: *std.Build) BuildOptions {
         .max_classes = max_classes,
         .trace = trace,
         .quit_on_first_failure = quit_on_first_failure,
-        .omit_frame_pointer = omit_frame_pointer,
+        .omit_frame_pointer = omit_frame_pointer and !trace,
     };
 }
 
@@ -146,7 +146,7 @@ fn createExperimentExecutables(
         .use_llvm = true,
     });
     b.installArtifact(fib);
-
+    if (true) return;
     const cnpFib = b.addExecutable(.{
         .name = "cnpFib",
         .root_module = b.createModule(.{
@@ -302,9 +302,9 @@ fn createTestStep(
 
         enc_tests.root_module.addOptions("options", enc_options);
         if (encoding_tests)
-            enc_tests.filters = &.{ "encoding:" };
+            enc_tests.filters = &.{"encoding:"};
         if (just_tests)
-            enc_tests.filters = &.{ "just:" };
+            enc_tests.filters = &.{"just:"};
         const run_enc_tests = b.addRunArtifact(enc_tests);
         test_step.dependOn(&run_enc_tests.step);
     }
@@ -326,8 +326,15 @@ fn createBenchStep(
                 .zag,
                 .zagSpur,
                 .zagOrig,
-                .compact1, .compact2, .compact4, .compact6,
-                .compactI1, .compactI2, .compactI4, .compactI6, .compactZ,
+                .compact1,
+                .compact2,
+                .compact4,
+                .compact6,
+                .compactI1,
+                .compactI2,
+                .compactI4,
+                .compactI6,
+                .compactZ,
                 .spur,
                 .spurOpt,
                 .taggedInt,
