@@ -7,3 +7,8 @@ What is useful from a copy-and-patch perspective is that each of these functions
 This also means that by extending the Abstract Interpretation, we can evolve over time to move stack operations to register operations.
 
 By using the threaded-functions as templates we get guaranteed correct native code generation, because the threaded functions are already working for the threaded execution. It is also trivial to extend the JIT by simply creating new threaded functions and compiling the source language to use the new operations. CnP will then seamlessly move that code into the JIT'ed code.
+
+### The JIT'er
+The function
+	`jitMethod(method: *const CompiledMethod, destination: []u8) ![]u8`
+where the result is a sub-slice of the `destination` parameter or an error if it ran out of space. The result should be castable to a `*ThreadFn` and run, but it returns a slice because in situ we will want to move it somewhere, or free up the unused space. Just start with the start threaded word, and abstract interpret until you’ve processed a return, handling sends specially (i.e. recognizing the address of `send`, `returnTop`, and `returnSelf` so that you don’t interpret the entire program (actually for the returns, you need to look for the call to `context.pop`).
