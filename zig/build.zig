@@ -29,7 +29,8 @@ pub fn build(b: *std.Build) void {
 fn createBuildOptions(b: *std.Build) BuildOptions {
     const include_llvm = b.option(bool, "llvm", "Include LLVM in build") orelse false;
     const git_version = b.run(&.{ "git", "log", "--pretty=format:%cI-%h", "-1" });
-    const compile_date_with_extra = b.run(&.{ "date", "+%Y-%m-%dT%H:%M:%S%z" });
+    //const compile_date_with_extra = b.run(&.{ "date", "+%Y-%m-%dT%H:%M:%S%z" });
+    const compile_date_with_extra = "1999-12-22 10:15:30-0400";
     const compile_date = std.mem.trim(u8, compile_date_with_extra, " \n\r");
     const encoding_option = b.option(Encoding, "encoding", "Object encoding");
     const max_classes = b.option(u16, "maxClasses", "Maximum number of classes") orelse 255;
