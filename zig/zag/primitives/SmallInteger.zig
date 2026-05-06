@@ -1,44 +1,66 @@
+//std imports
 const std = @import("std");
+const divFloor = std.math.divFloor;
+const divExact = std.math.divExact;
+
+const expectEqual = std.testing.expectEqual;
+
+//zag imports
 const zag = @import("../zag.zig");
+
+const tf = zag.threadedFn.Enum;
+const Sym = zag.symbol.symbols;
+const heap = zag.heap;
+const signature = zag.symbol.signature;
+
+//zag.config imports
 const config = zag.config;
-const tailCall = config.tailCall;
 const trace = config.trace;
-const execute = zag.execute;
+const tailCall = config.tailCall;
+
+//zag.Context imports
 const Context = zag.Context;
+const Extra = Context.Extra;
+
+//zag.execute imports
+const execute = zag.execute;
 const Code = execute.Code;
 const PC = execute.PC;
-const SP = Process.SP;
-const Extra = Context.Extra;
 const Result = execute.Result;
 const Execution = execute.Execution;
 const CompiledMethod = execute.CompiledMethod;
 const fromPrimitive = execute.Signature.fromPrimitive;
+
+//zag.Process imports
 const Process = zag.Process;
+const SP = Process.SP;
+
+//zag.object imports
 const object = zag.object;
-const Object = object.Object;
 const Nil = object.Nil;
 const True = object.True;
 const False = object.False;
-const Sym = zag.symbol.symbols;
-const signature = zag.symbol.signature;
-const heap = zag.heap;
-const primitives = zag.primitives;
+const Object = object.Object;
 const empty = &[0]Object{};
-const tf = zag.threadedFn.Enum;
 
 pub const moduleName = "SmallInteger";
 pub fn init() void {}
-const expectEqual = std.testing.expectEqual;
+
+//number = 1
 pub const @"+" = struct {
     pub const number = 1;
     pub const inlined = signature(.@"+", number);
+    //inline fn with(self: i64, other: Object, process: *Process, context: *Context) !Object { // INLINED - Add
+    // TODO: verify switch to sp and propogate
     inline fn with(self: i64, other: Object, sp: SP, context: *Context) !Object { // INLINED - Add
         if (other.untaggedI()) |untagged| {
             const result, const overflow = @addWithOverflow(self, untagged);
-            if (overflow == 0) return Object.fromTaggedI(result, sp, context);
+            if (overflow == 0)
+                return Object.fromTaggedI(result, sp, context);
         }
         return error.primitiveError;
     }
+    //TODO: verify primitive update acroos calls
     pub fn primitive(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result { // SmallInteger>>#+
         if (sp.next.taggedI()) |self| {
             const newSp = sp.dropPut(with(self, sp.top, sp, context) catch
@@ -84,13 +106,16 @@ pub const @"+" = struct {
         return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, extra });
     }
 };
+
+//number = 2
 pub const @"-" = struct {
     pub const number = 2;
     pub const inlined = signature(.@"-", number);
     inline fn with(self: i64, other: Object, sp: SP, context: *Context) !Object { // Subtract
         if (other.untaggedI()) |untagged| {
             const result, const overflow = @subWithOverflow(self, untagged);
-            if (overflow == 0) return Object.fromTaggedI(result, sp, context);
+            if (overflow == 0)
+                return Object.fromTaggedI(result, sp, context);
         }
         return error.primitiveError;
     }
@@ -113,6 +138,66 @@ pub const @"-" = struct {
         return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, extra });
     }
 };
+
+//number = 3
+pub const @"<" = struct {
+    pub const number = 3;
+    pub const inlined = signature(.@"<", number);
+    pub inline fn with(self: i64, other: Object, sp: SP, context: *Context) !Object { // Less
+        if (other.taggedI()) |tagged|
+            return Object.from(self < tagged, sp, context);
+        return error.primitiveError;
+    }
+    pub fn primitive(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result { // SmallInteger>>#<=
+        if (sp.next.taggedI()) |self| {
+            const newSp = sp.dropPut(with(self, sp.top, sp, context) catch
+                return @call(tailCall, Extra.primitiveFailed, .{ pc, sp, process, context, extra }));
+            return @call(tailCall, process.check(context.npc), .{ context.tpc, newSp, process, context, Extra.fromContextData(context.contextDataPtr(sp)) });
+        }
+        unreachable;
+    }
+    pub fn inlinePrimitive(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
+        sp.traceStack("<", context, extra);
+        if (sp.next.taggedI()) |self| {
+            const newSp = sp.dropPut(with(self, sp.top, sp, context) catch
+                return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, extra }));
+            return @call(tailCall, process.check(pc.prim3()), .{ pc.next3(), newSp, process, context, extra });
+        }
+        trace("Float>>#inlinePrimitive: < {f}", .{sp.next});
+        return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, extra });
+    }
+};
+
+//number = 4
+pub const @">" = struct {
+    pub const number = 4;
+    pub const inlined = signature(.@">", number);
+    inline fn with(self: i64, other: Object, sp: SP, context: *Context) !Object { // Greater
+        if (other.taggedI()) |tagged|
+            return Object.from(self > tagged, sp, context);
+        return error.primitiveError;
+    }
+    pub fn primitive(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result { // SmallInteger>>#>
+        if (sp.next.taggedI()) |self| {
+            const newSp = sp.dropPut(with(self, sp.top, sp, context) catch
+                return @call(tailCall, Extra.primitiveFailed, .{ pc, sp, process, context, extra }));
+            return @call(tailCall, process.check(context.npc), .{ context.tpc, newSp, process, context, Extra.fromContextData(context.contextDataPtr(sp)) });
+        }
+        unreachable;
+    }
+    pub fn inlinePrimitive(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
+        sp.traceStack(">", context, extra);
+        if (sp.next.taggedI()) |self| {
+            const newSp = sp.dropPut(with(self, sp.top, sp, context) catch
+                return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, extra }));
+            return @call(tailCall, process.check(pc.prim3()), .{ pc.next3(), newSp, process, context, extra });
+        }
+        trace("Float>>#inlinePrimitive: > {f}", .{sp.next});
+        return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, extra });
+    }
+};
+
+//number = 5
 pub const @"<=" = struct {
     pub const number = 5;
     pub const inlined = signature(.@"<=", number);
@@ -149,6 +234,95 @@ pub const @"<=" = struct {
         try expectEqual(Object.False(), try with(0, Object.from(-1, sp, context), sp, context));
     }
 };
+
+//number = 6
+pub const @">=" = struct {
+    pub const number = 6;
+    pub const inlined = signature(.@">=", number);
+    inline fn with(self: i64, other: Object, sp: SP, context: *Context) !Object { // GreaterOrEqual
+        if (other.taggedI()) |tagged|
+            return Object.from(self >= tagged, sp, context);
+        return error.primitiveError;
+    }
+    pub fn primitive(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result { // SmallInteger>>#>=
+        if (sp.next.taggedI()) |self| {
+            const newSp = sp.dropPut(with(self, sp.top, sp, context) catch
+                return @call(tailCall, Extra.primitiveFailed, .{ pc, sp, process, context, extra }));
+            return @call(tailCall, process.check(context.npc), .{ context.tpc, newSp, process, context, Extra.fromContextData(context.contextDataPtr(sp)) });
+        }
+        unreachable;
+    }
+    pub fn inlinePrimitive(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
+        sp.traceStack(">=", context, extra);
+        if (sp.next.taggedI()) |self| {
+            const newSp = sp.dropPut(with(self, sp.top, sp, context) catch
+                return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, extra }));
+            return @call(tailCall, process.check(pc.prim3()), .{ pc.next3(), newSp, process, context, extra });
+        }
+        trace("Float>>#inlinePrimitive: >= {f}", .{sp.next});
+        return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, extra });
+    }
+};
+
+//number = 7
+pub const @"=" = struct {
+    pub const number = 7;
+    pub const inlined = signature(.@"=", number);
+    inline fn with(self: i64, other: Object, sp: SP, context: *Context) !Object {  // Equal
+        if (other.taggedI()) |tagged|
+            return Object.from(self == tagged, sp, context);
+        return error.primitiveError;
+    }
+    pub fn primitive(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result { // SmallInteger>>#=
+        if (sp.next.taggedI()) |self| {
+            const newSp = sp.dropPut(with(self, sp.top, sp, context) catch
+                return @call(tailCall, Extra.primitiveFailed, .{ pc, sp, process, context, extra }));
+            return @call(tailCall, process.check(context.npc), .{ context.tpc, newSp, process, context, Extra.fromContextData(context.contextDataPtr(sp)) });
+        }
+        unreachable;
+    }
+    pub fn inlinePrimitive(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
+        sp.traceStack("=", context, extra);
+        if (sp.next.taggedI()) |self| {
+            const newSp = sp.dropPut(with(self, sp.top, sp, context) catch
+                return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, extra }));
+            return @call(tailCall, process.check(pc.prim3()), .{ pc.next3(), newSp, process, context, extra });
+        }
+        trace("Float>>#inlinePrimitive: = {f}", .{sp.next});
+        return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, extra });
+    }
+};
+
+//number = 8
+pub const @"~=" = struct {
+    pub const number = 8;
+    pub const inlined = signature(.@"~=", number);
+    inline fn with(self: i64, other: Object, sp: SP, context: *Context) !Object {  // NotEqual
+        if (other.taggedI()) |tagged|
+            return Object.from(self != tagged, sp, context);
+        return error.primitiveError;
+    }
+    pub fn primitive(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result { // SmallInteger>>#~=
+        if (sp.next.taggedI()) |self| {
+            const newSp = sp.dropPut(with(self, sp.top, sp, context) catch
+                return @call(tailCall, Extra.primitiveFailed, .{ pc, sp, process, context, extra }));
+            return @call(tailCall, process.check(context.npc), .{ context.tpc, newSp, process, context, Extra.fromContextData(context.contextDataPtr(sp)) });
+        }
+        unreachable;
+    }
+    pub fn inlinePrimitive(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
+        sp.traceStack("~=", context, extra);
+        if (sp.next.taggedI()) |self| {
+            const newSp = sp.dropPut(with(self, sp.top, sp, context) catch
+                return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, extra }));
+            return @call(tailCall, process.check(pc.prim3()), .{ pc.next3(), newSp, process, context, extra });
+        }
+        trace("Float>>#inlinePrimitive: ~= {f}", .{sp.next});
+        return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, extra });
+    }
+};
+
+//number = 9
 pub const @"*" = struct {
     pub const number = 9;
     pub const inlined = signature(.@"*", number);
@@ -186,6 +360,98 @@ pub const @"*" = struct {
         try expectEqual(Object.from(12, sp, context), with(3, Object.from(4, sp, context), sp, context));
         try expectEqual(error.primitiveError, with(0x1_0000_0000, Object.from(0x100_0000, sp, context), sp, context));
         try expectEqual(error.primitiveError, with(0x1_0000_0000, Object.from(0x80_0000, sp, context), sp, context));
+    }
+};
+
+// TODO: handle overflow where maxInt/-1
+//number = 10
+pub const @"/" = struct {
+    pub const number = 10;
+    pub const inlined = signature(.@"/", number);
+    inline fn with(self: i64, other: Object, sp: SP, context: *Context) !Object { // Divide
+        if (other.nativeI()) |native| {
+            const result = divExact(i64, self, native) catch return error.primitiveError; //TODO mult div untagged values
+            return Object.fromNativeI(result, sp, context);
+        }
+        return error.primitiveError;
+    }
+    pub fn primitive(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result { // SmallInteger>>#/
+        if (sp.next.nativeI()) |self| {
+            const newSp = sp.dropPut(with(self, sp.top, sp, context) catch
+                return @call(tailCall, Extra.primitiveFailed, .{ pc, sp, process, context, extra }));
+            return @call(tailCall, process.check(context.npc), .{ context.tpc, newSp, process, context, Extra.fromContextData(context.contextDataPtr(sp)) });
+        }
+        unreachable;
+    }
+    pub fn inlinePrimitive(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
+        if (sp.next.nativeI()) |self| {
+            const newSp = sp.dropPut(with(self, sp.top, sp, context) catch
+                return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, extra }));
+            return @call(tailCall, process.check(pc.prim3()), .{ pc.next3(), newSp, process, context, extra });
+        }
+        trace("SmallInteger>>#inlinePrimitive: / {f}", .{sp.next});
+        return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, extra });
+    }
+};
+
+//number = 11
+pub const @"\\\\" = struct {
+    pub const number = 11;
+    pub const inlined = signature(.@"\\\\", number);
+    inline fn with(self: i64, other: Object, sp: SP, context: *Context) !Object { // modulo
+        if (other.nativeI()) |native| {
+            const result = @mod(self, native) catch return error.primitiveError;
+            return Object.fromNativeI(result, sp, context);
+        }
+        return error.primitiveError;
+    }
+    pub fn primitive(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result { // SmallInteger>>#\\
+        if (sp.next.nativeI()) |self| {
+            const newSp = sp.dropPut(with(self, sp.top, sp, context) catch
+                return @call(tailCall, Extra.primitiveFailed, .{ pc, sp, process, context, extra }));
+            return @call(tailCall, process.check(context.npc), .{ context.tpc, newSp, process, context, Extra.fromContextData(context.contextDataPtr(sp)) });
+        }
+        unreachable;
+    }
+    pub fn inlinePrimitive(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
+        if (sp.next.nativeI()) |self| {
+            const newSp = sp.dropPut(with(self, sp.top, sp, context) catch
+                return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, extra }));
+            return @call(tailCall, process.check(pc.prim3()), .{ pc.next3(), newSp, process, context, extra });
+        }
+        trace("SmallInteger>>#inlinePrimitive: \\\\ {f}", .{sp.next});
+        return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, extra });
+    }
+};
+
+// TODO: handle overflow where maxInt/-1
+//number = 12
+pub const @"//" = struct {
+    pub const number = 12;
+    pub const inlined = signature(.@"//", number);
+    inline fn with(self: i64, other: Object, sp: SP, context: *Context) !Object { // div floor
+        if (other.nativeI()) |native| {
+            const result = divFloor(self.taggedI_noCheck(), native) catch return error.primitiveError; //TODO verify we want to return error
+            return Object.fromNativeI(result, sp, context);
+        }
+        return error.primitiveError;
+    }
+    pub fn primitive(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result { // SmallInteger>>#//
+        if (sp.next.untaggedI()) |self| {
+            const newSp = sp.dropPut(with(self, sp.top, sp, context) catch
+                return @call(tailCall, Extra.primitiveFailed, .{ pc, sp, process, context, extra }));
+            return @call(tailCall, process.check(context.npc), .{ context.tpc, newSp, process, context, Extra.fromContextData(context.contextDataPtr(sp)) });
+        }
+        unreachable;
+    }
+    pub fn inlinePrimitive(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
+        if (sp.next.untaggedI()) |self| {
+            const newSp = sp.dropPut(with(self, sp.top, sp, context) catch
+                return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, extra }));
+            return @call(tailCall, process.check(pc.prim3()), .{ pc.next3(), newSp, process, context, extra });
+        }
+        trace("SmallInteger>>#inlinePrimitive: // {f}", .{sp.next});
+        return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, extra });
     }
 };
 pub const threadedFns = struct {
