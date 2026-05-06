@@ -340,6 +340,7 @@ fn createBenchStep(
                 .compactZ,
                 .spur,
                 .spurOpt,
+                .spurNZ,
                 .taggedInt,
                 .taggedSMI,
                 .taggedLow,

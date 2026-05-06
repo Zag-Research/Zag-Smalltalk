@@ -17,9 +17,13 @@ const HeapObjectConstPtr = zag.heap.HeapObjectConstPtr;
 const InMemory = zag.InMemory;
 const encode = switch (zag.config.objectEncoding) {
     .spur => @import("floatEncoding.zig").Spur.encode,
+    .spurNZ => @import("floatEncoding.zig").SpurNZ.encode,
     else => @import("floatEncoding.zig").FastSpur.encode,
 };
-const decode = @import("floatEncoding.zig").Spur.decode;
+const decode = switch (zag.config.objectEncoding) {
+    .spurNZ => @import("floatEncoding.zig").SpurNZ.decode,
+    else => @import("floatEncoding.zig").Spur.decode,
+};
 
 const Tag = enum(u3) {
     pointer = 0,
