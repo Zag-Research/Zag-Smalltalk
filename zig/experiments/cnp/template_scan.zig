@@ -48,8 +48,8 @@ pub fn scan(start: [*]const u8, max_bytes: usize) ScanError!ScanResult {
             inst_seen[idx] = true;
             if (off + 4 > out.size) out.size = off + 4;
 
+            Arm64.printInstruction(@ptrCast(&start[off]));
             const inst = std.mem.readInt(u32, start[off..][0..4], .little);
-
             if (Arm64.isBranchRegister(inst)) {
                 if (out.br_count < out.br_offsets.len) {
                     out.br_offsets[out.br_count] = off;

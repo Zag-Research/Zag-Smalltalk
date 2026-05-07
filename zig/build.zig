@@ -19,7 +19,7 @@ pub fn build(b: *std.Build) void {
 
     // Experiment executables
     createExperimentExecutables(b, target, optimize, build_options, zag);
-    // createCnpBuilds(b, target, optimize, build_options, zag);
+    createCnpBuilds(b, target, optimize, build_options, zag);
 
     // Test and benchmark steps
     createTestStep(b, target, optimize, build_options, llvm_module);

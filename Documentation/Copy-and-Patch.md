@@ -1,0 +1,14 @@
+Copy and patch is a form of JIT originally described in [Copy-and-Patch](papers-others/Copy-and-patch-JIT.pdf). The basic idea is to stick together templates that contain the native code for various byte-codes in an interpreter.
+
+Zag has a unique feature in that `CompiledMethod`s are not represented by a series of byte-codes, but rather a series of addresses of native functions that perform operations similar to those of byte-codes in an interpreter. They are executed in sequence via an indirect tail-call one from the other. This is not particularly space efficient (each address is 8 bytes, which kind of replace a 1 byte byte-code), but execute several times faster.
+
+What is useful from a copy-and-patch perspective is that each of these functions is already effectively a template ready to use for a CnP JIT. The operations that link to the next threaded-function simply have to be replaced by instructions (if any) that connect to the next template. This is a natural application of Abstract Interpretation to extract the semantic part of the threaded-function from the no-longer necessary instructions that thread the words together.
+
+This also means that by extending the Abstract Interpretation, we can evolve over time to move stack operations to register operations.
+
+By using the threaded-functions as templates we get guaranteed correct native code generation, because the threaded functions are already working for the threaded execution. It is also trivial to extend the JIT by simply creating new threaded functions and compiling the source language to use the new operations. CnP will then seamlessly move that code into the JIT'ed code.
+
+### The JIT'er
+The function
+	`jitMethod(method: *const CompiledMethod, destination: []u8) ![]u8`
+where the result is a sub-slice of the `destination` parameter or an error if it ran out of space. The result should be castable to a `*ThreadFn` and run, but it returns a slice because in situ we will want to move it somewhere, or free up the unused space. Just start with the start threaded word, and abstract interpret until you’ve processed a return, handling sends specially (i.e. recognizing the address of `send`, `returnTop`, and `returnSelf` so that you don’t interpret the entire program (actually for the returns, you need to look for the call to `context.pop`).
