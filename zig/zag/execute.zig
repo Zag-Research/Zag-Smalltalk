@@ -447,9 +447,12 @@ pub const CompiledMethod = struct {
             .code = .{Code.primOf(methodFn)},
         };
     }
+    pub fn initPC(self: *const Self) PC {
+        return PC.init(&self.code[0]);
+    }
     pub fn execute(self: *const Self, sp: SP, process: *Process, context: *Context) Result {
         const newExtra = Extra.forMethod(self, sp);
-        const pc = PC.init(&self.code[0]).next();
+        const pc = self.initPC().next();
         return self.executeFn(pc, sp, process, context, newExtra);
     }
     inline fn asHeapObjectPtr(self: *const Self) HeapObjectConstPtr {
