@@ -41,9 +41,9 @@ pub fn CopyAndPatch(arch: anytype) type {
                 _ = patch;
             }
             nextInstruction: while (true) {
-                var inst = arch.getInstruction(address);
+                var inst: Operation = arch.getInstruction(address);
                 instSw: switch (inst) {
-                    .stop => break,
+                    .ret => break,
                     .move => |move| {
                         self.regType[move.destination] = self.regType[move.source];
                         self.regValue[move.destination] = self.regValue[move.source];

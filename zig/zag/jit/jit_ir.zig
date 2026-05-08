@@ -23,7 +23,8 @@ pub const Address = packed struct {
 };
 
 pub const Operation = union(enum) {
-    stop,
+    raw: u32,
+    ret,
     endBranch,
     move: Move,
     tst: u64,
