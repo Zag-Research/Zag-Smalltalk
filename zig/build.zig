@@ -249,6 +249,20 @@ fn createCnpBuilds(b: *std.Build, target: std.Build.ResolvedTarget, optimize: st
     const run_cnp_fib_bench = b.addRunArtifact(cnp_fib_bench);
     const run_cnp_fib_bench_step = b.step("cnp-fib-bench", "Run CNP JIT fibonacci benchmarks");
     run_cnp_fib_bench_step.dependOn(&run_cnp_fib_bench.step);
+
+    const test_cnp_exe = b.addTest(.{
+        .name = "test-cnp",
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("jit/cnp.zig"),
+            .target = target,
+            .optimize = optimize,
+            .imports = &.{ .{ .name = "zag", .module = zag }, },
+            .omit_frame_pointer = build_options.omit_frame_pointer,
+        }),
+    });
+    const test_cnp_cmd = b.addRunArtifact(test_cnp_exe);
+    const test_cnp_run = b.step("test-cnp", "run tests");
+    test_cnp_run.dependOn(&test_cnp_cmd.step);
 }
 
 fn createTestStep(

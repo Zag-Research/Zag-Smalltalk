@@ -138,14 +138,15 @@ pub fn CopyAndPatch(arch: anytype) type {
         fn resetAbstractState(self: *Self, pc: u64) void {
             self.regType = arch.registerTypes();
             self.regValue = [_]u64{0} ** arch.nRegisters; // don't need to, but may be useful for debugging
-            self.regValue[arch.pcRegister] = @intFromPtr(pc);
+            self.regValue[arch.pcRegister] = pc;
         }
     };
 }
 
 const zag = @import("zag");
 
-const assert = @import("std").debug.assert;
+const debug = @import("std").debug;
+const assert = debug.assert;
 const Process = zag.Process;
 const Context = zag.Context;
 const Extra = Context.Extra;
@@ -169,5 +170,8 @@ const maxMethodJitSize = 32768;
 pub const ThreadedFn = *const fn (PC, SP, *Process, *Context, Extra) Result;
 
 test "copyNPatch" {
-    _ = CopyAndPatch(@import("aarch64.zig"));
+    var cnp: CopyAndPatch(@import("cnp/mockArch.zig")) = undefined;
+    try cnp.init();
+    defer cnp.deinit();
+    cnp.resetAbstractState(72);
 }

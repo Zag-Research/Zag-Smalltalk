@@ -1,8 +1,8 @@
 pub const RegisterContents = enum {
     pc,
     sp,
-    processP,
-    contextP,
+    process,
+    context,
     extra,
     codeAddress,
     executableAddress,
