@@ -1,91 +1,138 @@
 const std = @import("std");
-
-pub fn PatchTable(AddressType: type, InfoType: type, comptime map_size: usize, comptime patch_size: usize) type {
-    const PatchElement = struct {
-        target: AddressType,
-        patch_address: usize,
-        info: InfoType,
-    };
-
-    const AddressMap = struct {
-        source: AddressType = undefined,
-        target: ?usize = null,
-        status: Status = .empty,
-        pending: bool = false,
-        // @TODO: Add a per-entry pending list rather a flat array. Remove existing global patch list.
-
-        const Status = enum { empty, referenced, defined };
-    };
-
-    return struct {
-        map: [map_size]AddressMap = [_]AddressMap{.{}} ** map_size,
-        patch: [patch_size]PatchElement = undefined,
-        patch_count: usize = 0,
-        pending_index: usize = 0,
-
+pub fn PatchTable(AddressType: anytype, InfoType: anytype, mapSize: usize, patchSize: usize) type {
+    const MapElement = struct {
+        source: ?AddressType,
+        target: ?AddressType,
+        pending: ?*Self,
+        status: Status,
         const Self = @This();
-
+        const Status = enum { free, new, defined, referenced };
+    };
+    const PatchElement = struct {
+        next: ?*Self,
+        address: AddressType,
+        info: InfoType,
+        const Self = @This();
+    };
+    return struct {
+        map: [mapSize]MapElement,
+        patch: [patchSize]PatchElement,
+        freePatch: ?*PatchElement,
+        pending: ?*MapElement,
+        const Self = @This();
         pub fn init(self: *Self) void {
-            self.* = .{};
+            var last: ?*PatchElement = null;
+            for (&self.patch) |*pe| {
+                pe.next = last;
+                last = pe;
+            }
+            self.freePatch = last;
+            for (&self.map) |*am| {
+                am.source = null;
+                am.status = .free;
+            }
         }
-
         pub fn deinit(_: *Self) void {}
-
-        pub fn externalReference(self: *Self, source: AddressType) void {
-            const entry = self.atOrInsert(source);
-            if (entry.status == .empty) entry.status = .referenced;
-            entry.pending = true;
-        }
-
-        pub fn getPending(self: *Self) ?AddressType {
-            while (self.pending_index < self.map.len) : (self.pending_index += 1) {
-                const entry = &self.map[self.pending_index];
-                if (entry.status != .empty and entry.pending) {
-                    entry.pending = false;
-                    self.pending_index += 1;
-                    return entry.source;
+        fn atOrDefine(map: []MapElement, source: AddressType) !*Self {
+            const hashed = (@intFromPtr(source) >> 8) % map.len;
+            // linear probe from there to the end
+            for (map[hashed..map.len]) |*element| {
+                if (element.source) |addr| {
+                    if (addr == source) return element;
+                } else {
+                    element.source = source;
+                    element.status = .new;
+                    return element;
                 }
+            }
+            // rest of linear probe for the first part of the array
+            for (map[0..hashed]) |*element| {
+                if (element.source) |addr| {
+                    if (addr == source) return element;
+                } else {
+                    element.source = source;
+                    element.status = .new;
+                    return element;
+                }
+            }
+            return error.TooSmall;
+        }
+        const PatchIterator = struct {
+            nextElement: ?*PatchElement,
+            current: ?*PatchElement = null,
+            freelist: *?*PatchElement,
+            pub fn next(self: *PatchIterator) ?PatchElement {
+                if (self.current) |*pe| {
+                    pe.next = self.freelist.*;
+                    pe.status = .free;
+                    self.freelist.* = pe;
+                    const nxt = self.nextElement;
+                    self.current = nxt;
+                    self.nextElement = nxt.next;
+                    return nxt;
+                } else
+                    return null;
+            }
+            fn new(pe:?*PatchElement, freeList:*?*PatchElement) PatchIterator {
+                return .{
+                    .nextElement = if (pe) |tpe| tpe.next else null,
+                    .current = pe,
+                    .freelist = freeList,
+                };
+            }
+        };
+        pub fn definition(self: *Self, define: AddressType, as: AddressType) PatchIterator {
+            const entry = atOrDefine(&self.map, define);
+            switch (entry.status) {
+                .new => {
+                    entry.target = as;
+                },
+                .referenced, .global => {
+                    const queue:?*PatchElement = @ptrCast(entry.target);
+                    entry.target = as;
+                    entry.status = .defined;
+                    return PatchIterator.new(queue, &self.freePatch);
+                },
+                .defined => @panic("multiply defined"),
+                .free => @panic("free shouldn't happen"),
             }
             self.pending_index = 0;
             return null;
         }
 
-        pub fn define(self: *Self, source: AddressType, target: usize) void {
-            const entry = self.atOrInsert(source);
-            entry.target = target;
-            entry.status = .defined;
-            entry.pending = false;
-            // @TODO: Resolve pending patch records that target source.
-            // @TODO: handle duplicate definitions
-        }
-
-        pub fn reference(self: *Self, source: AddressType, patch_address: usize, info: InfoType) void {
-            const entry = self.atOrInsert(source);
-            if (entry.status == .empty) entry.status = .referenced;
-            // @TODO: Patch immediately when source is already defined.
-
-            if (self.patch_count >= self.patch.len) @panic("PatchTable patch list too small");
-            self.patch[self.patch_count] = .{
-                .target = source,
-                .patch_address = patch_address,
-                .info = info,
-            };
-            self.patch_count += 1;
-        }
-
-        fn atOrInsert(self: *Self, source: AddressType) *AddressMap {
-            // Moved to non-hash version bceause the PC is a non-pointer type
-            // @CHECK: Revert if hashing is required
-            for (&self.map) |*entry| {
-                if (entry.status != .empty and std.meta.eql(entry.source, source)) return entry;
+        fn ref(self: *Self, target: AddressType, from: AddressType, info: InfoType) *MapElement {
+            const entry = atOrDefine(&self.map, target);
+            switch (entry.status) {
+                else => _ = .{ from, info, unreachable},
             }
-            for (&self.map) |*entry| {
-                if (entry.status == .empty) {
-                    entry.source = source;
-                    return entry;
-                }
+            return entry;
+        }
+        pub fn reference(self: *Self, target: AddressType, from: AddressType, info: InfoType) void {
+            const entry = self.ref(target, from, info);
+            entry.pending = self.pending;
+            self.pending = entry;
+        }
+        pub fn globalReference(self: *Self, target: AddressType, from: AddressType, info: InfoType) void {
+            _ = self.ref(target, from, info);
+        }
+        pub fn externalReference(self: *Self, target: AddressType) void {
+            const entry = atOrDefine(&self.map, target);
+            entry.status = .referenced;
+            entry.pending = self.pending;
+            self.pending = entry;
+        }
+        pub fn getPending(self: *Self) ?AddressType {
+            if (self.pending) |pending| {
+                self.pending = pending.pending;
+                return pending;
             }
-            @panic("PatchTable map too small");
+            return null;
         }
     };
+}
+test "patchTable" {
+    var pt: PatchTable(u64, u64, 10, 10) = undefined;
+    pt.init();
+    defer pt.deinit();
+
 }

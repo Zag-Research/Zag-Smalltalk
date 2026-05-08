@@ -10,8 +10,7 @@ pub fn CopyAndPatch(arch: anytype) type {
         regType: [arch.nRegisters]RegisterContents,
         regValue: [arch.nRegisters]u64,
         nativePatch: PatchTable(Address, Operation, mapSize, patchSize),
-        threadedPatch: PatchTable(PC, void, mapSize, patchSize),
-
+        threadedPatch: PatchTable(PC, void, threadedMapSize, 0),
         const Self = @This();
 
         pub fn init(self: *Self) !void {
@@ -40,7 +39,7 @@ pub fn CopyAndPatch(arch: anytype) type {
             self.regValue[0] = @intFromPtr(initial_pc.next().asCodePtr());
 
             var address = Address.fromPtr(initial_pc.prim());
-            self.nativePatch.define(address, self.buffer.currentOffset());
+            self.nativePatch.definition(address, self.buffer.currentOffset());
 
             var remaining: usize = arch.maxInstructionsPerTemplate;
             while (remaining > 0) : (remaining -= 1) {
@@ -50,16 +49,6 @@ pub fn CopyAndPatch(arch: anytype) type {
                     .move => |move| {
                         self.regType[move.destination] = self.regType[move.source];
                         self.regValue[move.destination] = self.regValue[move.source];
-                    },
-                    .branch => |branch| self.nativePatch.reference(branch.address, self.buffer.currentOffset(), inst),
-                    .branchRegister => |register| {
-                        switch (self.regType[register]) {
-                            .pc => {
-                                const target = PC.init(@ptrFromInt(self.regValue[register]));
-                                self.threadedPatch.externalReference(target);
-                            },
-                            else => {},
-                        }
                     },
                     .load => |ldst| {
                         switch (self.regType[ldst.base]) {
@@ -98,6 +87,27 @@ pub fn CopyAndPatch(arch: anytype) type {
                     .store, .tst, .branchConditional => {
                         // @TODO: Missing
                     },
+                    .branchRegister => |register| {
+                        switch (self.regType[register]) {
+                            .pc => {
+                                const target = PC.init(@ptrFromInt(self.regValue[register]));
+                                self.threadedPatch.externalReference(target);
+                                const inst: Operation = .{.branch = .{.address = undefined}};
+                                self.nativePatch.globalReference(self.regValue[register.register], self.buffer.address(), inst);
+                                arch.emit(inst, self.buffer);
+                            },
+                            else => @panic("branchRegister to non-pc"),
+                        }
+                    },
+                    .branch => |branch| {
+                        self.nativePatch.reference(branch.address, self.buffer.currentOffset(), inst),
+                        arch.emit(inst, self.buffer);
+                        if (self.nativePatch.getPending()) |addr| {
+                            address = addr;
+                            self.nativePatch.definition(address, self.jit.currentAddress());
+                        } else
+                            return;
+                    },
                 }
 
                 arch.emit(inst, &self.buffer);
@@ -124,13 +134,14 @@ const CompiledMethod = zag.execute.CompiledMethod;
 
 const JitBuffer = @import("jit_buffer.zig").JitBuffer;
 const PatchTable = @import("patchTable.zig").PatchTable;
-const machine_ir = @import("machine_ir.zig");
-const Address = machine_ir.Address;
-const Operation = machine_ir.Operation;
-const RegisterContents = machine_ir.RegisterContents;
+const jit_ir = @import("jit_ir.zig");
+const Address = jit_ir.Address;
+const Operation = jit_ir.Operation;
+const RegisterContents = jit_ir.RegisterContents;
 
+const threadedMapSize = 200;
 const mapSize = 1000;
-const patchSize = 1000;
-const maxMethodJitSize = 32000;
+const patchSize = 2000;
+const maxMethodJitSize = 32768;
 
 pub const ThreadedFn = *const fn (PC, SP, *Process, *Context, Extra) Result;
