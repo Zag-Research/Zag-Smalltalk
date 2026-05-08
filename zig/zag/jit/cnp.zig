@@ -15,7 +15,6 @@ pub fn CopyAndPatch(arch: anytype) type {
 
         pub fn init(self: *Self) !void {
             self.buffer = try JitBuffer.init(maxMethodJitSize);
-            self.resetAbstractState();
             self.nativePatch.init();
             self.threadedPatch.init();
         }
@@ -34,17 +33,16 @@ pub fn CopyAndPatch(arch: anytype) type {
         }
 
         fn abstractInterpret(self: *Self, initial_pc: PC) !void {
-            self.resetAbstractState();
-            self.regType[0] = .pc;
-            self.regValue[0] = @intFromPtr(initial_pc.next().asCodePtr());
-
+            self.resetAbstractState(initial_pc.next().asCodePtr());
             var address = Address.fromPtr(initial_pc.prim());
-            self.nativePatch.definition(address, self.buffer.currentOffset());
-
-            var remaining: usize = arch.maxInstructionsPerTemplate;
-            while (remaining > 0) : (remaining -= 1) {
-                const inst = arch.getInstruction(address);
-                switch (inst) {
+            const iter = self.nativePatch.definition(address, self.buffer.currentOffset());
+            while (iter.next) |patch| {
+                // patch the buffer
+                _ = patch;
+            }
+            nextInstruction: while (true) {
+                var inst = arch.getInstruction(address);
+                instSw: switch (inst) {
                     .stop => break,
                     .move => |move| {
                         self.regType[move.destination] = self.regType[move.source];
@@ -58,6 +56,14 @@ pub fn CopyAndPatch(arch: anytype) type {
                                 address = arch.skip(inst, address);
                                 continue;
                             },
+                            .context => {
+                                switch (ldst.offset) {
+                                    @offsetOf(Context,"prevCtxt") => self.regType[ldst.register] = .context,
+                                    @offsetOf(Context,"tpc") => self.regType[ldst.register] = .unknownPc,
+                                    @offsetOf(Context,"npc") => self.regType[ldst.register] = .executableAddress,
+                                    else => {},
+                                }
+                            },
                             else => {},
                         }
                     },
@@ -67,7 +73,7 @@ pub fn CopyAndPatch(arch: anytype) type {
                                 self.regType[arith.target] = self.regType[arith.source];
                                 self.regValue[arith.target] = self.regValue[arith.source] + arith.addend;
                                 address = arch.skip(inst, address);
-                                continue;
+                                continue :nextInstruction;
                             },
                             else => {},
                         }
@@ -78,7 +84,7 @@ pub fn CopyAndPatch(arch: anytype) type {
                                 self.regType[arith.target] = self.regType[arith.source];
                                 self.regValue[arith.target] = self.regValue[arith.source] + self.regValue[arith.addend];
                                 address = arch.skip(inst, address);
-                                continue;
+                                continue :nextInstruction;
                             },
                             .unknown => {},
                             else => {},
@@ -88,23 +94,37 @@ pub fn CopyAndPatch(arch: anytype) type {
                         // @TODO: Missing
                     },
                     .branchRegister => |register| {
-                        switch (self.regType[register]) {
-                            .pc => {
+                        sw: switch (self.regType[register]) {
+                            .codeAddress => {
+                                // this isn't right
                                 const target = PC.init(@ptrFromInt(self.regValue[register]));
                                 self.threadedPatch.externalReference(target);
-                                const inst: Operation = .{.branch = .{.address = undefined}};
+                                inst = .{.branch = .{.address = undefined}};
                                 self.nativePatch.globalReference(self.regValue[register.register], self.buffer.address(), inst);
-                                arch.emit(inst, self.buffer);
+                                continue :sw .executableAddress;
                             },
-                            else => @panic("branchRegister to non-pc"),
+                            .executableAddress => {
+                                // for debugging, should check that the 5 registers have the right types
+                                assert(self.regType[arch.pcRegister] == .pc or self.regType[arch.pcRegister] == .unknownPc);
+                                assert(self.regType[arch.spRegister] == .sp);
+                                assert(self.regType[arch.processRegister] == .process);
+                                assert(self.regType[arch.contextRegister] == .context);
+                                assert(self.regType[arch.extraRegister] == .extra);
+                                continue :instSw .endBranch;
+                            },
+                            else => @panic("branchRegister to non-executable"),
                         }
                     },
                     .branch => |branch| {
-                        self.nativePatch.reference(branch.address, self.buffer.currentOffset(), inst),
+                        self.nativePatch.reference(branch.address, self.buffer.currentOffset(), inst);
+                        continue :instSw .endBranch;
+                    },
+                    .endBranch => {
                         arch.emit(inst, self.buffer);
                         if (self.nativePatch.getPending()) |addr| {
                             address = addr;
                             self.nativePatch.definition(address, self.jit.currentAddress());
+                            continue :nextInstruction;
                         } else
                             return;
                     },
@@ -115,15 +135,17 @@ pub fn CopyAndPatch(arch: anytype) type {
             }
         }
 
-        fn resetAbstractState(self: *Self) void {
-            self.regType = [_]RegisterContents{.unknown} ** arch.nRegisters;
-            self.regValue = [_]u64{0} ** arch.nRegisters;
+        fn resetAbstractState(self: *Self, pc: u64) void {
+            self.regType = arch.registerTypes();
+            self.regValue = [_]u64{0} ** arch.nRegisters; // don't need to, but may be useful for debugging
+            self.regValue[arch.pcRegister] = @intFromPtr(pc);
         }
     };
 }
 
 const zag = @import("zag");
 
+const assert = @import("std").debug.assert;
 const Process = zag.Process;
 const Context = zag.Context;
 const Extra = Context.Extra;
@@ -145,3 +167,7 @@ const patchSize = 2000;
 const maxMethodJitSize = 32768;
 
 pub const ThreadedFn = *const fn (PC, SP, *Process, *Context, Extra) Result;
+
+test "copyNPatch" {
+    _ = CopyAndPatch(@import("aarch64.zig"));
+}

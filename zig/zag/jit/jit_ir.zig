@@ -5,7 +5,9 @@ pub const RegisterContents = enum {
     contextP,
     extra,
     codeAddress,
+    executableAddress,
     unknown,
+    unknownPc,
     randInt,
     randFloat,
     object,
@@ -22,6 +24,7 @@ pub const Address = packed struct {
 
 pub const Operation = union(enum) {
     stop,
+    endBranch,
     move: Move,
     tst: u64,
     load: LoadStore,
