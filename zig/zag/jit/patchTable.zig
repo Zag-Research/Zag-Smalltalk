@@ -1,4 +1,3 @@
-const std = @import("std");
 pub fn PatchTable(AddressType: anytype, InfoType: anytype, mapSize: usize, patchSize: usize) type {
     const MapElement = struct {
         source: ?AddressType,
@@ -27,6 +26,9 @@ pub fn PatchTable(AddressType: anytype, InfoType: anytype, mapSize: usize, patch
                 last = pe;
             }
             self.freePatch = last;
+            self.clearMap();
+        }
+        pub fn clearMap(self: *Self) void {
             for (&self.map) |*am| {
                 am.source = null;
                 am.status = .free;
@@ -40,6 +42,7 @@ pub fn PatchTable(AddressType: anytype, InfoType: anytype, mapSize: usize, patch
                 if (element.source) |addr| {
                     if (addr == source) return element;
                 } else {
+                    assert(element.status == .free);
                     element.source = source;
                     element.status = .new;
                     return element;
@@ -50,6 +53,7 @@ pub fn PatchTable(AddressType: anytype, InfoType: anytype, mapSize: usize, patch
                 if (element.source) |addr| {
                     if (addr == source) return element;
                 } else {
+                    assert(element.status == .free);
                     element.source = source;
                     element.status = .new;
                     return element;
@@ -59,16 +63,16 @@ pub fn PatchTable(AddressType: anytype, InfoType: anytype, mapSize: usize, patch
         }
         const PatchIterator = struct {
             nextElement: ?*PatchElement,
-            current: ?*PatchElement = null,
+            current: ?*PatchElement,
             freelist: *?*PatchElement,
             pub fn next(self: *PatchIterator) ?PatchElement {
                 if (self.current) |*pe| {
                     pe.next = self.freelist.*;
-                    pe.status = .free;
                     self.freelist.* = pe;
                     const nxt = self.nextElement;
                     self.current = nxt;
-                    self.nextElement = nxt.next;
+                    if (nxt) |_|
+                        self.nextElement = nxt.next;
                     return nxt;
                 } else
                     return null;
@@ -86,40 +90,52 @@ pub fn PatchTable(AddressType: anytype, InfoType: anytype, mapSize: usize, patch
             switch (entry.status) {
                 .new => {
                     entry.target = as;
+                    entry.status = .defined;
                 },
-                .referenced, .global => {
+                .referenced => {
                     const queue:?*PatchElement = @ptrCast(entry.target);
                     entry.target = as;
                     entry.status = .defined;
                     return PatchIterator.new(queue, &self.freePatch);
                 },
                 .defined => @panic("multiply defined"),
-                .free => @panic("free shouldn't happen"),
+                .free => unreachable,
             }
-            self.pending_index = 0;
             return null;
         }
 
-        fn ref(self: *Self, target: AddressType, from: AddressType, info: InfoType) *MapElement {
+        pub fn reference(self: *Self, target: AddressType, from: AddressType, info: InfoType) ?AddressType {
             const entry = atOrDefine(&self.map, target);
-            switch (entry.status) {
-                else => _ = .{ from, info, unreachable},
+            sw: switch (entry.status) {
+                .new => {
+                    entry.target = null;
+                    entry.status = .referenced;
+                    continue :sw .referenced;
+                },
+                .defined => {
+                    return entry.target;
+                },
+                .referenced => {
+                    if (self.freePatch) |patch| {
+                        patch.next = @ptrCast(entry.target);
+                        patch.address = from;
+                        patch.info = info;
+                        entry.target = @ptrCast(patch);
+                    } else @panic("no free patches");
+                    return null;
+                },
+                .free => unreachable,
             }
-            return entry;
+            self.addPending(entry);
         }
-        pub fn reference(self: *Self, target: AddressType, from: AddressType, info: InfoType) void {
-            const entry = self.ref(target, from, info);
+        fn addPending(self: *Self, entry: *Self) void {
             entry.pending = self.pending;
             self.pending = entry;
-        }
-        pub fn globalReference(self: *Self, target: AddressType, from: AddressType, info: InfoType) void {
-            _ = self.ref(target, from, info);
         }
         pub fn externalReference(self: *Self, target: AddressType) void {
             const entry = atOrDefine(&self.map, target);
             entry.status = .referenced;
-            entry.pending = self.pending;
-            self.pending = entry;
+            self.addPending(entry);
         }
         pub fn getPending(self: *Self) ?AddressType {
             if (self.pending) |pending| {
@@ -131,8 +147,10 @@ pub fn PatchTable(AddressType: anytype, InfoType: anytype, mapSize: usize, patch
     };
 }
 test "patchTable" {
-    var pt: PatchTable(u64, u64, 10, 10) = undefined;
+    var pt: PatchTable(*u64, u64, 10, 10) = undefined;
     pt.init();
     defer pt.deinit();
 
 }
+const std = @import("std");
+const assert = std.debug.assert;

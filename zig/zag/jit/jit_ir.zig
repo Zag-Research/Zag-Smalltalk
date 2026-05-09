@@ -14,13 +14,7 @@ pub const RegisterContents = enum {
     code,
 };
 
-pub const Address = packed struct {
-    address: *const u8,
-
-    pub fn fromPtr(ptr: anytype) Address {
-        return .{ .address = @ptrCast(ptr) };
-    }
-};
+pub const Address = *const u8;
 
 pub const Operation = union(enum) {
     raw: u32,

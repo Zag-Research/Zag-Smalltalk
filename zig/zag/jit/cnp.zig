@@ -10,7 +10,7 @@ pub fn CopyAndPatch(arch: anytype) type {
         regType: [arch.nRegisters]RegisterContents,
         regValue: [arch.nRegisters]u64,
         nativePatch: PatchTable(Address, Operation, mapSize, patchSize),
-        threadedPatch: PatchTable(PC, void, threadedMapSize, 0),
+        threadedPatch: PatchTable(*Code, Operation, threadedMapSize, threadedPatchSize),
         const Self = @This();
 
         pub fn init(self: *Self) !void {
@@ -25,9 +25,9 @@ pub fn CopyAndPatch(arch: anytype) type {
 
         pub fn jitMethod(self: *Self, method: *const CompiledMethod) !void {
             self.buffer.makeWritable();
-            self.threadedPatch.externalReference(method.initPC());
-            while (self.threadedPatch.getPending()) |pc| {
-                try self.abstractInterpret(pc);
+            self.threadedPatch.externalReference(method.initPC().asCodePtr());
+            while (self.threadedPatch.getPending()) |cp| {
+                try self.abstractInterpret(PC.init(cp));
             }
             self.buffer.makeExecutable();
         }
@@ -35,11 +35,8 @@ pub fn CopyAndPatch(arch: anytype) type {
         fn abstractInterpret(self: *Self, initial_pc: PC) !void {
             self.resetAbstractState(initial_pc.next().asCodePtr());
             var address = Address.fromPtr(initial_pc.prim());
-            const iter = self.nativePatch.definition(address, self.buffer.currentOffset());
-            while (iter.next) |patch| {
-                // patch the buffer
-                _ = patch;
-            }
+            self.define(&self.threadedPatch,address);
+            self.nativePatch.clearMap();
             nextInstruction: while (true) {
                 var inst: Operation = arch.getInstruction(address);
                 instSw: switch (inst) {
@@ -98,9 +95,8 @@ pub fn CopyAndPatch(arch: anytype) type {
                             .codeAddress => {
                                 // this isn't right
                                 const target = PC.init(@ptrFromInt(self.regValue[register]));
-                                self.threadedPatch.externalReference(target);
                                 inst = .{.branch = .{.address = undefined}};
-                                self.nativePatch.globalReference(self.regValue[register.register], self.buffer.address(), inst);
+                                self.threadedPatch.reference(target, self.buffer.address(), inst);
                                 continue :sw .executableAddress;
                             },
                             .executableAddress => {
@@ -123,7 +119,7 @@ pub fn CopyAndPatch(arch: anytype) type {
                         arch.emit(inst, self.buffer);
                         if (self.nativePatch.getPending()) |addr| {
                             address = addr;
-                            self.nativePatch.definition(address, self.jit.currentAddress());
+                            self.define(&self.nativePatch,address);
                             continue :nextInstruction;
                         } else
                             return;
@@ -132,6 +128,13 @@ pub fn CopyAndPatch(arch: anytype) type {
 
                 arch.emit(inst, &self.buffer);
                 address = arch.skip(inst, address);
+            }
+        }
+
+        fn define(self: *Self, patchTable: *PatchTable, address: Address) void {
+            var iter = patchTable.definition(address, self.jit.currentAddress());
+            while (iter.next()) |patch| {
+                _ = patch;
             }
         }
 
@@ -151,6 +154,7 @@ const Process = zag.Process;
 const Context = zag.Context;
 const Extra = Context.Extra;
 const PC = zag.execute.PC;
+const Code = zag.execute.Code;
 const SP = Process.SP;
 const Result = zag.execute.Result;
 const CompiledMethod = zag.execute.CompiledMethod;
@@ -162,7 +166,8 @@ const Address = jit_ir.Address;
 const Operation = jit_ir.Operation;
 const RegisterContents = jit_ir.RegisterContents;
 
-const threadedMapSize = 200;
+const threadedMapSize = 100;
+const threadedPatchSize = 200;
 const mapSize = 1000;
 const patchSize = 2000;
 const maxMethodJitSize = 32768;
