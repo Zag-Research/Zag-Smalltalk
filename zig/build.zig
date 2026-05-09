@@ -253,15 +253,16 @@ fn createCnpBuilds(b: *std.Build, target: std.Build.ResolvedTarget, optimize: st
     const test_cnp_exe = b.addTest(.{
         .name = "test-cnp",
         .root_module = b.createModule(.{
-            .root_source_file = b.path("jit/cnp.zig"),
+            .root_source_file = b.path("zag/jit/cnp.zig"),
             .target = target,
             .optimize = optimize,
             .imports = &.{ .{ .name = "zag", .module = zag }, },
             .omit_frame_pointer = build_options.omit_frame_pointer,
         }),
     });
+    b.installArtifact(test_cnp_exe);
     const test_cnp_cmd = b.addRunArtifact(test_cnp_exe);
-    const test_cnp_run = b.step("test-cnp", "run tests");
+    const test_cnp_run = b.step("test-cnp", "run cnp tests");
     test_cnp_run.dependOn(&test_cnp_cmd.step);
 }
 
