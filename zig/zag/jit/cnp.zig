@@ -41,12 +41,12 @@ pub fn CopyAndPatch(Code: anytype, arch: anytype, JitBuffer: anytype) type {
         fn abstractInterpret(self: *Self, initial_cp: [*]const Code) !void {
             self.resetAbstractState(@intFromPtr(initial_cp + 1));
             var decoder = arch.decoder(initial_cp[0].threadedFn);
-            self.define(&self.threadedPatch,decoder.address);
+            self.define(&self.threadedPatch,decoder.getAddress());
             self.nativePatch.clearMap();
             nextInstruction: while (true) {
                 var inst: Operation = decoder.nextInstruction();
                 instSw: switch (inst) {
-                    .ret => break,
+                    .ret, .raw => break,
                     .move => |move| {
                         self.regType[move.destination] = self.regType[move.source];
                         self.regValue[move.destination] = self.regValue[move.source];
@@ -124,7 +124,7 @@ pub fn CopyAndPatch(Code: anytype, arch: anytype, JitBuffer: anytype) type {
                         arch.emit(inst, self.buffer);
                         if (self.nativePatch.getPending()) |addr| {
                             decoder.goto(addr);
-                            self.define(&self.nativePatch,decoder.address());
+                            self.define(&self.nativePatch,decoder.getAddress());
                             continue :nextInstruction;
                         } else
                             break;

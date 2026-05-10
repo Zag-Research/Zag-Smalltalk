@@ -19,6 +19,9 @@ const Decoder = struct {
     fn new(address: [*]const Operation) Self {
         return .{.address = address};
     }
+    pub fn getAddress(self: *Self) Address {
+        return @constCast(@ptrCast(&self.address[0]));
+    }
 };
 pub const decoder = Decoder.new;
 
