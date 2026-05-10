@@ -9,6 +9,11 @@ pub const contextRegister = 3;
 pub const extraRegister = 4;
 pub const maxInstructionsPerTemplate = 4096;
 
+// Note: adrp instruction probably will  have to be modified because the Buffer won't be at the same 4K page as the original threadedFn
+// Note: probably should treat the adrp and following add instruction to be a single load-address Operation and emit properly
+// Note: also, need to make sure that the buffer allocated for jitting is within 4Gb of the zag code, so that adrp can reference things
+// Note: look at e.g. branchFalse - need to handle csel instruction correctly, too
+
 // A64 encoding reference:
 // https://www.scs.stanford.edu/~zyedidia/arm64/encodingindex.html
 // https://www.scs.stanford.edu/~zyedidia/arm64/ldr_imm_gen.html

@@ -138,9 +138,10 @@ pub fn PatchTable(AddressType: anytype, InfoType: anytype, mapSize: usize, patch
             self.addPending(entry);
         }
         pub fn getPending(self: *Self) ?AddressType {
-            if (self.pending) |pending| {
+            while (self.pending) |pending| {
                 self.pending = pending.pending;
-                return pending;
+                if (pending.status == .referenced)
+                    return pending;
             }
             return null;
         }
@@ -150,6 +151,7 @@ test "patchTable" {
     var pt: PatchTable(*u64, u64, 10, 10) = undefined;
     pt.init();
     defer pt.deinit();
+
 
 }
 const std = @import("std");
