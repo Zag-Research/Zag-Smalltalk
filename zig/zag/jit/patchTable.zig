@@ -141,7 +141,7 @@ pub fn PatchTable(AddressType: anytype, InfoType: anytype, mapSize: usize, patch
             while (self.pending) |pending| {
                 self.pending = pending.pending;
                 if (pending.status == .referenced)
-                    return pending;
+                    return @ptrCast(pending);
             }
             return null;
         }

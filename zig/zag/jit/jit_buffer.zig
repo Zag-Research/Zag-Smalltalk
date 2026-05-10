@@ -64,6 +64,10 @@ pub fn currentOffset(self: *const Self) usize {
     return self.pos;
 }
 
+pub fn getAddress(self: *const Self) *u8 {
+    return &self.memory[self.pos];
+}
+
 /// Copies template bytes to the JIT buffer. Relocation is handled by the
 /// architecture-specific CnP layer once that decoder/encoder is wired in.
 pub fn copyTemplate(self: *Self, info: anytype) usize {

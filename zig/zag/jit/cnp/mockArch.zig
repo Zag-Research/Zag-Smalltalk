@@ -11,22 +11,23 @@ pub const extraRegister = 4;
 const Decoder = struct {
     address: [*]const Operation,
     const Self = @This();
+    fn new(address: [*]const Operation) Self {
+        return .{.address = address};
+    }
     pub fn nextInstruction(self: *Self) Operation {
         const current = self.address;
         self.address = self.address + 1;
         return current[0];
     }
-    fn new(address: [*]const Operation) Self {
-        return .{.address = address};
-    }
-    pub fn getAddress(self: *Self) Address {
-        return @constCast(@ptrCast(&self.address[0]));
+    pub fn getAddress(self: *Self) [*]const Operation {
+        return self.address;
     }
 };
 pub const decoder = Decoder.new;
 
 pub fn emit(operation: Operation, buffer: anytype) void {
-    @as([*]operation, @ptrFromInt(buffer.currentOffset()))[0] = operation;
+    const oBuff = [_]Operation{operation};
+    buffer.append(&oBuff);
 }
 
 /// Advance from the current native instruction address to the next native instruction address.
