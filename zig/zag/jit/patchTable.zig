@@ -1,7 +1,7 @@
 pub fn PatchTable(AddressType: anytype, InfoType: anytype, mapSize: usize, patchSize: usize) type {
     const MapElement = struct {
         source: ?AddressType,
-        target: ?AddressType,
+        resolution: ?AddressType,
         pending: ?*Self,
         status: Status,
         const Self = @This();
@@ -33,9 +33,10 @@ pub fn PatchTable(AddressType: anytype, InfoType: anytype, mapSize: usize, patch
                 am.source = null;
                 am.status = .free;
             }
+            self.pending = null;
         }
         pub fn deinit(_: *Self) void {}
-        fn atOrDefine(map: []MapElement, source: AddressType) !*Self {
+        fn atOrDefine(map: []MapElement, source: AddressType) !*MapElement {
             const hashed = (@intFromPtr(source) >> 8) % map.len;
             // linear probe from there to the end
             for (map[hashed..map.len]) |*element| {
@@ -45,6 +46,7 @@ pub fn PatchTable(AddressType: anytype, InfoType: anytype, mapSize: usize, patch
                     assert(element.status == .free);
                     element.source = source;
                     element.status = .new;
+                    element.pending = null;
                     return element;
                 }
             }
@@ -56,6 +58,7 @@ pub fn PatchTable(AddressType: anytype, InfoType: anytype, mapSize: usize, patch
                     assert(element.status == .free);
                     element.source = source;
                     element.status = .new;
+                    element.pending = null;
                     return element;
                 }
             }
@@ -89,12 +92,12 @@ pub fn PatchTable(AddressType: anytype, InfoType: anytype, mapSize: usize, patch
             const entry = atOrDefine(&self.map, define);
             switch (entry.status) {
                 .new => {
-                    entry.target = as;
+                    entry.resolution = as;
                     entry.status = .defined;
                 },
                 .referenced => {
-                    const queue:?*PatchElement = @ptrCast(entry.target);
-                    entry.target = as;
+                    const queue:?*PatchElement = @ptrCast(entry.resolution);
+                    entry.resolution = as;
                     entry.status = .defined;
                     return PatchIterator.new(queue, &self.freePatch);
                 },
@@ -108,19 +111,19 @@ pub fn PatchTable(AddressType: anytype, InfoType: anytype, mapSize: usize, patch
             const entry = atOrDefine(&self.map, target);
             sw: switch (entry.status) {
                 .new => {
-                    entry.target = null;
+                    entry.resolution = null;
                     entry.status = .referenced;
                     continue :sw .referenced;
                 },
                 .defined => {
-                    return entry.target;
+                    return entry.resolution;
                 },
                 .referenced => {
                     if (self.freePatch) |patch| {
-                        patch.next = @ptrCast(entry.target);
+                        patch.next = @ptrCast(entry.resolution);
                         patch.address = from;
                         patch.info = info;
-                        entry.target = @ptrCast(patch);
+                        entry.resolution = @ptrCast(patch);
                     } else @panic("no free patches");
                     return null;
                 },
@@ -128,12 +131,12 @@ pub fn PatchTable(AddressType: anytype, InfoType: anytype, mapSize: usize, patch
             }
             self.addPending(entry);
         }
-        fn addPending(self: *Self, entry: *Self) void {
+        fn addPending(self: *Self, entry: *MapElement) void {
             entry.pending = self.pending;
             self.pending = entry;
         }
         pub fn externalReference(self: *Self, target: AddressType) void {
-            const entry = atOrDefine(&self.map, target);
+            const entry = atOrDefine(&self.map, target) catch unreachable;
             entry.status = .referenced;
             self.addPending(entry);
         }
@@ -141,7 +144,7 @@ pub fn PatchTable(AddressType: anytype, InfoType: anytype, mapSize: usize, patch
             while (self.pending) |pending| {
                 self.pending = pending.pending;
                 if (pending.status == .referenced)
-                    return @ptrCast(pending);
+                    return pending.source;
             }
             return null;
         }
@@ -151,8 +154,11 @@ test "patchTable" {
     var pt: PatchTable(*u64, u64, 10, 10) = undefined;
     pt.init();
     defer pt.deinit();
-
-
+    var data = [_]u64{1,2,3,4,5,6,7,8,9,10};
+    pt.externalReference(&data[2]);
+    try expectEqual(&data[2], pt.getPending());
+    try expectEqual(null, pt.getPending());
 }
 const std = @import("std");
 const assert = std.debug.assert;
+const expectEqual = std.testing.expectEqual;
