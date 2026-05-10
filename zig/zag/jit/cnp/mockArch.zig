@@ -8,15 +8,22 @@ pub const processRegister = 2;
 pub const contextRegister = 3;
 pub const extraRegister = 4;
 
-pub fn getInstruction(_: Address) Operation {
-    // @TODO: Placeholder
-    return .stop;
-}
+const Decoder = struct {
+    address: [*]const Operation,
+    const Self = @This();
+    pub fn nextInstruction(self: *Self) Operation {
+        const current = self.address;
+        self.address = self.address + 1;
+        return current[0];
+    }
+    fn new(address: [*]const Operation) Self {
+        return .{.address = address};
+    }
+};
+pub const decoder = Decoder.new;
 
 pub fn emit(operation: Operation, buffer: anytype) void {
-    // @TODO: Placeholder
-    _ = operation;
-    _ = buffer;
+    @as([*]operation, @ptrFromInt(buffer.currentOffset()))[0] = operation;
 }
 
 /// Advance from the current native instruction address to the next native instruction address.

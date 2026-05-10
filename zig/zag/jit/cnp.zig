@@ -4,13 +4,15 @@
 /// defer jit.deinit();
 /// const code = try jit.jitMethod(method);
 /// method.jitted = @ptrCast(@alignCast(code.ptr));
-pub fn CopyAndPatch(arch: anytype) type {
+pub fn CopyAndPatch(Code: anytype, arch: anytype, JitBuffer: anytype) type {
+    const nativePatchType = PatchTable(Address, Operation, mapSize, patchSize);
+    const threadedPatchType = PatchTable([*]const Code, Operation, threadedMapSize, threadedPatchSize);
     return struct {
         buffer: JitBuffer,
         regType: [arch.nRegisters]RegisterContents,
         regValue: [arch.nRegisters]u64,
-        nativePatch: PatchTable(Address, Operation, mapSize, patchSize),
-        threadedPatch: PatchTable(*Code, Operation, threadedMapSize, threadedPatchSize),
+        nativePatch: nativePatchType,
+        threadedPatch: threadedPatchType,
         const Self = @This();
 
         pub fn init(self: *Self) !void {
@@ -24,21 +26,25 @@ pub fn CopyAndPatch(arch: anytype) type {
         }
 
         pub fn jitMethod(self: *Self, method: *const CompiledMethod) !void {
+            return self.jitCode(method.codeSlice());
+        }
+
+        fn jitCode(self: *Self, code: []const Code) !void {
             self.buffer.makeWritable();
-            self.threadedPatch.externalReference(method.initPC().asCodePtr());
+            self.threadedPatch.externalReference(@ptrCast(code));
             while (self.threadedPatch.getPending()) |cp| {
-                try self.abstractInterpret(PC.init(cp));
+                try self.abstractInterpret(cp);
             }
             self.buffer.makeExecutable();
         }
 
-        fn abstractInterpret(self: *Self, initial_pc: PC) !void {
-            self.resetAbstractState(initial_pc.next().asCodePtr());
-            var address = Address.fromPtr(initial_pc.prim());
-            self.define(&self.threadedPatch,address);
+        fn abstractInterpret(self: *Self, initial_cp: [*]const Code) !void {
+            self.resetAbstractState(@intFromPtr(initial_cp + 1));
+            var decoder = arch.decoder(initial_cp[0].threadedFn);
+            self.define(&self.threadedPatch,decoder.address);
             self.nativePatch.clearMap();
             nextInstruction: while (true) {
-                var inst: Operation = arch.getInstruction(address);
+                var inst: Operation = decoder.nextInstruction();
                 instSw: switch (inst) {
                     .ret => break,
                     .move => |move| {
@@ -50,7 +56,6 @@ pub fn CopyAndPatch(arch: anytype) type {
                             .pc => {
                                 self.regType[ldst.register] = .codeAddress;
                                 self.regValue[ldst.register] = self.regValue[ldst.base] + ldst.offset;
-                                address = arch.skip(inst, address);
                                 continue;
                             },
                             .context => {
@@ -69,7 +74,6 @@ pub fn CopyAndPatch(arch: anytype) type {
                             .pc, .codeAddress => {
                                 self.regType[arith.target] = self.regType[arith.source];
                                 self.regValue[arith.target] = self.regValue[arith.source] + arith.addend;
-                                address = arch.skip(inst, address);
                                 continue :nextInstruction;
                             },
                             else => {},
@@ -80,7 +84,6 @@ pub fn CopyAndPatch(arch: anytype) type {
                             self.regType[arith.addend] => {
                                 self.regType[arith.target] = self.regType[arith.source];
                                 self.regValue[arith.target] = self.regValue[arith.source] + self.regValue[arith.addend];
-                                address = arch.skip(inst, address);
                                 continue :nextInstruction;
                             },
                             .unknown => {},
@@ -94,7 +97,9 @@ pub fn CopyAndPatch(arch: anytype) type {
                         sw: switch (self.regType[register]) {
                             .codeAddress => {
                                 // this isn't right
-                                const target = PC.init(@ptrFromInt(self.regValue[register]));
+                                inst = .{.addConstant = .{.source = arch.pcRegister, .target = arch.pcRegister, .addend = self.regValue[arch.pcRegister] - initial_cp}};
+                                arch.emit(inst, self.buffer);
+                                const target: [*]Code = @ptrFromInt(self.regValue[register]);
                                 inst = .{.branch = .{.address = undefined}};
                                 self.threadedPatch.reference(target, self.buffer.address(), inst);
                                 continue :sw .executableAddress;
@@ -118,20 +123,19 @@ pub fn CopyAndPatch(arch: anytype) type {
                     .endBranch => {
                         arch.emit(inst, self.buffer);
                         if (self.nativePatch.getPending()) |addr| {
-                            address = addr;
-                            self.define(&self.nativePatch,address);
+                            decoder.goto(addr);
+                            self.define(&self.nativePatch,decoder.address());
                             continue :nextInstruction;
                         } else
-                            return;
+                            break;
                     },
                 }
 
                 arch.emit(inst, &self.buffer);
-                address = arch.skip(inst, address);
             }
         }
 
-        fn define(self: *Self, patchTable: *PatchTable, address: Address) void {
+        fn define(self: *Self, patchTable: anytype, address: Address) void {
             var iter = patchTable.definition(address, self.jit.currentAddress());
             while (iter.next()) |patch| {
                 _ = patch;
@@ -150,16 +154,15 @@ const zag = @import("zag");
 
 const debug = @import("std").debug;
 const assert = debug.assert;
-const Process = zag.Process;
 const Context = zag.Context;
+const Process = zag.Process;
 const Extra = Context.Extra;
 const PC = zag.execute.PC;
-const Code = zag.execute.Code;
 const SP = Process.SP;
 const Result = zag.execute.Result;
 const CompiledMethod = zag.execute.CompiledMethod;
+pub const ThreadedFn = *const fn (PC, SP, *Process, *Context, Extra) Result;
 
-const JitBuffer = @import("jit_buffer.zig").JitBuffer;
 const PatchTable = @import("patchTable.zig").PatchTable;
 const jit_ir = @import("jit_ir.zig");
 const Address = jit_ir.Address;
@@ -172,11 +175,27 @@ const mapSize = 1000;
 const patchSize = 2000;
 const maxMethodJitSize = 32768;
 
-pub const ThreadedFn = *const fn (PC, SP, *Process, *Context, Extra) Result;
-
 test "copyNPatch" {
-    var cnp: CopyAndPatch(@import("cnp/mockArch.zig")) = undefined;
+    const Code = union(enum) {
+        object: i64,
+        threadedFn: [*]const Operation,
+        codePtr: *@This(),
+    };
+    const JitBuffer = struct {
+        buffer: [10]Operation = undefined,
+        pos: usize = 0,
+        const Self = @This();
+        fn init(_: usize) !Self {
+            return .{};
+        }
+        fn deinit(_: *Self) void {}
+        fn makeWritable(_: *Self) void {}
+        fn makeExecutable(_: *Self) void {}
+    };
+    const tf1 = [_]Operation{.ret};
+    const m1 = [_]Code{.{.threadedFn = &tf1}};
+    var cnp: CopyAndPatch(Code, @import("cnp/mockArch.zig"), JitBuffer) = undefined;
     try cnp.init();
     defer cnp.deinit();
-    cnp.resetAbstractState(72);
+    try cnp.jitCode(&m1);
 }
