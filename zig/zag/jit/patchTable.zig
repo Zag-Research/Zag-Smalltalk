@@ -1,11 +1,14 @@
 pub fn PatchTable(AddressType: anytype, InfoType: anytype, mapSize: usize, patchSize: usize) type {
     const MapElement = struct {
         source: ?AddressType,
-        resolution: ?AddressType,
-        pending: ?*Self,
         status: Status,
+        pending: ?*Self,
+        resolution: ?AddressType,
         const Self = @This();
         const Status = enum { free, new, defined, referenced };
+        fn before(self: *Self, other: *Self) bool {
+            return @intFromPtr(self.source) < @intFromPtr(other.source);
+        }
     };
     const PatchElement = struct {
         next: ?*Self,
@@ -114,6 +117,7 @@ pub fn PatchTable(AddressType: anytype, InfoType: anytype, mapSize: usize, patch
                 .new => {
                     entry.resolution = null;
                     entry.status = .referenced;
+                    self.addPending(entry);
                     continue :sw .referenced;
                 },
                 .defined => {
@@ -126,7 +130,6 @@ pub fn PatchTable(AddressType: anytype, InfoType: anytype, mapSize: usize, patch
                         patch.info = info;
                         patch.next = @ptrCast(entry.resolution);
                         entry.resolution = @ptrCast(patch);
-                        self.addPending(entry);
                     } else @panic("no free patches");
                     return null;
                 },
@@ -139,12 +142,36 @@ pub fn PatchTable(AddressType: anytype, InfoType: anytype, mapSize: usize, patch
             self.addPending(entry);
         }
         fn addPending(self: *Self, entry: *MapElement) void {
-            entry.pending = self.pending;
+            if (self.pending) |pending| {
+                if (pending.before(entry)) {
+                    var me = pending;
+                    while (true) {
+                        if (me.pending) |next| {
+                            if (entry.before(next)) {
+                                entry.pending = next;
+                                me.pending = entry;
+                                return;
+                            }
+                            me = next;
+                        } else {
+                            entry.pending = null;
+                            me.pending = entry;
+                            return;
+                        }
+                    }
+                } else {
+                    entry.pending = self.pending;
+                    self.pending = entry;
+                    return;
+                }
+            }
+            entry.pending = null;
             self.pending = entry;
         }
         pub fn getPending(self: *Self) ?AddressType {
             while (self.pending) |pending| {
                 self.pending = pending.pending;
+                pending.pending = null;
                 if (pending.status == .referenced)
                     return pending.source;
             }
@@ -153,7 +180,7 @@ pub fn PatchTable(AddressType: anytype, InfoType: anytype, mapSize: usize, patch
     };
 }
 test "patchTable" {
-    var pt: PatchTable(*u64, u64, 3, 3) = undefined;
+    var pt: PatchTable(*u64, u64, 5, 5) = undefined;
     pt.init();
     defer pt.deinit();
     var data = [_]u64{1,2,3,4,5,6,7,8,9,10};
@@ -164,26 +191,33 @@ test "patchTable" {
     var d1 = pt.definition(&data[2], &data[4]);
     try expectEqual(null, d1.next());
     try expectEqual(&data[4], pt.reference(&data[2], &data[5], 42));
-    pt.clearMap();
+    pt.init();
     // reference before definition returns an iterator
     try expectEqual(null, pt.reference(&data[2], &data[6], 17));
     try expectEqual(null, pt.reference(&data[2], &data[5], 42));
-    var d2 = pt.definition(&data[2], &data[4]);
-    std.debug.print("d2 before: {}\n\n",.{d2});
+    try expectEqual(null, pt.reference(&data[3], &data[7], 91));
+    try expectEqual(null, pt.reference(&data[1], &data[8], 97));
+    try expectEqual(&data[1], pt.getPending());
+    try expectEqual(&data[2], pt.getPending());
+    try expectEqual(&data[3], pt.getPending());
+    try expectEqual(null, pt.getPending());
+    var d2 = pt.definition(&data[3], &data[1]);
     if (d2.next()) |p| {
+        try expectEqual(&data[7], p.address);
+        try expectEqual(91, p.info);
+    } else return error.NoFixupTable;
+    try expectEqual(null, d2.next());
+    var d3 = pt.definition(&data[2], &data[4]);
+    if (d3.next()) |p| {
         try expectEqual(&data[5], p.address);
         try expectEqual(42, p.info);
     } else return error.NoFixupTable;
-    std.debug.print("d2 after1: {}\n\n",.{d2});
-    if (d2.next()) |p| {
+    if (d3.next()) |p| {
         try expectEqual(&data[6], p.address);
         try expectEqual(17, p.info);
     } else return error.ShortFixupTable;
-    std.debug.print("d2 after2: {}\n\n",.{d2});
-    try expectEqual(null, d2.next());
-    std.debug.print("d2 after3: {}\n\n",.{d2});
+    try expectEqual(null, d3.next());
     try expectEqual(&data[4], pt.reference(&data[2], &data[5], 42));
-    try expectEqual(null, pt.getPending());
 }
 const std = @import("std");
 const assert = std.debug.assert;
