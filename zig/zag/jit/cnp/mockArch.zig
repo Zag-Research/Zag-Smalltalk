@@ -1,49 +1,52 @@
-pub const nRegisters = floatOffset + floatRegisters;
-const intRegisters = 31;
-const floatRegisters = 32;
-const floatOffset = intRegisters + 1;
-pub const pcRegister = 0;
-pub const spRegister = 1;
-pub const processRegister = 2;
-pub const contextRegister = 3;
-pub const extraRegister = 4;
+pub fn MockArch(AddressType: anytype) type {
+    return struct {
+        pub const nRegisters = floatOffset + floatRegisters;
+        const intRegisters = 31;
+        const floatRegisters = 32;
+        const floatOffset = intRegisters + 1;
+        pub const pcRegister = 0;
+        pub const spRegister = 1;
+        pub const processRegister = 2;
+        pub const contextRegister = 3;
+        pub const extraRegister = 4;
+        pub const Address = AddressType;
+        const Decoder = struct {
+            address: [*]const Operation,
+            const Self = @This();
+            fn new(address: [*]const Operation) Self {
+                return .{.address = address};
+            }
+            pub fn nextInstruction(self: *Self) Operation {
+                const current = self.address;
+                self.address = self.address + 1;
+                return current[0];
+            }
+            pub fn getAddress(self: *Self) [*]const Operation {
+                return self.address;
+            }
+            pub fn goto(self: *Self, address: [*]const Operation) void {
+                self.address = address;
+            }
+        };
+        pub const decoder = Decoder.new;
 
-const Decoder = struct {
-    address: [*]const Operation,
-    const Self = @This();
-    fn new(address: [*]const Operation) Self {
-        return .{.address = address};
-    }
-    pub fn nextInstruction(self: *Self) Operation {
-        const current = self.address;
-        self.address = self.address + 1;
-        return current[0];
-    }
-    pub fn getAddress(self: *Self) [*]const Operation {
-        return self.address;
-    }
-};
-pub const decoder = Decoder.new;
+        pub fn emit(operation: Operation, buffer: anytype) void {
+            const oBuff = [_]Operation{operation};
+            buffer.append(&oBuff);
+        }
 
-pub fn emit(operation: Operation, buffer: anytype) void {
-    const oBuff = [_]Operation{operation};
-    buffer.append(&oBuff);
+        /// Advance from the current native instruction address to the next native instruction address.
+        pub fn skip(_: Operation, address: Address) Address {
+            return .{ .address = @ptrFromInt(@intFromPtr(address.address) + 4) };
+        }
+
+        pub fn registerTypes() [nRegisters]RegisterContents {
+            return [_]RegisterContents{.pc, .sp, .process, .context, .extra}
+                ++ [_]RegisterContents{.unknown} ** (floatOffset-5)
+                ++ [_]RegisterContents{.randFloat} ** floatRegisters;
+        }
+    };
 }
-
-/// Advance from the current native instruction address to the next native instruction address.
-pub fn skip(_: Operation, address: Address) Address {
-    return .{ .address = @ptrFromInt(@intFromPtr(address.address) + 4) };
-}
-
-pub fn registerTypes() [nRegisters]RegisterContents {
-    return [_]RegisterContents{.pc, .sp, .process, .context, .extra}
-        ++ [_]RegisterContents{.unknown} ** (floatOffset-5)
-        ++ [_]RegisterContents{.randFloat} ** floatRegisters;
-}
-
-pub const MockArch = @This();
-
 const jit_ir = @import("../jit_ir.zig");
-const Address = jit_ir.Address;
 const Operation = jit_ir.Operation;
 const RegisterContents = jit_ir.RegisterContents;

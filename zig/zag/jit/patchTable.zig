@@ -26,7 +26,6 @@ pub fn PatchTable(AddressType: anytype, InfoType: anytype, mapSize: usize, patch
             var last: ?*PatchElement = null;
             for (&self.patch) |*pe| {
                 pe.next = last;
-                pe.info = 0;
                 last = pe;
             }
             self.freePatch = last;
@@ -37,7 +36,6 @@ pub fn PatchTable(AddressType: anytype, InfoType: anytype, mapSize: usize, patch
                 am.source = null;
                 am.status = .free;
                 am.pending = null;
-                am.resolution = null;
             }
             self.pending = null;
         }

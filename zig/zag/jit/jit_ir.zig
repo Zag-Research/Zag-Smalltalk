@@ -14,14 +14,14 @@ pub const RegisterContents = enum {
     code,
 };
 
-pub const Address = *const u8;
+pub const Address = [*]const u8;
 
 pub const Operation = union(enum) {
     raw: u32,
     ret,
     endBranch,
     move: Move,
-    tst: u64,
+    tst: Test,
     load: LoadStore,
     store: LoadStore,
     branch: Branch,
@@ -40,6 +40,11 @@ pub const Operation = union(enum) {
         target: Register,
         source: Register,
         addend: u64,
+    };
+
+    pub const Test = struct {
+        source: Register,
+        mask: u64,
     };
 
     pub const BranchConditional = struct {
