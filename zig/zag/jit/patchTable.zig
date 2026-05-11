@@ -23,6 +23,7 @@ pub fn PatchTable(AddressType: anytype, InfoType: anytype, mapSize: usize, patch
             var last: ?*PatchElement = null;
             for (&self.patch) |*pe| {
                 pe.next = last;
+                pe.info = 0;
                 last = pe;
             }
             self.freePatch = last;
@@ -32,51 +33,51 @@ pub fn PatchTable(AddressType: anytype, InfoType: anytype, mapSize: usize, patch
             for (&self.map) |*am| {
                 am.source = null;
                 am.status = .free;
+                am.pending = null;
+                am.resolution = null;
             }
             self.pending = null;
         }
         pub fn deinit(_: *Self) void {}
-        fn atOrDefine(map: []MapElement, source: AddressType) !*MapElement {
-            const hashed = (@intFromPtr(source) >> 8) % map.len;
+        fn atOrDefine(self: *Self, source: AddressType) *MapElement {
+            const hashed = (@intFromPtr(source) >> 8) % mapSize;
             // linear probe from there to the end
-            for (map[hashed..map.len]) |*element| {
+            for (self.map[hashed..mapSize]) |*element| {
                 if (element.source) |addr| {
                     if (addr == source) return element;
                 } else {
                     assert(element.status == .free);
                     element.source = source;
                     element.status = .new;
-                    element.pending = null;
                     return element;
                 }
             }
             // rest of linear probe for the first part of the array
-            for (map[0..hashed]) |*element| {
+            for (self.map[0..hashed]) |*element| {
                 if (element.source) |addr| {
                     if (addr == source) return element;
                 } else {
                     assert(element.status == .free);
                     element.source = source;
                     element.status = .new;
-                    element.pending = null;
                     return element;
                 }
             }
-            return error.TooSmall;
+            @panic("map too small");
         }
         const PatchIterator = struct {
             nextElement: ?*PatchElement,
             current: ?*PatchElement,
             freelist: *?*PatchElement,
-            pub fn next(self: *PatchIterator) ?PatchElement {
-                if (self.current) |*pe| {
+            pub fn next(self: *PatchIterator) ?*PatchElement {
+                if (self.current) |pe| {
                     pe.next = self.freelist.*;
                     self.freelist.* = pe;
                     const nxt = self.nextElement;
                     self.current = nxt;
-                    if (nxt) |_|
-                        self.nextElement = nxt.next;
-                    return nxt;
+                    if (nxt) |then|
+                        self.nextElement = then.next;
+                    return pe;
                 } else
                     return null;
             }
@@ -89,7 +90,7 @@ pub fn PatchTable(AddressType: anytype, InfoType: anytype, mapSize: usize, patch
             }
         };
         pub fn definition(self: *Self, define: AddressType, as: AddressType) PatchIterator {
-            const entry = atOrDefine(&self.map, define);
+            const entry = self.atOrDefine(define);
             switch (entry.status) {
                 .new => {
                     entry.resolution = as;
@@ -104,11 +105,11 @@ pub fn PatchTable(AddressType: anytype, InfoType: anytype, mapSize: usize, patch
                 .defined => @panic("multiply defined"),
                 .free => unreachable,
             }
-            return null;
+            return PatchIterator.new(null, &self.freePatch);
         }
 
         pub fn reference(self: *Self, target: AddressType, from: AddressType, info: InfoType) ?AddressType {
-            const entry = atOrDefine(&self.map, target);
+            const entry = self.atOrDefine(target);
             sw: switch (entry.status) {
                 .new => {
                     entry.resolution = null;
@@ -120,25 +121,26 @@ pub fn PatchTable(AddressType: anytype, InfoType: anytype, mapSize: usize, patch
                 },
                 .referenced => {
                     if (self.freePatch) |patch| {
-                        patch.next = @ptrCast(entry.resolution);
+                        self.freePatch = patch.next;
                         patch.address = from;
                         patch.info = info;
+                        patch.next = @ptrCast(entry.resolution);
                         entry.resolution = @ptrCast(patch);
+                        self.addPending(entry);
                     } else @panic("no free patches");
                     return null;
                 },
                 .free => unreachable,
             }
+        }
+        pub fn externalReference(self: *Self, target: AddressType) void {
+            const entry = self.atOrDefine(target);
+            entry.status = .referenced;
             self.addPending(entry);
         }
         fn addPending(self: *Self, entry: *MapElement) void {
             entry.pending = self.pending;
             self.pending = entry;
-        }
-        pub fn externalReference(self: *Self, target: AddressType) void {
-            const entry = atOrDefine(&self.map, target) catch unreachable;
-            entry.status = .referenced;
-            self.addPending(entry);
         }
         pub fn getPending(self: *Self) ?AddressType {
             while (self.pending) |pending| {
@@ -151,12 +153,36 @@ pub fn PatchTable(AddressType: anytype, InfoType: anytype, mapSize: usize, patch
     };
 }
 test "patchTable" {
-    var pt: PatchTable(*u64, u64, 10, 10) = undefined;
+    var pt: PatchTable(*u64, u64, 3, 3) = undefined;
     pt.init();
     defer pt.deinit();
     var data = [_]u64{1,2,3,4,5,6,7,8,9,10};
     pt.externalReference(&data[2]);
     try expectEqual(&data[2], pt.getPending());
+    try expectEqual(null, pt.getPending());
+    pt.clearMap();
+    var d1 = pt.definition(&data[2], &data[4]);
+    try expectEqual(null, d1.next());
+    try expectEqual(&data[4], pt.reference(&data[2], &data[5], 42));
+    pt.clearMap();
+    // reference before definition returns an iterator
+    try expectEqual(null, pt.reference(&data[2], &data[6], 17));
+    try expectEqual(null, pt.reference(&data[2], &data[5], 42));
+    var d2 = pt.definition(&data[2], &data[4]);
+    std.debug.print("d2 before: {}\n\n",.{d2});
+    if (d2.next()) |p| {
+        try expectEqual(&data[5], p.address);
+        try expectEqual(42, p.info);
+    } else return error.NoFixupTable;
+    std.debug.print("d2 after1: {}\n\n",.{d2});
+    if (d2.next()) |p| {
+        try expectEqual(&data[6], p.address);
+        try expectEqual(17, p.info);
+    } else return error.ShortFixupTable;
+    std.debug.print("d2 after2: {}\n\n",.{d2});
+    try expectEqual(null, d2.next());
+    std.debug.print("d2 after3: {}\n\n",.{d2});
+    try expectEqual(&data[4], pt.reference(&data[2], &data[5], 42));
     try expectEqual(null, pt.getPending());
 }
 const std = @import("std");
