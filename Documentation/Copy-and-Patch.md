@@ -9,6 +9,18 @@ This also means that by extending the Abstract Interpretation, we can evolve ove
 By using the threaded-functions as templates we get guaranteed correct native code generation, because the threaded functions are already working for the threaded execution. It is also trivial to extend the JIT by simply creating new threaded functions and compiling the source language to use the new operations. CnP will then seamlessly move that code into the JIT'ed code.
 
 ### The JIT'er
-The function
-	`jitMethod(method: *const CompiledMethod, destination: []u8) ![]u8`
-where the result is a sub-slice of the `destination` parameter or an error if it ran out of space. The result should be castable to a `*ThreadFn` and run, but it returns a slice because in situ we will want to move it somewhere, or free up the unused space. Just start with the start threaded word, and abstract interpret until you’ve processed a return, handling sends specially (i.e. recognizing the address of `send`, `returnTop`, and `returnSelf` so that you don’t interpret the entire program (actually for the returns, you need to look for the call to `context.pop`).
+The `jit/cnp.zig` file has a parameterized type:
+```zig
+CopyAndPatch(Code, Arch, JitBuffer)
+```
+Where the `Code` is normally `execution.Code` the `Arch` is the particular architecture decoder/emitter and `JitBuffer` manages finding the space to allocate an executable compilation buffer.
+
+That type includes a function
+```zig
+jitMethod(self: *Self, method: *const CompiledMethod) void
+```
+where the resulting jitted function is stored in the buffer. The result should be castable to a `*ThreadFn`.
+
+There are 2 loops. The first goes through all the executable words, starting with the first, and called the `abstractInterpret` method to do the abstract interpretation of the machine code.
+
+`abstractInterpret` calls the architecture type to decode instructions into an intermediate representation so we can support multiple architectures. Many of these instructions have special handling. Examples include loading things from the `pc` or the `context`, which can be recognized from the types of registers used; moving or adding to special registers, such as the `pc` or `sp`; branches.
