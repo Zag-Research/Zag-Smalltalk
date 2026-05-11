@@ -78,6 +78,16 @@ pub fn copyTemplate(self: *Self, info: anytype) usize {
     return startPos;
 }
 
+/// Copy a slice of any type into the buffer
+pub fn append(self: *Self, slice: anytype) usize {
+    const byteSlice = std.mem.sliceAsBytes(slice);
+    const startPos = self.pos;
+    const dst = self.memory[self.pos..][0..byteSlice.len];
+    @memcpy(dst, byteSlice);
+    self.pos += byteSlice.len;
+    return startPos;
+}
+
 pub fn getEntry(self: *Self, offset: usize) ThreadedFn {
     return @ptrCast(@alignCast(self.memory.ptr + offset));
 }
