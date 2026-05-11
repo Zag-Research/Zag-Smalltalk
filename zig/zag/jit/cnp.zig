@@ -173,6 +173,10 @@ const patchSize = 2000;
 const maxMethodJitSize = 32768;
 
 test "copyNPatch" {
+    // this command (with the magic corrected) can be used to test CopyAndPatch
+    // zig test --dep zag -Mroot=cnp.zig --dep options -Mzag=../zag.zig -Moptions=.../.zig-cache/c/.../options.zig
+    // to find the right path, use the most recent of:
+    // find ../../.zig-cache/c -name options.zig -ls
     const Code = union(enum) {
         object: i64,
         threadedFn: [*]const Operation,
