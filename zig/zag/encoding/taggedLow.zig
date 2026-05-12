@@ -23,7 +23,8 @@ pub const Object = packed struct(u64) {
     intOrAddress: u48,
 
     const Self = @This();
-
+    const intShift = 64 - @bitSizeOf(IntType);
+    pub const IntType = i48;
     pub const maxInt: i64 = (1 << 47) - 1;
 
     pub const ZERO: Object = @bitCast(@as(u64, 0));
@@ -100,7 +101,7 @@ pub const Object = packed struct(u64) {
     pub inline fn isFloat(self: object.Object) bool {
         return self.class == .Float;
     }
-    pub inline fn fromNativeI(i: i48, _: anytype, _: anytype) Object {
+    pub inline fn fromNativeI(i: IntType, _: anytype, _: anytype) Object {
         return Object{ .intOrAddress = @bitCast(i), .class = .SmallInteger };
     }
     pub inline fn fromNativeF(t: f64, sp: SP, context: *Context) object.Object {
@@ -312,8 +313,8 @@ pub const Object = packed struct(u64) {
         if (self.isHeapObject()) return @ptrFromInt(self.heapAddr());
         return null;
     }
-    pub inline fn asUntaggedI(i: i48) i64 {
-        return @as(i64, i) << 16;
+    pub inline fn asUntaggedI(i: IntType) i64 {
+        return @as(i64, i) << intShift;
     }
 
     pub const Scanner = struct {

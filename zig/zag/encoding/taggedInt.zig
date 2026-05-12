@@ -42,6 +42,8 @@ pub const Object = packed union {
     const SmallIntegerTag = Tag.u(.smallInteger);
 
     const Self = @This();
+    const intShift = 64 - @bitSizeOf(IntType);
+    pub const IntType = i63;
     pub const maxInt = 0x3fff_ffff_ffff_ffff;
     pub const ZERO: Object = @bitCast(@as(u64, 0));
     pub inline fn False() Object {
@@ -115,7 +117,7 @@ pub const Object = packed union {
     pub inline fn nativeI_noCheck(self: Object) i64 {
         return @as(i64, self.rawI()) >> 1;
     }
-    pub inline fn fromNativeI(i: i63, _: anytype, _: anytype) Object {
+    pub inline fn fromNativeI(i: IntType, _: anytype, _: anytype) Object {
         return @bitCast((@as(u64, @bitCast(@as(i64, i))) << 1) + SmallIntegerTag);
     }
 

@@ -31,20 +31,21 @@ const floatEncoding = switch (encoding) {
 };
 const encode = floatEncoding.encode;
 const decode = floatEncoding.decode;
-const IntType = switch (encoding) {
-    .compactI1, .compactI2, .compactI4 => i62,
-    .compactI6 => i61,
-    .compactZ, .compact1 => i58,
-    .compact2, .compact4 => i57,
-    .compact6 => i56,
-    else => @compileError("No matching encoding"),
-};
 
 pub const Object = packed struct(u64) {
     hash: u48 = 0,
     extra: ExtraType = 0,
     class: ClassIndex.Compact = @enumFromInt(0),
     const Self = @This();
+    const intShift = 64 - @bitSizeOf(IntType);
+    pub const IntType = switch (encoding) {
+        .compactI1, .compactI2, .compactI4 => i62,
+        .compactI6 => i61,
+        .compactZ, .compact1 => i58,
+        .compact2, .compact4 => i57,
+        .compact6 => i56,
+        else => @compileError("No matching encoding"),
+    };
     const ExtraType = zag.UInt(16 - @bitSizeOf(ClassIndex.Compact));
     pub const maxInt = 0x1ff_ffff_ffff_ffff;
     pub const ZERO: Object = @bitCast(@as(u64, 0));
@@ -118,7 +119,7 @@ pub const Object = packed struct(u64) {
     pub inline fn nativeI(self: object.Object) ?i64 {
         if (self.untaggedI()) |int| {
             @branchHint(.likely);
-            return int >> (64 - @bitSizeOf(IntType));
+            return int >> intShift;
         }
         return null;
     }
@@ -126,18 +127,27 @@ pub const Object = packed struct(u64) {
         return fromUntaggedI(asUntaggedI(i), null, null);
     }
     pub inline fn asUntaggedI(i: IntType) i64 {
-        return @as(i64, i) << (64 - @bitSizeOf(IntType));
+        return @as(i64, i) << intShift;
     }
     inline fn isInt(self: object.Object) bool {
+        const u: u64 = @bitCast(self);
         switch (encoding) {
-            .compactI1 => return self.rawU() & 1 != 0,
-            .compactI2, .compactI4 => return self.rawI() & 3 == 1, // << 62 > 0,
+            .compactI1 => return u & 1 != 0,
+            .compactI2, .compactI4 => return u & 3 == 1, // << 62 > 0,
             // return asm ( // on AARCH64
             //     "cmn xzr, %[val], lsl #62"
             //     : [ret] "=@ccgt" (-> bool)
             //     : [val] "r" (self.rawU()) // Pass the raw integer, not the struct
             // );
-            .compactI6 => return self.rawU() & 7 == 1,
+            .compactI6 => return u & 1 != 0 and u & 6 == 0, // u & 7 == 1,
+            //   cpu            = apple_m2 (.aarch64)
+            //   objectEncoding = .compactI6
+            //   max_classes    = 255
+            //   stack/nursery  = 511w/3831w (8192w)
+            // for '36 fibonacci'
+            //           Median   Mean   StdDev  SD/Mean GeomMean(10 runs, 3 warmups)
+            // IntegerBr  390ms   392ms   6.63ms   1.7%   392ms
+            //     Float  420ms   418ms   2.30ms   0.6%   418ms
             else => return self.isImmediateClass(.SmallInteger),
         }
     }
@@ -342,12 +352,18 @@ pub const Object = packed struct(u64) {
             },
             .compactI6 => {
                 const u: u64 = @bitCast(self);
-                if (decode(u)) |_| {
+                if (u & 1 != 0) {
+                    @branchHint(.likely);
+                    if (decode(u)) |_| {
+                        @branchHint(.unlikely);
+                        return .Float;
+                    } else {
+                        @branchHint(.likely);
+                        return .SmallInteger;
+                    }
+                } else if (decode(u)) |_| {
                     @branchHint(.likely);
                     return .Float;
-                } else if (u & 1 != 0) {
-                    @branchHint(.likely);
-                    return .SmallInteger;
                 }
             },
             .compactZ => {

@@ -8,9 +8,12 @@ const assert = std.debug.assert;
 const object = zag.object;
 const ClassIndex = object.ClassIndex;
 const HeapObject = zag.heap.HeapObject;
+
 pub const Object = packed struct(u64) {
     int: u64,
     const Self = @This();
+    const intShift = 64 - @bitSizeOf(IntType);
+    pub const IntType = i64;
     pub const ZERO: Object = @bitCast(@as(u64, 0));
     pub inline fn False() Object {
         return @bitCast(@as(u64, 0));
@@ -39,13 +42,13 @@ pub const Object = packed struct(u64) {
         return @bitCast(i);
     }
     pub const fromUntaggedI = fromTaggedI;
-    pub inline fn asUntaggedI(i: i64) i64 {
+    pub inline fn asUntaggedI(i: IntType) i64 {
         return i;
     }
     pub inline fn nativeI(self: object.Object) ?i64 {
         return @bitCast(self);
     }
-    pub inline fn fromNativeI(t: i64, _: anytype, _: anytype) object.Object {
+    pub inline fn fromNativeI(t: IntType, _: anytype, _: anytype) object.Object {
         return @bitCast(t);
     }
     pub inline fn nativeF(_: object.Object) ?f64 {

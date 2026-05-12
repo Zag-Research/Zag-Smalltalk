@@ -18,10 +18,12 @@ const InMemory = zag.InMemory;
 const encode = switch (zag.config.objectEncoding) {
     .spur => @import("floatEncoding.zig").Spur.encode,
     .spurNZ => @import("floatEncoding.zig").SpurNZ.encode,
+    .spurFST => @import("floatEncoding.zig").Fst1(4).encode,
     else => @import("floatEncoding.zig").FastSpur.encode,
 };
 const decode = switch (zag.config.objectEncoding) {
     .spurNZ => @import("floatEncoding.zig").SpurNZ.decode,
+    .spurFST => @import("floatEncoding.zig").Fst1(4).decode,
     else => @import("floatEncoding.zig").Spur.decode,
 };
 
@@ -70,6 +72,8 @@ pub const Object = packed union {
     },
 
     const Self = @This();
+    const intShift = 64 - @bitSizeOf(IntType);
+    const IntType = i61;
     pub const maxInt = 0xfff_ffff_ffff_ffff;
     pub const ZERO: Object = @bitCast(@as(u64, 0));
     pub inline fn False() Object {
@@ -136,11 +140,14 @@ pub const Object = packed union {
         }
         return null;
     }
-    pub inline fn fromNativeI(i: i61, _: anytype, _: anytype) Object {
+    pub inline fn fromNativeI(i: IntType, _: anytype, _: anytype) Object {
         return Tag.shiftToObject(@bitCast(@as(i64, i)), .smallInteger);
     }
     pub inline fn nativeF(self: Object) ?f64 {
-        if (decode(@bitCast(self))) |flt| return flt;
+        if (decode(@bitCast(self))) |flt| {
+            @branchHint(.likely);
+            return flt;
+        }
         if (self.isMemoryDouble()) return self.toDoubleFromMemory();
         return null;
     }
@@ -320,7 +327,7 @@ pub const Object = packed union {
         return null;
     }
 
-    pub inline fn asUntaggedI(i: i61) i64 {
+    pub inline fn asUntaggedI(i: IntType) i64 {
         return @as(i64, i) << 3;
     }
 

@@ -40,6 +40,8 @@ pub const Object = packed struct(u64) {
     class: Compact,
     hash: u56,
     const Self = @This();
+    const intShift = 64 - @bitSizeOf(IntType);
+    pub const IntType = i56;
     pub const maxInt = 0x7f_ffff_ffff_ffff;
     pub const ZERO: Object = @bitCast(@as(u64, 0));
     pub inline fn False() Object {
@@ -116,8 +118,8 @@ pub const Object = packed struct(u64) {
         }
         return null;
     }
-    pub inline fn fromNativeI(t: i56, _: anytype, _: anytype) Object {
-        return oImm(.SmallInteger, @as(u56, @bitCast(t)));
+    pub inline fn fromNativeI(t: IntType, _: anytype, _: anytype) Object {
+        return oImm(.SmallInteger, @bitCast(t));
     }
     pub inline fn nativeF(self: object.Object) ?f64 {
         if (decode(@bitCast(self))) |flt| return flt;

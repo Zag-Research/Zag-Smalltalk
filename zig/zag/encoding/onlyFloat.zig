@@ -13,6 +13,8 @@ pub const Object = packed struct(u64) {
     float: u64,
 
     const Self = @This();
+    const intShift = 64 - @bitSizeOf(IntType);
+    pub const IntType = u64;
     pub const ZERO: Object = @bitCast(@as(f64, 0));
     pub inline fn False() Object {
         return @bitCast(@as(u64, 0));
@@ -43,7 +45,7 @@ pub const Object = packed struct(u64) {
 
     pub const taggedI = untaggedI;
 
-    pub inline fn fromTaggedI(_: i64, _: anytype, _: anytype) Object {
+    pub inline fn fromTaggedI(_: IntType, _: anytype, _: anytype) Object {
         @panic("not implemented");
     }
 
@@ -52,7 +54,7 @@ pub const Object = packed struct(u64) {
     pub inline fn nativeI(_: Object) ?i64 {
         @panic("not implemented");
     }
-    pub inline fn fromNativeI(_: i64, _: anytype, _: anytype) Object {
+    pub inline fn fromNativeI(_: IntType, _: anytype, _: anytype) Object {
         @panic("not implemented");
     }
 

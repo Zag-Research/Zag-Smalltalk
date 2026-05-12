@@ -257,33 +257,39 @@ const fibIntegerCl = struct {
     const classes = object.PackedObject.classes;
     const signature = zag.symbol.signature;
     const nullMethod = zag.dispatch.nullMethod;
-    const fromClassI8 = zag.execute.Signature.fromClassI8;
+    const primitive = zag.execute.Signature.fromPrimitive;
     var TifTrue align(codeAlignment) =
         compileMethod(Sym.@"ifTrue:", 0, .True, .{ tf.dup, tf.value, tf.returnTop });
     var FifTrue align(codeAlignment) =
         compileMethod(Sym.@"ifTrue:", 0, .False, .{tf.returnSelf});
+    var SIplus align(codeAlignment) =
+        compileMethod(Sym.@"+", 0, .SmallInteger, .{ tf.primitive, primitive(1), tf.fail});
+    var SIminus align(codeAlignment) =
+        compileMethod(Sym.@"-", 0, .SmallInteger, .{ tf.primitive, primitive(2), tf.fail});
+    var SIleq align(codeAlignment) =
+        compileMethod(Sym.@"<=", 0, .SmallInteger, .{ tf.primitive, primitive(5), tf.fail});
     var fib align(codeAlignment) =
         compileMethod(Sym.fibonacci, 0, .SmallInteger, .{
             //            tf.debug,
             tf.push,                   self,
             tf.pushLiteral,            "1const",
-            leq,                       tf.fail,
-            tf.fail,                   tf.returnLocalClosure,
+            tf.send,
+            signature(.@"<="), &nullMethod,
+            tf.returnLocalClosure,
             "0const",                  tf.send,
             signature(.@"ifTrue:"), &nullMethod,
             tf.drop,                   tf.push,
             self,                      tf.pushLiteral,
-            "1const",                  minus,
-            tf.fail,                   tf.fail,
+            "1const",                  tf.send,
+            signature(.@"-"), &nullMethod,
             tf.send,                   signature(.fibonacci),
             &nullMethod,               tf.push,
             self,                      tf.pushLiteral,
-            "2const",                  minus,
-            tf.fail,                   tf.fail,
+            "2const",                  tf.send,
+            signature(.@"-"), &nullMethod,
             tf.send,                   signature(.fibonacci),
-            &nullMethod,               plus,
-            tf.fail,                   tf.fail,
-            //            tf.enddebug,
+            &nullMethod,               tf.send,
+            signature(.@"+"), &nullMethod,
             tf.returnTop,
         });
     var exe: MainExecutor = undefined;
@@ -297,13 +303,22 @@ const fibIntegerCl = struct {
         const zero = zero_.init(0);
         fib.resolve(&[_]Object{ zero, one, two }) catch @panic("Failed to resolve");
         fib.initExecute();
+        zag.dispatch.addMethod(@ptrCast(&fib));
         TifTrue.resolve(Object.empty) catch @panic("Failed to resolve");
         TifTrue.initExecute();
+        zag.dispatch.addMethod(@ptrCast(&TifTrue));
         FifTrue.resolve(Object.empty) catch @panic("Failed to resolve");
         FifTrue.initExecute();
-        zag.dispatch.addMethod(@ptrCast(&fib));
-        zag.dispatch.addMethod(@ptrCast(&TifTrue));
         zag.dispatch.addMethod(@ptrCast(&FifTrue));
+        SIplus.resolve(Object.empty) catch @panic("Failed to resolve");
+        SIplus.initExecute();
+        zag.dispatch.addMethod(@ptrCast(&SIplus));
+        SIminus.resolve(Object.empty) catch @panic("Failed to resolve");
+        SIminus.initExecute();
+        zag.dispatch.addMethod(@ptrCast(&SIminus));
+        SIleq.resolve(Object.empty) catch @panic("Failed to resolve");
+        SIleq.initExecute();
+        zag.dispatch.addMethod(@ptrCast(&SIleq));
         if (zag.config.show_trace) {
             std.debug.print("\n", .{});
             std.debug.print("address of one {*}\n", .{&one});
@@ -470,11 +485,11 @@ pub fn main() !void {
         "Config",            "Header",
         //"Native",            "NativeF",
         //"Integer",
+        "IntegerCl",
         "IntegerBr?Integer",
         //"Integer0?Integer",
         //"IntegerCnP",
         "Float",
-        //"IntegerCl",
     };
     // var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     // const allocator = gpa.allocator();

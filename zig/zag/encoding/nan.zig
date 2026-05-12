@@ -64,6 +64,8 @@ pub const Tag = enum(TagBaseType) {
 pub const Object = packed struct(u64) {
     data: u48,
     tag: Tag,
+    const intShift = 64 - @bitSizeOf(IntType);
+    pub const IntType = i50;
     pub const maxInt = 0x3_ffff_ffff_ffff;
     pub const ZERO: Object = @bitCast(@as(u64, 0));
     pub inline fn False() Object {
@@ -90,16 +92,15 @@ pub const Object = packed struct(u64) {
         assert(tagAndClassBits == @bitSizeOf(TagAndClassType));
     }
     const extraMask = 7;
-    const intTagBits = 14;
     const integerTag = Tag.u(.smallInteger) >> 2;
     inline fn isInt(self: Object) bool {
         switch (zag.arch) {
             .x86_64 => {
                 return self.rawU() >= Tag.g(.smallInteger);
-                // return self.rawU() >> (64 - intTagBits) >= integerTag;
+                // return self.rawU() >> (64 - intShift) >= integerTag;
             },
             else => {
-                return (self.rawI() >> 64 - intTagBits) + 1 == 0;
+                return (self.rawI() >> 64 - intShift) + 1 == 0;
             },
         }
     }
@@ -173,22 +174,22 @@ pub const Object = packed struct(u64) {
     }
 
     pub inline fn untaggedI(self: Object) ?i64 {
-        if (self.isInt()) return @bitCast(@as(u64, @bitCast(self)) << intTagBits);
+        if (self.isInt()) return @bitCast(@as(u64, @bitCast(self)) << intShift);
         return null;
     }
     pub inline fn fromUntaggedI(int: i64, _: anytype, _: anytype) Object {
-        return @bitCast(std.math.rotr(u64, @as(u64, @bitCast(int)) + integerTag, intTagBits));
+        return @bitCast(std.math.rotr(u64, @as(u64, @bitCast(int)) + integerTag, intShift));
     }
     pub const taggedI = untaggedI;
     pub const fromTaggedI = fromUntaggedI;
     pub inline fn nativeI(self: Object) ?i64 {
-        if (self.untaggedI()) |int| return int >> intTagBits;
+        if (self.untaggedI()) |int| return int >> intShift;
         return null;
     }
-    pub inline fn asUntaggedI(int: i50) i64 {
-        return @as(i64, int) << intTagBits;
+    pub inline fn asUntaggedI(int: IntType) i64 {
+        return @as(i64, int) << intShift;
     }
-    pub inline fn fromNativeI(int: i50, _: anytype, _: anytype) Object {
+    pub inline fn fromNativeI(int: IntType, _: anytype, _: anytype) Object {
         return fromUntaggedI(asUntaggedI(int), null, null);
     }
     pub inline fn nativeF(self: Object) ?f64 {
@@ -384,7 +385,7 @@ pub const Object = packed struct(u64) {
                 }
             },
             else => {
-                const tagBits = (self.rawI() >> 64 - intTagBits) + 1;
+                const tagBits = (self.rawI() >> 64 - intShift) + 1;
                 if (tagBits == 0) {
                     @branchHint(.likely);
                     return .SmallInteger;

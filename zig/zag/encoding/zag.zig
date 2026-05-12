@@ -41,6 +41,8 @@ pub const Object = packed struct(u64) {
     extra: u11 = 0,
     class: Compact = @enumFromInt(0),
     const Self = @This();
+    const intShift = 64 - @bitSizeOf(IntType);
+    pub const IntType = i62;
     pub const maxInt = 0x3fff_ffff_ffff_ffff;
     pub const ZERO: Object = @bitCast(@as(u64, 0));
     pub inline fn False() Object {
@@ -97,11 +99,11 @@ pub const Object = packed struct(u64) {
         }
         return null;
     }
-    pub inline fn fromNativeI(i: i62, _: anytype, _: anytype) Object {
+    pub inline fn fromNativeI(i: IntType, _: anytype, _: anytype) Object {
         return fromUntaggedI(asUntaggedI(i), null, null);
     }
-    pub inline fn asUntaggedI(i: i62) i64 {
-        return @as(i64, i) << 2;
+    pub inline fn asUntaggedI(i: IntType) i64 {
+        return @as(i64, i) << intShift;
     }
     inline fn isInt(self: object.Object) bool {
         return @as(u64, @bitCast(self)) & Tag.u(.smallinteger) != 0;

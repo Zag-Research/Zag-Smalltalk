@@ -20,6 +20,8 @@ const Context = zag.Context;
 pub const Object = packed struct(u64) {
     ref: *const InMemory.PointedObject,
     const Self = @This();
+    const intShift = 64 - @bitSizeOf(IntType);
+    pub const IntType = i64;
     pub const ZERO: Object = @bitCast(@as(u64, 0));
     pub inline fn False() Object {
         if (@inComptime()) {
@@ -65,7 +67,7 @@ pub const Object = packed struct(u64) {
         if (self.isInt()) return self.rawI();
         return null;
     }
-    pub inline fn fromNativeI(t: i64, sp: SP, context: *Context) object.Object {
+    pub inline fn fromNativeI(t: IntType, sp: SP, context: *Context) object.Object {
         return from(t, sp, context);
     }
     pub inline fn nativeF(self: object.Object) ?f64 {
@@ -112,7 +114,7 @@ pub const Object = packed struct(u64) {
         if (value & 7 != 0) return value;
         return null;
     }
-    pub inline fn asUntaggedI(i: i64) i64 {
+    pub inline fn asUntaggedI(i: IntType) i64 {
         return i;
     }
     pub fn returnObjectClosure(_: Object, _: anytype) ?Object {

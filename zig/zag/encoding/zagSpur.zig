@@ -52,6 +52,8 @@ pub const Object = packed union {
         hash: u61,
     },
     const Self = @This();
+    const intShift = 64 - @bitSizeOf(IntType);
+    pub const IntType = i61;
     pub const maxInt = 0xfff_ffff_ffff_ffff;
     pub const ZERO: Object = @bitCast(@as(u64, 0));
     pub inline fn False() Object {
@@ -105,11 +107,11 @@ pub const Object = packed union {
     pub inline fn fromUntaggedI(i: i64, _: anytype, _: anytype) Object {
         return @bitCast(i + @intFromEnum(Tag.smallInteger));
     }
-    pub inline fn fromNativeI(i: i61, _: anytype, _: anytype) Object {
-        return @bitCast((@as(i64, i) << 3) + @intFromEnum(Tag.smallInteger));
+    pub inline fn fromNativeI(i: IntType, _: anytype, _: anytype) Object {
+        return @bitCast((@as(i64, i) << intShift) + @intFromEnum(Tag.smallInteger));
     }
-    pub inline fn asUntaggedI(i: i61) i64 {
-        return @as(i64, i) << 3;
+    pub inline fn asUntaggedI(i: IntType) i64 {
+        return @as(i64, i) << intShift;
     }
     inline fn isInt(self: Object) bool {
         return self.isTag(.smallInteger);
