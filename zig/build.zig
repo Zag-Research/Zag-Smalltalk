@@ -1,5 +1,5 @@
 const std = @import("std");
-const Encoding = @import("zag/object/encoding.zig").Encoding;
+const Encoding = @import("zag/encoding/encoding.zig").Encoding;
 
 pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
@@ -36,7 +36,7 @@ fn createBuildOptions(b: *std.Build) BuildOptions {
     const max_classes = b.option(u16, "maxClasses", "Maximum number of classes") orelse 255;
     const trace = b.option(bool, "trace", "trace execution") orelse false;
     const quit_on_first_failure = b.option(bool, "quitOnFirstFailure", "Stop after first error");
-    const omit_frame_pointer = false;
+    const omit_frame_pointer = b.option(bool, "omitFramePointer", "Omit frame pointers") orelse false;
 
     return .{
         .include_llvm = include_llvm,
@@ -46,7 +46,7 @@ fn createBuildOptions(b: *std.Build) BuildOptions {
         .max_classes = max_classes,
         .trace = trace,
         .quit_on_first_failure = quit_on_first_failure,
-        .omit_frame_pointer = omit_frame_pointer,
+        .omit_frame_pointer = omit_frame_pointer and !trace,
     };
 }
 
@@ -328,11 +328,23 @@ fn createBenchStep(
                 .nan,
                 .zag,
                 .zagSpur,
-                .zagMixed,
+                .zagOrig,
+                .compact1,
+                .compact2,
+                .compact4,
+                .compact6,
+                .compactI1,
+                .compactI2,
+                .compactI4,
+                .compactI6,
+                .compactZ,
                 .spur,
+                .spurOpt,
+                .spurNZ,
+                .spurFST,
                 .taggedInt,
                 .taggedSMI,
-                .taggedPtr,
+                .taggedLow,
                 .taggedHigh,
                 .cachedPtr,
                 .ptr,

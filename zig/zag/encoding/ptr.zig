@@ -20,6 +20,8 @@ const Context = zag.Context;
 pub const Object = packed struct(u64) {
     ref: *const InMemory.PointedObject,
     const Self = @This();
+    const intShift = 64 - @bitSizeOf(IntType);
+    pub const IntType = i64;
     pub const ZERO: Object = @bitCast(@as(u64, 0));
     pub inline fn False() Object {
         if (@inComptime()) {
@@ -48,7 +50,9 @@ pub const Object = packed struct(u64) {
     pub const highTagSmallInteger = 0;
     pub const PackedTagType = u3;
     pub const packedTagSmallInteger = 1;
-    pub const signatureTag = 1;
+    pub const signatureTag = @as(u8, @intFromEnum(ClassIndex.Compact.Signature)) << 3 | 1;
+    pub const LowTag = u8;
+    pub const HighTag = u8;
     pub inline fn untaggedI(self: object.Object) ?i64 {
         if (self.isInt()) return self.ref.data.int;
         return null;
@@ -63,21 +67,18 @@ pub const Object = packed struct(u64) {
         if (self.isInt()) return self.rawI();
         return null;
     }
-    pub inline fn fromNativeI(t: i64, sp: SP, context: *Context) object.Object {
+    pub inline fn fromNativeI(t: IntType, sp: SP, context: *Context) object.Object {
         return from(t, sp, context);
     }
     pub inline fn nativeF(self: object.Object) ?f64 {
         if (self.isMemoryDouble()) return self.toDoubleFromMemory();
         return null;
     }
-    pub inline fn isFloat(self: object.Object) bool {
-        return self.isMemoryDouble();
-    }
     pub inline fn fromNativeF(t: f64, sp: SP, context: *Context) object.Object {
         return from(t, sp, context);
     }
     pub inline fn symbolHash(self: Object) ?u24 {
-        if (self.isSymbol()) return @truncate(self.hash32() >> 8);
+        if (self.isSymbol()) return self.hash24();
         return null;
     }
     pub inline fn numArgs(self: Object) u4 {
@@ -113,7 +114,7 @@ pub const Object = packed struct(u64) {
         if (value & 7 != 0) return value;
         return null;
     }
-    pub inline fn asUntaggedI(i: i64) i64 {
+    pub inline fn asUntaggedI(i: IntType) i64 {
         return i;
     }
     pub fn returnObjectClosure(_: Object, _: anytype) ?Object {
@@ -154,17 +155,11 @@ pub const Object = packed struct(u64) {
     pub inline fn isNat(self: Object) bool {
         return self.isInt() and self.rawI() >= 0;
     }
-    pub inline fn isDouble(self: Object) bool {
-        return self.ref.header.classIndex == .Float;
-    }
-    // pub inline fn oImm(c: ClassIndex.Compact, h: u56) Self {
-    //     return Self{ .tag = .immediates, .class = c, .hash = h };
-    // }
     pub inline fn highPointer(self: Object, T: type) ?T {
         return @ptrCast(self.ref.data.objects);
     }
     pub inline fn pointer(self: Object, T: type) ?T {
-        if (self.hasMemoryReference()) return @constCast(@ptrCast(self.ref));
+        if (self.hasHeapReference()) return @constCast(@ptrCast(self.ref));
         return null;
     }
     pub inline fn toIntNoCheck(self: Object) i64 {
@@ -246,7 +241,7 @@ pub const Object = packed struct(u64) {
                         switch (@typeInfo(ptrInfo.child)) {
                             .@"fn" => {},
                             .@"struct" => {
-                                if (!check or (self.hasMemoryReference() and (!@hasDecl(ptrInfo.child, "ClassIndex") or self.to(HeapObjectConstPtr).classIndex == ptrInfo.child.ClassIndex))) {
+                                if (!check or (self.hasHeapReference() and (!@hasDecl(ptrInfo.child, "ClassIndex") or self.to(HeapObjectConstPtr).classIndex == ptrInfo.child.ClassIndex))) {
                                     if (@hasField(ptrInfo.child, "header") or (@hasDecl(ptrInfo.child, "includesHeader") and ptrInfo.child.includesHeader)) {
                                         return @as(T, @ptrFromInt(@as(usize, @bitCast(self))));
                                     } else {
@@ -267,7 +262,7 @@ pub const Object = packed struct(u64) {
     fn which_class(self: Object) ClassIndex {
         return self.ref.header.classIndex;
     }
-    pub inline fn hasMemoryReference(self: Object) bool {
+    pub inline fn hasHeapReference(self: Object) bool {
         return @intFromPtr(self.ref) & 0x7 == 0 and self != Nil();
     }
     pub const Scanner = struct {
@@ -301,7 +296,6 @@ pub const Object = packed struct(u64) {
     pub const equals = OF.equals;
     pub const format = OF.format;
     pub const getField = OF.getField;
-    pub const get_class = OF.get_class;
     pub const isBool = OF.isBool;
     pub const toBoolNoCheck = OF.toBoolNoCheck;
     pub const isIndexable = OF.isIndexable;
@@ -313,6 +307,4 @@ pub const Object = packed struct(u64) {
     pub const to = OF.to;
     pub const toUnchecked = OF.toUnchecked;
     pub const asVariable = zag.Context.asVariable;
-    pub const PackedObject = object.PackedObject;
-    pub const signature = zag.execute.Signature.signature;
 };
