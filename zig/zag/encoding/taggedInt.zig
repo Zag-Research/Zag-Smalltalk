@@ -42,6 +42,8 @@ pub const Object = packed union {
     const SmallIntegerTag = Tag.u(.smallInteger);
 
     const Self = @This();
+    const intShift = 64 - @bitSizeOf(IntType);
+    pub const IntType = i63;
     pub const maxInt = 0x3fff_ffff_ffff_ffff;
     pub const ZERO: Object = @bitCast(@as(u64, 0));
     pub inline fn False() Object {
@@ -69,6 +71,8 @@ pub const Object = packed union {
     pub const PackedTagType = u3;
     pub const packedTagSmallInteger = 1;
     pub const signatureTag = Tag.u(.smallInteger);
+    pub const LowTag = u1;
+    pub const HighTag = u8;
     const TagAndClassType = u1;
     inline fn tagbits(self: Self) TagAndClassType {
         return @truncate(self.rawU());
@@ -113,7 +117,7 @@ pub const Object = packed union {
     pub inline fn nativeI_noCheck(self: Object) i64 {
         return @as(i64, self.rawI()) >> 1;
     }
-    pub inline fn fromNativeI(i: i63, _: anytype, _: anytype) Object {
+    pub inline fn fromNativeI(i: IntType, _: anytype, _: anytype) Object {
         return @bitCast((@as(u64, @bitCast(@as(i64, i))) << 1) + SmallIntegerTag);
     }
 
@@ -164,15 +168,12 @@ pub const Object = packed union {
         if (self.isMemoryDouble()) return self.toDoubleFromMemory();
         return null;
     }
-    pub inline fn isFloat(self: object.Object) bool {
-        return self.isMemoryDouble();
-    }
     pub inline fn fromNativeF(t: f64, sp: SP, context: *Context) object.Object {
         return memoryFloat(t, sp, context);
     }
 
     pub inline fn symbolHash(self: Object) ?u24 {
-        if (self.isSymbol()) return @truncate(self.hash32() >> 8);
+        if (self.isSymbol()) return self.hash24();
         return null;
     }
     pub inline fn numArgs(self: Object) u4 {
@@ -284,7 +285,7 @@ pub const Object = packed union {
                         switch (@typeInfo(ptrInfo.child)) {
                             .@"fn" => {},
                             .@"struct" => {
-                                if (!check or (self.hasMemoryReference() and (!@hasDecl(ptrInfo.child, "ClassIndex") or self.to(HeapObjectConstPtr).classIndex == ptrInfo.child.ClassIndex))) {
+                                if (!check or (self.hasHeapReference() and (!@hasDecl(ptrInfo.child, "ClassIndex") or self.to(HeapObjectConstPtr).classIndex == ptrInfo.child.ClassIndex))) {
                                     if (@hasField(ptrInfo.child, "header") or (@hasDecl(ptrInfo.child, "includesHeader") and ptrInfo.child.includesHeader)) {
                                         return @as(T, @ptrCast(self.addr()));
                                     } else {
@@ -310,7 +311,7 @@ pub const Object = packed union {
         }
         return self.addr().header.classIndex;
     }
-    pub const hasMemoryReference = isHeapObject;
+    pub const hasHeapReference = isHeapObject;
     pub inline fn ifHeapObject(self: Object) ?*HeapObject {
         if (self.isHeapObject()) return @constCast(@ptrCast(self.addr()));
         return null;
@@ -351,10 +352,6 @@ pub const Object = packed union {
         return null;
     }
 
-    pub inline fn isDouble(self: Object) bool {
-        return self.isMemoryDouble();
-    }
-
     pub inline fn extraValue(self: Object) Object {
         // For spur encoding, extract value from immediate objects
         // if (self.isImmediate()) {
@@ -365,7 +362,6 @@ pub const Object = packed union {
     }
 
     const OF = object.ObjectFunctions;
-    pub const PackedObject = object.PackedObject;
     pub const arrayAsSlice = OF.arrayAsSlice;
     pub const asObjectArray = OF.asObjectArray;
     pub const asZeroTerminatedString = OF.asZeroTerminatedString;
@@ -374,7 +370,6 @@ pub const Object = packed union {
     pub const equals = OF.equals;
     pub const format = OF.format;
     pub const getField = OF.getField;
-    pub const get_class = OF.get_class;
     pub const toBoolNoCheck = OF.toBoolNoCheck;
     pub const isIndexable = OF.isIndexable;
     pub const isNil = OF.isNil;

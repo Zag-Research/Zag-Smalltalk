@@ -16,8 +16,9 @@ const HeapHeader = zag.heap.HeapHeader;
 const HeapObject = zag.heap.HeapObject;
 const HeapObjectConstPtr = zag.heap.HeapObjectConstPtr;
 const InMemory = zag.InMemory;
-const encode = @import("floatSpur.zig").encode;
-const decode = @import("floatSpur.zig").decode;
+const floatEncoding = @import("floatEncoding.zig").Fst1(4);
+const encode = floatEncoding.encode;
+const decode = floatEncoding.decode;
 
 const Tag = enum(u3) {
     heap = 0,
@@ -51,6 +52,8 @@ pub const Object = packed union {
         hash: u61,
     },
     const Self = @This();
+    const intShift = 64 - @bitSizeOf(IntType);
+    pub const IntType = i61;
     pub const maxInt = 0xfff_ffff_ffff_ffff;
     pub const ZERO: Object = @bitCast(@as(u64, 0));
     pub inline fn False() Object {
@@ -68,7 +71,9 @@ pub const Object = packed union {
     pub const highTagSmallInteger = 0;
     pub const PackedTagType = Tag;
     pub const packedTagSmallInteger = Tag.smallInteger;
-    pub const signatureTag = Tag.u(.immediates);
+    pub const signatureTag = @as(u8, @intFromEnum(ClassIndex.Compact.Signature)) << 3 | Tag.u(.immediates);
+    pub const LowTag = u8;
+    pub const HighTag = u8;
     const TagAndClassType = u8;
     const tagAndClassBits = @bitSizeOf(Tag) + @bitSizeOf(ClassIndex.Compact);
     comptime {
@@ -102,11 +107,11 @@ pub const Object = packed union {
     pub inline fn fromUntaggedI(i: i64, _: anytype, _: anytype) Object {
         return @bitCast(i + @intFromEnum(Tag.smallInteger));
     }
-    pub inline fn fromNativeI(i: i61, _: anytype, _: anytype) Object {
-        return @bitCast((@as(i64, i) << 3) + @intFromEnum(Tag.smallInteger));
+    pub inline fn fromNativeI(i: IntType, _: anytype, _: anytype) Object {
+        return @bitCast((@as(i64, i) << intShift) + @intFromEnum(Tag.smallInteger));
     }
-    pub inline fn asUntaggedI(i: i61) i64 {
-        return @as(i64, i) << 3;
+    pub inline fn asUntaggedI(i: IntType) i64 {
+        return @as(i64, i) << intShift;
     }
     inline fn isInt(self: Object) bool {
         return self.isTag(.smallInteger);
@@ -122,16 +127,11 @@ pub const Object = packed union {
     }
     pub inline fn fromNativeF(t: f64, sp: SP, context: *Context) Object {
         return @bitCast(encode(t) catch {
+            std.debug.print("inMemory {}\n", .{t});
             return InMemory.float(t, sp, context);
         });
     }
-    pub inline fn isFloat(self: Object) bool {
-        return self.isImmediateDouble() or self.isMemoryDouble();
-    }
-    inline fn isImmediateDouble(self: Object) bool {
-        return self.isTag(.float);
-    }
-    pub inline fn isMemoryDouble(self: Object) bool {
+    inline fn isMemoryDouble(self: Object) bool {
         return if (self.ifHeapObject()) |ptr|
             ptr.getClass() == .Float
         else
@@ -142,7 +142,7 @@ pub const Object = packed union {
     }
 
     pub inline fn symbolHash(self: Object) ?u24 {
-        if (self.isImmediateClass(.Symbol)) return @truncate(self.immediate.hash);
+        if (self.isSymbol()) return self.hash24();
         return null;
     }
     pub inline fn numArgs(self: Object) u4 {
@@ -263,7 +263,7 @@ pub const Object = packed union {
                         switch (@typeInfo(ptrInfo.child)) {
                             .@"fn" => {},
                             .@"struct" => {
-                                if (!check or (self.hasMemoryReference() and (!@hasDecl(ptrInfo.child, "ClassIndex") or self.to(HeapObjectConstPtr).classIndex == ptrInfo.child.ClassIndex))) {
+                                if (!check or (self.hasHeapReference() and (!@hasDecl(ptrInfo.child, "ClassIndex") or self.to(HeapObjectConstPtr).classIndex == ptrInfo.child.ClassIndex))) {
                                     if (@hasField(ptrInfo.child, "header") or (@hasDecl(ptrInfo.child, "includesHeader") and ptrInfo.child.includesHeader)) {
                                         return @as(T, @ptrFromInt(@as(usize, @bitCast(self))));
                                     } else {
@@ -296,7 +296,7 @@ pub const Object = packed union {
         }
         return .UndefinedObject;
     }
-    pub inline fn hasMemoryReference(self: Object) bool {
+    pub inline fn hasHeapReference(self: Object) bool {
         return if (self.isTag(.heap))
             self.rawU() != 0
         else switch (self.immediate.class) {
@@ -405,7 +405,6 @@ pub const Object = packed union {
     pub const equals = OF.equals;
     pub const format = OF.format;
     pub const getField = OF.getField;
-    pub const get_class = OF.get_class;
     pub const isBool = OF.isBool;
     pub const toBoolNoCheck = OF.toBoolNoCheck;
     pub const isIndexable = OF.isIndexable;
@@ -418,7 +417,5 @@ pub const Object = packed union {
     pub const toUnchecked = OF.toUnchecked;
     pub const header = OF.header;
     pub const asVariable = zag.Context.asVariable;
-    pub const PackedObject = object.PackedObject;
-    pub const signature = zag.execute.Signature.signature;
     pub const tests = OF.tests;
 };

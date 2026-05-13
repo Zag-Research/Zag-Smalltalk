@@ -41,7 +41,7 @@ pub fn fromLE(comptime T: type, v: T) Object {
 pub const compareObject = Object.compare;
 const siIndex = 21;
 const noneIndex = switch (config.objectEncoding) {
-    .taggedPtr, .taggedHigh => siIndex,
+    .taggedLow, .taggedHigh => siIndex,
     else => 0,
 };
 pub const ClassIndex = enum(u16) {
@@ -67,17 +67,13 @@ pub const ClassIndex = enum(u16) {
     ThunkFloat,
     LLVM,
     UndefinedObject,
-    reserved_22 = 22,
-    reserved_23,
-    reserved_24,
-    reserved_25,
-    reserved_26,
-    o4,
+    o4 = 26,
     o3,
     o2,
     o1,
     o0,
-    Context,
+    heap,
+    Context = 64,
     Float,
     ProtoObject,
     Object,
@@ -113,7 +109,7 @@ pub const ClassIndex = enum(u16) {
     pub const ReplacementIndices = Self.replace7;
     pub const LastSpecial = @intFromEnum(Self.Dispatch);
     const Self = @This();
-    pub const Compact = enum(u5) {
+    pub const Compact = enum(switch (zag.config.objectEncoding) {.compactZ => u6, else => u5}) {
         none = noneIndex,
         SmallInteger = noneIndex ^ siIndex,
         ThunkReturnLocal = 1,
@@ -136,16 +132,13 @@ pub const ClassIndex = enum(u16) {
         ThunkFloat,
         LLVM,
         UndefinedObject,
-        reserved_22 = 22,
-        reserved_23,
-        reserved_24,
-        reserved_25,
-        reserved_26,
-        o4,
+        o4 = 26,
         o3,
         o2,
         o1,
         o0,
+        heap,
+        _,
         pub inline fn classIndex(cp: Compact) ClassIndex {
             return @enumFromInt(@intFromEnum(cp));
         }
@@ -174,8 +167,8 @@ comptime {
     std.debug.assert(@intFromEnum(ClassIndex.Compact.UndefinedObject) == 20);
     std.debug.assert(@intFromEnum(ClassIndex.UndefinedObject) == 20);
     std.debug.assert(@intFromEnum(ClassIndex.replace0) == 0xffff);
-    std.debug.assert(@intFromEnum(ClassIndex.Compact.o0) == 0x1f);
-    std.debug.assert(@intFromEnum(ClassIndex.o0) == 0x1f);
+    std.debug.assert(@intFromEnum(ClassIndex.Compact.heap) == 0x1f);
+    std.debug.assert(@intFromEnum(ClassIndex.heap) == 0x1f);
     std.testing.expectEqual(@intFromEnum(ClassIndex.ThunkReturnLocal), 1) catch @panic("unreachable");
     //    std.debug.assert(std.meta.hasUniqueRepresentation(Object));
     for (@typeInfo(ClassIndex.Compact).@"enum".fields, @typeInfo(ClassIndex).@"enum".fields[0..@typeInfo(ClassIndex.Compact).@"enum".fields.len]) |ci, cci| {
@@ -224,7 +217,7 @@ pub const ObjectFunctions = struct {
     }
     pub inline //
     fn isUnmoving(self: Object) bool {
-        return !self.hasMemoryReference() or self.to(*HeapObject).isUnmoving();
+        return !self.hasHeapReference() or self.to(*HeapObject).isUnmoving();
     }
     pub inline //
     fn hash(self: Object) Object {
@@ -309,11 +302,8 @@ pub const ObjectFunctions = struct {
                 return ord.eq;
             }
         }
+        std.debug.print("\nself:  0x{x:0>16}\nother: 0x{x:0>16}\n",.{self.testU(), other.testU()});
         @panic("unreachable");
-    }
-    pub inline//
-    fn get_class(self: Object) ClassIndex {
-        return self.which_class();
     }
     pub inline fn promoteToUnmovable(self: Object) !Object {
         if (self.isUnmoving()) return self;
@@ -343,16 +333,16 @@ pub const ObjectFunctions = struct {
             try writer.print("{}", .{name});
         } else if (self.invalidObject()) |invalid| {
             try writer.print("{{?0x{x:0>16}}}", .{invalid});
-        } else if (self.signature()) |signature| {
+        } else if (zag.execute.Signature.ifSignature(self)) |signature| {
             try writer.print("{f}", .{signature});
         } else if (self.nativeI()) |i| {
             try writer.print("{d}", .{i});
         } else if (self.symbolHash()) |_| {
             try writer.print("#{s}", .{symbol.asString(self).arrayAsSlice(u8) catch "???"});
-        } else if (self.extraImmediateU()) |extra| {
-            try writer.print("{}({}) -> {*}", .{ self.which_class(), extra, self.highPointer(*zag.Context) });
-        } else if (self.extraImmediateI()) |extra| {
-            try writer.print("{}({}) -> {*}", .{ self.which_class(), extra, self.highPointer(*zag.Context) });
+            // } else if (self.extraImmediateU()) |extra| {
+            //     try writer.print("{}({}) -> {*}", .{ self.which_class(), extra, self.highPointer(*zag.Context) });
+            // } else if (self.extraImmediateI()) |extra| {
+            //     try writer.print("{}({}) -> {*}", .{ self.which_class(), extra, self.highPointer(*zag.Context) });
         } else if (self.equals(False())) {
             try writer.print("false", .{});
         } else if (self.equals(True())) {
@@ -376,15 +366,15 @@ pub const PackedObject = packed struct {
     f1: u14,
     f2: u14 = 0,
     f3: u14 = 0,
-    f4: std.meta.Int(.unsigned, 64 - 42 - @bitSizeOf(Object.PackedTagType)) = 0,
+    f4: zag.UInt(64 - 42 - @bitSizeOf(Object.PackedTagType)) = 0,
     pub fn asU64(self: PackedObject) u64 {
         return @as(u64, @bitCast(self)) >> @bitSizeOf(Object.PackedTagType);
     }
     fn combine(size: type, tup: anytype) comptime_int {
-        comptime var n: u56 = 0;
+        comptime var n: u48 = 0;
         comptime var shift = 0;
         inline for (tup) |field| {
-            n |= @as(u56, switch (@TypeOf(field)) {
+            n |= @as(u48, switch (@TypeOf(field)) {
                 comptime_int => @as(size, field),
                 else => @intFromEnum(field),
             }) << shift;
@@ -406,7 +396,9 @@ pub const PackedObject = packed struct {
         try expectEqual(0x2C015, combine14([_]ClassIndex{ .SmallInteger, .Symbol }));
     }
 };
-test {_ = tests;}
+test {
+    _ = tests;
+}
 const tests = struct {
     var process: Process align(Process.alignment) = undefined;
     var sp: Process.SP = undefined;
@@ -463,30 +455,30 @@ const tests = struct {
         try ee(true, (from(true)).to(bool));
         try ee(-0x400000, (from(-0x400000)).toUnchecked(i64));
         for (0..200) |u| {
-            const i:iTest = @truncate(@as(i64,@bitCast(u)) - 100);
+            const i: iTest = @truncate(@as(i64, @bitCast(u)) - 100);
             try ee(i, nativeI(fromNativeI(i)));
             try ee(i, nativeI(fromUntaggedI(try untaggedI(from(i)))));
         }
-        try ee(12345,Object.makeSymbol(.Symbol,12345,3).symbolHash());
-        try ee(3,Object.makeSymbol(.Symbol,12345,3).numArgs());
+        try ee(12345, Object.makeSymbol(.Symbol, 12345, 3).symbolHash());
+        try ee(3, Object.makeSymbol(.Symbol, 12345, 3).numArgs());
     }
-    test "encoding: get_class" {
+    test "encoding: which_class" {
         //try config.skipNotZag();
         init();
-        try expect((from(3.14)).isFloat());
+        //try expect((from(3.14)).isFloat());
         try expect((from(true)).isBool());
         try expect((from(false)).isBool());
         try expect((from(null)).isNil());
-        try ee(.Float, (from(3.14)).get_class());
-        try ee(.SmallInteger, (from(42)).get_class());
-        try ee(.True, (from(true)).get_class());
-        try ee(.False, (from(false)).get_class());
-        try ee(.UndefinedObject, (from(null)).get_class());
-        try ee(.Symbol, symbol.Symbols.yourself.get_class());
-        try ee(.True, True().get_class());
-        try ee(.False, False().get_class());
-        try ee(.UndefinedObject, Nil().get_class());
-        try ee(.Symbol,Object.makeSymbol(.Symbol, 0, 0).get_class());
+        try ee(.Float, (from(3.14)).which_class());
+        try ee(.SmallInteger, (from(42)).which_class());
+        try ee(.True, (from(true)).which_class());
+        try ee(.False, (from(false)).which_class());
+        try ee(.UndefinedObject, (from(null)).which_class());
+        try ee(.Symbol, symbol.Symbols.yourself.which_class());
+        try ee(.True, True().which_class());
+        try ee(.False, False().which_class());
+        try ee(.UndefinedObject, Nil().which_class());
+        try ee(.Symbol, Object.makeSymbol(.Symbol, 0, 0).which_class());
     }
     test "printing" {
         init();

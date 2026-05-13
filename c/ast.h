@@ -26,9 +26,9 @@ typedef unsigned long objectT;
   y_.d;                            \
 })
 #define as_pointer(x) (((long)(x))<<12>>12)
-#define get_class(x) (((objectT)(x)>>49)>0x7ff8?((int)((objectT)(x)>>49)&7):((objectT)(x)>>49)<0x7ff0?8:get_class_7ff0(x))
+#define which_class(x) (((objectT)(x)>>49)>0x7ff8?((int)((objectT)(x)>>49)&7):((objectT)(x)>>49)<0x7ff0?8:which_class_7ff0(x))
 #define short_class(x) (((objectT)(x))>NEGATIVE_INF?((int)((objectT)(x)>>49)&7):8)
-static inline int get_class_7ff0(const objectT x) {
+static inline int which_class_7ff0(const objectT x) {
   long ptr = as_pointer(x);
   if (ptr==0) return 8;
   ptr = *((long *)ptr);
