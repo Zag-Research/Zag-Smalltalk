@@ -97,7 +97,7 @@ pub const Object = packed union {
         return null;
     }
     pub inline fn nativeI(self: object.Object) ?i64 {
-        if (self.taggedI()) |int| return int >> 3;
+        if (self.taggedI()) |int| return int >> intShift;
         return null;
     }
 
