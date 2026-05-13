@@ -4,24 +4,29 @@ pub fn PatchTable(AddressType: anytype, InfoType: anytype, mapSize: usize, patch
         status: Status,
         pending: ?*Self,
         resolution: ?AddressType,
+        
         const Self = @This();
         const Status = enum { free, new, defined, referenced };
+        
         fn before(self: *Self, other: *Self) bool {
             return @intFromPtr(self.source) < @intFromPtr(other.source);
         }
     };
+
     const PatchElement = struct {
         next: ?*Self,
         address: AddressType,
         info: InfoType,
         const Self = @This();
     };
+
     return struct {
         map: [mapSize]MapElement,
         patch: [patchSize]PatchElement,
         freePatch: ?*PatchElement,
         pending: ?*MapElement,
         const Self = @This();
+
         pub fn init(self: *Self) void {
             var last: ?*PatchElement = null;
             for (&self.patch) |*pe| {
@@ -31,6 +36,7 @@ pub fn PatchTable(AddressType: anytype, InfoType: anytype, mapSize: usize, patch
             self.freePatch = last;
             self.clearMap();
         }
+
         pub fn clearMap(self: *Self) void {
             for (&self.map) |*am| {
                 am.source = null;
@@ -39,7 +45,9 @@ pub fn PatchTable(AddressType: anytype, InfoType: anytype, mapSize: usize, patch
             }
             self.pending = null;
         }
+
         pub fn deinit(_: *Self) void {}
+
         fn atOrDefine(self: *Self, source: AddressType) *MapElement {
             const hashed = (@intFromPtr(source) >> 8) % mapSize;
             // linear probe from there to the end
@@ -53,6 +61,7 @@ pub fn PatchTable(AddressType: anytype, InfoType: anytype, mapSize: usize, patch
                     return element;
                 }
             }
+
             // rest of linear probe for the first part of the array
             for (self.map[0..hashed]) |*element| {
                 if (element.source) |addr| {
@@ -66,10 +75,12 @@ pub fn PatchTable(AddressType: anytype, InfoType: anytype, mapSize: usize, patch
             }
             @panic("map too small");
         }
+
         const PatchIterator = struct {
             nextElement: ?*PatchElement,
             current: ?*PatchElement,
             freelist: *?*PatchElement,
+
             pub fn next(self: *PatchIterator) ?*PatchElement {
                 if (self.current) |pe| {
                     pe.next = self.freelist.*;
@@ -79,10 +90,10 @@ pub fn PatchTable(AddressType: anytype, InfoType: anytype, mapSize: usize, patch
                     if (nxt) |then|
                         self.nextElement = then.next;
                     return pe;
-                } else
-                    return null;
+                } else return null;
             }
-            fn new(pe:?*PatchElement, freeList:*?*PatchElement) PatchIterator {
+
+            fn new(pe: ?*PatchElement, freeList: *?*PatchElement) PatchIterator {
                 return .{
                     .nextElement = if (pe) |tpe| tpe.next else null,
                     .current = pe,
@@ -90,6 +101,7 @@ pub fn PatchTable(AddressType: anytype, InfoType: anytype, mapSize: usize, patch
                 };
             }
         };
+
         pub fn definition(self: *Self, define: AddressType, as: AddressType) PatchIterator {
             const entry = self.atOrDefine(define);
             switch (entry.status) {
@@ -98,7 +110,7 @@ pub fn PatchTable(AddressType: anytype, InfoType: anytype, mapSize: usize, patch
                     entry.status = .defined;
                 },
                 .referenced => {
-                    const queue:?*PatchElement = @ptrCast(entry.resolution);
+                    const queue: ?*PatchElement = @ptrCast(entry.resolution);
                     entry.resolution = as;
                     entry.status = .defined;
                     return PatchIterator.new(queue, &self.freePatch);
@@ -134,11 +146,13 @@ pub fn PatchTable(AddressType: anytype, InfoType: anytype, mapSize: usize, patch
                 .free => unreachable,
             }
         }
+
         pub fn externalReference(self: *Self, target: AddressType) void {
             const entry = self.atOrDefine(target);
             entry.status = .referenced;
             self.addPending(entry);
         }
+
         fn addPending(self: *Self, entry: *MapElement) void {
             if (self.pending) |pending| {
                 if (pending.before(entry)) {
@@ -166,6 +180,7 @@ pub fn PatchTable(AddressType: anytype, InfoType: anytype, mapSize: usize, patch
             entry.pending = null;
             self.pending = entry;
         }
+
         pub fn getPending(self: *Self) ?AddressType {
             while (self.pending) |pending| {
                 self.pending = pending.pending;
@@ -181,7 +196,7 @@ test "patchTable" {
     var pt: PatchTable(*u64, u64, 5, 5) = undefined;
     pt.init();
     defer pt.deinit();
-    var data = [_]u64{1,2,3,4,5,6,7,8,9,10};
+    var data = [_]u64{ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 };
     pt.externalReference(&data[2]);
     try expectEqual(&data[2], pt.getPending());
     try expectEqual(null, pt.getPending());
@@ -217,6 +232,7 @@ test "patchTable" {
     try expectEqual(null, d3.next());
     try expectEqual(&data[4], pt.reference(&data[2], &data[5], 42));
 }
+
 const std = @import("std");
 const assert = std.debug.assert;
 const expectEqual = std.testing.expectEqual;

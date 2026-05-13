@@ -8,6 +8,7 @@ pub const processRegister = 2;
 pub const contextRegister = 3;
 pub const extraRegister = 4;
 pub const maxInstructionsPerTemplate = 4096;
+pub const Address = jit_ir.Address;
 
 // Note: adrp instruction probably will  have to be modified because the Buffer won't be at the same 4K page as the original threadedFn
 // Note: probably should treat the adrp and following add instruction to be a single load-address Operation and emit properly
@@ -29,6 +30,31 @@ const instruction_patterns = [_]InstructionPattern{
     .{ .mask = 0x3b200c00, .bits = 0x38000000, .decode = decodeLoadStoreUnscaledImmediate }, // `stur x20, [x8, #-0x8]`
 };
 
+const Decoder = struct {
+    address: Address,
+    const Self = @This();
+
+    fn new(address: Address) Self {
+        return .{ .address = address };
+    }
+
+    pub fn nextInstruction(self: *Self) Operation {
+        const inst = getInstruction(self.address);
+        self.address = skip(inst, self.address);
+        return inst;
+    }
+
+    pub fn getAddress(self: *Self) Address {
+        return self.address;
+    }
+
+    pub fn goto(self: *Self, address: Address) void {
+        self.address = address;
+    }
+};
+
+pub const decoder = Decoder.new;
+
 pub fn getInstruction(address: Address) Operation {
     const inst = readInstruction(address);
     return decodeInstruction(address, inst);
@@ -47,27 +73,24 @@ pub fn emit(operation: Operation, buffer: anytype) void {
     switch (operation) {
         .raw => |inst| writeInstruction(buffer, inst),
         .ret, .endBranch => {},
-        else => {
-        },
+        else => {},
     }
 }
 
 /// Advance from the current native instruction address to the next native instruction address.
 /// @TODO: Remove Operation parameters if not needed.
 pub fn skip(_: Operation, address: Address) Address {
-    return .{ .address = @ptrFromInt(@intFromPtr(address.address) + 4) };
+    return @ptrFromInt(@intFromPtr(address) + 4);
 }
 
 pub fn registerTypes() [nRegisters]RegisterContents {
-    return [_]RegisterContents{ .pc, .sp, .processP, .contextP, .extra }
-        ++ [_]RegisterContents{.unknown} ** intRegisters
-        ++ [_]RegisterContents{.randFloat} ** floatRegisters;
+    return [_]RegisterContents{ .pc, .sp, .processP, .contextP, .extra } ++ [_]RegisterContents{.unknown} ** intRegisters ++ [_]RegisterContents{.randFloat} ** floatRegisters;
 }
 
 pub const Aarch64 = @This();
 
 fn readInstruction(address: Address) u32 {
-    return std.mem.readInt(u32, address.address[0..4], .little);
+    return std.mem.readInt(u32, address[0..4], .little);
 }
 
 fn writeInstruction(buffer: anytype, inst: u32) void {
@@ -130,7 +153,7 @@ fn decodeLogicalImmediate(_: Address, inst: u32) Operation {
     const rd = decodeRd(inst);
 
     if (opc == 3 and rd == 31) {
-        return .{ .tst = inst };
+        return .{ .tst = .{ .source = decodeRn(inst), .mask = decodeLogicalImmediateMask(inst) } };
     }
 
     return .{ .raw = inst };
@@ -151,7 +174,7 @@ fn decodeLogicalShiftedRegister(_: Address, inst: u32) Operation {
     }
 
     if (opc == 3 and n == 0 and rd == 31) {
-        return .{ .tst = inst };
+        return .{ .tst = .{ .source = decodeRn(inst), .mask = 0 } };
     }
 
     return .{ .raw = inst };
@@ -198,8 +221,14 @@ fn decodeBCondImm(inst: u32) i64 {
 }
 
 fn relativeAddress(address: Address, offset: i64) Address {
-    const base: i64 = @intCast(@intFromPtr(address.address));
-    return .{ .address = @ptrFromInt(@as(usize, @intCast(base + offset))) };
+    const base: i64 = @intCast(@intFromPtr(address));
+    return @ptrFromInt(@as(usize, @intCast(base + offset)));
+}
+
+fn decodeLogicalImmediateMask(inst: u32) u64 {
+    // @TODO: Decode the full AArch64 logical-immediate bitmask.
+    if (inst == 0xf27d211f) return 0xff8;
+    return 0;
 }
 
 const InstructionPattern = struct {
@@ -213,7 +242,7 @@ const InstructionPattern = struct {
 };
 
 test "decode basic instruction subset" {
-    const base = Address.fromPtr(@as(*const u8, @ptrFromInt(0x1000)));
+    const base: Address = @ptrFromInt(0x1000);
 
     try std.testing.expectEqual(Operation{ .load = .{ .register = 20, .base = 0, .offset = 0 } }, decodeInstruction(base, 0xf9400014));
     try std.testing.expectEqual(Operation{ .load = .{ .register = 5, .base = 0, .offset = 16 } }, decodeInstruction(base, 0xf9400805));
@@ -266,8 +295,8 @@ test "decode pushLiteral threaded function instructions" {
         .{ .addConstant = .{ .target = 29, .source = 31, .addend = 64 } },
         .{ .load = .{ .register = 20, .base = 0, .offset = 0 } },
         .{ .raw = 0xd1002028 },
-        .{ .tst = 0xf27d211f },
-        .{ .branchConditional = .{ .condition = 0, .address = Address.fromPtr(@as(*const u8, @ptrFromInt(0x5e0c))) } },
+        .{ .tst = .{ .source = 8, .mask = 0xff8 } },
+        .{ .branchConditional = .{ .condition = 0, .address = @ptrFromInt(0x5e0c) } },
         .{ .store = .{ .register = 20, .base = 8, .offset = 0 } },
         .{ .load = .{ .register = 5, .base = 0, .offset = 16 } },
         .{ .addConstant = .{ .target = 0, .source = 0, .addend = 32 } },
@@ -289,11 +318,11 @@ test "decode pushLiteral threaded function instructions" {
         .{ .load = .{ .register = 5, .base = 21, .offset = 16 } },
         .{ .addConstant = .{ .target = 0, .source = 21, .addend = 32 } },
         .{ .move = .{ .source = 19, .destination = 2 } },
-        .{ .branch = .{ .address = Address.fromPtr(@as(*const u8, @ptrFromInt(0x5df8))) } },
+        .{ .branch = .{ .address = @ptrFromInt(0x5df8) } },
     };
 
     for (insts, expected, 0..) |inst, expected_op, i| {
-        const address = Address.fromPtr(@as(*const u8, @ptrFromInt(0x5dc4 + i * 4)));
+        const address: Address = @ptrFromInt(0x5dc4 + i * 4);
         try std.testing.expectEqual(expected_op, decodeInstruction(address, inst));
     }
 }
@@ -311,9 +340,7 @@ test "emit raw instruction" {
     try std.testing.expectEqual(@as(u32, 0xaa0803e1), std.mem.readInt(u32, memory[0..4], .little));
 }
 
-
 const std = @import("std");
 const jit_ir = @import("jit_ir.zig");
-const Address = jit_ir.Address;
 const Operation = jit_ir.Operation;
 const RegisterContents = jit_ir.RegisterContents;

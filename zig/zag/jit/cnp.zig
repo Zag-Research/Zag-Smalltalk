@@ -182,6 +182,7 @@ test "copyNPatch" {
         threadedFn: [*]const Operation,
         codePtr: *@This(),
     };
+    
     const JitBuffer = struct {
         buffer: [10]Operation = undefined,
         pos: usize = 0,
@@ -206,12 +207,15 @@ test "copyNPatch" {
             return self.buffer[0..self.pos];
         }
     };
+    
     const tf1 = [_]Operation{.{.tst = .{ .source = 5, .mask = 7}}, .ret};
     const m1 = [_]Code{.{.threadedFn = &tf1}};
     const Arch = @import("cnp/mockArch.zig").MockArch(JitBuffer.Address);
+    
     var cnp: CopyAndPatch(Code, Arch, JitBuffer) = undefined;
     try cnp.init();
     defer cnp.deinit();
+    
     try cnp.jitCode(&m1);
     // std.debug.print("buffer: {any}\n",.{cnp.buffer.slice()});
 }
