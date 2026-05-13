@@ -34,12 +34,8 @@ const largerPowerOf2 = @import("utilities.zig").largerPowerOf2;
 pub const False = Object.False;
 pub const True = Object.True;
 pub const Nil = Object.Nil;
-pub fn fromLE(comptime T: type, v: T) Object {
-    const val = @as(*const [@sizeOf(T)]u8, @ptrCast(&v));
-    return @bitCast(mem.readIntLittle(T, val));
-}
 pub const compareObject = Object.compare;
-const siIndex = 21;
+const siIndex = 24;
 const noneIndex = switch (config.objectEncoding) {
     .taggedLow, .taggedHigh => siIndex,
     else => 0,
@@ -67,14 +63,14 @@ pub const ClassIndex = enum(u16) {
     ThunkFloat,
     LLVM,
     UndefinedObject,
-    o4 = 26,
+    Float = siIndex+1, // skipping SmallInteger.none
+    o4,
     o3,
     o2,
     o1,
     o0,
     heap,
     Context = 64,
-    Float,
     ProtoObject,
     Object,
     Array,
@@ -132,7 +128,8 @@ pub const ClassIndex = enum(u16) {
         ThunkFloat,
         LLVM,
         UndefinedObject,
-        o4 = 26,
+        Float = siIndex+1,
+        o4,
         o3,
         o2,
         o1,
