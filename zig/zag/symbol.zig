@@ -105,7 +105,7 @@ const SymbolsEnum = enum(u32) {
     pub inline fn symbolHash(self: SymbolsEnum) ?u24 {
         return hash(@truncate(@intFromEnum(self)));
     }
-    pub inline fn get_class(_: SymbolsEnum) object.ClassIndex {
+    pub inline fn which_class(_: SymbolsEnum) object.ClassIndex {
         return .Symbol;
     }
     pub fn asObject(self: SymbolsEnum) Object {
@@ -115,9 +115,9 @@ const SymbolsEnum = enum(u32) {
         }
         return Object.fromAddress(&staticSymbols[index - 1]);
     }
-    fn signature(sym: SymbolsEnum, primitive: u8) Signature {
+    fn signature(sym: SymbolsEnum) Signature {
         const int = @intFromEnum(sym);
-        return Signature.fromHashPrimitive(hash(@truncate(int)), @intCast(int >> 24), primitive);
+        return Signature.fromHash(hash(@truncate(int)), @intCast(int >> 24));
     }
     inline fn symbol_of(index: u24, nArgs: u4) Object {
         if (config.immediateSymbols) {

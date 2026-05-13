@@ -52,8 +52,8 @@ pub const Format = enum(u7) {
     const Self = @This();
     const NumberOfBytes = 109;
     const LastPointerFree = asU7(.free);
-//    const Indexed = asU7(.indexed);
-//    const External = asU7(.external);
+    //    const Indexed = asU7(.indexed);
+    //    const External = asU7(.external);
     const FirstWeak = asU7(.externalWeakWithPointers);
     const LastWeak = asU7(.indexedWeakWithPointers);
     const Last = 128;
@@ -320,7 +320,7 @@ pub const HeapObjectIterator = struct {
         while (@intFromPtr(self.current) < @intFromPtr(self.beyond)) {
             const addr = &self.current[0];
             self.current += 1;
-            if (addr.hasMemoryReference())
+            if (addr.hasHeapReference())
                 return addr;
         }
         return null;
@@ -659,9 +659,9 @@ pub const HeapHeader = packed struct(u64) {
         writer: anytype,
     ) !void {
         if (self.ifForwarded()) |ptr| {
-            try writer.print("-> {*}", .{ ptr });
+            try writer.print("-> {*}", .{ptr});
         } else {
-            try writer.print("HeapHeader{{{} {} {}{s} {} len:{}}}", .{self.classIndex, self.hash, self.objectFormat, if (self.immutable) " immutable" else "", self.age, self.length});
+            try writer.print("HeapHeader{{{} {} {}{s} {} len:{}}}", .{ self.classIndex, self.hash, self.objectFormat, if (self.immutable) " immutable" else "", self.age, self.length });
         }
     }
     fn forwardTo(where: anytype) HeapHeader {
@@ -694,7 +694,7 @@ pub const HeapHeader = packed struct(u64) {
         return .{ .classIndex = class, .objectFormat = objectFormat, .age = .onStack, .length = objectSize, .hash = hash };
     }
     pub inline fn at(self: HeapHeader, where: anytype) void {
-        @as(*HeapHeader,@ptrCast(where)).* = self;
+        @as(*HeapHeader, @ptrCast(where)).* = self;
     }
     pub inline fn headerStatic(comptime class: ClassIndex, hash: u24, length: u11) HeapHeader {
         return .{ .classIndex = class, .hash = hash, .objectFormat = .special, .age = .static, .length = length };
@@ -796,7 +796,7 @@ pub const HeapObject = packed struct {
         self: HeapObject,
         writer: anytype,
     ) !void {
-        try writer.print("{{{f}, ...}}", .{ self.header });
+        try writer.print("{{{f}, ...}}", .{self.header});
     }
     pub inline //
     fn alignProperBoundary(self: HeapObjectArray) HeapObjectArray {
