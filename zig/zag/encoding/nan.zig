@@ -64,6 +64,8 @@ pub const Tag = enum(TagBaseType) {
 pub const Object = packed struct(u64) {
     data: u48,
     tag: Tag,
+    const intShift = 64 - @bitSizeOf(IntType);
+    pub const IntType = i50;
     pub const maxInt = 0x3_ffff_ffff_ffff;
     pub const ZERO: Object = @bitCast(@as(u64, 0));
     pub inline fn False() Object {
@@ -81,29 +83,26 @@ pub const Object = packed struct(u64) {
     pub const highTagSmallInteger: HighTagType = Tag.u(.smallInteger);
     pub const PackedTagType = u3;
     pub const packedTagSmallInteger = 1;
-    pub const signatureTag = 1;
+    pub const signatureTag = 0;
+    pub const LowTag = u8;
+    pub const HighTag = u0;
     const TagAndClassType = u16;
     const tagAndClassBits = @bitSizeOf(Tag);
     comptime {
         assert(tagAndClassBits == @bitSizeOf(TagAndClassType));
     }
     const extraMask = 7;
-    const intTagBits = 14;
     const integerTag = Tag.u(.smallInteger) >> 2;
     inline fn isInt(self: Object) bool {
-        switch (builtin.target.cpu.arch) {
+        switch (zag.arch) {
             .x86_64 => {
                 return self.rawU() >= Tag.g(.smallInteger);
-                // return self.rawU() >> (64 - intTagBits) >= integerTag;
+                // return self.rawU() >> (64 - intShift) >= integerTag;
             },
-            .aarch64 => {
-                return (self.rawI() >> 64 - intTagBits) + 1 == 0;
+            else => {
+                return (self.rawI() >> 64 - intShift) + 1 == 0;
             },
-            else => @compileError("unsupported target cpu"),
         }
-    }
-    inline fn toObject(int: i64) Object {
-        return @bitCast(std.math.rotr(u64, @as(u64, @bitCast(int)) + integerTag, intTagBits));
     }
     pub const testU = rawU;
     inline fn rawU(self: Object) u64 {
@@ -127,7 +126,7 @@ pub const Object = packed struct(u64) {
         return .{ .tag = Tag.from(c), .data = h };
     }
     pub inline fn symbolHash(self: Object) ?u24 {
-        if (self.isImmediateClass(.Symbol)) return @truncate(self.rawU() >> 8);
+        if (self.isSymbol()) return self.hash24();
         return null;
     }
     pub inline fn numArgs(self: Object) u4 {
@@ -175,30 +174,34 @@ pub const Object = packed struct(u64) {
     }
 
     pub inline fn untaggedI(self: Object) ?i64 {
-        if (self.isInt()) return @bitCast(@as(u64, @bitCast(self)) << intTagBits);
+        if (self.isInt()) return @bitCast(@as(u64, @bitCast(self)) << intShift);
         return null;
     }
-    pub inline fn fromUntaggedI(i: i64, _: anytype, _: anytype) Object {
-        return toObject(i);
+    pub inline fn fromUntaggedI(int: i64, _: anytype, _: anytype) Object {
+        return @bitCast(std.math.rotr(u64, @as(u64, @bitCast(int)) + integerTag, intShift));
     }
     pub const taggedI = untaggedI;
     pub const fromTaggedI = fromUntaggedI;
     pub inline fn nativeI(self: Object) ?i64 {
-        if (self.untaggedI()) |int| return int >> intTagBits;
+        if (self.untaggedI()) |int| return int >> intShift;
         return null;
     }
-    pub inline fn asUntaggedI(int: i50) i64 {
-        return @as(i64, int) << intTagBits;
+    pub inline fn asUntaggedI(int: IntType) i64 {
+        return @as(i64, int) << intShift;
     }
-    pub inline fn fromNativeI(int: i50, _: anytype, _: anytype) Object {
-        return toObject(asUntaggedI(int));
+    pub inline fn fromNativeI(int: IntType, _: anytype, _: anytype) Object {
+        return fromUntaggedI(asUntaggedI(int), null, null);
     }
     pub inline fn nativeF(self: Object) ?f64 {
-        if (self.isImmediateDouble()) return @bitCast(self);
+        const f: f64 = @bitCast(self);
+        if (!math.isNan(f)) {
+            @branchHint(.likely);
+            return f;
+        } else if (@as(u64, @bitCast(self)) == NaN) {
+            @branchHint(.unlikely);
+            return f;
+        }
         return null;
-    }
-    pub inline fn isFloat(self: Object) bool {
-        return self.isImmediateDouble();
     }
     pub inline fn fromNativeF(t: f64, _: anytype, _: anytype) Object {
         return @bitCast(t);
@@ -211,15 +214,9 @@ pub const Object = packed struct(u64) {
         //        return (self.rawU()^other.rawU())&0xffffffffffff == 0; // may be false positive
         return self.rawU() == other.rawU();
     }
-    inline fn isNaN(self: Object) bool {
-        return std.math.isNan(@as(f64, @bitCast(self)));
-    }
     pub inline fn isNat(self: Object) bool {
         if (self.untaggedI()) |value| return value >= 0;
         return false;
-    }
-    inline fn isImmediateDouble(self: Object) bool {
-        return !std.math.isNan(@as(f64, @bitCast(self))) or self.rawU() == NaN;
     }
     pub inline fn highPointer(self: Object, T: type) ?T {
         return @ptrFromInt(self.rawU() & 0xFFFF_FFFF_FFF8);
@@ -235,11 +232,7 @@ pub const Object = packed struct(u64) {
         }
         return null;
     }
-
-    pub inline fn isDouble(self: Object) bool {
-        return self.which_class() == .Float;
-    }
-    pub inline fn hasMemoryReference(self: Object) bool {
+    pub inline fn hasHeapReference(self: Object) bool {
         return switch (self.tag) {
             .heap => self != Nil(),
             .ThunkReturnLocal, .ThunkReturnInstance, .ThunkReturnObject, .ThunkReturnImmediate, .ThunkLocal, .ThunkInstance, .ThunkHeap => true,
@@ -342,7 +335,7 @@ pub const Object = packed struct(u64) {
                         switch (@typeInfo(ptrInfo.child)) {
                             .@"fn" => {},
                             .@"struct" => {
-                                if (!check or (self.hasMemoryReference() and (!@hasDecl(ptrInfo.child, "ClassIndex") or self.to(HeapObjectConstPtr).classIndex == ptrInfo.child.ClassIndex))) {
+                                if (!check or (self.hasHeapReference() and (!@hasDecl(ptrInfo.child, "ClassIndex") or self.to(HeapObjectConstPtr).classIndex == ptrInfo.child.ClassIndex))) {
                                     if (@hasField(ptrInfo.child, "header") or (@hasDecl(ptrInfo.child, "includesHeader") and ptrInfo.child.includesHeader)) {
                                         return @as(T, @ptrFromInt(self.nanPointerAsInt()));
                                     } else {
@@ -357,15 +350,15 @@ pub const Object = packed struct(u64) {
                 }
             },
         }
-        std.debug.print("\nclass={} {x}\n", .{self.which_class(), self.rawU()});
+        std.debug.print("\nclass={} {x}\n", .{ self.which_class(), self.rawU() });
         @panic("Trying to convert Object to " ++ @typeName(T));
     }
     inline fn nanPointerAsInt(self: Object) usize {
         return @as(u48, @truncate(@as(usize, @bitCast(self))));
     }
     pub inline fn which_class(self: Object) ClassIndex {
-        switch (builtin.target.cpu.arch) {
-            .x86_64 => {
+        switch (zag.arch) {
+            .propeller => {
                 switch (self.tag) {
                     .heap => {
                         if (self.data == 0) {
@@ -391,8 +384,8 @@ pub const Object = packed struct(u64) {
                     },
                 }
             },
-            .aarch64 => {
-                const tagBits = (self.rawI() >> 64 - intTagBits) + 1;
+            else => {
+                const tagBits = (self.rawI() >> 64 - intShift) + 1;
                 if (tagBits == 0) {
                     @branchHint(.likely);
                     return .SmallInteger;
@@ -411,7 +404,10 @@ pub const Object = packed struct(u64) {
                             return self.toUnchecked(*HeapObject).*.getClass();
                         },
                         else => |tag| {
-                            if (self.rawU() == NaN or self.rawU() == Inf) {
+                            if (self.rawU() == NaN) {
+                                @branchHint(.unlikely);
+                                return .Float;
+                            } else if (self.rawU() == Inf) {
                                 @branchHint(.unlikely);
                                 return .Float;
                             }
@@ -420,7 +416,6 @@ pub const Object = packed struct(u64) {
                     }
                 }
             },
-            else => @compileError("unsupported target cpu"),
         }
     }
     pub inline fn ifHeapObject(self: object.Object) ?*HeapObject {
@@ -436,7 +431,6 @@ pub const Object = packed struct(u64) {
     pub const equals = OF.equals;
     pub const format = OF.format;
     pub const getField = OF.getField;
-    pub const get_class = OF.get_class;
     pub const isBool = OF.isBool;
     pub const toBoolNoCheck = OF.toBoolNoCheck;
     pub const isIndexable = OF.isIndexable;
@@ -448,10 +442,8 @@ pub const Object = packed struct(u64) {
     pub const to = OF.to;
     pub const toUnchecked = OF.toUnchecked;
     pub const asVariable = zag.Context.asVariable;
-    pub const PackedObject = object.PackedObject;
     pub const primitive = @import("zag.zig").Object.primitive;
     pub const symbol = @import("zag.zig").Object.symbol;
-    pub const signature = zag.execute.Signature.signature;
 };
 test "all generated NaNs are positive" {
     // test that all things that generate NaN generate positive ones

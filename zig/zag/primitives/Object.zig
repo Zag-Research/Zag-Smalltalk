@@ -84,11 +84,11 @@ pub const @"perform:" = struct { // perform: perform:with: perform:with:with: pe
     pub fn primitive(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
         // the same primitive number is used for perform:, perform:with:, etc.
         // so we need to find out where the selector is
-        const arity = extra.getMethod().?.signature.numArgs - 1;
+        const arity = extra.getMethod().?.signature.numArgs() - 1;
         const selector = sp.at(arity);
         const numArgs = selector.numArgs();
         if (selector.isSymbol() and numArgs == arity) {
-            //     const newPc = lookupAddress(selector);//, sp.next.get_class());
+            //     const newPc = lookupAddress(selector);//, sp.next.which_class());
             @panic("unreachable");
         }
         return @call(tailCall, Extra.primitiveFailed, .{ pc, sp, process, context, extra });
@@ -101,7 +101,7 @@ pub const @"perform:withArguments:" = struct {
         //     const selector = sp.next;
         //     sp.next = sp.top;
         //     if (selector.numArgs() != 1) @panic("wrong number of args");
-        //     const newPc = lookupAddress(selector);//, sp.third.get_class());
+        //     const newPc = lookupAddress(selector);//, sp.third.which_class());
         //     context.setTPc(pc + 1);
         //     return @call(tailCall, process.check(newPc.prim()), .{ newPc.next(), sp + 1, process, context, undefined });
         _ = .{ pc, sp, process, context, extra, unreachable };

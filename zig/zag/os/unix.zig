@@ -60,7 +60,10 @@ fn mmap(hint: pageAddressType, size: usize, fd: os.fd_t) ![]align(page_size) u8 
         hint,
         size,
         os.PROT.READ | os.PROT.WRITE,
-        .{ .TYPE = .PRIVATE, .FIXED = true, .ANONYMOUS = true, .NORESERVE = true },
+        switch (builtin.cpu.arch) {
+            .riscv64 => .{ .TYPE = .PRIVATE, .FIXED = true, .ANONYMOUS = true },
+            else => .{ .TYPE = .PRIVATE, .FIXED = true, .ANONYMOUS = true, .NORESERVE = true },
+        },
         fd,
         0,
     );

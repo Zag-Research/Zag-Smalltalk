@@ -76,7 +76,7 @@ const fibInteger = struct {
     const leq = tf.@"inline<=I";
     const plus = tf.@"inline+I";
     const minus = tf.@"inline-I";
-    const classes = Object.PackedObject.classes;
+    const classes = object.PackedObject.classes;
     const signature = zag.symbol.signature;
     const nullMethod = zag.dispatch.nullMethod;
     var fib align(codeAlignment) =
@@ -91,12 +91,12 @@ const fibInteger = struct {
             tf.pushLiteral,           "0const",
             minus,                    tf.fail,
             tf.fail,                  tf.send,
-            signature(.fibonacci, 0), &nullMethod,
+            signature(.fibonacci),   &nullMethod,
             tf.push,                  self,
             tf.pushLiteral,           "1const",
             minus,                    tf.fail,
             tf.fail,                  tf.send,
-            signature(.fibonacci, 0), &nullMethod,
+            signature(.fibonacci), &nullMethod,
             plus,                     tf.fail,
             tf.fail,                  tf.returnTop,
         });
@@ -132,7 +132,7 @@ const fibInteger0 = struct {
     const leq = tf.@"inline<=I";
     const plus = tf.@"inline+I";
     const minus = tf.@"inline-I";
-    const classes = Object.PackedObject.classes;
+    const classes = object.PackedObject.classes;
     const signature = zag.symbol.signature;
     const nullMethod = zag.dispatch.nullMethod;
     var fib align(codeAlignment) =
@@ -147,12 +147,12 @@ const fibInteger0 = struct {
             tf.pushLiteral,           "0const",
             minus,                    tf.fail,
             tf.fail,                  tf.send0,
-            signature(.fibonacci, 0), &nullMethod,
+            signature(.fibonacci), &nullMethod,
             tf.push,                  self,
             tf.pushLiteral,           "1const",
             minus,                    tf.fail,
             tf.fail,                  tf.send0,
-            signature(.fibonacci, 0), &nullMethod,
+            signature(.fibonacci), &nullMethod,
             plus,                     tf.fail,
             tf.fail,                  tf.returnTop,
         });
@@ -188,7 +188,7 @@ const fibIntegerBr = struct {
     const leq = tf.@"inline<=I";
     const plus = tf.@"inline+I";
     const minus = tf.@"inline-I";
-    const classes = Object.PackedObject.classes;
+    const classes = object.PackedObject.classes;
     const signature = zag.symbol.signature;
     const nullMethod = zag.dispatch.nullMethod;
     var fib align(codeAlignment) =
@@ -203,12 +203,12 @@ const fibIntegerBr = struct {
             self,           tf.pushLiteral,
             "0const",       minus,
             tf.fail,        tf.fail,
-            tf.send,        signature(.fibonacci, 0),
+            tf.send,        signature(.fibonacci),
             &nullMethod,    tf.push,
             self,           tf.pushLiteral,
             "1const",       minus,
             tf.fail,        tf.fail,
-            tf.send,        signature(.fibonacci, 0),
+            tf.send,        signature(.fibonacci),
             &nullMethod,    plus,
             tf.fail,        tf.fail,
             //            tf.enddebug,
@@ -254,36 +254,42 @@ const fibIntegerCl = struct {
     const leq = tf.@"inline<=I";
     const plus = tf.@"inline+I";
     const minus = tf.@"inline-I";
-    const classes = Object.PackedObject.classes;
+    const classes = object.PackedObject.classes;
     const signature = zag.symbol.signature;
     const nullMethod = zag.dispatch.nullMethod;
-    const fromClassI8 = zag.execute.Signature.fromClassI8;
+    const primitive = zag.execute.Signature.fromPrimitive;
     var TifTrue align(codeAlignment) =
         compileMethod(Sym.@"ifTrue:", 0, .True, .{ tf.dup, tf.value, tf.returnTop });
     var FifTrue align(codeAlignment) =
         compileMethod(Sym.@"ifTrue:", 0, .False, .{tf.returnSelf});
+    var SIplus align(codeAlignment) =
+        compileMethod(Sym.@"+", 0, .SmallInteger, .{ tf.primitive, primitive(1), tf.fail});
+    var SIminus align(codeAlignment) =
+        compileMethod(Sym.@"-", 0, .SmallInteger, .{ tf.primitive, primitive(2), tf.fail});
+    var SIleq align(codeAlignment) =
+        compileMethod(Sym.@"<=", 0, .SmallInteger, .{ tf.primitive, primitive(5), tf.fail});
     var fib align(codeAlignment) =
         compileMethod(Sym.fibonacci, 0, .SmallInteger, .{
             //            tf.debug,
             tf.push,                   self,
             tf.pushLiteral,            "1const",
-            leq,                       tf.fail,
-            tf.fail,                   tf.returnLocalClosure,
+            tf.send,
+            signature(.@"<="), &nullMethod,
+            tf.returnLocalClosure,
             "0const",                  tf.send,
-            signature(.@"ifTrue:", 0), &nullMethod,
+            signature(.@"ifTrue:"), &nullMethod,
             tf.drop,                   tf.push,
             self,                      tf.pushLiteral,
-            "1const",                  minus,
-            tf.fail,                   tf.fail,
-            tf.send,                   signature(.fibonacci, 0),
+            "1const",                  tf.send,
+            signature(.@"-"), &nullMethod,
+            tf.send,                   signature(.fibonacci),
             &nullMethod,               tf.push,
             self,                      tf.pushLiteral,
-            "2const",                  minus,
-            tf.fail,                   tf.fail,
-            tf.send,                   signature(.fibonacci, 0),
-            &nullMethod,               plus,
-            tf.fail,                   tf.fail,
-            //            tf.enddebug,
+            "2const",                  tf.send,
+            signature(.@"-"), &nullMethod,
+            tf.send,                   signature(.fibonacci),
+            &nullMethod,               tf.send,
+            signature(.@"+"), &nullMethod,
             tf.returnTop,
         });
     var exe: MainExecutor = undefined;
@@ -297,13 +303,22 @@ const fibIntegerCl = struct {
         const zero = zero_.init(0);
         fib.resolve(&[_]Object{ zero, one, two }) catch @panic("Failed to resolve");
         fib.initExecute();
+        zag.dispatch.addMethod(@ptrCast(&fib));
         TifTrue.resolve(Object.empty) catch @panic("Failed to resolve");
         TifTrue.initExecute();
+        zag.dispatch.addMethod(@ptrCast(&TifTrue));
         FifTrue.resolve(Object.empty) catch @panic("Failed to resolve");
         FifTrue.initExecute();
-        zag.dispatch.addMethod(@ptrCast(&fib));
-        zag.dispatch.addMethod(@ptrCast(&TifTrue));
         zag.dispatch.addMethod(@ptrCast(&FifTrue));
+        SIplus.resolve(Object.empty) catch @panic("Failed to resolve");
+        SIplus.initExecute();
+        zag.dispatch.addMethod(@ptrCast(&SIplus));
+        SIminus.resolve(Object.empty) catch @panic("Failed to resolve");
+        SIminus.initExecute();
+        zag.dispatch.addMethod(@ptrCast(&SIminus));
+        SIleq.resolve(Object.empty) catch @panic("Failed to resolve");
+        SIleq.initExecute();
+        zag.dispatch.addMethod(@ptrCast(&SIleq));
         if (zag.config.show_trace) {
             std.debug.print("\n", .{});
             std.debug.print("address of one {*}\n", .{&one});
@@ -337,7 +352,7 @@ const fibFloat = struct {
     const leq = tf.@"inline<=F";
     const plus = tf.@"inline+F";
     const minus = tf.@"inline-F";
-    const classes = Object.PackedObject.classes;
+    const classes = object.PackedObject.classes;
     const signature = zag.symbol.signature;
     const nullMethod = zag.dispatch.nullMethod;
     var fib align(codeAlignment) =
@@ -351,12 +366,12 @@ const fibFloat = struct {
             self,           tf.pushLiteral,
             "0const",       minus,
             tf.fail,        tf.fail,
-            tf.send,        signature(.fibonacci, 0),
+            tf.send,        signature(.fibonacci),
             &nullMethod,    tf.push,
             self,           tf.pushLiteral,
             "1const",       minus,
             tf.fail,        tf.fail,
-            tf.send,        signature(.fibonacci, 0),
+            tf.send,        signature(.fibonacci),
             &nullMethod,    plus,
             tf.fail,        tf.fail,
             tf.returnTop,
@@ -470,11 +485,11 @@ pub fn main() !void {
         "Config",            "Header",
         //"Native",            "NativeF",
         //"Integer",
+        //"IntegerCl",
         "IntegerBr?Integer",
         //"Integer0?Integer",
         //"IntegerCnP",
         "Float",
-        //"IntegerCl",
     };
     // var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     // const allocator = gpa.allocator();
