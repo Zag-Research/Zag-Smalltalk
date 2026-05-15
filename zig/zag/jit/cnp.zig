@@ -8,6 +8,7 @@ pub fn CopyAndPatch(Code: anytype, Arch: anytype, JitBuffer: anytype) type {
     const Address = Arch.Address;
     const nativePatchType = PatchTable(Address, Operation, mapSize, patchSize);
     const threadedPatchType = PatchTable([*]Code, Operation, threadedMapSize, threadedPatchSize);
+    
     return struct {
         buffer: JitBuffer,
         regType: [Arch.nRegisters]RegisterContents,

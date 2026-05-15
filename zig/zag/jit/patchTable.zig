@@ -2,7 +2,7 @@ pub fn PatchTable(AddressType: anytype, InfoType: anytype, mapSize: usize, patch
     const MapElement = struct {
         source: ?AddressType,
         status: Status,
-        pending: ?*Self,
+        next_pending: ?*Self,
         resolution: ?AddressType,
         
         const Self = @This();
@@ -21,10 +21,13 @@ pub fn PatchTable(AddressType: anytype, InfoType: anytype, mapSize: usize, patch
     };
 
     return struct {
+        // Fixed allocated pool.
         map: [mapSize]MapElement,
         patch: [patchSize]PatchElement,
-        freePatch: ?*PatchElement,
-        pending: ?*MapElement,
+        
+        free_patch: ?*PatchElement,
+        pending_head: ?*MapElement,
+        
         const Self = @This();
 
         pub fn init(self: *Self) void {
@@ -33,7 +36,7 @@ pub fn PatchTable(AddressType: anytype, InfoType: anytype, mapSize: usize, patch
                 pe.next = last;
                 last = pe;
             }
-            self.freePatch = last;
+            self.free_patch = last;
             self.clearMap();
         }
 
@@ -41,9 +44,9 @@ pub fn PatchTable(AddressType: anytype, InfoType: anytype, mapSize: usize, patch
             for (&self.map) |*am| {
                 am.source = null;
                 am.status = .free;
-                am.pending = null;
+                am.next_pending = null;
             }
-            self.pending = null;
+            self.pending_head = null;
         }
 
         pub fn deinit(_: *Self) void {}
@@ -77,27 +80,27 @@ pub fn PatchTable(AddressType: anytype, InfoType: anytype, mapSize: usize, patch
         }
 
         const PatchIterator = struct {
-            nextElement: ?*PatchElement,
+            next_element: ?*PatchElement,
             current: ?*PatchElement,
-            freelist: *?*PatchElement,
+            free_list: *?*PatchElement,
 
             pub fn next(self: *PatchIterator) ?*PatchElement {
                 if (self.current) |pe| {
-                    pe.next = self.freelist.*;
-                    self.freelist.* = pe;
-                    const nxt = self.nextElement;
+                    pe.next = self.free_list.*;
+                    self.free_list.* = pe;
+                    const nxt = self.next_element;
                     self.current = nxt;
                     if (nxt) |then|
-                        self.nextElement = then.next;
+                        self.next_element = then.next;
                     return pe;
                 } else return null;
             }
 
             fn new(pe: ?*PatchElement, freeList: *?*PatchElement) PatchIterator {
                 return .{
-                    .nextElement = if (pe) |tpe| tpe.next else null,
+                    .next_element = if (pe) |tpe| tpe.next else null,
                     .current = pe,
-                    .freelist = freeList,
+                    .free_list = freeList,
                 };
             }
         };
@@ -113,12 +116,12 @@ pub fn PatchTable(AddressType: anytype, InfoType: anytype, mapSize: usize, patch
                     const queue: ?*PatchElement = @ptrCast(entry.resolution);
                     entry.resolution = as;
                     entry.status = .defined;
-                    return PatchIterator.new(queue, &self.freePatch);
+                    return PatchIterator.new(queue, &self.free_patch);
                 },
                 .defined => @panic("multiply defined"),
                 .free => unreachable,
             }
-            return PatchIterator.new(null, &self.freePatch);
+            return PatchIterator.new(null, &self.free_patch);
         }
 
         pub fn reference(self: *Self, target: AddressType, from: AddressType, info: InfoType) ?AddressType {
@@ -134,10 +137,12 @@ pub fn PatchTable(AddressType: anytype, InfoType: anytype, mapSize: usize, patch
                     return entry.resolution;
                 },
                 .referenced => {
-                    if (self.freePatch) |patch| {
-                        self.freePatch = patch.next;
+                    if (self.free_patch) |patch| {
+                        self.free_patch = patch.next;
                         patch.address = from;
                         patch.info = info;
+                        // Bug: On a new referenced entry.  
+                        // we point to the patch_entry. by ptr casting the resolution
                         patch.next = @ptrCast(entry.resolution);
                         entry.resolution = @ptrCast(patch);
                     } else @panic("no free patches");
@@ -154,37 +159,19 @@ pub fn PatchTable(AddressType: anytype, InfoType: anytype, mapSize: usize, patch
         }
 
         fn addPending(self: *Self, entry: *MapElement) void {
-            if (self.pending) |pending| {
-                if (pending.before(entry)) {
-                    var me = pending;
-                    while (true) {
-                        if (me.pending) |next| {
-                            if (entry.before(next)) {
-                                entry.pending = next;
-                                me.pending = entry;
-                                return;
-                            }
-                            me = next;
-                        } else {
-                            entry.pending = null;
-                            me.pending = entry;
-                            return;
-                        }
-                    }
-                } else {
-                    entry.pending = self.pending;
-                    self.pending = entry;
-                    return;
-                }
+            var link = &self.pending_head;
+            while (link.*) |pending| {
+                if (entry.before(pending)) break;
+                link = &pending.next_pending;
             }
-            entry.pending = null;
-            self.pending = entry;
+            entry.next_pending = link.*;
+            link.* = entry;
         }
 
-        pub fn getPending(self: *Self) ?AddressType {
-            while (self.pending) |pending| {
-                self.pending = pending.pending;
-                pending.pending = null;
+        pub fn popPending(self: *Self) ?AddressType {
+            while (self.pending_head) |pending| {
+                self.pending_head = pending.next_pending;
+                pending.next_pending = null;
                 if (pending.status == .referenced)
                     return pending.source;
             }
@@ -192,34 +179,44 @@ pub fn PatchTable(AddressType: anytype, InfoType: anytype, mapSize: usize, patch
         }
     };
 }
+
+
 test "patchTable" {
     var pt: PatchTable(*u64, u64, 5, 5) = undefined;
     pt.init();
     defer pt.deinit();
+    
     var data = [_]u64{ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 };
+    
     pt.externalReference(&data[2]);
-    try expectEqual(&data[2], pt.getPending());
-    try expectEqual(null, pt.getPending());
+    
+    try expectEqual(&data[2], pt.popPending());
+    try expectEqual(null, pt.popPending());
+    
     pt.clearMap();
+    
     var d1 = pt.definition(&data[2], &data[4]);
     try expectEqual(null, d1.next());
     try expectEqual(&data[4], pt.reference(&data[2], &data[5], 42));
+
     pt.init();
     // reference before definition returns an iterator
     try expectEqual(null, pt.reference(&data[2], &data[6], 17));
     try expectEqual(null, pt.reference(&data[2], &data[5], 42));
     try expectEqual(null, pt.reference(&data[3], &data[7], 91));
     try expectEqual(null, pt.reference(&data[1], &data[8], 97));
-    try expectEqual(&data[1], pt.getPending());
-    try expectEqual(&data[2], pt.getPending());
-    try expectEqual(&data[3], pt.getPending());
-    try expectEqual(null, pt.getPending());
+    try expectEqual(&data[1], pt.popPending());
+    try expectEqual(&data[2], pt.popPending());
+    try expectEqual(&data[3], pt.popPending());
+    try expectEqual(null, pt.popPending());
+    
     var d2 = pt.definition(&data[3], &data[1]);
     if (d2.next()) |p| {
         try expectEqual(&data[7], p.address);
         try expectEqual(91, p.info);
     } else return error.NoFixupTable;
     try expectEqual(null, d2.next());
+    
     var d3 = pt.definition(&data[2], &data[4]);
     if (d3.next()) |p| {
         try expectEqual(&data[5], p.address);
