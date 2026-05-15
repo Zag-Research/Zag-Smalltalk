@@ -1,23 +1,24 @@
 pub fn PatchTable(AddressType: anytype, InfoType: anytype, mapSize: usize, patchSize: usize) type {
-    const MapElement = struct {
-        source: ?AddressType,
-        status: Status,
-        next_pending: ?*Self,
-        resolution: ?AddressType,
-        
-        const Self = @This();
-        const Status = enum { free, new, defined, referenced };
-        
-        fn before(self: *Self, other: *Self) bool {
-            return @intFromPtr(self.source) < @intFromPtr(other.source);
-        }
-    };
-
     const PatchElement = struct {
         next: ?*Self,
         address: AddressType,
         info: InfoType,
         const Self = @This();
+    };
+
+    const MapElement = struct {
+        source: ?AddressType,
+        status: Status,
+        next_pending: ?*Self,
+        resolution: ?AddressType,
+        patch_head: ?*PatchElement,
+
+        const Self = @This();
+        const Status = enum { free, new, defined, referenced };
+
+        fn before(self: *Self, other: *Self) bool {
+            return @intFromPtr(self.source) < @intFromPtr(other.source);
+        }
     };
 
     return struct {
@@ -45,6 +46,8 @@ pub fn PatchTable(AddressType: anytype, InfoType: anytype, mapSize: usize, patch
                 am.source = null;
                 am.status = .free;
                 am.next_pending = null;
+                am.resolution = null;
+                am.patch_head = null;
             }
             self.pending_head = null;
         }
@@ -113,7 +116,8 @@ pub fn PatchTable(AddressType: anytype, InfoType: anytype, mapSize: usize, patch
                     entry.status = .defined;
                 },
                 .referenced => {
-                    const queue: ?*PatchElement = @ptrCast(entry.resolution);
+                    const queue = entry.patch_head;
+                    entry.patch_head = null;
                     entry.resolution = as;
                     entry.status = .defined;
                     return PatchIterator.new(queue, &self.free_patch);
@@ -141,10 +145,8 @@ pub fn PatchTable(AddressType: anytype, InfoType: anytype, mapSize: usize, patch
                         self.free_patch = patch.next;
                         patch.address = from;
                         patch.info = info;
-                        // Bug: On a new referenced entry.  
-                        // we point to the patch_entry. by ptr casting the resolution
-                        patch.next = @ptrCast(entry.resolution);
-                        entry.resolution = @ptrCast(patch);
+                        patch.next = entry.patch_head;
+                        entry.patch_head = patch;
                     } else @panic("no free patches");
                     return null;
                 },
@@ -181,42 +183,66 @@ pub fn PatchTable(AddressType: anytype, InfoType: anytype, mapSize: usize, patch
 }
 
 
-test "patchTable" {
+test "patchTable external references are queued as pending work" {
     var pt: PatchTable(*u64, u64, 5, 5) = undefined;
     pt.init();
     defer pt.deinit();
-    
-    var data = [_]u64{ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 };
-    
+
+    var data = [_]u64{ 1, 2, 3, 4, 5 };
+
     pt.externalReference(&data[2]);
-    
+
     try expectEqual(&data[2], pt.popPending());
     try expectEqual(null, pt.popPending());
-    
-    pt.clearMap();
-    
+}
+
+test "patchTable defined target returns resolved address" {
+    var pt: PatchTable(*u64, u64, 5, 5) = undefined;
+    pt.init();
+    defer pt.deinit();
+
+    var data = [_]u64{ 1, 2, 3, 4, 5, 6 };
+
     var d1 = pt.definition(&data[2], &data[4]);
     try expectEqual(null, d1.next());
     try expectEqual(&data[4], pt.reference(&data[2], &data[5], 42));
+}
 
+test "patchTable pending work is popped in address order" {
+    var pt: PatchTable(*u64, u64, 5, 5) = undefined;
     pt.init();
-    // reference before definition returns an iterator
+    defer pt.deinit();
+
+    var data = [_]u64{ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 };
+
     try expectEqual(null, pt.reference(&data[2], &data[6], 17));
-    try expectEqual(null, pt.reference(&data[2], &data[5], 42));
     try expectEqual(null, pt.reference(&data[3], &data[7], 91));
     try expectEqual(null, pt.reference(&data[1], &data[8], 97));
+
     try expectEqual(&data[1], pt.popPending());
     try expectEqual(&data[2], pt.popPending());
     try expectEqual(&data[3], pt.popPending());
     try expectEqual(null, pt.popPending());
-    
+}
+
+test "patchTable definition drains patches for one target" {
+    var pt: PatchTable(*u64, u64, 5, 5) = undefined;
+    pt.init();
+    defer pt.deinit();
+
+    var data = [_]u64{ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 };
+
+    try expectEqual(null, pt.reference(&data[2], &data[6], 17));
+    try expectEqual(null, pt.reference(&data[2], &data[5], 42));
+    try expectEqual(null, pt.reference(&data[3], &data[7], 91));
+
     var d2 = pt.definition(&data[3], &data[1]);
     if (d2.next()) |p| {
         try expectEqual(&data[7], p.address);
         try expectEqual(91, p.info);
     } else return error.NoFixupTable;
     try expectEqual(null, d2.next());
-    
+
     var d3 = pt.definition(&data[2], &data[4]);
     if (d3.next()) |p| {
         try expectEqual(&data[5], p.address);
@@ -227,6 +253,24 @@ test "patchTable" {
         try expectEqual(17, p.info);
     } else return error.ShortFixupTable;
     try expectEqual(null, d3.next());
+}
+
+test "patchTable defined target remains directly referenceable after draining patches" {
+    var pt: PatchTable(*u64, u64, 5, 5) = undefined;
+    pt.init();
+    defer pt.deinit();
+
+    var data = [_]u64{ 1, 2, 3, 4, 5, 6 };
+
+    try expectEqual(null, pt.reference(&data[2], &data[5], 42));
+
+    var d1 = pt.definition(&data[2], &data[4]);
+    if (d1.next()) |p| {
+        try expectEqual(&data[5], p.address);
+        try expectEqual(42, p.info);
+    } else return error.NoFixupTable;
+    try expectEqual(null, d1.next());
+
     try expectEqual(&data[4], pt.reference(&data[2], &data[5], 42));
 }
 
