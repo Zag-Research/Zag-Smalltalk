@@ -204,8 +204,22 @@ pub const Object = packed struct(u64) {
     pub inline fn extraValue(self: object.Object) object.Object {
         return @bitCast(self.nativeI_noCheck() >> 8);
     }
-    pub inline fn highPointer(self: object.Object, T: type) ?T {
-        return @ptrFromInt(self.rawU() >> 16);
+    pub inline fn encodedPointer(self: object.Object, T: type) ?T {
+        switch (builtin.target.cpu.arch) {
+            .x86_64 => {
+                // Cast to a signed integer to trigger an Arithmetic Shift.
+                // Shifting left by 16 discards the tag/aux metadata.
+                // Shifting right copies bit 47 (the new sign bit) back into 63..48.
+                const signed:isize = @bitCast(self);
+                return @ptrFromInt(@as(usize, @bitCast((signed << 16) >> 16)));
+            },
+            else => {
+                // On ARM, we use a Logical Shift (zero-filling).
+                // The compiler will likely emit a single 'UBFX' instruction.
+                const unsigned: usize = @bitCast(self);
+                return @ptrFromInt((unsigned << 16) >> 16);
+            },
+        }
     }
     pub const testU = rawU;
     pub const testI = rawI;

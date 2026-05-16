@@ -122,9 +122,13 @@ pub const @"<=" = struct {
         return error.primitiveError;
     }
     pub fn primitive(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result { // SmallInteger>>#<=
+        sp.traceStack("primitive SmallInteger.<=", context, extra);
         if (sp.next.taggedI()) |self| {
-            const newSp = sp.dropPut(with(self, sp.top, sp, context) catch
-                return @call(tailCall, Extra.primitiveFailed, .{ pc, sp, process, context, extra }));
+            const newSp = sp.dropPut(with(self, sp.top, sp, context) catch {
+                std.debug.print("failing: self={} sp.top={f}\n",.{self, sp.top});
+                return @call(tailCall, Extra.primitiveFailed, .{ pc, sp, process, context, extra });
+            });
+            std.debug.print("success: npc={} tpc={f}\n",.{context.npc, context.tpc});
             return @call(tailCall, process.check(context.npc), .{ context.tpc, newSp, process, context, Extra.fromContextData(context.contextDataPtr(sp)) });
         }
         unreachable;

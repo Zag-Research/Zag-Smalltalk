@@ -349,13 +349,17 @@ pub const threadedFunctions = struct {
             const numArgs = signature.numArgs();
             const selfAddr = sp.unreserve(numArgs);
             const method = getMethod(pc, signature, selfAddr.top);
+            std.debug.print("method: {f}\n",.{method});
             const newPc = method.codePc();
+            std.debug.print("newPc: {f}\n",.{newPc});
             if (extra.installContextIfNone(sp, process, context)) |new| {
                 const newSp = new.sp;
                 const newContext = new.context;
                 newContext.setReturn(pc.next2());
                 const newExtra = Extra.forMethod(method, newSp.unreserve(numArgs));
+                trace("newExtra {x} {f}",.{ @as(u64, @bitCast(newExtra)), newExtra});
                 newSp.traceStack("send new stack", newContext, newExtra);
+                std.debug.print("newPc: {f} {?}\n",.{newPc, @import("threadedFn.zig").find(method.executeFn)});
                 return @call(tailCall, method.executeFn, .{ newPc.next(), newSp, process, newContext, newExtra });
             }
             context.setReturn(pc.next2());

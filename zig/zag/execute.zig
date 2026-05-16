@@ -139,7 +139,11 @@ pub const Signature = packed struct {
                 },
                 else => |class| try writer.print("{}", .{class}),
             }
-            try writer.print(" #{s}", .{symbol.asStringFromHash(@intCast((self.asInt() & 0xffffff00) >> 8)).arrayAsSlice(u8) catch "???"});
+            if (self.hash<256) {
+                try writer.print(" prim: {}", .{ self.hash});
+            } else {
+                try writer.print(" #{s}", .{symbol.asStringFromHash(@intCast((self.asInt() & 0xffffff00) >> 8)).arrayAsSlice(u8) catch "???"});
+            }
         }
     }
 };

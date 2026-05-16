@@ -51,7 +51,9 @@ pub const module = struct {
     };
 };
 pub const fail = struct {
-    pub fn threadedFn(_: PC, _: SP, _: *Process, _: *Context, _: Extra) Result {
+    pub fn threadedFn(pc: PC, sp: SP, _: *Process, context: *Context, extra: Extra) Result {
+        sp.traceStack("fail", context, extra);
+        trace("pc = {f}, sp={any}",.{pc,sp});
         @panic("executing the 'fail' threadedFn");
     }
 };

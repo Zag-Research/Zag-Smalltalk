@@ -42,7 +42,7 @@ pub const ThunkReturnObject = struct {
         if (true) @panic("unreachable");
         const val = sp.top;
         const result = Object.from(@as(i50, val.extraI()), null);
-        const targetContext = val.highPointer(*Context).?;
+        const targetContext = val.encodedPointer(*Context).?;
         const newSp, const callerContext = targetContext.popTargetContext(process, result);
         return @call(tailCall, process.check(callerContext.getNPc()), .{ callerContext.getTPc(), newSp, process, callerContext, Extra.fromContextData(callerContext.contextData) });
     }
@@ -214,12 +214,12 @@ pub const threadedFns = struct {
             if (extra.installContextIfNone(sp, process, context)) |new| {
                 const newSp = new.sp;
                 const newContext = new.context;
-                newContext.setReturn(pc.next());
+                newContext.setReturn(pc.next2());
                 const newExtra = new.extra;
                 newSp.traceStack("returnLiteralClosure new stack", newContext, newExtra);
                 return @call(tailCall, threadedFn, .{ pc, newSp, process, newContext, newExtra });
             }
-            if (pc.object().returnObjectClosure(context)) |closure| {
+            if (pc.object().returnLiteralClosure(context)) |closure| {
                 if (sp.push(closure)) |newSp| {
                     return @call(tailCall, process.check(pc.prim2()), .{ pc.next2(), newSp, process, context, extra });
                 }
@@ -235,8 +235,8 @@ pub const threadedFns = struct {
             if (extra.installContextIfNone(sp, process, context)) |new| {
                 const newSp = new.sp;
                 const newContext = new.context;
-                newContext.setReturn(pc.next());
                 const newExtra = new.extra;
+                newContext.setReturn(pc.next2());
                 newSp.traceStack("returnLocalClosure new stack", newContext, newExtra);
                 return @call(tailCall, threadedFn, .{ pc, newSp, process, newContext, newExtra });
             }
@@ -375,8 +375,9 @@ pub const threadedFns = struct {
             sp.traceStack("value", context, extra);
             const val = sp.top;
             const class = val.which_class();
+            std.debug.print("for class: {}\n",.{class});
             if (nonLocalReturning(val, class, sp, context)) |result| {
-                const newSp, const newContext = val.highPointer(*Context).?.pop(sp);
+                const newSp, const newContext = val.encodedPointer(*Context).?.pop(sp);
                 const newExtra = Extra.fromContextData(newContext.contextDataPtr(newSp));
                 trace("newSp = {*}..{*} newConect = {*} newExtra = {x} newContext.npc = {*}", .{ newSp, newSp.endOfStack(), newContext, @as(u64, @bitCast(newExtra)), newContext.npc });
                 newSp.top = result;

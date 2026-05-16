@@ -111,13 +111,12 @@ fn ifOnStack(context: *const Context, sp: SP) ?*const ContextOnStack {
 }
 pub const Extra = packed struct {
     addr: u48,
-    stack_offset: u16 = 0,
-    const stack_mask = Process.stack_mask;
-    const is_encoded: u16 = 0x8000;
-    comptime {
-        assert(stack_mask < is_encoded);
-    }
-    pub const none: Extra = .{ .addr = 0, .stack_offset = 0 };
+    stack_offset: StackOffset = 0,
+    _filler1: zag.UInt(15 - @bitSizeOf(StackOffset)) = 0,
+    is_encoded: bool = false,
+    pub const stack_mask = Process.stack_mask;
+    const StackOffset = Process.StackMask;
+    pub const none: Extra = .{ .addr = 0 };
     // Three states:
     //  - method is not encoded - is_encoded will not be set and stack_offset not zero
     //  - method is encoded - is_encoded will be set and stack_offset not zero
@@ -164,13 +163,13 @@ pub const Extra = packed struct {
         sp: SP,
     };
     pub fn encoded(self: Extra) Extra {
-        return .{ .addr = self.addr, .stack_offset = self.stack_offset | is_encoded };
+        return .{ .addr = self.addr, .stack_offset = self.stack_offset, .is_encoded = true };
     }
     pub fn decoded(self: Extra) Extra {
-        return .{ .addr = self.addr, .stack_offset = self.stack_offset & ~is_encoded };
+        return .{ .addr = self.addr, .stack_offset = self.stack_offset };
     }
     pub fn isEncoded(self: Extra) bool {
-        return self.stack_offset & is_encoded != 0;
+        return self.is_encoded;
     }
     pub fn primitiveFailed(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
         trace("primitiveFailed: {f} {f}", .{ extra, pc });
@@ -181,9 +180,9 @@ pub const Extra = packed struct {
         writer: anytype,
     ) !void {
         if (self.getMethod()) |method| {
-            try writer.print("Extra{{.stack_offset = {x}, .method = {*}}}", .{ self.stack_offset, method });
+            try writer.print("Extra{{offset = {x}, .method = 0x{x}{s}}}", .{ self.stack_offset, @intFromPtr(method), if (self.is_encoded) " encoded" else "" });
         } else {
-            try writer.print("Extra{{.contextData = {*}}}", .{self.contextDataPtr()});
+            try writer.print("Extra{{.contextData = 0x{x}}}", .{@intFromPtr(self.contextDataPtr())});
         }
     }
 };

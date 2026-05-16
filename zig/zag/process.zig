@@ -41,6 +41,7 @@ m: [process_total_size]u8 align(1), // alignment explicitly stated to emphasize 
 pub const alignment = @max(stack_mask_overflow * 2, flagMask + 1);
 const alignment_mask = @as(u64, @bitCast(-@as(i64, alignment)));
 const stack_mask_overflow: usize = zag.utilities.largerPowerOf2(Process.stack_size * @sizeOf(Object));
+pub const StackMask = zag.UInt(stack_mask_shift);
 pub const stack_mask = stack_mask_overflow - @sizeOf(Object);
 pub const stack_mask_shift = @ctz(stack_mask_overflow);
 pub const process_stack_size = Process.stack_size;
@@ -528,7 +529,7 @@ const Stack = struct {
     pub inline //
     fn traceStack(self: SP, why: []const u8, context: *Context, extra: Extra) void {
         trace("traceStack ({s}) {} {}", .{why, @intFromPtr(self.endOfStack()) - @intFromPtr(self), self.getStack().len});
-        trace("sp = {*} context = {*} extra = {x}", .{self, context, @as(u64,@bitCast(extra))});
+        trace("sp = {*} context = {*} extra = {f}", .{self, context, extra});
         const selfAddr = extra.selfAddress(self) orelse context.selfAddress(self);
         for (self.getStack()) |*obj| {
             const addr = @intFromPtr(obj);

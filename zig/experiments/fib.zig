@@ -276,7 +276,7 @@ const fibIntegerCl = struct {
             tf.send,
             signature(.@"<="), &nullMethod,
             tf.returnLocalClosure,
-            "0const",                  tf.send,
+            "1const",                  tf.send,
             signature(.@"ifTrue:"), &nullMethod,
             tf.drop,                   tf.push,
             self,                      tf.pushLiteral,
@@ -325,6 +325,9 @@ const fibIntegerCl = struct {
             fib.dump();
             TifTrue.dump();
             FifTrue.dump();
+            SIplus.dump();
+            SIminus.dump();
+            SIleq.dump();
             zag.execute.endMethod.dump();
         } else {
             const threaded = runIt(fibN, 0);
@@ -485,11 +488,11 @@ pub fn main() !void {
         "Config",            "Header",
         //"Native",            "NativeF",
         //"Integer",
-        //"IntegerCl",
+        "IntegerCl",
         "IntegerBr?Integer",
         //"Integer0?Integer",
         //"IntegerCnP",
-        "Float",
+        //"Float",
     };
     // var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     // const allocator = gpa.allocator();
