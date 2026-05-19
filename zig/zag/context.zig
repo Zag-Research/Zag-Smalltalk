@@ -192,7 +192,7 @@ pub const ContextData = struct {
     fn objects(self: *const ContextData) [*]Object {
         return @constCast(@ptrCast(self));
     }
-    fn localAddress(self: *const ContextData, r: usize) [*]Object {
+    pub fn localAddress(self: *const ContextData, r: usize) [*]Object {
         return self.objects() + r;
     }
     fn selfAddress(self: *const ContextData) [*]Object {
@@ -249,7 +249,7 @@ pub inline fn pop(self: *Context, sp: SP) struct { SP, *Context } {
         trace("popContext: {*}, {*}", .{ self, newSp });
         return .{ newSp, self.previous() };
     }
-    trace("popContext: not on stack, {*}, {*}", .{ self, sp });
+    std.log.err("popContext: not on stack, {*}, {*} - ", .{ self, sp });
     @panic("incomplete");
 }
 pub fn push(self: *Context, sp: SP, process: *Process, method: *const CompiledMethod, extra: Extra) struct { SP, *ContextOnStack } {
@@ -395,7 +395,7 @@ pub const Variable = packed struct {
             self.objectIndices,
         });
     }
-    fn make(stackOffset: u8, localIndex: u7, options: Options, indices: []u10) Variable {
+    pub fn make(stackOffset: u8, localIndex: u7, options: Options, indices: []u10) Variable {
         var oi: usize = 0;
         for (indices, 0..) |index, shift| {
             oi = oi | @as(usize, index) << @intCast(10 * shift);

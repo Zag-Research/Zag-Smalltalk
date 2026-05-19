@@ -128,7 +128,7 @@ pub const @"<=" = struct {
                 std.debug.print("failing: self={} sp.top={f}\n",.{self, sp.top});
                 return @call(tailCall, Extra.primitiveFailed, .{ pc, sp, process, context, extra });
             });
-            std.debug.print("success: npc={} tpc={f}\n",.{context.npc, context.tpc});
+            trace("success: npc={} tpc={f}",.{context.npc, context.tpc});
             return @call(tailCall, process.check(context.npc), .{ context.tpc, newSp, process, context, Extra.fromContextData(context.contextDataPtr(sp)) });
         }
         unreachable;

@@ -158,7 +158,7 @@ pub const Object = packed union {
     pub inline fn extraValue(self: Object) Object {
         return @bitCast(self.nativeI_noCheck() >> 8);
     }
-    pub inline fn highPointer(self: Object, T: type) ?T {
+    pub inline fn encodedPointer(self: Object, T: type) ?T {
         return @ptrFromInt(self.rawU() >> 16);
     }
     pub const testU = rawU;
@@ -186,7 +186,7 @@ pub const Object = packed union {
         switch (self.tag) {
             .heap => return @ptrFromInt(self.rawU()),
             .immediates => switch (self.class) {
-                .ThunkReturnLocal, .ThunkReturnInstance, .ThunkReturnObject, .ThunkReturnImmediate, .ThunkReturnCharacter, .ThunkReturnFloat, .ThunkHeap, .ThunkLocal, .ThunkInstance, .BlockAssignLocal, .BlockAssignInstance => return self.highPointer(T),
+                .ThunkReturnLocal, .ThunkReturnInstance, .ThunkReturnObject, .ThunkReturnImmediate, .ThunkReturnCharacter, .ThunkReturnFloat, .ThunkHeap, .ThunkLocal, .ThunkInstance, .BlockAssignLocal, .BlockAssignInstance => return self.encodedPointer(T),
                 else => {},
             },
             else => {},
@@ -308,6 +308,8 @@ pub const Object = packed union {
         if (self.isTag(.heap) and self.rawU() != 0) return @ptrFromInt(self.rawU());
         return null;
     }
+    pub fn returnLiteralClosure(_: Object, _: *Context) ?Object { return null; }
+    pub fn isImmediate(_: Object) bool { return false; }
 
     pub fn returnObjectClosure(self: Object, context: *Context) ?Object {
         if (self.nativeI()) |i| {

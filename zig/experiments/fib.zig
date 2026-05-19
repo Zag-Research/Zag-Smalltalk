@@ -82,18 +82,18 @@ const fibInteger = struct {
     var fib align(codeAlignment) =
         compileMethod(Sym.fibonacci, 0, .SmallInteger, .{
             tf.push,                  self,
-            tf.pushLiteral,           "1const",
+            tf.pushLiteral,           "2const",
             leq,                      tf.fail,
             tf.fail,                  tf.classCase,
             classes(&.{.False}),      "false",
             tf.returnSelf,            ":false",
             tf.push,                  self,
-            tf.pushLiteral,           "0const",
+            tf.pushLiteral,           "1const",
             minus,                    tf.fail,
             tf.fail,                  tf.send,
             signature(.fibonacci),   &nullMethod,
             tf.push,                  self,
-            tf.pushLiteral,           "1const",
+            tf.pushLiteral,           "2const",
             minus,                    tf.fail,
             tf.fail,                  tf.send,
             signature(.fibonacci), &nullMethod,
@@ -101,13 +101,15 @@ const fibInteger = struct {
             tf.fail,                  tf.returnTop,
         });
     var exe: MainExecutor = undefined;
+    var zero_: Object.StaticObject = undefined;
     var one_: Object.StaticObject = undefined;
     var two_: Object.StaticObject = undefined;
     fn init(_: u32) void {
         exe = MainExecutor.new();
+        const zero = zero_.init(0);
         const one = one_.init(1);
         const two = two_.init(2);
-        fib.resolve(&[_]Object{ one, two }) catch @panic("Failed to resolve");
+        fib.resolve(&[_]Object{ zero, one, two }) catch @panic("Failed to resolve");
         fib.initExecute();
         zag.dispatch.addMethod(@ptrCast(&fib));
         if (zag.config.show_trace) {
@@ -138,18 +140,18 @@ const fibInteger0 = struct {
     var fib align(codeAlignment) =
         compileMethod(Sym.fibonacci, 0, .SmallInteger, .{
             tf.push,                  self,
-            tf.pushLiteral,           "1const",
+            tf.pushLiteral,           "2const",
             leq,                      tf.fail,
             tf.fail,                  tf.classCase,
             classes(&.{.False}),      "false",
             tf.returnSelf,            ":false",
             tf.push,                  self,
-            tf.pushLiteral,           "0const",
+            tf.pushLiteral,           "1const",
             minus,                    tf.fail,
             tf.fail,                  tf.send0,
             signature(.fibonacci), &nullMethod,
             tf.push,                  self,
-            tf.pushLiteral,           "1const",
+            tf.pushLiteral,           "2const",
             minus,                    tf.fail,
             tf.fail,                  tf.send0,
             signature(.fibonacci), &nullMethod,
@@ -157,13 +159,15 @@ const fibInteger0 = struct {
             tf.fail,                  tf.returnTop,
         });
     var exe: MainExecutor = undefined;
+    var zero_: Object.StaticObject = undefined;
     var one_: Object.StaticObject = undefined;
     var two_: Object.StaticObject = undefined;
     fn init(_: u32) void {
         exe = MainExecutor.new();
+        const zero = zero_.init(0);
         const one = one_.init(1);
         const two = two_.init(2);
-        fib.resolve(&[_]Object{ one, two }) catch @panic("Failed to resolve");
+        fib.resolve(&[_]Object{ zero, one, two }) catch @panic("Failed to resolve");
         fib.initExecute();
         zag.dispatch.addMethod(@ptrCast(&fib));
         if (zag.config.show_trace) {
@@ -195,18 +199,18 @@ const fibIntegerBr = struct {
         compileMethod(Sym.fibonacci, 0, .SmallInteger, .{
             //            tf.debug,
             tf.push,        self,
-            tf.pushLiteral, "1const",
+            tf.pushLiteral, "2const",
             leq,            tf.fail,
             tf.fail,        tf.branchFalse,
             "false",        tf.returnSelf,
             ":false",       tf.push,
             self,           tf.pushLiteral,
-            "0const",       minus,
+            "1const",       minus,
             tf.fail,        tf.fail,
             tf.send,        signature(.fibonacci),
             &nullMethod,    tf.push,
             self,           tf.pushLiteral,
-            "1const",       minus,
+            "2const",       minus,
             tf.fail,        tf.fail,
             tf.send,        signature(.fibonacci),
             &nullMethod,    plus,
@@ -215,13 +219,15 @@ const fibIntegerBr = struct {
             tf.returnTop,
         });
     var exe: MainExecutor = undefined;
+    var zero_: Object.StaticObject = undefined;
     var one_: Object.StaticObject = undefined;
     var two_: Object.StaticObject = undefined;
     fn init(_: anytype) void {
         exe = MainExecutor.new();
+        const zero = zero_.init(0);
         const one = one_.init(1);
         const two = two_.init(2);
-        fib.resolve(&[_]Object{ one, two }) catch @panic("Failed to resolve");
+        fib.resolve(&[_]Object{ zero, one, two }) catch @panic("Failed to resolve");
         fib.initExecute();
         zag.dispatch.addMethod(@ptrCast(&fib));
         if (zag.config.show_trace) {
@@ -272,7 +278,7 @@ const fibIntegerCl = struct {
         compileMethod(Sym.fibonacci, 0, .SmallInteger, .{
             //            tf.debug,
             tf.push,                   self,
-            tf.pushLiteral,            "1const",
+            tf.pushLiteral,            "2const",
             tf.send,
             signature(.@"<="), &nullMethod,
             tf.returnLocalClosure,
@@ -293,14 +299,14 @@ const fibIntegerCl = struct {
             tf.returnTop,
         });
     var exe: MainExecutor = undefined;
+    var zero_: Object.StaticObject = undefined;
     var one_: Object.StaticObject = undefined;
     var two_: Object.StaticObject = undefined;
-    var zero_: Object.StaticObject = undefined;
     fn init(fibN: u32) void {
         exe = MainExecutor.new();
+        const zero = zero_.init(0);
         const one = one_.init(1);
         const two = two_.init(2);
-        const zero = zero_.init(0);
         fib.resolve(&[_]Object{ zero, one, two }) catch @panic("Failed to resolve");
         fib.initExecute();
         zag.dispatch.addMethod(@ptrCast(&fib));
@@ -334,7 +340,7 @@ const fibIntegerCl = struct {
             const native = fibCheck(fibN);
             if (threaded != native) {
                 std.log.err("threaded={}, native={}\n", .{ threaded, native });
-                unreachable;
+                @panic("mismatch IntegerCl");
             }
         }
     }
@@ -344,7 +350,7 @@ const fibIntegerCl = struct {
             return @as(u64, @bitCast(result)) + proof;
         }
         std.log.err("fib object: {f}\n", .{obj});
-        unreachable;
+        @panic("failed");
     }
 };
 
@@ -361,18 +367,18 @@ const fibFloat = struct {
     var fib align(codeAlignment) =
         compileMethod(Sym.fibonacci, 0, .Float, .{
             tf.push,        self,
-            tf.pushLiteral, "1const",
+            tf.pushLiteral, "2const",
             leq,            tf.fail,
             tf.fail,        tf.branchFalse,
             "false",        tf.returnSelf,
             ":false",       tf.push,
             self,           tf.pushLiteral,
-            "0const",       minus,
+            "1const",       minus,
             tf.fail,        tf.fail,
             tf.send,        signature(.fibonacci),
             &nullMethod,    tf.push,
             self,           tf.pushLiteral,
-            "1const",       minus,
+            "2const",       minus,
             tf.fail,        tf.fail,
             tf.send,        signature(.fibonacci),
             &nullMethod,    plus,
@@ -380,13 +386,15 @@ const fibFloat = struct {
             tf.returnTop,
         });
     var exe: MainExecutor = undefined;
+    var zero_: Object.StaticObject = undefined;
     var one_: Object.StaticObject = undefined;
     var two_: Object.StaticObject = undefined;
     fn init(fibN: u32) void {
         exe = MainExecutor.new();
+        const zero = zero_.init(0.0);
         const one = one_.init(1.0);
         const two = two_.init(2.0);
-        fib.resolve(&[_]Object{ one, two }) catch @panic("Failed to resolve");
+        fib.resolve(&[_]Object{ zero, one, two }) catch @panic("Failed to resolve");
         fib.initExecute();
         zag.dispatch.addMethod(@ptrCast(&fib));
         if (zag.config.show_trace) {
@@ -488,11 +496,11 @@ pub fn main() !void {
         "Config",            "Header",
         //"Native",            "NativeF",
         //"Integer",
-        "IntegerCl",
         "IntegerBr?Integer",
+        //"IntegerCl",
         //"Integer0?Integer",
         //"IntegerCnP",
-        //"Float",
+        "Float",
     };
     // var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     // const allocator = gpa.allocator();
@@ -523,6 +531,6 @@ pub fn main() !void {
     try timing(if (default) @constCast(do_all[0..]) else args[start..], nRuns, fibN, default);
 }
 const testRun = zag.config.testRun;
-const defaultFib = if (testRun) 5 else 36;
+const defaultFib = if (testRun) 3 else 36;
 const defaultRuns = if (testRun) 1 else 10;
 const warmups = if (testRun) 0 else null;

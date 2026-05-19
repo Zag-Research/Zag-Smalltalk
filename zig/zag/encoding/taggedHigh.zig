@@ -265,6 +265,9 @@ pub const Object = packed struct(u64) {
         return null;
     }
     pub const hasHeapReference = isHeapObject;
+    pub fn returnLiteralClosure(_: Object, _: *Context) ?Object { return null; }
+    pub fn isImmediate(_: Object) bool { return false; }
+    pub fn extraU(_: Object) u0 {@panic("not implemented");}
     pub inline fn isImmediateClass(self: object.Object, comptime class: ClassIndex.Compact) bool {
         return self.class == class.classIndex();
     }
@@ -304,7 +307,7 @@ pub const Object = packed struct(u64) {
         }
         return 0;
     }
-    pub inline fn highPointer(self: object.Object, T: type) ?T {
+    pub inline fn encodedPointer(self: object.Object, T: type) ?T {
         if (self.isHeapObject()) return @ptrFromInt(self.heapAddr());
         return null;
     }

@@ -92,6 +92,11 @@
     "cwd": "$ZED_WORKTREE_ROOT/zig",
   },
   {
+    "label": "trace fib compactA2",
+    "command": "zig build -Dtrace -Dencoding=compactA2 -Doptimize=Debug -freference-trace=5 && ./zig-out/bin/fib",
+    "cwd": "$ZED_WORKTREE_ROOT/zig",
+  },
+  {
     "label": "trace fib mix",
     "command": "zig build -Dtrace -Dencoding=zagMixed -Doptimize=Debug -freference-trace=5 && ./zig-out/bin/fib",
     "cwd": "$ZED_WORKTREE_ROOT/zig",
@@ -109,6 +114,11 @@
   {
     "label": "time fib zag",
     "command": "zig build -Dencoding=zag -Doptimize=ReleaseFast -freference-trace=10 && ./zig-out/bin/fib",
+    "cwd": "$ZED_WORKTREE_ROOT/zig",
+  },
+  {
+    "label": "time fib compactA2",
+    "command": "zig build -Dencoding=compactA2 -Doptimize=ReleaseFast -freference-trace=10 && ./zig-out/bin/fib",
     "cwd": "$ZED_WORKTREE_ROOT/zig",
   },
   {

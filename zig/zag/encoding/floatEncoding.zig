@@ -231,7 +231,6 @@ pub fn Fst2(MATCH: u64) type {
             6 => "4,6 (5,7 reserved)",
             else => @compileError("only 2, 4, 6 supported"),
         };
-        const MASK = MATCH & (~MATCH >> 1);
         pub inline fn encode(x: f64) EncodeError!u64 {
             switch (MATCH) {
                 else => {
@@ -243,25 +242,28 @@ pub fn Fst2(MATCH: u64) type {
                 },
                 6 => {
                     const u = rotl(u64, @bitCast(x), 5);
-                    if ((u + 1) & 7 < 2) {
+                    if ((u +% 1) & 6 == 0) {
                         @branchHint(.likely);
-                        const bit1 = u & 2;
-                        return (u ^ (bit1 >> 1)) | 4;
+                        return (u & ~@as(u64, 1)) | 2;
                     }
                 },
             }
             return error.Unencodable;
         }
         pub inline fn decode(self: u64) ?f64 {
-            if (self & MASK != 0) {
+            if (self & MATCH != 0) {
                 @branchHint(.likely);
                 switch (MATCH) {
                     else => {
                         return @bitCast(rotr(u64, self -% (MATCH + 1), 5));
                     },
                     6 => {
-                        const bit1 = self & 2;
-                        return @bitCast(rotr(u64, self ^ 4 ^ (bit1 << 1) ^ (bit1 >> 1), 5));
+                        const b2 = self & 4;
+                        return @bitCast(rotr(u64, self ^ 2 ^ (b2 >> 1) ^ (b2 >> 2), 5));
+                    },
+                    7 => {
+                        const b2 = (self >> 2) & 1;
+                        return @bitCast(rotr(u64, self ^ (2 - b2), 5));
                     },
                 }
             }
@@ -486,7 +488,7 @@ fn validAndNot(comptime encoding: anytype, valid_v: []f64, invalid_v: []f64, dec
             if (valid_v.len > 0) {
                 valid_v[valid_n] = value;
                 decode_v[valid_n] = encoding.encode(value) catch {
-                    std.debug.print("trying to encode {x} {}\n", .{ u, value });
+                    std.log.err("trying to encode {x} {} - ", .{ u, value });
                     @panic("covered value doesn't encode");
                 };
                 valid_n += 1;

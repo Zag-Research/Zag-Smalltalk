@@ -178,7 +178,7 @@ pub const Object = packed union {
     pub inline fn extraValue(_: Object) Object {
         @panic("Not implemented");
     }
-    pub inline fn highPointer(_: Object, T: type) ?T {
+    pub inline fn encodedPointer(_: Object, T: type) ?T {
         @panic("Not implemented");
     }
     pub const testU = rawU;
@@ -326,7 +326,11 @@ pub const Object = packed union {
         if (self.isHeapObject()) return @ptrFromInt(self.rawU());
         return null;
     }
-
+    pub fn returnLiteralClosure(_: Object, _: *Context) ?Object { return null; }
+    pub fn isImmediate(self: Object) bool {
+       return self.rawU() & 7 != 0;
+    }
+    pub fn extraU(_: Object) u0 {@panic("not implemented");}
     pub inline fn asUntaggedI(i: IntType) i64 {
         return @as(i64, i) << 3;
     }

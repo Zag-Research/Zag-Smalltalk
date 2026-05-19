@@ -155,7 +155,7 @@ pub const Object = packed struct(u64) {
     pub inline fn isNat(self: Object) bool {
         return self.isInt() and self.rawI() >= 0;
     }
-    pub inline fn highPointer(self: Object, T: type) ?T {
+    pub inline fn encodedPointer(self: Object, T: type) ?T {
         return @ptrCast(self.ref.data.objects);
     }
     pub inline fn pointer(self: Object, T: type) ?T {
@@ -281,6 +281,9 @@ pub const Object = packed struct(u64) {
     pub inline fn ifHeapObject(self: object.Object) ?*HeapObject {
         return @ptrFromInt(@as(u64, @bitCast(self)));
     }
+    pub fn returnLiteralClosure(_: Object, _: *Context) ?Object { return null; }
+    pub fn isImmediate(_: Object) bool { return false; }
+    pub fn extraU(_: Object) u0 {@panic("not implemented");}
     pub fn extraImmediateI(_: Object) ?u8 {
         return null;
     }

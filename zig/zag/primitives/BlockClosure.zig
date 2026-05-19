@@ -226,6 +226,7 @@ pub const threadedFns = struct {
                 const newSp, const newContext, const newExtra = sp.spillStack(context, extra);
                 return @call(tailCall, threadedFn, .{ pc, newSp, process, newContext, newExtra });
             }
+            std.log.err("returnLiteralClosure: {f} - ",.{pc.object()});
             @panic("Unexpected object encoding");
         }
     };
@@ -241,12 +242,14 @@ pub const threadedFns = struct {
                 return @call(tailCall, threadedFn, .{ pc, newSp, process, newContext, newExtra });
             }
             if (pc.object().returnLocalClosure(context)) |closure| {
+                trace("returnLocalClosure: 0x{x:0>16} {f}",.{closure.testU(), closure});
                 if (sp.push(closure)) |newSp| {
                     return @call(tailCall, process.check(pc.prim2()), .{ pc.next2(), newSp, process, context, extra });
                 }
                 const newSp, const newContext, const newExtra = sp.spillStack(context, extra);
                 return @call(tailCall, threadedFn, .{ pc, newSp, process, newContext, newExtra });
             }
+            std.log.err("returnLocalClosure: {f} - ",.{pc.object()});
             @panic("Unexpected object encoding");
         }
     };
@@ -375,30 +378,34 @@ pub const threadedFns = struct {
             sp.traceStack("value", context, extra);
             const val = sp.top;
             const class = val.which_class();
-            std.debug.print("for class: {}\n",.{class});
-            if (nonLocalReturning(val, class, sp, context)) |result| {
-                const newSp, const newContext = val.encodedPointer(*Context).?.pop(sp);
-                const newExtra = Extra.fromContextData(newContext.contextDataPtr(newSp));
-                trace("newSp = {*}..{*} newConect = {*} newExtra = {x} newContext.npc = {*}", .{ newSp, newSp.endOfStack(), newContext, @as(u64, @bitCast(newExtra)), newContext.npc });
-                newSp.top = result;
-                newSp.traceStack("value after", newContext, newExtra);
-                return @call(tailCall, process.check(newContext.npc), .{ newContext.tpc, newSp, process, newContext, newExtra });
+            if (val.isImmediate()) {
+                if (nonLocalReturningFromImmediate(val, class, sp, context)) |result| {
+                    const newSp, const newContext = val.encodedPointer(*Context).?.pop(sp);
+                    const newExtra = Extra.fromContextData(newContext.contextDataPtr(newSp));
+                    trace("newSp = {*}..{*} newConect = {*} newExtra = {x} newContext.npc = {*}", .{ newSp, newSp.endOfStack(), newContext, @as(u64, @bitCast(newExtra)), newContext.npc });
+                    newSp.top = result;
+                    newSp.traceStack("value after", newContext, newExtra);
+                    return @call(tailCall, process.check(newContext.npc), .{ newContext.tpc, newSp, process, newContext, newExtra });
+                }
             }
+            std.log.err("class: {} - ",.{class});
             _ = .{ pc, @panic("Unimplemented class") };
         }
-        inline fn nonLocalReturning(val: Object, class: ClassIndex, sp: SP, context: *Context) ?Object {
+        inline fn nonLocalReturningFromImmediate(val: Object, class: ClassIndex, sp: SP, context: *Context) ?Object {
+            trace("for class: {}",.{class});
             switch (class) {
-                .ThunkReturnObject => {
-                    return Object.from(val.extraI(), sp, context);
+                .ThunkReturnObject => return Object.from(val.extraI(), sp, context),
+                .ThunkReturnImmediate => {
+                    const u: u64 = val.extraU();
+                    return @bitCast((u >> 6 << 59) | (u & 0x3f));
                 },
-                // .ThunkReturnImmediate => {
-                //     result = @bitCast(val.rawU() << 48 >> 56);
-                //     continue :sw .reserved;
-                // },
-                // .ThunkReturnCharacter => {
-                //     result = Object.makeImmediate(.Character, val.rawU() << 48 >> 56);
-                //     continue :sw .reserved;
-                // },
+                .ThunkReturnCharacter => return Object.makeImmediate(.Character, val.extraU()),
+                .ThunkReturnLocal => {
+                    const targetContext: *Context = val.encodedPointer(*Context).?;
+                    const localAddress = targetContext.contextDataPtr(sp).localAddress(val.extraU());
+                    trace("val: 0x{x:0>16} context: {*} localAddress: {*} variable: {}",.{ val.testU(), targetContext, localAddress, val.extraU()});
+                    return localAddress[0];
+                },
                 // .ThunkReturnFloat => {
                 //     const sign_exponent = (val.rawU() & 0xc000) << 48;
                 //     const exponent_mantissa = @as(u64, @bitCast(@as(i64, @bitCast((val.rawU() & 0x3f00) << 50)) >> 6)) >> 2;
@@ -410,9 +417,6 @@ pub const threadedFns = struct {
                 // => { // this is the common part for ThunkReturns
                 //     const targetContext: Context = @ptrFromInt(val >> 16);
                 //     switch (val.class) {
-                //         .ThunkReturnLocal => {
-                //             result = targetContext.getLocal((val.rawU() >> 8) and 0xFF);
-                //         },
                 //         .ThunkReturnInstance => {
                 //             result = targetContext.getSelfInstVar((val.rawU() >> 8) and 0xFF);
                 //         },
