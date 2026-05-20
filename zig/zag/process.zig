@@ -474,13 +474,14 @@ const Stack = struct {
                 return null;
             }
             return @ptrFromInt(newP);
+        } else {
+            const newP = @intFromPtr(self) - @sizeOf(Object) * n;
+            if (newP < @intFromPtr(&self.theProcess().stack)) {
+                @branchHint(.unlikely);
+                return null;
+            }
+            return @ptrFromInt(newP);
         }
-        const newP = @intFromPtr(self) - @sizeOf(Object) * n;
-        if (newP < @intFromPtr(&self.theProcess().stack)) {
-            @branchHint(.unlikely);
-            return null;
-        }
-        return @ptrFromInt(newP);
     }
     pub inline fn safeReserve(self: SP, n: anytype) SP {
         return @ptrFromInt(@intFromPtr(self) - @sizeOf(Object) * n);

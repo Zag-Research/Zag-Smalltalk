@@ -246,11 +246,16 @@ pub const threadedFns = struct {
                 if (sp.push(closure)) |newSp| {
                     return @call(tailCall, process.check(pc.prim2()), .{ pc.next2(), newSp, process, context, extra });
                 }
-                const newSp, const newContext, const newExtra = sp.spillStack(context, extra);
-                return @call(tailCall, threadedFn, .{ pc, newSp, process, newContext, newExtra });
+            } else if (!context.ifOnStack(sp)) {
+                std.log.err("returnLocalClosure: {f} - ",.{pc.object()});
+                @panic("need to allocate on heap");
+            } else if (sp.reserve(3)) |newSp| {
+                _ = newSp;
+                std.log.err("returnLocalClosure: {f} - ",.{pc.object()});
+                @panic("Unexpected object encoding");
             }
-            std.log.err("returnLocalClosure: {f} - ",.{pc.object()});
-            @panic("Unexpected object encoding");
+            const newSp, const newContext, const newExtra = sp.spillStack(context, extra);
+            return @call(tailCall, threadedFn, .{ pc, newSp, process, newContext, newExtra });
         }
     };
     pub const pushClosure = struct {

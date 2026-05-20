@@ -75,7 +75,7 @@ const ContextOnStack = struct {
         self.contextData = @ptrCast(&self.contextDataHeader);
         return self.prevCtxt;
     }
-    pub inline fn selfAddress(self: *const ContextOnStack) [*]Object {
+    inline fn selfAddress(self: *const ContextOnStack) [*]Object {
         const locals: [*]Object = @ptrCast(@constCast(&self.locals));
         return @ptrCast(&locals[self.spAndSelfOffset & Process.stack_mask]);
     }
@@ -103,7 +103,7 @@ pub fn reify(self: *Context, sp: SP) void {
         } else break;
     }
 }
-fn ifOnStack(context: *const Context, sp: SP) ?*const ContextOnStack {
+pub fn ifOnStack(context: *const Context, sp: SP) ?*const ContextOnStack {
     if (sp.contains(context)) {
         return @ptrCast(context);
     }

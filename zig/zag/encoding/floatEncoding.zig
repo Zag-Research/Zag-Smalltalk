@@ -257,13 +257,15 @@ pub fn Fst2(MATCH: u64) type {
                     else => {
                         return @bitCast(rotr(u64, self -% (MATCH + 1), 5));
                     },
-                    6 => {
-                        const b2 = self & 4;
-                        return @bitCast(rotr(u64, self ^ 2 ^ (b2 >> 1) ^ (b2 >> 2), 5));
-                    },
-                    7 => {
-                        const b2 = (self >> 2) & 1;
-                        return @bitCast(rotr(u64, self ^ (2 - b2), 5));
+                    6 => switch (builtin.target.cpu.arch) {
+                        .x86_64 => { // better on x86-64
+                            const b2 = self & 4;
+                            return @bitCast(rotr(u64, self ^ 2 ^ (b2 >> 1) ^ (b2 >> 2), 5));
+                        },
+                        else => { // better on aarch64
+                            const b2 = (self >> 2) & 1;
+                            return @bitCast(rotr(u64, self ^ (2 - b2), 5));
+                        },
                     },
                 }
             }
