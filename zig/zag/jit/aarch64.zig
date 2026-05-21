@@ -77,6 +77,14 @@ pub fn emit(operation: Operation, buffer: anytype) void {
     }
 }
 
+pub fn patch(from: Address, to: Address, info: Operation) void {
+    switch (info) {
+        .branch => writeInstructionAt(from, encodeBranchImmediate(from, to)),
+        .branchConditional => |branch| writeInstructionAt(from, encodeBranchConditional(from, to, branch.condition)),
+        else => @panic("unsupported patch operation"),
+    }
+}
+
 /// Advance from the current native instruction address to the next native instruction address.
 /// @TODO: Remove Operation parameters if not needed.
 pub fn skip(_: Operation, address: Address) Address {
@@ -97,6 +105,10 @@ fn writeInstruction(buffer: anytype, inst: u32) void {
     const dst = buffer.memory[buffer.pos..][0..4];
     std.mem.writeInt(u32, dst, inst, .little);
     buffer.pos += 4;
+}
+
+fn writeInstructionAt(address: Address, inst: u32) void {
+    std.mem.writeInt(u32, @constCast(address)[0..4], inst, .little);
 }
 
 /// Decode destination register field Rd.
@@ -220,6 +232,27 @@ fn decodeBCondImm(inst: u32) i64 {
     return signExtend((inst >> 5) & 0x7ffff, 19) << 2;
 }
 
+fn encodeBranchImmediate(from: Address, to: Address) u32 {
+    const from_int: i64 = @intCast(@intFromPtr(from));
+    const to_int: i64 = @intCast(@intFromPtr(to));
+    const offset = to_int - from_int;
+
+    assert(offset & 0x3 == 0);
+    const imm26 = std.math.cast(i26, offset >> 2) orelse @panic("branch target out of range");
+    return 0x14000000 | @as(u32, @intCast(@as(u26, @bitCast(imm26))));
+}
+
+fn encodeBranchConditional(from: Address, to: Address, condition: Operation.Condition) u32 {
+    const from_int: i64 = @intCast(@intFromPtr(from));
+    const to_int: i64 = @intCast(@intFromPtr(to));
+    const offset = to_int - from_int;
+
+    assert(offset & 0x3 == 0);
+    assert(condition <= 0xf);
+    const imm19 = std.math.cast(i19, offset >> 2) orelse @panic("conditional branch target out of range");
+    return 0x54000000 | (@as(u32, @intCast(@as(u19, @bitCast(imm19)))) << 5) | condition;
+}
+
 fn relativeAddress(address: Address, offset: i64) Address {
     const base: i64 = @intCast(@intFromPtr(address));
     return @ptrFromInt(@as(usize, @intCast(base + offset)));
@@ -340,7 +373,28 @@ test "emit raw instruction" {
     try std.testing.expectEqual(@as(u32, 0xaa0803e1), std.mem.readInt(u32, memory[0..4], .little));
 }
 
+test "patch branch instruction" {
+    var memory: [32]u8 = undefined;
+    const from: Address = @ptrCast(&memory);
+    const to: Address = @ptrFromInt(@intFromPtr(from) + 0x100);
+
+    patch(from, to, .{ .branch = .{ .address = undefined } });
+
+    try std.testing.expectEqual(@as(u32, 0x14000040), std.mem.readInt(u32, memory[0..4], .little));
+}
+
+test "patch conditional branch instruction" {
+    var memory: [32]u8 = undefined;
+    const from: Address = @ptrCast(&memory);
+    const to: Address = @ptrFromInt(@intFromPtr(from) + 0x100);
+
+    patch(from, to, .{ .branchConditional = .{ .condition = 0, .address = undefined } });
+
+    try std.testing.expectEqual(@as(u32, 0x54000800), std.mem.readInt(u32, memory[0..4], .little));
+}
+
 const std = @import("std");
 const jit_ir = @import("jit_ir.zig");
 const Operation = jit_ir.Operation;
 const RegisterContents = jit_ir.RegisterContents;
+const assert = std.debug.assert;

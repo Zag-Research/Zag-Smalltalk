@@ -35,6 +35,16 @@ pub fn MockArch(AddressType: anytype) type {
             buffer.append(&oBuff);
         }
 
+        pub fn patch(from: anytype, to: anytype, info: Operation) void {
+            // Note: This only works for [*]Operation AddressType. Maybe add different variants to this. 
+            // or add a comptime assert to check for the type. There is same assumption for the decoder
+            const slot: [*]Operation = @ptrCast(@alignCast(from));
+            slot[0] = switch (info) {
+                .branch => .{ .branch = .{ .address = @ptrCast(to) } },
+                else => @panic("unsupported patch operation"),
+            };
+        }
+
         /// Advance from the current native instruction address to the next native instruction address.
         pub fn skip(_: Operation, address: Address) Address {
             return .{ .address = @ptrFromInt(@intFromPtr(address.address) + 4) };

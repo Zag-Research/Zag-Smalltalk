@@ -3,6 +3,7 @@ memory: []align(PAGE_SIZE) u8,
 pos: usize,
 
 const Self = @This();
+pub const Address = [*]u8;
 
 const c = @cImport({
     @cInclude("pthread.h");
@@ -66,6 +67,10 @@ pub fn currentOffset(self: *const Self) usize {
 
 pub fn getAddress(self: *const Self) *u8 {
     return &self.memory[self.pos];
+}
+
+pub fn slice(self: *const Self) []std.meta.Child(Address) {
+    return self.memory[0..self.pos];
 }
 
 /// Copies template bytes to the JIT buffer. Relocation is handled by the

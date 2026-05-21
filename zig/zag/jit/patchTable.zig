@@ -161,6 +161,7 @@ pub fn PatchTable(AddressType: anytype, InfoType: anytype, mapSize: usize, patch
         }
 
         fn addPending(self: *Self, entry: *MapElement) void {
+            // TODO: Possible duplication of the element cause cycles.
             var link = &self.pending_head;
             while (link.*) |pending| {
                 if (entry.before(pending)) break;
