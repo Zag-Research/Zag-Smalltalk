@@ -45,7 +45,7 @@ pub fn CopyAndPatch(Code: anytype, Arch: anytype, JitBuffer: anytype) type {
             self.native_patch.clearMap();
 
             var decoder = Arch.decoder(initial_cp[0].threadedFn);
-            self.define(&self.threaded_patch, decoder.getAddress());
+            self.define(&self.threaded_patch, initial_cp);
 
             nextInstruction: while (true) {
                 var inst: Operation = decoder.nextInstruction();
@@ -96,7 +96,6 @@ pub fn CopyAndPatch(Code: anytype, Arch: anytype, JitBuffer: anytype) type {
                     .branchRegister => |register| {
                         sw: switch (self.reg_type[register]) {
                             .codeAddress => {
-                                // this isn't right
                                 inst = .{ .addConstant = .{
                                     .source = Arch.pcRegister,
                                     .target = Arch.pcRegister,
@@ -152,7 +151,6 @@ pub fn CopyAndPatch(Code: anytype, Arch: anytype, JitBuffer: anytype) type {
             );
 
             while (patches.next()) |patch| {
-                std.debug.print("Patches to be made!\n", .{});
                 Arch.patch(
                     patch.address,
                     emitted_address,
@@ -250,21 +248,28 @@ test "patch threaded branch" {
 
     const emitted = cnp.buffer.slice();
 
-    try std.testing.expectEqual(@as(usize, 2), emitted.len);
+    try std.testing.expectEqual(@as(usize, 3), emitted.len);
 
     try std.testing.expectEqual(Operation{
-        .branch = .{
-            .address = @ptrCast(&emitted[1]),
+        .addConstant = .{
+            .addend = 16,
+            .target = 0,
+            .source = 0,
         },
     }, emitted[0]);
 
     try std.testing.expectEqual(Operation{
-        .tst = .{ .source = 7, .mask = 3 },
+        .branch = .{
+            .address = @ptrCast(&emitted[2]),
+        },
     }, emitted[1]);
+
+    try std.testing.expectEqual(Operation{
+        .tst = .{ .source = 7, .mask = 3 },
+    }, emitted[2]);
 }
 
 pub const ThreadedFn = *const fn (PC, SP, *Process, *Context, Extra) Result;
-
 
 const std = @import("std");
 const debug = std.debug;
