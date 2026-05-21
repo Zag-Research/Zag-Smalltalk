@@ -41,7 +41,8 @@ pub fn CopyAndPatch(Code: anytype, Arch: anytype, JitBuffer: anytype) type {
         }
 
         fn abstractInterpret(self: *Self, initial_cp: [*]const Code) !void {
-            self.resetAbstractState(@intFromPtr(initial_cp + 1));
+            const entry_pc = @intFromPtr(initial_cp + 1);
+            self.resetAbstractState(entry_pc);
             self.native_patch.clearMap();
 
             var decoder = Arch.decoder(initial_cp[0].threadedFn);
@@ -99,7 +100,7 @@ pub fn CopyAndPatch(Code: anytype, Arch: anytype, JitBuffer: anytype) type {
                                 inst = .{ .addConstant = .{
                                     .source = Arch.pcRegister,
                                     .target = Arch.pcRegister,
-                                    .addend = self.reg_value[Arch.pcRegister] - @intFromPtr(initial_cp),
+                                    .addend = self.reg_value[Arch.pcRegister] - entry_pc,
                                 } };
                                 Arch.emit(inst, &self.buffer);
 
@@ -220,8 +221,10 @@ test "smoke: copy linear test" {
     defer cnp.deinit();
 
     try cnp.jitCode(&m1);
-    // TODO: Add more asserts
-    // std.debug.print("buffer: {any}\n",.{cnp.buffer.slice()});
+
+    try std.testing.expectEqualSlices(Operation, &.{
+        .{ .tst = .{ .source = 5, .mask = 7 } },
+    }, cnp.buffer.slice());
 }
 
 test "patch threaded branch" {
@@ -252,9 +255,76 @@ test "patch threaded branch" {
 
     try std.testing.expectEqual(Operation{
         .addConstant = .{
-            .addend = 16,
+            .addend = 0,
             .target = 0,
             .source = 0,
+        },
+    }, emitted[0]);
+
+    try std.testing.expectEqual(Operation{
+        .branch = .{
+            .address = @ptrCast(&emitted[2]),
+        },
+    }, emitted[1]);
+
+    try std.testing.expectEqual(Operation{
+        .tst = .{ .source = 7, .mask = 3 },
+    }, emitted[2]);
+}
+
+test "operand-consuming threaded word " {
+    const dispatch = [_]Operation{
+        // Entry PC is &method[1]. This simulates consuming one operand/literal slot,
+        // so the next threaded function lives at &method[2].
+        .{ .load = .{
+            .register = 5,
+            .base = TestArch.pcRegister,
+            .offset = @sizeOf(TestCode),
+        } },
+
+        .{ .addConstant = .{
+            .source = TestArch.pcRegister,
+            .target = TestArch.pcRegister,
+            .addend = @sizeOf(TestCode),
+        } },
+
+        .{ .addConstant = .{
+            .source = TestArch.pcRegister,
+            .target = TestArch.pcRegister,
+            .addend = @sizeOf(TestCode),
+        } },
+
+        .{ .branchRegister = 5 },
+    };
+
+    const literal_operand = TestCode{ .object = 123 };
+
+    const continuation = [_]Operation{
+        .{ .tst = .{ .source = 7, .mask = 3 } },
+        .ret,
+    };
+
+    const method = [_]TestCode{
+        .{ .threadedFn = &dispatch },
+        literal_operand,
+        .{ .threadedFn = &continuation },
+    };
+
+    var cnp: CopyAndPatch(TestCode, TestArch, TestJitBuffer) = undefined;
+    try cnp.init();
+    defer cnp.deinit();
+
+    try cnp.jitCode(&method);
+
+    const emitted = cnp.buffer.slice();
+
+    try std.testing.expectEqual(@as(usize, 3), emitted.len);
+
+    try std.testing.expectEqual(Operation{
+        .addConstant = .{
+            .source = TestArch.pcRegister,
+            .target = TestArch.pcRegister,
+            .addend = 2 * @sizeOf(TestCode),
         },
     }, emitted[0]);
 
