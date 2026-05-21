@@ -430,6 +430,7 @@ pub const CompiledMethod = struct {
     stackStructure: StackStructure,
     executeFn: *const fn (PC, SP, *Process, *Context, Extra) Result,
     jitted: ?*const fn (PC, SP, *Process, *Context, Extra) Result,
+    size: usize,
     code: [codeSize]Code, // the threaded version of the method
     const Self = @This();
     const codeSize = 1;
@@ -460,7 +461,7 @@ pub const CompiledMethod = struct {
             std.debug.print("[{x:0>12}]: {f}\n", .{ @intFromPtr(instruction), instruction.* });
         }
     }
-    pub fn init(name: anytype, methodFn: *const fn (PC, SP, *Process, *Context, Extra) Result) Self {
+    pub fn init(name: anytype, methodFn: *const fn (PC, SP, *Process, *Context, Extra) Result, size: usize) Self {
         return Self{
             .header = HeapHeader.calc(.CompiledMethod, codeOffsetInObjects + codeSize, 42 //name.hash24()
                 , .static, null, Object, false) catch unreachable,
@@ -468,12 +469,16 @@ pub const CompiledMethod = struct {
             .signature = Signature.fromNameClass(name, .testClass),
             .executeFn = methodFn,
             .jitted = methodFn,
+            .size = size,
             .code = .{Code.primOf(methodFn)},
         };
     }
+    pub fn initPC(self: *const Self) PC {
+        return PC.init(&self.code[0]);
+    }
     pub fn execute(self: *const Self, sp: SP, process: *Process, context: *Context) Result {
         const newExtra = Extra.forMethod(self, sp);
-        const pc = PC.init(&self.code[0]).next();
+        const pc = self.initPC().next();
         return self.executeFn(pc, sp, process, context, newExtra);
     }
     inline fn asHeapObjectPtr(self: *const Self) HeapObjectConstPtr {
@@ -481,6 +486,9 @@ pub const CompiledMethod = struct {
     }
     pub inline fn codePtr(self: *const Self) *const Code {
         return &self.code[0];
+    }
+    pub inline fn codeSlice(self: *const Self) []const Code {
+        return self.code[0..self.size];
     }
     pub inline fn codePc(self: *const Self) PC {
         return PC.init(@ptrCast(&self.code[0]));

@@ -58,7 +58,6 @@ c/sacTest
 .claude
 *.dSYM
 zig/zag/returnAddress
-zig/zag/jit
 /image
 zig/experiments/Benchmarks/test.pdf
 *.aux
