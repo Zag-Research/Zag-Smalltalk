@@ -16,6 +16,14 @@ pub const RegisterContents = enum {
 
 pub const Address = [*]const u8;
 
+pub fn Instruction(AddressType: type, RawType: type) type {
+    return struct {
+        address: AddressType,
+        raw: RawType,
+        operation: Operation,
+    };
+}
+
 pub const Operation = union(enum) {
     raw: u32,
     ret,

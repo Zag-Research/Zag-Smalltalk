@@ -49,7 +49,8 @@ pub fn CopyAndPatch(Code: anytype, Arch: anytype, JitBuffer: anytype) type {
             self.define(&self.threaded_patch, initial_cp);
 
             nextInstruction: while (true) {
-                var inst: Operation = decoder.nextInstruction();
+                const instruction = decoder.nextInstruction();
+                var inst: Operation = instruction.operation;
                 instSw: switch (inst) {
                     .ret => break,
                     .move => |move| {
@@ -93,6 +94,8 @@ pub fn CopyAndPatch(Code: anytype, Arch: anytype, JitBuffer: anytype) type {
                     },
                     .branchConditional => |branch| {
                         _ = self.native_patch.reference(@ptrCast(@alignCast(@constCast(branch.address))), self.buffer.getAddress(), inst);
+                        self.emitOperation(inst);
+                        continue :nextInstruction;
                     },
                     .branchRegister => |register| {
                         sw: switch (self.reg_type[register]) {
@@ -102,7 +105,7 @@ pub fn CopyAndPatch(Code: anytype, Arch: anytype, JitBuffer: anytype) type {
                                     .target = Arch.pcRegister,
                                     .addend = self.reg_value[Arch.pcRegister] - entry_pc,
                                 } };
-                                Arch.emit(inst, &self.buffer);
+                                self.emitOperation(inst);
 
                                 const target: [*]Code = @ptrFromInt(self.reg_value[register]);
 
@@ -128,7 +131,7 @@ pub fn CopyAndPatch(Code: anytype, Arch: anytype, JitBuffer: anytype) type {
                         continue :instSw .endBranch;
                     },
                     .endBranch => {
-                        Arch.emit(inst, &self.buffer);
+                        self.emitOperation(inst);
 
                         if (self.native_patch.popPending()) |addr| {
                             decoder.goto(addr);
@@ -139,8 +142,16 @@ pub fn CopyAndPatch(Code: anytype, Arch: anytype, JitBuffer: anytype) type {
                     else => {},
                 }
 
-                Arch.emit(inst, &self.buffer);
+                Arch.emitInstruction(instruction, &self.buffer);
             }
+        }
+
+        fn emitOperation(self: *Self, operation: Operation) void {
+            Arch.emitInstruction(.{
+                .address = @ptrCast(self.buffer.getAddress()),
+                .raw = undefined,
+                .operation = operation,
+            }, &self.buffer);
         }
 
         fn define(self: *Self, patch_table: anytype, source_address: anytype) void {
@@ -376,18 +387,18 @@ test "conditional native branch paths dispatch to same continuation" {
     const emitted = cnp.buffer.slice();
 
     try std.testing.expectEqual(@as(usize, 8), emitted.len);
-    
+
     try std.testing.expectEqual(Operation{
         .branchConditional = .{
             .condition = 0,
             .address = @ptrCast(&emitted[4]),
         },
     }, emitted[0]);
-    
+
     try std.testing.expectEqual(Operation{
         .tst = .{ .source = 1, .mask = 1 },
     }, emitted[1]);
-    
+
     try std.testing.expectEqual(Operation{
         .addConstant = .{
             .source = TestArch.pcRegister,
@@ -395,17 +406,17 @@ test "conditional native branch paths dispatch to same continuation" {
             .addend = 0,
         },
     }, emitted[2]);
-    
+
     try std.testing.expectEqual(Operation{
         .branch = .{
             .address = @ptrCast(&emitted[7]),
         },
     }, emitted[3]);
-    
+
     try std.testing.expectEqual(Operation{
         .tst = .{ .source = 2, .mask = 2 },
     }, emitted[4]);
-    
+
     try std.testing.expectEqual(Operation{
         .addConstant = .{
             .source = TestArch.pcRegister,
@@ -413,20 +424,17 @@ test "conditional native branch paths dispatch to same continuation" {
             .addend = 0,
         },
     }, emitted[5]);
-    
+
     try std.testing.expectEqual(Operation{
         .branch = .{
             .address = @ptrCast(&emitted[7]),
         },
     }, emitted[6]);
-    
+
     try std.testing.expectEqual(Operation{
         .tst = .{ .source = 9, .mask = 9 },
     }, emitted[7]);
-
 }
-
-
 
 pub const ThreadedFn = *const fn (PC, SP, *Process, *Context, Extra) Result;
 

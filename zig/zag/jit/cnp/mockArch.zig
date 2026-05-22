@@ -16,10 +16,14 @@ pub fn MockArch(AddressType: anytype) type {
             fn new(address: [*]const Operation) Self {
                 return .{ .address = address };
             }
-            pub fn nextInstruction(self: *Self) Operation {
+            pub fn nextInstruction(self: *Self) Instruction {
                 const current = self.address;
                 self.address = self.address + 1;
-                return current[0];
+                return .{
+                    .address = current,
+                    .raw = current[0],
+                    .operation = current[0],
+                };
             }
             pub fn getAddress(self: *Self) [*]const Operation {
                 return self.address;
@@ -30,8 +34,10 @@ pub fn MockArch(AddressType: anytype) type {
         };
         pub const decoder = Decoder.new;
 
-        pub fn emit(operation: Operation, buffer: anytype) void {
-            const oBuff = [_]Operation{operation};
+        pub const Instruction = jit_ir.Instruction([*]const Operation, Operation);
+
+        pub fn emitInstruction(instruction: Instruction, buffer: anytype) void {
+            const oBuff = [_]Operation{instruction.operation};
             buffer.append(&oBuff);
         }
 

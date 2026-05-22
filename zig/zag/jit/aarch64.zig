@@ -38,10 +38,16 @@ const Decoder = struct {
         return .{ .address = address };
     }
 
-    pub fn nextInstruction(self: *Self) Operation {
-        const inst = getInstruction(self.address);
-        self.address = skip(inst, self.address);
-        return inst;
+    pub fn nextInstruction(self: *Self) Instruction {
+        const address = self.address;
+        const raw = readInstruction(address);
+        const operation = decodeOperation(address, raw);
+        self.address = skip(operation, address);
+        return .{
+            .address = address,
+            .raw = raw,
+            .operation = operation,
+        };
     }
 
     pub fn getAddress(self: *Self) Address {
@@ -54,26 +60,24 @@ const Decoder = struct {
 };
 
 pub const decoder = Decoder.new;
+pub const Instruction = jit_ir.Instruction(Address, u32);
 
-pub fn getInstruction(address: Address) Operation {
-    const inst = readInstruction(address);
-    return decodeInstruction(address, inst);
-}
-
-fn decodeInstruction(address: Address, inst: u32) Operation {
+fn decodeOperation(address: Address, inst: u32) Operation {
     for (instruction_patterns) |pattern| {
         if (pattern.matches(inst)) return pattern.decode(address, inst);
     }
     return .{ .raw = inst };
 }
 
-// @TODO: Handle emiting operation. Take raw []u8 bytes instead of `Operation` type to emit.
-// Alternative: Do encoding per instruction family. Mostly unnecessary since we already have raw bytes.
-pub fn emit(operation: Operation, buffer: anytype) void {
-    switch (operation) {
-        .raw => |inst| writeInstruction(buffer, inst),
+pub fn emitInstruction(instruction: Instruction, buffer: anytype) void {
+    const from: Address = @ptrCast(buffer.getAddress());
+    switch (instruction.operation) {
         .ret, .endBranch => {},
-        else => {},
+        .raw => writeInstruction(buffer, instruction.raw),
+        .branch => writeInstruction(buffer, encodeBranchImmediate(from, from)),
+        .branchConditional => |branch| writeInstruction(buffer, encodeBranchConditional(from, from, branch.condition)),
+        .addConstant => |arith| writeInstruction(buffer, encodeAddImmediate(arith)),
+        else => writeInstruction(buffer, instruction.raw),
     }
 }
 
@@ -266,6 +270,25 @@ fn encodeBranchConditional(from: Address, to: Address, condition: Operation.Cond
     return 0x54000000 | (@as(u32, @intCast(@as(u19, @bitCast(imm19)))) << 5) | condition;
 }
 
+fn encodeAddImmediate(arith: Operation.ArithmeticConstant) u32 {
+    assert(arith.source <= 31);
+    assert(arith.target <= 31);
+
+    const shifted = arith.addend > 0xfff;
+    const imm12 = if (shifted) blk: {
+        assert(arith.addend & 0xfff == 0);
+        const shifted_imm = arith.addend >> 12;
+        assert(shifted_imm <= 0xfff);
+        break :blk shifted_imm;
+    } else arith.addend;
+
+    return 0x91000000 |
+        (@as(u32, @intFromBool(shifted)) << 22) |
+        (@as(u32, @intCast(imm12)) << 10) |
+        (@as(u32, arith.source) << 5) |
+        @as(u32, arith.target);
+}
+
 fn relativeAddress(address: Address, offset: i64) Address {
     const base: i64 = @intCast(@intFromPtr(address));
     return @ptrFromInt(@as(usize, @intCast(base + offset)));
@@ -275,6 +298,14 @@ fn decodeLogicalImmediateMask(inst: u32) u64 {
     // @TODO: Decode the full AArch64 logical-immediate bitmask.
     if (inst == 0xf27d211f) return 0xff8;
     return 0;
+}
+
+fn operationInstruction(operation: Operation) Instruction {
+    return .{
+        .address = undefined,
+        .raw = undefined,
+        .operation = operation,
+    };
 }
 
 const InstructionPattern = struct {
@@ -290,12 +321,12 @@ const InstructionPattern = struct {
 test "decode basic instruction subset" {
     const base: Address = @ptrFromInt(0x1000);
 
-    try std.testing.expectEqual(Operation{ .load = .{ .register = 20, .base = 0, .offset = 0 } }, decodeInstruction(base, 0xf9400014));
-    try std.testing.expectEqual(Operation{ .load = .{ .register = 5, .base = 0, .offset = 16 } }, decodeInstruction(base, 0xf9400805));
-    try std.testing.expectEqual(Operation{ .addConstant = .{ .target = 0, .source = 0, .addend = 32 } }, decodeInstruction(base, 0x91008000));
-    try std.testing.expectEqual(Operation{ .move = .{ .source = 8, .destination = 1 } }, decodeInstruction(base, 0xaa0803e1));
-    try std.testing.expectEqual(Operation{ .branchRegister = 5 }, decodeInstruction(base, 0xd61f00a0));
-    try std.testing.expectEqual(Operation.ret, decodeInstruction(base, 0xd65f03c0));
+    try std.testing.expectEqual(Operation{ .load = .{ .register = 20, .base = 0, .offset = 0 } }, decodeOperation(base, 0xf9400014));
+    try std.testing.expectEqual(Operation{ .load = .{ .register = 5, .base = 0, .offset = 16 } }, decodeOperation(base, 0xf9400805));
+    try std.testing.expectEqual(Operation{ .addConstant = .{ .target = 0, .source = 0, .addend = 32 } }, decodeOperation(base, 0x91008000));
+    try std.testing.expectEqual(Operation{ .move = .{ .source = 8, .destination = 1 } }, decodeOperation(base, 0xaa0803e1));
+    try std.testing.expectEqual(Operation{ .branchRegister = 5 }, decodeOperation(base, 0xd61f00a0));
+    try std.testing.expectEqual(Operation.ret, decodeOperation(base, 0xd65f03c0));
 }
 
 test "decode pushLiteral threaded function instructions" {
@@ -369,21 +400,37 @@ test "decode pushLiteral threaded function instructions" {
 
     for (insts, expected, 0..) |inst, expected_op, i| {
         const address: Address = @ptrFromInt(0x5dc4 + i * 4);
-        try std.testing.expectEqual(expected_op, decodeInstruction(address, inst));
+        try std.testing.expectEqual(expected_op, decodeOperation(address, inst));
     }
 }
 
-test "emit raw instruction" {
+test "emit instructions" {
     var memory: [32]u8 = undefined;
     var buffer = struct {
         memory: []u8,
         pos: usize = 0,
+        pub fn getAddress(self: *@This()) Address {
+            return @ptrCast(&self.memory[self.pos]);
+        }
     }{ .memory = memory[0..] };
 
-    emit(.{ .raw = 0xaa0803e1 }, &buffer);
+    emitInstruction(.{
+        .address = @ptrFromInt(0x1000),
+        .raw = 0xaa0803e1,
+        .operation = .{ .move = .{ .source = 8, .destination = 1 } },
+    }, &buffer);
 
-    try std.testing.expectEqual(@as(usize, 4), buffer.pos);
     try std.testing.expectEqual(@as(u32, 0xaa0803e1), std.mem.readInt(u32, memory[0..4], .little));
+
+    emitInstruction(operationInstruction(.{ .addConstant = .{ .target = 0, .source = 0, .addend = 32 } }), &buffer);
+    try std.testing.expectEqual(@as(u32, 0x91008000), std.mem.readInt(u32, memory[4..8], .little));
+
+    emitInstruction(operationInstruction(.{ .branch = .{ .address = undefined } }), &buffer);
+    try std.testing.expectEqual(@as(u32, 0x14000000), std.mem.readInt(u32, memory[8..12], .little));
+
+    emitInstruction(operationInstruction(.{ .branchConditional = .{ .condition = 0, .address = undefined } }), &buffer);
+    try std.testing.expectEqual(@as(u32, 0x54000000), std.mem.readInt(u32, memory[12..16], .little));
+    try std.testing.expectEqual(@as(usize, 16), buffer.pos);
 }
 
 test "decode actual threadedFn dispatch tail" {
@@ -397,8 +444,9 @@ test "decode actual threadedFn dispatch tail" {
     var saw_load_next_prim = false;
     var saw_advance_pc = false;
 
+    // Note: This is *not* full template scan, it is simply till the continuation branch register instruction
     for (0..128) |_| {
-        const inst = dec.nextInstruction();
+        const inst = dec.nextInstruction().operation;
         // std.debug.print("{any}: {any}\n", .{ dec.getAddress(), inst });
         switch (inst) {
             .load => |ldst| {
