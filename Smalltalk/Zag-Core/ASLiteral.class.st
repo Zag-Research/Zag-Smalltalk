@@ -29,6 +29,11 @@ ASLiteral >> accept: aVisitor [
 	^ aVisitor visitLiteral: literal
 ]
 
+{ #category : 'converting' }
+ASLiteral >> asPharoAST [
+	^OCLiteralNode value: literal.
+]
+
 { #category : 'accessing' }
 ASLiteral >> inferType: aClass [
 

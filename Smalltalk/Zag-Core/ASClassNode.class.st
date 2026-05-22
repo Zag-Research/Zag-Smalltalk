@@ -27,6 +27,12 @@ ASClassNode >> addMethod: anASMethodNode [
 	methods at: anASMethodNode selector put: anASMethodNode
 ]
 
+{ #category : 'converting' }
+ASClassNode >> asPharoAST [
+	"Converts me to the associated Pharo AST."
+	self error: 'Pharo AST doesn''t have any form of class node.'
+]
+
 { #category : 'initialization' }
 ASClassNode >> from: aClass [
 

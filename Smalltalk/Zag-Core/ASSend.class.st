@@ -50,6 +50,11 @@ ASSend >> args [
 	^ args
 ]
 
+{ #category : 'converting' }
+ASSend >> asPharoAST [
+	^OCMessageNode receiver: target asPharoAST selector: selector arguments: (args collect: #asPharoAST) 
+]
+
 { #category : 'accessing' }
 ASSend >> blocks [
 

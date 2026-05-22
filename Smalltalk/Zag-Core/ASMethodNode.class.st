@@ -63,6 +63,13 @@ ASMethodNode >> accept: aVisitor [
 	^ aVisitor visitMethod: self
 ]
 
+{ #category : 'converting' }
+ASMethodNode >> asPharoAST [
+	| pharoBody |
+	pharoBody := OCSequenceNode temporaries: (locals collect: #asPharoAST) statements: (body collect: #asPharoAST).
+	^OCMethodNode selector: (OCSelectorNode value: selector asString) arguments: (arguments collect: #asPharoAST) body: pharoBody.
+]
+
 { #category : 'accessing' }
 ASMethodNode >> children [
 

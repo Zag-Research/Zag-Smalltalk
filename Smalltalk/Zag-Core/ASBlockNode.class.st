@@ -17,6 +17,13 @@ ASBlockNode class >> arguments: args locals: locals body: body [
 	^ (self locals: locals body: body) arguments: args
 ]
 
+{ #category : 'converting' }
+ASBlockNode >> asPharoAST [
+	| pharoBody |
+	pharoBody := OCSequenceNode temporaries: (locals collect: #asPharoAST) statements: (body collect: #asPharoAST).
+	^OCBlockNode arguments: (arguments collect: #asPharoAST) body: pharoBody.
+]
+
 { #category : 'accessing' }
 ASBlockNode >> blocks [
 

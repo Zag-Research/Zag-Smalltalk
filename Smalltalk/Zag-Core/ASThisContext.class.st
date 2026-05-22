@@ -9,6 +9,11 @@ Class {
 	#tag : 'AST'
 }
 
+{ #category : 'converting' }
+ASThisContext >> asPharoAST [
+	^OCVariableNode thisContextNode.
+]
+
 { #category : 'compiling' }
 ASThisContext >> zigWalk: aGenerator [
 

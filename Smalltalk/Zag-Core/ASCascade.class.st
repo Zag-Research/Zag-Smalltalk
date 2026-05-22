@@ -26,6 +26,13 @@ ASCascade >> = other [
 			  self sends = other sends ] ]
 ]
 
+{ #category : 'converting' }
+ASCascade >> asPharoAST [
+	| pharoSends |
+	pharoSends := sends collect: [ :send | send target: target; asPharoAST ].
+	OCCascadeNode messages: pharoSends.
+]
+
 { #category : 'accessing' }
 ASCascade >> children [
 	| c |
