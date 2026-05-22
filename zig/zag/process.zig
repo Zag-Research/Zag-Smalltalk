@@ -515,32 +515,38 @@ const Stack = struct {
     fn getStack(self: SP) []Object {
         return self.sliceTo(self.endOfStack());
     }
-    pub inline fn dumpStack(self: SP, why: []const u8, context: *Context, extra: Extra) void {
+    pub fn dumpStack(self: SP, why: []const u8, context: *Context, extra: Extra) void {
         std.debug.print("dumpStack ({s})\n", .{why});
-        const selfAddr = extra.selfAddress(self) orelse context.selfAddress(self);
-        for (self.getStack()) |*obj| {
+        doStack(std.debug.print,self,context,extra);
+    }
+    fn doStack(print: anytype, sp: SP, context: *Context, extra: Extra) void {
+        const newline = if (print == trace) "" else "\n";
+        const selfAddr = extra.selfAddress(sp) orelse context.selfAddress(sp);
+        for (sp.getStack()) |*obj| {
             const addr = @intFromPtr(obj);
-            std.debug.print("[{x:0>10}]: {f}{s}{s}{s}\n",
-                .{ addr, obj.*,
-                   if (addr == @intFromPtr(self)) " <--sp" else "",
-                   if (addr == @intFromPtr(context)) " <--ctx" else "",
-                   if (addr == @intFromPtr(selfAddr)) " <--self" else "" });
+            var onStackObject: *const HeapObject = @ptrCast(context.endOfStack(sp));
+            if (addr == @intFromPtr(context)) {
+                print("[{x:0>10}]: 0x{x:0>16} <-- ctx{s}",.{addr, @as(u64,@bitCast(obj.*)),newline});
+                break;
+            } else if (addr == @intFromPtr(onStackObject)) {
+                print("[{x:0>10}]: {f} <-- on stack object{s}",.{addr, onStackObject, newline});
+                onStackObject = @ptrCast(onStackObject.skipForward());
+            } else {
+                print("[{x:0>10}]: {f}{s}{s}{s}",
+                    .{ addr, obj.*,
+                    if (addr == @intFromPtr(sp)) " <--sp" else "",
+                    if (addr == @intFromPtr(selfAddr)) " <--self" else "",
+                    newline});
+            }
         }
     }
-    pub inline //
-    fn traceStack(self: SP, why: []const u8, context: *Context, extra: Extra) void {
+    pub fn traceStack(self: SP, why: []const u8, context: *Context, extra: Extra) void {
         trace("traceStack ({s}) {} {}", .{why, @intFromPtr(self.endOfStack()) - @intFromPtr(self), self.getStack().len});
         trace("sp = {*} context = {*} extra = {f}", .{self, context, extra});
-        const selfAddr = extra.selfAddress(self) orelse context.selfAddress(self);
-        for (self.getStack()) |*obj| {
-            const addr = @intFromPtr(obj);
-            trace("[{x:0>10}]: {f}{s}{s}{s}",
-                .{ addr, obj.*,
-                   if (addr == @intFromPtr(self)) " <--sp" else "",
-                   if (addr == @intFromPtr(context)) " <--ctx" else "",
-                   if (addr == @intFromPtr(selfAddr)) " <--self" else "" });
-            if (addr == @intFromPtr(context)) break;
-        }
+        doStack(trace,self,context,extra);
+    }
+    pub inline fn getProcess(self: SP) *Self {
+        return @ptrFromInt(@intFromPtr(self) & alignment_mask);
     }
     inline fn theProcess(self: SP) *Process {
         return @ptrFromInt(@intFromPtr(self) & alignment_mask);

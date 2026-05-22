@@ -51,8 +51,9 @@ const ContextOnStack = struct {
     contextData: *ContextData,
     contextDataHeader: HeapHeader,
     locals: Object,
-    inline fn set(self: *ContextOnStack, method: *const CompiledMethod, context: *Context, selfOffset: u64, numLocals: u64) void {
-        self.spAndSelfOffset = selfOffset;
+    const stackEndShift = Process.stack_mask_shift;
+    inline fn set(self: *ContextOnStack, method: *const CompiledMethod, context: *Context, spAndSelfOffset: u64, numLocals: u64) void {
+        self.spAndSelfOffset = spAndSelfOffset;
         self.prevCtxt = context;
         self.method = method;
         self.trapContextNumber = undefined;
@@ -66,27 +67,29 @@ const ContextOnStack = struct {
         }
     }
     fn reify(self: *ContextOnStack, sp: SP) ?*Context {
-        const dataLength = (@intFromPtr(self.prevCtxt.?.endOfStack(sp)) - @intFromPtr(&self.locals)) >> 3;
-        const spAndSelfOffset = self.spAndSelfOffset;
-        HeapHeader.objectOnStackWithHash(.ContextData, .directIndexed, @intCast(dataLength), @truncate(spAndSelfOffset)).at(&self.contextDataHeader);
-        // and then overwrite it with the Context header
-        HeapHeader.objectOnStackWithHash(.Context, .special, structLength(Context), @intCast(spAndSelfOffset >> 24)).at(self);
+        HeapHeader.objectOnStack(.Context, .special, 0, structLength(Context)).storeAt(self);
         self.trapContextNumber = sp.trapContextNumber();
+        const dataLength = (@intFromPtr(self.prevCtxt.?.endOfStack(sp)) - @intFromPtr(&self.locals)) >> 3;
+        HeapHeader.objectOnStack(.ContextData, .directIndexed, self.selfOffset(), @intCast(dataLength)).storeAt(&self.contextDataHeader);
         self.contextData = @ptrCast(&self.contextDataHeader);
         return self.prevCtxt;
     }
     inline fn selfAddress(self: *const ContextOnStack) [*]Object {
         const locals: [*]Object = @ptrCast(@constCast(&self.locals));
-        return @ptrCast(&locals[self.spAndSelfOffset & Process.stack_mask]);
+        return locals + self.selfOffset();
+    }
+    inline fn selfOffset(self: *const ContextOnStack) u24 {
+        return @intCast(self.spAndSelfOffset & Process.stack_mask);
     }
     inline fn contextDataPtr(self: *ContextOnStack) *ContextData {
         return @ptrCast(&self.contextDataHeader);
     }
     fn endOfStack(self: *const ContextOnStack) SP {
-        return @ptrFromInt(@intFromPtr(self) - (self.spAndSelfOffset >> Process.stack_mask_shift));
+        return @ptrFromInt(@intFromPtr(self) - (self.spAndSelfOffset >> stackEndShift << 3));
     }
-    inline fn bumpEndOfStack(self: *Context, _: SP, size: usize) void {
-        self.spAndSelfOffset += size << 24;
+    inline fn bumpEndOfStack(self: *ContextOnStack, _: SP, size: usize) *HeapObject {
+        self.spAndSelfOffset += size << stackEndShift;
+        return @ptrCast(self.endOfStack());
     }
     inline fn alloc(self: *ContextOnStack, sp: SP, size: usize) struct { [*]Object, SP } {
         _ = .{ self, sp, size, unreachable };
@@ -150,18 +153,13 @@ pub const Extra = packed struct {
     }
     /// Install a context
     /// used by any threaded function that needs a context
-    pub fn installContextIfNone(self: Extra, sp: SP, process: *Process, context: *Context) ?NewContext {
+    pub fn installContextIfNone(self: Extra, sp: SP, process: *Process, context: *Context) ?ReturnNextContext {
         if (self.getMethod()) |method| {
             const newSp, const contextOnStack = context.push(sp, process, method, self);
             return .{ .context = @ptrCast(contextOnStack), .extra = fromContextData(contextOnStack.contextDataPtr()), .sp = newSp };
         }
         return null;
     }
-    const NewContext = struct {
-        context: *Context,
-        extra: Extra,
-        sp: SP,
-    };
     pub fn encoded(self: Extra) Extra {
         return .{ .addr = self.addr, .stack_offset = self.stack_offset, .is_encoded = true };
     }
@@ -185,6 +183,11 @@ pub const Extra = packed struct {
             try writer.print("Extra{{.contextData = 0x{x}}}", .{@intFromPtr(self.contextDataPtr())});
         }
     }
+};
+const ReturnNextContext = struct {
+    context: *Context,
+    extra: Extra,
+    sp: SP,
 };
 pub const ContextData = struct {
     header: HeapHeader,
@@ -293,6 +296,36 @@ pub inline fn contextDataPtr(self: *const Context, sp: SP) *ContextData {
     }
     return self.contextData;
 }
+pub fn pushClosure(self_: *Context, class: ClassIndex, size: u11, sp_: SP, extra_: Extra) struct { *HeapObject, SP, *Context, Extra } {
+    var context = self_;
+    var sp = sp_;
+    var extra = extra_;
+    var closure: *HeapObject = undefined;
+    while (true) {
+        if (context.ifOnStack(sp) == null) {
+            if (sp.reserve(1)) |newSp| {
+                sp = newSp;
+                const allocator = @as(*HeapObject, @ptrCast(context)).allocator(sp.getProcess());
+                closure = undefined;
+                std.log.err("pushClosure: {*} - ",.{allocator});
+                @panic("need to allocate on heap");
+                // break;
+            }
+        } else if (sp.reserve(size+2)) |newSp| {
+            sp.traceStack("before pushClosure", context, extra);
+            sp = newSp;
+            closure = context.bumpEndOfStack(sp, size+1);
+            @memmove(sp.unreserve(1).sliceTo(closure), sp.unreserve(size+2).array());
+            HeapHeader.objectOnStack(class, .notIndexable, 0, size).storeAt(closure);
+            break;
+        }
+
+        sp, context, extra = sp.spillStack(context, extra);
+    }
+    sp.top = Object.fromAddress(closure);
+    sp.traceStack("after pushClosure", context, extra);
+    return .{ closure, sp, context, extra };
+}
 pub inline fn isOnStack(self: *const Self, sp: SP) bool {
     return sp.contains(self);
 }
@@ -303,11 +336,11 @@ fn endOfStack(self: *const Context, sp: SP) SP {
     }
     return sp.endOfStack();
 }
-pub inline fn bumpEndOfStack(self: *Context, sp: SP, size: usize) void {
+pub inline fn bumpEndOfStack(self: *Context, sp: SP, size: usize) *HeapObject {
     if (self.ifOnStack(sp)) |contextOnStack| {
-        contextOnStack.bumpEndOfStack(size);
+        return @constCast(contextOnStack).bumpEndOfStack(sp, size);
     } else {
-        self.header.hash += size;
+        @panic("trying to bump");
     }
 }
 pub fn stack(self: *const Self, sp: SP) []Object {
