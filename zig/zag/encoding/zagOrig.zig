@@ -471,8 +471,12 @@ pub const Object = packed struct(u64) {
         if (self.tag == .heap and self != Nil()) return @ptrFromInt(@as(u64, @bitCast(self)));
         return null;
     }
-    pub fn returnLiteralClosure(_: Object, _: *Context) ?Object { return null; }
-    pub fn isImmediate(_: Object) bool { return false; }
+    pub fn returnLiteralClosure(_: Object, _: *Context) ?Object {
+        return null;
+    }
+    pub fn isImmediate(_: Object) bool {
+        return false;
+    }
 
     pub inline fn asUntaggedI(i: i56) i64 {
         return @as(i64, i) << tagAndClassBits;

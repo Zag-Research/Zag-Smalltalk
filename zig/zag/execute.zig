@@ -46,7 +46,7 @@ pub const Signature = packed struct {
     _filler2: zag.UInt(16 - @bitSizeOf(Object.HighTag)) = 0,
     fn isTagged(self: Signature) bool {
         switch (Object.signatureTag) {
-            0 => return @as(Object,@bitCast(self)).isImmediateClass(.Signature),
+            0 => return @as(Object, @bitCast(self)).isImmediateClass(.Signature),
             else => |tag| return self.low == tag,
         }
     }
@@ -139,8 +139,8 @@ pub const Signature = packed struct {
                 },
                 else => |class| try writer.print("{}", .{class}),
             }
-            if (self.hash<256) {
-                try writer.print(" prim: {}", .{ self.hash});
+            if (self.hash < 256) {
+                try writer.print(" prim: {}", .{self.hash});
             } else {
                 try writer.print(" #{s}", .{symbol.asStringFromHash(@intCast((self.asInt() & 0xffffff00) >> 8)).arrayAsSlice(u8) catch "???"});
             }

@@ -95,7 +95,7 @@ const ContextOnStack = struct {
         _ = .{ self, sp, size, unreachable };
     }
     inline fn callerStack(self: *const ContextOnStack) SP {
-        return @constCast(@ptrCast(&self.locals));
+        return @ptrCast(@constCast(&self.locals));
     }
 };
 pub fn reify(self: *Context, sp: SP) void {
@@ -193,7 +193,7 @@ pub const ContextData = struct {
     header: HeapHeader,
     contextData: [1]Object,
     fn objects(self: *const ContextData) [*]Object {
-        return @constCast(@ptrCast(self));
+        return @ptrCast(@constCast(self));
     }
     pub fn localAddress(self: *const ContextData, r: usize) [*]Object {
         return self.objects() + r;
@@ -263,7 +263,17 @@ pub fn push(self: *Context, sp: SP, process: *Process, method: *const CompiledMe
         const selfAddr = extra.selfAddress(sp).?;
         const sizeToMove = (@intFromPtr(selfAddr - selfOffset) - @intFromPtr(sp)) / @sizeOf(Object);
         const contextAddr = selfAddr - selfOffset - locals - sizeOnStack;
-        trace("pushContext: sizeOnStack={},\n locals={},\n selfOffset={},\n selfAddr={*},\n contextAddr={*},\n context={*},\n newSp.array = {*},\n sp.array = {*},\n sizeToMove={},\n", .{ sizeOnStack, locals, selfOffset, selfAddr, contextAddr, self, newSp.array(), sp.array(), sizeToMove,});// sp.array()[0..sizeToMove] });
+        trace("pushContext: sizeOnStack={},\n locals={},\n selfOffset={},\n selfAddr={*},\n contextAddr={*},\n context={*},\n newSp.array = {*},\n sp.array = {*},\n sizeToMove={},\n", .{
+            sizeOnStack,
+            locals,
+            selfOffset,
+            selfAddr,
+            contextAddr,
+            self,
+            newSp.array(),
+            sp.array(),
+            sizeToMove,
+        }); // sp.array()[0..sizeToMove] });
         if (contextAddr != newSp.array() + sizeToMove) @panic("pushContext: contextAddr != newSp.array() + sizeToMove");
         for (newSp.array()[0..sizeToMove], sp.array()) |*target, *source| {
             target.* = source.*;
@@ -307,15 +317,15 @@ pub fn pushClosure(self_: *Context, class: ClassIndex, size: u11, sp_: SP, extra
                 sp = newSp;
                 const allocator = @as(*HeapObject, @ptrCast(context)).allocator(sp.getProcess());
                 closure = undefined;
-                std.log.err("pushClosure: {*} - ",.{allocator});
+                std.log.err("pushClosure: {*} - ", .{allocator});
                 @panic("need to allocate on heap");
                 // break;
             }
-        } else if (sp.reserve(size+2)) |newSp| {
+        } else if (sp.reserve(size + 2)) |newSp| {
             sp.traceStack("before pushClosure", context, extra);
             sp = newSp;
-            closure = context.bumpEndOfStack(sp, size+1);
-            @memmove(sp.unreserve(1).sliceTo(closure), sp.unreserve(size+2).array());
+            closure = context.bumpEndOfStack(sp, size + 1);
+            @memmove(sp.unreserve(1).sliceTo(closure), sp.unreserve(size + 2).array());
             HeapHeader.objectOnStack(class, .notIndexable, 0, size).storeAt(closure);
             break;
         }

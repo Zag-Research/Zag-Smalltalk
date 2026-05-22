@@ -6,7 +6,7 @@ const expect = std.testing.expect;
 const rotl = std.math.rotl;
 const rotr = std.math.rotr;
 
-const What = enum {encode11, benchmark, ranges};
+const What = enum { encode11, benchmark, ranges };
 const do_what = What.benchmark;
 
 pub const FastSpur = switch (builtin.target.cpu.arch) {
@@ -561,12 +561,12 @@ pub fn main() void {
         .encode11 => {
             // doesn't catch much of interest except +/-0.0 and +/-2.0
             inline for (.{ Spur, SpurAlt1, SpurAlt2, SpurNZ, Fst1(1), Fst1(2), Fst1(4), Fst2(2), Fst2(4), Fst2(6), Fst4, Zag4, Zag6, NaN, NuN }) |encoding| {
-                std.debug.print("{s}\n",.{encoding.name});
+                std.debug.print("{s}\n", .{encoding.name});
                 for (0..2047) |u| {
                     const e = (u >> 6 << 59) | (u & 0x3f);
                     if (encoding.decode(e)) |f| {
                         if (@abs(f) < 1000000 and @floor(f) == f)
-                        std.debug.print("   u: x{x:0>3} = 0x{x:0>16} {e}\n",.{u, e, f});
+                            std.debug.print("   u: x{x:0>3} = 0x{x:0>16} {e}\n", .{ u, e, f });
                     }
                 }
             }

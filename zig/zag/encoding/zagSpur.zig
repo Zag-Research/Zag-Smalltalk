@@ -308,8 +308,12 @@ pub const Object = packed union {
         if (self.isTag(.heap) and self.rawU() != 0) return @ptrFromInt(self.rawU());
         return null;
     }
-    pub fn returnLiteralClosure(_: Object, _: *Context) ?Object { return null; }
-    pub fn isImmediate(_: Object) bool { return false; }
+    pub fn returnLiteralClosure(_: Object, _: *Context) ?Object {
+        return null;
+    }
+    pub fn isImmediate(_: Object) bool {
+        return false;
+    }
 
     pub fn returnObjectClosure(self: Object, context: *Context) ?Object {
         if (self.nativeI()) |i| {

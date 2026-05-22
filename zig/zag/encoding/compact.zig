@@ -75,7 +75,8 @@ pub const Object = packed struct(u64) {
     pub const HighTag = u8;
     const heap: ClassIndex.Compact = switch (encoding) {
         .compactZ, .compactA2 => .heap,
-        else => .none,};
+        else => .none,
+    };
     inline fn tagbits(self: Object) u64 {
         switch (encoding) {
             .compact1 => return rotl(u64, @bitCast(self), 5) & 0x1f,
@@ -214,7 +215,7 @@ pub const Object = packed struct(u64) {
                 // Cast to a signed integer to trigger an Arithmetic Shift.
                 // Shifting left by 16 discards the tag/aux metadata.
                 // Shifting right copies bit 47 (the new sign bit) back into 63..48.
-                const signed:isize = @bitCast(self);
+                const signed: isize = @bitCast(self);
                 return @ptrFromInt(@as(usize, @bitCast((signed << 16) >> 16)));
             },
             else => {
@@ -274,7 +275,7 @@ pub const Object = packed struct(u64) {
     }
 
     pub fn fromAddress(value: anytype) Object {
-        return oImmAddr(heap,value,0);
+        return oImmAddr(heap, value, 0);
     }
     pub const StaticObject = struct {
         obj: InMemory.PointedObject,
@@ -471,8 +472,12 @@ pub const Object = packed struct(u64) {
             else => @panic("fixme"), //null,
         };
     }
-    pub fn returnLiteralClosure(_: Object, _: *Context) ?Object { return null; }
-    pub fn isImmediate(_: Object) bool { return false; }
+    pub fn returnLiteralClosure(_: Object, _: *Context) ?Object {
+        return null;
+    }
+    pub fn isImmediate(_: Object) bool {
+        return false;
+    }
 
     pub fn extraImmediateU(obj: Object) ?u11 {
         switch (obj.class) {

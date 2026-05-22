@@ -81,24 +81,24 @@ const fibInteger = struct {
     const nullMethod = zag.dispatch.nullMethod;
     var fib align(codeAlignment) =
         compileMethod(Sym.fibonacci, 0, .SmallInteger, .{
-            tf.push,                  self,
-            tf.pushLiteral,           "2const",
-            leq,                      tf.fail,
-            tf.fail,                  tf.classCase,
-            classes(&.{.False}),      "false",
-            tf.returnSelf,            ":false",
-            tf.push,                  self,
-            tf.pushLiteral,           "1const",
-            minus,                    tf.fail,
-            tf.fail,                  tf.send,
-            signature(.fibonacci),   &nullMethod,
-            tf.push,                  self,
-            tf.pushLiteral,           "2const",
-            minus,                    tf.fail,
-            tf.fail,                  tf.send,
+            tf.push,               self,
+            tf.pushLiteral,        "2const",
+            leq,                   tf.fail,
+            tf.fail,               tf.classCase,
+            classes(&.{.False}),   "false",
+            tf.returnSelf,         ":false",
+            tf.push,               self,
+            tf.pushLiteral,        "1const",
+            minus,                 tf.fail,
+            tf.fail,               tf.send,
             signature(.fibonacci), &nullMethod,
-            plus,                     tf.fail,
-            tf.fail,                  tf.returnTop,
+            tf.push,               self,
+            tf.pushLiteral,        "2const",
+            minus,                 tf.fail,
+            tf.fail,               tf.send,
+            signature(.fibonacci), &nullMethod,
+            plus,                  tf.fail,
+            tf.fail,               tf.returnTop,
         });
     var exe: MainExecutor = undefined;
     var zero_: Object.StaticObject = undefined;
@@ -139,24 +139,24 @@ const fibInteger0 = struct {
     const nullMethod = zag.dispatch.nullMethod;
     var fib align(codeAlignment) =
         compileMethod(Sym.fibonacci, 0, .SmallInteger, .{
-            tf.push,                  self,
-            tf.pushLiteral,           "2const",
-            leq,                      tf.fail,
-            tf.fail,                  tf.classCase,
-            classes(&.{.False}),      "false",
-            tf.returnSelf,            ":false",
-            tf.push,                  self,
-            tf.pushLiteral,           "1const",
-            minus,                    tf.fail,
-            tf.fail,                  tf.send0,
+            tf.push,               self,
+            tf.pushLiteral,        "2const",
+            leq,                   tf.fail,
+            tf.fail,               tf.classCase,
+            classes(&.{.False}),   "false",
+            tf.returnSelf,         ":false",
+            tf.push,               self,
+            tf.pushLiteral,        "1const",
+            minus,                 tf.fail,
+            tf.fail,               tf.send0,
             signature(.fibonacci), &nullMethod,
-            tf.push,                  self,
-            tf.pushLiteral,           "2const",
-            minus,                    tf.fail,
-            tf.fail,                  tf.send0,
+            tf.push,               self,
+            tf.pushLiteral,        "2const",
+            minus,                 tf.fail,
+            tf.fail,               tf.send0,
             signature(.fibonacci), &nullMethod,
-            plus,                     tf.fail,
-            tf.fail,                  tf.returnTop,
+            plus,                  tf.fail,
+            tf.fail,               tf.returnTop,
         });
     var exe: MainExecutor = undefined;
     var zero_: Object.StaticObject = undefined;
@@ -269,33 +269,32 @@ const fibIntegerCl = struct {
     var FifTrue align(codeAlignment) =
         compileMethod(Sym.@"ifTrue:", 0, .False, .{tf.returnSelf});
     var SIplus align(codeAlignment) =
-        compileMethod(Sym.@"+", 0, .SmallInteger, .{ tf.primitive, primitive(1), tf.fail});
+        compileMethod(Sym.@"+", 0, .SmallInteger, .{ tf.primitive, primitive(1), tf.fail });
     var SIminus align(codeAlignment) =
-        compileMethod(Sym.@"-", 0, .SmallInteger, .{ tf.primitive, primitive(2), tf.fail});
+        compileMethod(Sym.@"-", 0, .SmallInteger, .{ tf.primitive, primitive(2), tf.fail });
     var SIleq align(codeAlignment) =
-        compileMethod(Sym.@"<=", 0, .SmallInteger, .{ tf.primitive, primitive(5), tf.fail});
+        compileMethod(Sym.@"<=", 0, .SmallInteger, .{ tf.primitive, primitive(5), tf.fail });
     var fib align(codeAlignment) =
         compileMethod(Sym.fibonacci, 0, .SmallInteger, .{
             //            tf.debug,
-            tf.push,                   self,
-            tf.pushLiteral,            "2const",
-            tf.send,
-            signature(.@"<="), &nullMethod,
-            tf.returnLocalClosure,
-            "1const",                  tf.send,
+            tf.push,                self,
+            tf.pushLiteral,         "2const",
+            tf.send,                signature(.@"<="),
+            &nullMethod,            tf.returnLocalClosure,
+            "1const",               tf.send,
             signature(.@"ifTrue:"), &nullMethod,
-            tf.drop,                   tf.push,
-            self,                      tf.pushLiteral,
-            "1const",                  tf.send,
-            signature(.@"-"), &nullMethod,
-            tf.send,                   signature(.fibonacci),
-            &nullMethod,               tf.push,
-            self,                      tf.pushLiteral,
-            "2const",                  tf.send,
-            signature(.@"-"), &nullMethod,
-            tf.send,                   signature(.fibonacci),
-            &nullMethod,               tf.send,
-            signature(.@"+"), &nullMethod,
+            tf.drop,                tf.push,
+            self,                   tf.pushLiteral,
+            "1const",               tf.send,
+            signature(.@"-"),       &nullMethod,
+            tf.send,                signature(.fibonacci),
+            &nullMethod,            tf.push,
+            self,                   tf.pushLiteral,
+            "2const",               tf.send,
+            signature(.@"-"),       &nullMethod,
+            tf.send,                signature(.fibonacci),
+            &nullMethod,            tf.send,
+            signature(.@"+"),       &nullMethod,
             tf.returnTop,
         });
     var exe: MainExecutor = undefined;
@@ -493,11 +492,10 @@ pub fn timing(args: []const []const u8, nRuns: usize, fibN: u32, default: bool) 
 }
 pub fn main() !void {
     const do_all = [_][]const u8{
-        "Config",            "Header",
+        "Config",    "Header",
         //"Native",            "NativeF",
         //"Integer",
-        "IntegerCl",
-        "IntegerBr?Integer",
+        "IntegerCl", "IntegerBr?Integer",
         //"Integer0?Integer",
         //"IntegerCnP",
         "Float",

@@ -312,12 +312,18 @@ pub const Object = packed union {
     }
     pub const hasHeapReference = isHeapObject;
     pub inline fn ifHeapObject(self: Object) ?*HeapObject {
-        if (self.isHeapObject()) return @constCast(@ptrCast(self.addr()));
+        if (self.isHeapObject()) return @ptrCast(@constCast(self.addr()));
         return null;
     }
-    pub fn returnLiteralClosure(_: Object, _: *Context) ?Object { return null; }
-    pub fn isImmediate(_: Object) bool { return false; }
-    pub fn extraU(_: Object) u0 {@panic("not implemented");}
+    pub fn returnLiteralClosure(_: Object, _: *Context) ?Object {
+        return null;
+    }
+    pub fn isImmediate(_: Object) bool {
+        return false;
+    }
+    pub fn extraU(_: Object) u0 {
+        @panic("not implemented");
+    }
     pub inline fn encodedPointer(self: Object, T: type) ?T {
         if (self.isHeapObject()) return @ptrFromInt(self.rawU());
         return null;

@@ -326,11 +326,15 @@ pub const Object = packed union {
         if (self.isHeapObject()) return @ptrFromInt(self.rawU());
         return null;
     }
-    pub fn returnLiteralClosure(_: Object, _: *Context) ?Object { return null; }
-    pub fn isImmediate(self: Object) bool {
-       return self.rawU() & 7 != 0;
+    pub fn returnLiteralClosure(_: Object, _: *Context) ?Object {
+        return null;
     }
-    pub fn extraU(_: Object) u0 {@panic("not implemented");}
+    pub fn isImmediate(self: Object) bool {
+        return self.rawU() & 7 != 0;
+    }
+    pub fn extraU(_: Object) u0 {
+        @panic("not implemented");
+    }
     pub inline fn asUntaggedI(i: IntType) i64 {
         return @as(i64, i) << 3;
     }

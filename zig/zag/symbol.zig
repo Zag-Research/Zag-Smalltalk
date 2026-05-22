@@ -300,7 +300,7 @@ pub const QuickSelectorsMask = 0x19046000;
 pub const QuickSelectorsMatch = 0x18046000;
 pub fn findQuickSelector(obj: Object) ?u2 {
     if (config.immediateSymbols and (obj.testU() & QuickSelectorsMask) == QuickSelectorsMatch) {
-        for (QuickSelectors,0..) |qs,i| {
+        for (QuickSelectors, 0..) |qs, i| {
             if (obj.equals(qs)) return @truncate(i);
         }
     }
@@ -322,7 +322,7 @@ test "find key value for quick selectors" {
     try std.testing.expectEqual(mask, QuickSelectorsMask);
     try std.testing.expectEqual(match, QuickSelectorsMatch);
     for (QuickSelectors) |obj| {
-        try std.testing.expect(findQuickSelector(obj)!=null);
+        try std.testing.expect(findQuickSelector(obj) != null);
     }
 }
 test "force second allocation of symbol treap" {

@@ -63,7 +63,7 @@ pub const ClassIndex = enum(u16) {
     ThunkFloat,
     LLVM,
     UndefinedObject,
-    Float = siIndex+1, // skipping SmallInteger.none
+    Float = siIndex + 1, // skipping SmallInteger.none
     o4,
     o3,
     o2,
@@ -105,7 +105,10 @@ pub const ClassIndex = enum(u16) {
     pub const ReplacementIndices = Self.replace7;
     pub const LastSpecial = @intFromEnum(Self.Dispatch);
     const Self = @This();
-    pub const Compact = enum(switch (zag.config.objectEncoding) {.compactZ => u6, else => u5}) {
+    pub const Compact = enum(switch (zag.config.objectEncoding) {
+        .compactZ => u6,
+        else => u5,
+    }) {
         none = noneIndex,
         SmallInteger = noneIndex ^ siIndex,
         ThunkReturnLocal = 1,
@@ -128,7 +131,7 @@ pub const ClassIndex = enum(u16) {
         ThunkFloat,
         LLVM,
         UndefinedObject,
-        Float = siIndex+1,
+        Float = siIndex + 1,
         o4,
         o3,
         o2,
@@ -299,7 +302,7 @@ pub const ObjectFunctions = struct {
                 return ord.eq;
             }
         }
-        std.debug.print("\nself:  0x{x:0>16}\nother: 0x{x:0>16}\n",.{self.testU(), other.testU()});
+        std.debug.print("\nself:  0x{x:0>16}\nother: 0x{x:0>16}\n", .{ self.testU(), other.testU() });
         @panic("unreachable");
     }
     pub inline fn promoteToUnmovable(self: Object) !Object {

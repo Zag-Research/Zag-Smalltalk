@@ -180,8 +180,7 @@ pub const Object = packed struct(u64) {
     }
     pub inline fn pointer(self: object.Object, T: type) ?T {
         switch (self.tag) {
-            .heap, .ThunkReturnLocal, .ThunkReturnInstance, .ThunkReturnObject, .ThunkReturnImmediate, .ThunkReturnCharacter, .ThunkReturnFloat, .ThunkHeap, .ThunkLocal, .ThunkInstance, .BlockAssignLocal, .BlockAssignInstance =>
-            return self.encodedPointer(T),
+            .heap, .ThunkReturnLocal, .ThunkReturnInstance, .ThunkReturnObject, .ThunkReturnImmediate, .ThunkReturnCharacter, .ThunkReturnFloat, .ThunkHeap, .ThunkLocal, .ThunkInstance, .BlockAssignLocal, .BlockAssignInstance => return self.encodedPointer(T),
             else => {},
         }
         return null;
@@ -321,7 +320,7 @@ pub const Object = packed struct(u64) {
 
     pub fn returnLocalClosure(self: Object, context: *Context) ?Object {
         if (self.nativeI()) |i| {
-            trace("about to return: {f} -> {f}",.{self, oImmAddr(.ThunkReturnLocal, context, @intCast(i))});
+            trace("about to return: {f} -> {f}", .{ self, oImmAddr(.ThunkReturnLocal, context, @intCast(i)) });
             switch (i) {
                 0...2047 => return oImmAddr(.ThunkReturnLocal, context, @intCast(i)),
                 else => {},
@@ -331,13 +330,13 @@ pub const Object = packed struct(u64) {
     }
     pub fn returnLiteralClosure(self: Object, context: *Context) ?Object {
         if (self.nativeI()) |i| {
-            trace("about to return: {f} -> {f}",.{self, oImmAddr(.ThunkReturnObject, context, @intCast(i))});
+            trace("about to return: {f} -> {f}", .{ self, oImmAddr(.ThunkReturnObject, context, @intCast(i)) });
             switch (i) {
                 -1024...1023 => return oImmAddr(.ThunkReturnObject, context, @intCast(i)),
                 else => {},
             }
         } else if (self.rawU() & 0x07ffffffffffffc0 == 0) {
-            trace("about to return: {f} -> {f}",.{self, oImmAddr(.ThunkReturnImmediate, context, @intCast((self.rawU() >> 59 << 6) | self.rawU() & 0x3f))});
+            trace("about to return: {f} -> {f}", .{ self, oImmAddr(.ThunkReturnImmediate, context, @intCast((self.rawU() >> 59 << 6) | self.rawU() & 0x3f)) });
             return oImmAddr(.ThunkReturnImmediate, context, @intCast((self.rawU() >> 59 << 6) | self.rawU() & 0x3f));
         }
         return null;

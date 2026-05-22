@@ -219,11 +219,11 @@ pub const threadedFunctions = struct {
         pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
             sp.traceStack("primitive", context, extra);
             if (extra.isEncoded()) {
-                trace("extra encoded {x} {f}",.{ @as(u64, @bitCast(extra)), extra});
+                trace("extra encoded {x} {f}", .{ @as(u64, @bitCast(extra)), extra });
                 const newPc = pc.next();
                 return @call(tailCall, process.check(newPc.prim()), .{ newPc.next(), sp, process, context, extra.decoded() });
             }
-            trace("extra not encoded {x} {f}",.{ @as(u64, @bitCast(extra)), extra});
+            trace("extra not encoded {x} {f}", .{ @as(u64, @bitCast(extra)), extra });
             const primNumber = pc.signature().primitive();
             const method: *execute.CompiledMethod = @constCast(extra.getMethod().?);
             if (Module.findNumberedPrimitive(primNumber)) |prim| {
