@@ -85,6 +85,18 @@ pub fn patch(from: Address, to: Address, info: Operation) void {
     }
 }
 
+test "patch branch instructions" {
+    var memory: [32]u8 = undefined;
+    const from: Address = @ptrCast(&memory);
+    const to: Address = @ptrFromInt(@intFromPtr(from) + 0x100);
+
+    patch(from, to, .{ .branch = .{ .address = undefined } });
+    try std.testing.expectEqual(@as(u32, 0x14000040), std.mem.readInt(u32, memory[0..4], .little));
+
+    patch(from, to, .{ .branchConditional = .{ .condition = 0, .address = undefined } });
+    try std.testing.expectEqual(@as(u32, 0x54000800), std.mem.readInt(u32, memory[0..4], .little));
+}
+
 /// Advance from the current native instruction address to the next native instruction address.
 /// @TODO: Remove Operation parameters if not needed.
 pub fn skip(_: Operation, address: Address) Address {
@@ -209,7 +221,8 @@ fn decodeLoadStoreUnsignedImmediate(_: Address, inst: u32) Operation {
 fn decodeLoadStoreUnscaledImmediate(_: Address, inst: u32) Operation {
     const is_load = ((inst >> 22) & 1) == 1;
     const imm9 = (inst >> 12) & 0x1ff;
-    const offset: u16 = @intCast(@as(u64, @bitCast(signExtend(imm9, 9))));
+    const signed_offset: i16 = @intCast(signExtend(imm9, 9));
+    const offset: u16 = @bitCast(signed_offset);
     const ldst = Operation.LoadStore{
         .register = decodeRd(inst),
         .base = decodeRn(inst),
@@ -373,26 +386,49 @@ test "emit raw instruction" {
     try std.testing.expectEqual(@as(u32, 0xaa0803e1), std.mem.readInt(u32, memory[0..4], .little));
 }
 
-test "patch branch instruction" {
-    var memory: [32]u8 = undefined;
-    const from: Address = @ptrCast(&memory);
-    const to: Address = @ptrFromInt(@intFromPtr(from) + 0x100);
+test "decode actual threadedFn dispatch tail" {
+    if (builtin.cpu.arch != .aarch64) return error.SkipZigTest;
+    if (builtin.mode == .Debug) return error.SkipZigTest;
 
-    patch(from, to, .{ .branch = .{ .address = undefined } });
+    const zag = @import("zag");
+    const start: Address = @ptrCast(&zag.controlWords.pushLiteral.threadedFn);
+    var dec = decoder(start);
 
-    try std.testing.expectEqual(@as(u32, 0x14000040), std.mem.readInt(u32, memory[0..4], .little));
+    var saw_load_next_prim = false;
+    var saw_advance_pc = false;
+
+    for (0..128) |_| {
+        const inst = dec.nextInstruction();
+        // std.debug.print("{any}: {any}\n", .{ dec.getAddress(), inst });
+        switch (inst) {
+            .load => |ldst| {
+                if (ldst.register == 5 and ldst.base == pcRegister and ldst.offset == 16) {
+                    saw_load_next_prim = true;
+                }
+            },
+            .addConstant => |arith| {
+                if (saw_load_next_prim and
+                    arith.target == pcRegister and
+                    arith.source == pcRegister and
+                    arith.addend == 32)
+                {
+                    saw_advance_pc = true;
+                }
+            },
+            .branchRegister => |register| {
+                if (register == 5 and saw_load_next_prim and saw_advance_pc) return;
+            },
+            .ret => break,
+            else => {},
+        }
+    }
+
+    try std.testing.expect(saw_load_next_prim);
+    try std.testing.expect(saw_advance_pc);
+    return error.ExpectedPushLiteralDispatchTail;
 }
 
-test "patch conditional branch instruction" {
-    var memory: [32]u8 = undefined;
-    const from: Address = @ptrCast(&memory);
-    const to: Address = @ptrFromInt(@intFromPtr(from) + 0x100);
-
-    patch(from, to, .{ .branchConditional = .{ .condition = 0, .address = undefined } });
-
-    try std.testing.expectEqual(@as(u32, 0x54000800), std.mem.readInt(u32, memory[0..4], .little));
-}
-
+const builtin = @import("builtin");
 const std = @import("std");
 const jit_ir = @import("jit_ir.zig");
 const Operation = jit_ir.Operation;

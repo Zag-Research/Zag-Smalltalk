@@ -219,6 +219,7 @@ fn dummyCompiledMethod(signature: Signature) CompiledMethod {
         .stackStructure = undefined,
         .executeFn = undefined,
         .jitted = undefined,
+        .size = 0,
         .code = undefined,
         .signature = signature,
     };
