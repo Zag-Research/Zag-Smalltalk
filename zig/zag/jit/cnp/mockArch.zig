@@ -14,7 +14,7 @@ pub fn MockArch(AddressType: anytype) type {
             address: [*]const Operation,
             const Self = @This();
             fn new(address: [*]const Operation) Self {
-                return .{.address = address};
+                return .{ .address = address };
             }
             pub fn nextInstruction(self: *Self) Operation {
                 const current = self.address;
@@ -36,11 +36,15 @@ pub fn MockArch(AddressType: anytype) type {
         }
 
         pub fn patch(from: anytype, to: anytype, info: Operation) void {
-            // Note: This only works for [*]Operation AddressType. Maybe add different variants to this. 
+            // Note: This only works for [*]Operation AddressType. Maybe add different variants to this.
             // or add a comptime assert to check for the type. There is same assumption for the decoder
             const slot: [*]Operation = @ptrCast(@alignCast(from));
             slot[0] = switch (info) {
                 .branch => .{ .branch = .{ .address = @ptrCast(to) } },
+                .branchConditional => |branch| .{ .branchConditional = .{
+                    .condition = branch.condition,
+                    .address = @ptrCast(to),
+                } },
                 else => @panic("unsupported patch operation"),
             };
         }
@@ -51,9 +55,7 @@ pub fn MockArch(AddressType: anytype) type {
         }
 
         pub fn registerTypes() [nRegisters]RegisterContents {
-            return [_]RegisterContents{.pc, .sp, .process, .context, .extra}
-                ++ [_]RegisterContents{.unknown} ** (floatOffset-5)
-                ++ [_]RegisterContents{.randFloat} ** floatRegisters;
+            return [_]RegisterContents{ .pc, .sp, .process, .context, .extra } ++ [_]RegisterContents{.unknown} ** (floatOffset - 5) ++ [_]RegisterContents{.randFloat} ** floatRegisters;
         }
     };
 }

@@ -339,6 +339,95 @@ test "operand-consuming threaded word " {
     }, emitted[2]);
 }
 
+test "conditional native branch paths dispatch to same continuation" {
+    const continuation = [_]Operation{
+        .{ .tst = .{ .source = 9, .mask = 9 } },
+        .ret,
+    };
+
+    var template = [_]Operation{
+        .{ .branchConditional = .{ .condition = 0, .address = undefined } },
+
+        .{ .tst = .{ .source = 1, .mask = 1 } },
+        .{ .load = .{ .register = 5, .base = TestArch.pcRegister, .offset = 0 } },
+        .{ .branchRegister = 5 },
+
+        .{ .tst = .{ .source = 2, .mask = 2 } },
+        .{ .load = .{ .register = 5, .base = TestArch.pcRegister, .offset = 0 } },
+        .{ .branchRegister = 5 },
+    };
+
+    template[0] = .{ .branchConditional = .{
+        .condition = 0,
+        .address = @ptrCast(&template[4]),
+    } };
+
+    const method = [_]TestCode{
+        .{ .threadedFn = &template },
+        .{ .threadedFn = &continuation },
+    };
+
+    var cnp: CopyAndPatch(TestCode, TestArch, TestJitBuffer) = undefined;
+    try cnp.init();
+    defer cnp.deinit();
+
+    try cnp.jitCode(&method);
+
+    const emitted = cnp.buffer.slice();
+
+    try std.testing.expectEqual(@as(usize, 8), emitted.len);
+    
+    try std.testing.expectEqual(Operation{
+        .branchConditional = .{
+            .condition = 0,
+            .address = @ptrCast(&emitted[4]),
+        },
+    }, emitted[0]);
+    
+    try std.testing.expectEqual(Operation{
+        .tst = .{ .source = 1, .mask = 1 },
+    }, emitted[1]);
+    
+    try std.testing.expectEqual(Operation{
+        .addConstant = .{
+            .source = TestArch.pcRegister,
+            .target = TestArch.pcRegister,
+            .addend = 0,
+        },
+    }, emitted[2]);
+    
+    try std.testing.expectEqual(Operation{
+        .branch = .{
+            .address = @ptrCast(&emitted[7]),
+        },
+    }, emitted[3]);
+    
+    try std.testing.expectEqual(Operation{
+        .tst = .{ .source = 2, .mask = 2 },
+    }, emitted[4]);
+    
+    try std.testing.expectEqual(Operation{
+        .addConstant = .{
+            .source = TestArch.pcRegister,
+            .target = TestArch.pcRegister,
+            .addend = 0,
+        },
+    }, emitted[5]);
+    
+    try std.testing.expectEqual(Operation{
+        .branch = .{
+            .address = @ptrCast(&emitted[7]),
+        },
+    }, emitted[6]);
+    
+    try std.testing.expectEqual(Operation{
+        .tst = .{ .source = 9, .mask = 9 },
+    }, emitted[7]);
+
+}
+
+
+
 pub const ThreadedFn = *const fn (PC, SP, *Process, *Context, Extra) Result;
 
 const std = @import("std");
