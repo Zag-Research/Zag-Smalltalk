@@ -343,7 +343,7 @@ pub inline fn getHeap(self: *align(1) const Self) []HeapObject {
 pub fn allocArray(self: *align(1) Self, slice: []const Object, sp: SP, context: *Context) HeapObjectArray {
     const len: u11 = @intCast(slice.len);
     const hop = self.allocSpace(len, sp, context);
-    hop.header.objectInNursery(.Array, len);
+    HeapHeader.objectInNursery(.Array, .directIndexed, len).storeAt(hop);
     const target: HeapObjectArray = @ptrCast(hop);
     @memcpy(target + 1, @as([]const HeapObject, @ptrCast(slice)));
     return target;
