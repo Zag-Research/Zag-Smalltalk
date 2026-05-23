@@ -123,7 +123,7 @@ fn loadClassTable() !void {
     assert(zagImageHeader.classTable.equals(object.Nil()));
 }
 fn loadDispatchTable(file: std.fs.File) !void {
-//    execute.loadIntrinsicsDispatch();
+    //    execute.loadIntrinsicsDispatch();
     const stat = try file.stat();
     assert(stat.size == @sizeOf(ZagImageHeader)); // no dispatch to read
     //    _ = references;
@@ -152,7 +152,7 @@ fn processHeader(file: std.fs.File) !void {
 }
 fn runImage() !void {
     @panic("runImage");
-//    _ = try execute.mainSendTo(zagImageHeader.selector, zagImageHeader.target);
+    //    _ = try execute.mainSendTo(zagImageHeader.selector, zagImageHeader.target);
 }
 fn readHeap(file: std.fs.File, address: u64) !void {
     //const stat = try file.stat();std.log.err("heap stat: {}\naddress: 0x{x}\n", .{ stat, address });
@@ -210,7 +210,7 @@ fn loadAndRun(directory: [*:0]const u8) !void {
         try processHeader(file);
         try runImage();
     } else {
-        std.log.err("no header file found in: {s}",.{directory});
+        std.log.err("no header file found in: {s}", .{directory});
     }
 }
 pub fn main() !void {

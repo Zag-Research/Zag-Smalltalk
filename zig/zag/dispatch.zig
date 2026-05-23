@@ -44,7 +44,7 @@ const DispatchHandler = struct {
     fn loadMethodForClass(ci: ClassIndex, signature: Signature) *const CompiledMethod {
         if (defaultForTest != void)
             return defaultForTest.loadMethodForClass(ci, signature);
-        std.log.err("loadMethodForClass({} {x} {} {f})\n", .{ ci, @as(u64, @bitCast(signature)), signature.fullHash(), signature });
+        std.log.err("Class: {} signature: {f}) - ", .{ ci, signature });
         @panic("Method not found");
     }
     fn stats(index: ClassIndex) Dispatch.Stats {
@@ -55,7 +55,7 @@ const DispatchHandler = struct {
     }
     fn addMethod(method: *const CompiledMethod) void {
         const index = method.signature.getClassIndex();
-        trace("addMethod({b} {f} {}) {} {*}\n", .{ @as(u64, @bitCast(method.signature)), method.signature, method.signature.fullHash(), index, dispatches[index] });
+        trace("addMethod({b} {f} {}) {} {*}", .{ @as(u64, @bitCast(method.signature)), method.signature, method.signature.fullHash(), index, dispatches[index] });
         if (dispatches[index].addIfAllocated(method)) return;
         while (true) {
             if (dispatches[index].lock()) |dispatch| {
@@ -267,8 +267,9 @@ pub const threadedFunctions = struct {
                 return @call(tailCall, process.check(context.npc), .{ context.tpc, newSp, process, context, newExtra });
             }
             const newSp, const callerContext = context.pop(sp);
-            newSp.traceStack("returnSelf after pop", context, extra);
-            return @call(tailCall, process.branchCheck(callerContext.getNPc()), .{ callerContext.getTPc(), newSp, process, callerContext, Extra.fromContextData(callerContext.contextData) });
+            const newExtra = Extra.fromContextData(callerContext.contextDataPtr(sp));
+            newSp.traceStack("returnSelf after pop", context, newExtra);
+            return @call(tailCall, process.branchCheck(callerContext.getNPc()), .{ callerContext.getTPc(), newSp, process, callerContext, newExtra });
         }
         test {
             if (true) return config.skipForDebugging();
@@ -329,7 +330,7 @@ pub const threadedFunctions = struct {
     inline fn getMethod(pc: PC, signature: Signature, receiver: Object) *const CompiledMethod {
         const class = receiver.which_class();
         const requiredSignature = signature.withClass(class);
-        trace("getMethod: {} {f} {f} {f}\n", .{ class, signature, receiver, requiredSignature });
+        trace("getMethod: {} {f} {f} {f}", .{ class, signature, receiver, requiredSignature });
         if (signature == requiredSignature) {
             return pc.next().method();
         }
@@ -349,13 +350,17 @@ pub const threadedFunctions = struct {
             const numArgs = signature.numArgs();
             const selfAddr = sp.unreserve(numArgs);
             const method = getMethod(pc, signature, selfAddr.top);
+            trace("method: {f}", .{method});
             const newPc = method.codePc();
+            trace("newPc: {f}", .{newPc});
             if (extra.installContextIfNone(sp, process, context)) |new| {
                 const newSp = new.sp;
                 const newContext = new.context;
                 newContext.setReturn(pc.next2());
                 const newExtra = Extra.forMethod(method, newSp.unreserve(numArgs));
+                trace("newExtra {x} {f}", .{ @as(u64, @bitCast(newExtra)), newExtra });
                 newSp.traceStack("send new stack", newContext, newExtra);
+                trace("newPc: {f} {?}", .{ newPc, @import("threadedFn.zig").find(method.executeFn) });
                 return @call(tailCall, method.executeFn, .{ newPc.next(), newSp, process, newContext, newExtra });
             }
             context.setReturn(pc.next2());

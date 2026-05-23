@@ -132,7 +132,7 @@ pub const Object = packed struct(u64) {
     inline fn memObject(self: Object) ?*HeapObject {
         const value: u64 = @bitCast(self);
         if (value == 0) return null;
-        return @constCast(@ptrCast(self.ref));
+        return @ptrCast(@constCast(self.ref));
     }
     inline fn isMemoryDouble(self: object.Object) bool {
         return if (self.ifHeapObject()) |ptr|
@@ -155,11 +155,11 @@ pub const Object = packed struct(u64) {
     pub inline fn isNat(self: Object) bool {
         return self.isInt() and self.rawI() >= 0;
     }
-    pub inline fn highPointer(self: Object, T: type) ?T {
+    pub inline fn encodedPointer(self: Object, T: type) ?T {
         return @ptrCast(self.ref.data.objects);
     }
     pub inline fn pointer(self: Object, T: type) ?T {
-        if (self.hasHeapReference()) return @constCast(@ptrCast(self.ref));
+        if (self.hasHeapReference()) return @ptrCast(@constCast(self.ref));
         return null;
     }
     pub inline fn toIntNoCheck(self: Object) i64 {
@@ -280,6 +280,15 @@ pub const Object = packed struct(u64) {
     };
     pub inline fn ifHeapObject(self: object.Object) ?*HeapObject {
         return @ptrFromInt(@as(u64, @bitCast(self)));
+    }
+    pub fn returnLiteralClosure(_: Object, _: *Context) ?Object {
+        return null;
+    }
+    pub fn isImmediate(_: Object) bool {
+        return false;
+    }
+    pub fn extraU(_: Object) u0 {
+        @panic("not implemented");
     }
     pub fn extraImmediateI(_: Object) ?u8 {
         return null;

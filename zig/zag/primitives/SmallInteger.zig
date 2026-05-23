@@ -64,12 +64,12 @@ pub const @"+" = struct {
         try exe.runTest(
             &[_]Object{
                 exe.object(4),
-                exe.object(Object.maxInt/2),
+                exe.object(Object.maxInt / 2),
             },
             &[_]Object{
                 object.testObjects[0],
                 exe.object(4),
-                exe.object(Object.maxInt/2),
+                exe.object(Object.maxInt / 2),
             },
         );
     }
@@ -122,9 +122,13 @@ pub const @"<=" = struct {
         return error.primitiveError;
     }
     pub fn primitive(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result { // SmallInteger>>#<=
+        sp.traceStack("primitive SmallInteger.<=", context, extra);
         if (sp.next.taggedI()) |self| {
-            const newSp = sp.dropPut(with(self, sp.top, sp, context) catch
-                return @call(tailCall, Extra.primitiveFailed, .{ pc, sp, process, context, extra }));
+            const newSp = sp.dropPut(with(self, sp.top, sp, context) catch {
+                std.debug.print("failing: self={} sp.top={f}\n", .{ self, sp.top });
+                return @call(tailCall, Extra.primitiveFailed, .{ pc, sp, process, context, extra });
+            });
+            trace("success: npc={} tpc={f}", .{ context.npc, context.tpc });
             return @call(tailCall, process.check(context.npc), .{ context.tpc, newSp, process, context, Extra.fromContextData(context.contextDataPtr(sp)) });
         }
         unreachable;
@@ -182,7 +186,7 @@ pub const @"*" = struct {
         const sp = process.getSp();
         const context = process.getContext();
         std.debug.print("* {f} {f}\n", .{ Object.from(12, sp, context), try with(3, Object.from(4, sp, context), sp, context) });
-        std.debug.print("* {x} {}\n", .{ Object.from(12, sp, context).testU(), (try with(3, Object.from(4, sp, context), sp, context)).testU()});
+        std.debug.print("* {x} {}\n", .{ Object.from(12, sp, context).testU(), (try with(3, Object.from(4, sp, context), sp, context)).testU() });
         try expectEqual(Object.from(12, sp, context), with(3, Object.from(4, sp, context), sp, context));
         try expectEqual(error.primitiveError, with(0x1_0000_0000, Object.from(0x100_0000, sp, context), sp, context));
         try expectEqual(error.primitiveError, with(0x1_0000_0000, Object.from(0x80_0000, sp, context), sp, context));

@@ -6,7 +6,8 @@ const expect = std.testing.expect;
 const rotl = std.math.rotl;
 const rotr = std.math.rotr;
 
-const do_benchmark = true;
+const What = enum { encode11, benchmark, ranges };
+const do_what = What.benchmark;
 
 pub const FastSpur = switch (builtin.target.cpu.arch) {
     .x86_64 => SpurAlt1,
@@ -227,20 +228,46 @@ pub fn Fst2(MATCH: u64) type {
         const uses = switch (MATCH) {
             2 => "2,3 (6,7 reserved)",
             4 => "4,5 (6,7 reserved)",
-            else => @compileError("only 2, 4 supported"),
+            6 => "4,6 (5,7 reserved)",
+            else => @compileError("only 2, 4, 6 supported"),
         };
         pub inline fn encode(x: f64) EncodeError!u64 {
-            const u = rotl(u64, @bitCast(x), 5) +% (MATCH + 1);
-            if (u & 6 == MATCH) {
-                @branchHint(.likely);
-                return u;
+            switch (MATCH) {
+                else => {
+                    const u = rotl(u64, @bitCast(x), 5) +% (MATCH + 1);
+                    if (u & 6 == MATCH) {
+                        @branchHint(.likely);
+                        return u;
+                    }
+                },
+                6 => {
+                    const u = rotl(u64, @bitCast(x), 5);
+                    if ((u +% 1) & 6 == 0) {
+                        @branchHint(.likely);
+                        return (u & ~@as(u64, 1)) | 2;
+                    }
+                },
             }
             return error.Unencodable;
         }
         pub inline fn decode(self: u64) ?f64 {
             if (self & MATCH != 0) {
                 @branchHint(.likely);
-                return @bitCast(rotr(u64, self -% (MATCH + 1), 5));
+                switch (MATCH) {
+                    else => {
+                        return @bitCast(rotr(u64, self -% (MATCH + 1), 5));
+                    },
+                    6 => switch (builtin.target.cpu.arch) {
+                        .x86_64 => { // better on x86-64
+                            const b2 = self & 4;
+                            return @bitCast(rotr(u64, self ^ 2 ^ (b2 >> 1) ^ (b2 >> 2), 5));
+                        },
+                        else => { // better on aarch64
+                            const b2 = (self >> 2) & 1;
+                            return @bitCast(rotr(u64, self ^ (2 - b2), 5));
+                        },
+                    },
+                }
             }
             return null;
         }
@@ -390,16 +417,18 @@ fn expectEqualHex(actual: anytype, expected: @TypeOf(actual)) !void {
     }
 }
 test "encode patterns" {
-    inline for (.{ Spur, SpurNZ, Fst1(1), Fst1(2), Fst1(4), Fst2(2), Fst2(4), Fst4, Zag4, Zag6 }) |encoding| {
+    inline for (.{ Spur, SpurNZ, Fst1(1), Fst1(2), Fst1(4), Fst2(2), Fst2(4), Fst2(6), Fst4, Zag4, Zag6 }) |encoding| {
         std.debug.print("for {s}\n", .{encoding.name});
-        for (&[_]f64{ 0, 1, 2, 5, 42, 1e6 }) |value|
-            std.debug.print("  0x{x:0>16} from {}\n", .{ try encoding.encode(value), value });
+        for (&[_]f64{ 0, 1, 2, 5, 42, 1e6 }) |value| {
+            if (value > 0 or encoding.valid_ranges[0].low == 0)
+                std.debug.print("  0x{x:0>16} from {}\n", .{ try encoding.encode(value), value });
+        }
     }
     try expectEqualHex(try Fst1(1).encode(0.0), 0x8000000000000001);
 }
 
 test "encode/decode" {
-    inline for (.{ Spur, SpurAlt1, SpurAlt2, SpurNZ, Fst1(1), Fst1(2), Fst1(4), Fst2(2), Fst2(4), Fst4, Zag4, Zag6 }) |encoding| {
+    inline for (.{ Spur, SpurAlt1, SpurAlt2, SpurNZ, Fst1(1), Fst1(2), Fst1(4), Fst2(2), Fst2(4), Fst2(6), Fst4, Zag4, Zag6 }) |encoding| {
         var valid_v: [likely_values.len]f64 = undefined;
         var invalid_v: [likely_values.len]f64 = undefined;
         var decode_v: [likely_values.len]u64 = undefined;
@@ -461,7 +490,7 @@ fn validAndNot(comptime encoding: anytype, valid_v: []f64, invalid_v: []f64, dec
             if (valid_v.len > 0) {
                 valid_v[valid_n] = value;
                 decode_v[valid_n] = encoding.encode(value) catch {
-                    std.debug.print("trying to encode {x} {}\n", .{ u, value });
+                    std.log.err("trying to encode {x} {} - ", .{ u, value });
                     @panic("covered value doesn't encode");
                 };
                 valid_n += 1;
@@ -528,64 +557,80 @@ fn benchmark(comptime encoding: anytype) void {
 }
 // zig run -Doptimize=ReleaseFast floatSpur.zig
 pub fn main() void {
-    if (do_benchmark) {
-        inline for (.{ Spur, SpurAlt1, SpurAlt2, SpurNZ, Fst1(1), Fst1(2), Fst1(4), Fst2(2), Fst2(4), Fst4, Zag4, Zag6, NaN, NuN }) |encoding|
-            benchmark(encoding);
-    } else {
-        var buffer: [20]u8 = undefined;
-        const ranges = [_]Range{
-            .{ .low = 0x0000_0000_0000_0000, .high = 0x0000_0000_0000_0000 },
-            .{ .low = 0x0000_0000_0000_0000, .high = 0x03FF_FFFF_FFFF_FFFF },
-            .{ .low = 0x0400_0000_0000_0000, .high = 0x07FF_FFFF_FFFF_FFFF },
-            .{ .low = 0x0800_0000_0000_0000, .high = 0x0FFF_FFFF_FFFF_FFFF },
-            .{ .low = 0x1000_0000_0000_0000, .high = 0x2FFF_FFFF_FFFF_FFFF },
-            .{ .low = 0x3000_0000_0000_0000, .high = 0x37FF_FFFF_FFFF_FFFF },
-            .{ .low = 0x3800_0000_0000_0000, .high = 0x3BFF_FFFF_FFFF_FFFF },
-            .{ .low = 0x3C00_0000_0000_0000, .high = 0x43FF_FFFF_FFFF_FFFF },
-            .{ .low = 0x4400_0000_0000_0000, .high = 0x47FF_FFFF_FFFF_FFFF },
-            .{ .low = 0x4800_0000_0000_0000, .high = 0x4FFF_FFFF_FFFF_FFFF },
-            .{ .low = 0x5000_0000_0000_0000, .high = 0x6FFF_FFFF_FFFF_FFFF },
-            .{ .low = 0x7000_0000_0000_0000, .high = 0x77FF_FFFF_FFFF_FFFF },
-            .{ .low = 0x7800_0000_0000_0000, .high = 0x7BFF_FFFF_FFFF_FFFF },
-            .{ .low = 0x7C00_0000_0000_0000, .high = 0x7FFF_FFFF_FFFF_FFFF },
-        };
-        std.debug.print("% do not edit - produced by floatEncoding.zig\n", .{});
-        for (&ranges) |range| {
-            if (range.low == range.high) {
-                std.debug.print("00000000000&0&", .{});
-            } else {
-                const bits: u6 = @intCast(@min(@ctz(range.low), @ctz(~range.high)));
-                const mask: u64 = @bitCast(@as(i64, -1) << bits);
-                print_bits(range.low, bits);
-                if (range.low & mask != range.high & mask) {
-                    std.debug.print("-", .{});
-                    print_bits(range.high, bits);
+    switch (do_what) {
+        .encode11 => {
+            // doesn't catch much of interest except +/-0.0 and +/-2.0
+            inline for (.{ Spur, SpurAlt1, SpurAlt2, SpurNZ, Fst1(1), Fst1(2), Fst1(4), Fst2(2), Fst2(4), Fst2(6), Fst4, Zag4, Zag6, NaN, NuN }) |encoding| {
+                std.debug.print("{s}\n", .{encoding.name});
+                for (0..2047) |u| {
+                    const e = (u >> 6 << 59) | (u & 0x3f);
+                    if (encoding.decode(e)) |f| {
+                        if (@abs(f) < 1000000 and @floor(f) == f)
+                            std.debug.print("   u: x{x:0>3} = 0x{x:0>16} {e}\n", .{ u, e, f });
+                    }
                 }
-                std.debug.print("&${s}\\cdots ", .{latex_e(range.low, &buffer)});
-                std.debug.print("{s}$&", .{latex_e(range.high, &buffer)});
             }
-            var coverage: u64 = 0;
-            var total: u64 = 0;
-            for (0.., &frequency) |index, count| {
-                total += count;
-                const addr = index << 52;
-                // std.debug.print("name={s}\n addr=  {b:0>64}\n ranges={b:0>64}\n        {b:0>64} {} {}\n",.{encoding.name,addr,encoding.valid_ranges[0].low,encoding.valid_ranges[0].high, encoding.valid_ranges[0].includes(addr), count});
-                if (range.includes(addr))
-                    coverage += count;
-            }
-            const cover = @as(f64, @floatFromInt(coverage)) * 100.0 / @as(f64, @floatFromInt(total));
-            std.debug.print("{d:.2}\\%", .{cover});
-            inline for (.{ Spur, SpurNZ, Fst1(4), Fst2(4), Fst4, Zag4, Zag6, NaN }) |encoding| {
-                if (Range.covers(&encoding.valid_ranges, range.low) and
-                    Range.covers(&encoding.valid_ranges, range.high))
-                {
-                    std.debug.print("&\\cmark", .{});
+        },
+        .benchmark => {
+            inline for (.{ Spur, SpurAlt1, SpurAlt2, SpurNZ, Fst1(1), Fst1(2), Fst1(4), Fst2(2), Fst2(4), Fst2(6), Fst4, Zag4, Zag6, NaN, NuN }) |encoding|
+                benchmark(encoding);
+        },
+        .ranges => {
+            var buffer: [20]u8 = undefined;
+            const ranges = [_]Range{
+                .{ .low = 0x0000_0000_0000_0000, .high = 0x0000_0000_0000_0000 },
+                .{ .low = 0x0000_0000_0000_0000, .high = 0x03FF_FFFF_FFFF_FFFF },
+                .{ .low = 0x0400_0000_0000_0000, .high = 0x07FF_FFFF_FFFF_FFFF },
+                .{ .low = 0x0800_0000_0000_0000, .high = 0x0FFF_FFFF_FFFF_FFFF },
+                .{ .low = 0x1000_0000_0000_0000, .high = 0x2FFF_FFFF_FFFF_FFFF },
+                .{ .low = 0x3000_0000_0000_0000, .high = 0x37FF_FFFF_FFFF_FFFF },
+                .{ .low = 0x3800_0000_0000_0000, .high = 0x3BFF_FFFF_FFFF_FFFF },
+                .{ .low = 0x3C00_0000_0000_0000, .high = 0x43FF_FFFF_FFFF_FFFF },
+                .{ .low = 0x4400_0000_0000_0000, .high = 0x47FF_FFFF_FFFF_FFFF },
+                .{ .low = 0x4800_0000_0000_0000, .high = 0x4FFF_FFFF_FFFF_FFFF },
+                .{ .low = 0x5000_0000_0000_0000, .high = 0x6FFF_FFFF_FFFF_FFFF },
+                .{ .low = 0x7000_0000_0000_0000, .high = 0x77FF_FFFF_FFFF_FFFF },
+                .{ .low = 0x7800_0000_0000_0000, .high = 0x7BFF_FFFF_FFFF_FFFF },
+                .{ .low = 0x7C00_0000_0000_0000, .high = 0x7FFF_FFFF_FFFF_FFFF },
+            };
+            std.debug.print("% do not edit - produced by floatEncoding.zig\n", .{});
+            for (&ranges) |range| {
+                if (range.low == range.high) {
+                    std.debug.print("00000000000&0&", .{});
                 } else {
-                    std.debug.print("&\\xmark", .{});
+                    const bits: u6 = @intCast(@min(@ctz(range.low), @ctz(~range.high)));
+                    const mask: u64 = @bitCast(@as(i64, -1) << bits);
+                    print_bits(range.low, bits);
+                    if (range.low & mask != range.high & mask) {
+                        std.debug.print("-", .{});
+                        print_bits(range.high, bits);
+                    }
+                    std.debug.print("&${s}\\cdots ", .{latex_e(range.low, &buffer)});
+                    std.debug.print("{s}$&", .{latex_e(range.high, &buffer)});
                 }
+                var coverage: u64 = 0;
+                var total: u64 = 0;
+                for (0.., &frequency) |index, count| {
+                    total += count;
+                    const addr = index << 52;
+                    // std.debug.print("name={s}\n addr=  {b:0>64}\n ranges={b:0>64}\n        {b:0>64} {} {}\n",.{encoding.name,addr,encoding.valid_ranges[0].low,encoding.valid_ranges[0].high, encoding.valid_ranges[0].includes(addr), count});
+                    if (range.includes(addr))
+                        coverage += count;
+                }
+                const cover = @as(f64, @floatFromInt(coverage)) * 100.0 / @as(f64, @floatFromInt(total));
+                std.debug.print("{d:.2}\\%", .{cover});
+                inline for (.{ Spur, SpurNZ, Fst1(4), Fst2(4), Fst4, Zag4, Zag6, NaN }) |encoding| {
+                    if (Range.covers(&encoding.valid_ranges, range.low) and
+                        Range.covers(&encoding.valid_ranges, range.high))
+                    {
+                        std.debug.print("&\\cmark", .{});
+                    } else {
+                        std.debug.print("&\\xmark", .{});
+                    }
+                }
+                std.debug.print("\\\\\\hline\n", .{});
             }
-            std.debug.print("\\\\\\hline\n", .{});
-        }
+        },
     }
 }
 fn latex_e(field: u64, buffer: []u8) []const u8 {

@@ -14,8 +14,8 @@ const fibonacci_u16 = init: {
     break :init initial_value;
 }; //[_]u16{ 1, 2, 3, 5, 8, 13, 21, 34, 55, 89, 144, 233, 377, 610, 987, 1597, 2584, 4181, 6765, 10946, 17711, 28657, 46368};
 // but just in case it's a bigger allocation, match everything up to the maximum u64 value
-const fib_index = [_]u8{ 0, 0, 1, 2} ++ [_]u8{3} ** 2 ++ [_]u8{4} ** 3 ++ [_]u8{5} ** 5 ++
-                    [_]u8{6} ** 8 ++ [_]u8{7} ** 13 ++ [_]u8{8} ** 21 ++ [_]u8{9} ** 34 ++ [_]u8{10} ** 55;
+const fib_index = [_]u8{ 0, 0, 1, 2 } ++ [_]u8{3} ** 2 ++ [_]u8{4} ** 3 ++ [_]u8{5} ** 5 ++
+    [_]u8{6} ** 8 ++ [_]u8{7} ** 13 ++ [_]u8{8} ** 21 ++ [_]u8{9} ** 34 ++ [_]u8{10} ** 55;
 const fibonacci_u64 = init: {
     var initial_value: [93]u64 = undefined;
     initFibs(u64, initial_value[0..92]);
@@ -47,19 +47,19 @@ inline fn search(T: type, comptime low: usize, comptime high: usize, target: T, 
     return low;
 }
 inline fn binarySearch(comptime T: type, target: T, comptime buffer: []const T) usize {
-        var low: usize = 0;
-        var high: usize = buffer.len;
+    var low: usize = 0;
+    var high: usize = buffer.len;
 
-        while (low < high) {
-            const mid = low + (high - low) / 2;
-            if (buffer[mid] < target) {
-                low = mid + 1;
-            } else {
-                high = mid;
-            }
+    while (low < high) {
+        const mid = low + (high - low) / 2;
+        if (buffer[mid] < target) {
+            low = mid + 1;
+        } else {
+            high = mid;
         }
-        return low;
     }
+    return low;
+}
 fn findFib2(target: u64) usize {
     const start = fibonacci_u16.len - 1;
     if (target <= fibonacci_u16[start])

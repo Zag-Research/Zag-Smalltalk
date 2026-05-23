@@ -42,3 +42,4 @@ pub fn untested() void {
 pub fn UInt(n: usize) type {
     return @import("std").meta.Int(.unsigned, n);
 }
+pub const Check = enum { check, ignore };

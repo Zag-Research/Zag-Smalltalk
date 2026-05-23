@@ -41,6 +41,7 @@ m: [process_total_size]u8 align(1), // alignment explicitly stated to emphasize 
 pub const alignment = @max(stack_mask_overflow * 2, flagMask + 1);
 const alignment_mask = @as(u64, @bitCast(-@as(i64, alignment)));
 const stack_mask_overflow: usize = zag.utilities.largerPowerOf2(Process.stack_size * @sizeOf(Object));
+pub const StackMask = zag.UInt(stack_mask_shift);
 pub const stack_mask = stack_mask_overflow - @sizeOf(Object);
 pub const stack_mask_shift = @ctz(stack_mask_overflow);
 pub const process_stack_size = Process.stack_size;
@@ -85,7 +86,7 @@ const Process = struct {
         // @compileLog("stack_mask_overflow:", stack_mask_overflow);
         assert(stack_size < nursery_size);
         assert(fill_size <= 1);
-        assert(@offsetOf(Process,"stack") == 0);
+        assert(@offsetOf(Process, "stack") == 0);
     }
     const maxNurseryObjectSize = @min(HeapHeader.maxLength, nursery_size / 4);
 
@@ -174,7 +175,7 @@ const Process = struct {
     fn dumpHeap(self: *Process) void {
         var scan = self.h.currHeap;
         const hp = self.h.currHp;
-        std.debug.print("heap: {*} {*}\n", .{scan, hp});
+        std.debug.print("heap: {*} {*}\n", .{ scan, hp });
         while (@intFromPtr(scan) < @intFromPtr(hp)) {
             std.debug.print("[{x:0>10}]: {f}\n", .{ @intFromPtr(scan), scan[0].header });
             scan = scan[0].skipForward();
@@ -342,7 +343,7 @@ pub inline fn getHeap(self: *align(1) const Self) []HeapObject {
 pub fn allocArray(self: *align(1) Self, slice: []const Object, sp: SP, context: *Context) HeapObjectArray {
     const len: u11 = @intCast(slice.len);
     const hop = self.allocSpace(len, sp, context);
-    hop.header.objectInNursery(.Array, len);
+    HeapHeader.objectInNursery(.Array, .directIndexed, len).storeAt(hop);
     const target: HeapObjectArray = @ptrCast(hop);
     @memcpy(target + 1, @as([]const HeapObject, @ptrCast(slice)));
     return target;
@@ -473,13 +474,14 @@ const Stack = struct {
                 return null;
             }
             return @ptrFromInt(newP);
+        } else {
+            const newP = @intFromPtr(self) - @sizeOf(Object) * n;
+            if (newP < @intFromPtr(&self.theProcess().stack)) {
+                @branchHint(.unlikely);
+                return null;
+            }
+            return @ptrFromInt(newP);
         }
-        const newP = @intFromPtr(self) - @sizeOf(Object) * n;
-        if (newP < @intFromPtr(&self.theProcess().stack)) {
-            @branchHint(.unlikely);
-            return null;
-        }
-        return @ptrFromInt(newP);
     }
     pub inline fn safeReserve(self: SP, n: anytype) SP {
         return @ptrFromInt(@intFromPtr(self) - @sizeOf(Object) * n);
@@ -513,32 +515,34 @@ const Stack = struct {
     fn getStack(self: SP) []Object {
         return self.sliceTo(self.endOfStack());
     }
-    pub inline fn dumpStack(self: SP, why: []const u8, context: *Context, extra: Extra) void {
+    pub fn dumpStack(self: SP, why: []const u8, context: *Context, extra: Extra) void {
         std.debug.print("dumpStack ({s})\n", .{why});
-        const selfAddr = extra.selfAddress(self) orelse context.selfAddress(self);
-        for (self.getStack()) |*obj| {
+        doStack(std.debug.print, self, context, extra);
+    }
+    fn doStack(print: anytype, sp: SP, context: *Context, extra: Extra) void {
+        const newline = if (print == trace) "" else "\n";
+        const selfAddr = extra.selfAddress(sp) orelse context.selfAddress(sp);
+        for (sp.getStack()) |*obj| {
             const addr = @intFromPtr(obj);
-            std.debug.print("[{x:0>10}]: {f}{s}{s}{s}\n",
-                .{ addr, obj.*,
-                   if (addr == @intFromPtr(self)) " <--sp" else "",
-                   if (addr == @intFromPtr(context)) " <--ctx" else "",
-                   if (addr == @intFromPtr(selfAddr)) " <--self" else "" });
+            var onStackObject: *const HeapObject = @ptrCast(context.endOfStack(sp));
+            if (addr == @intFromPtr(context)) {
+                print("[{x:0>10}]: 0x{x:0>16} <-- ctx{s}", .{ addr, @as(u64, @bitCast(obj.*)), newline });
+                break;
+            } else if (addr == @intFromPtr(onStackObject)) {
+                print("[{x:0>10}]: {f} <-- on stack object{s}", .{ addr, onStackObject, newline });
+                onStackObject = @ptrCast(onStackObject.skipForward());
+            } else {
+                print("[{x:0>10}]: {f}{s}{s}{s}", .{ addr, obj.*, if (addr == @intFromPtr(sp)) " <--sp" else "", if (addr == @intFromPtr(selfAddr)) " <--self" else "", newline });
+            }
         }
     }
-    pub inline //
-    fn traceStack(self: SP, why: []const u8, context: *Context, extra: Extra) void {
-        trace("traceStack ({s}) {} {}", .{why, @intFromPtr(self.endOfStack()) - @intFromPtr(self), self.getStack().len});
-        trace("sp = {*} context = {*} extra = {x}", .{self, context, @as(u64,@bitCast(extra))});
-        const selfAddr = extra.selfAddress(self) orelse context.selfAddress(self);
-        for (self.getStack()) |*obj| {
-            const addr = @intFromPtr(obj);
-            trace("[{x:0>10}]: {f}{s}{s}{s}",
-                .{ addr, obj.*,
-                   if (addr == @intFromPtr(self)) " <--sp" else "",
-                   if (addr == @intFromPtr(context)) " <--ctx" else "",
-                   if (addr == @intFromPtr(selfAddr)) " <--self" else "" });
-            if (addr == @intFromPtr(context)) break;
-        }
+    pub fn traceStack(self: SP, why: []const u8, context: *Context, extra: Extra) void {
+        trace("traceStack ({s}) {} {}", .{ why, @intFromPtr(self.endOfStack()) - @intFromPtr(self), self.getStack().len });
+        trace("sp = {*} context = {*} extra = {f}", .{ self, context, extra });
+        doStack(trace, self, context, extra);
+    }
+    pub inline fn getProcess(self: SP) *Self {
+        return @ptrFromInt(@intFromPtr(self) & alignment_mask);
     }
     inline fn theProcess(self: SP) *Process {
         return @ptrFromInt(@intFromPtr(self) & alignment_mask);
@@ -625,7 +629,7 @@ test "Stack" {
     try ee(True(), sp1.next);
     try ee(False(), sp1.top);
     _ = sp1.drop().push(Object.from(42, sp1, context));
-    std.debug.print("sp1.top = {x} {x}\n",.{sp1.top.testU(), Object.from(42, sp1, context).testU()});
+    std.debug.print("sp1.top = {x} {x}\n", .{ sp1.top.testU(), Object.from(42, sp1, context).testU() });
     try config.skipForDebugging();
     try ee(sp1.top.to(i64), 42);
 }
