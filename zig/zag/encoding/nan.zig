@@ -218,16 +218,16 @@ pub const Object = packed struct(u64) {
         if (self.untaggedI()) |value| return value >= 0;
         return false;
     }
-    pub inline fn highPointer(self: Object, T: type) ?T {
+    pub inline fn encodedPointer(self: Object, T: type) ?T {
         return @ptrFromInt(self.rawU() & 0xFFFF_FFFF_FFF8);
     }
     pub inline fn pointer(self: Object, T: type) ?T {
         switch (self.tag) {
             .heap => {
                 @branchHint(.likely);
-                return self.highPointer(T);
+                return self.encodedPointer(T);
             },
-            .ThunkReturnLocal, .ThunkReturnInstance, .ThunkReturnObject, .ThunkReturnImmediate, .ThunkLocal, .ThunkInstance, .ThunkHeap => return self.highPointer(T),
+            .ThunkReturnLocal, .ThunkReturnInstance, .ThunkReturnObject, .ThunkReturnImmediate, .ThunkLocal, .ThunkInstance, .ThunkHeap => return self.encodedPointer(T),
             else => {},
         }
         return null;
@@ -419,8 +419,14 @@ pub const Object = packed struct(u64) {
         }
     }
     pub inline fn ifHeapObject(self: object.Object) ?*HeapObject {
-        if (self.tag == .heap and self != Nil()) return self.highPointer(*HeapObject);
+        if (self.tag == .heap and self != Nil()) return self.encodedPointer(*HeapObject);
         return null;
+    }
+    pub fn returnLiteralClosure(_: Object, _: *Context) ?Object {
+        return null;
+    }
+    pub fn isImmediate(_: Object) bool {
+        return false;
     }
     const OF = object.ObjectFunctions;
     pub const arrayAsSlice = OF.arrayAsSlice;

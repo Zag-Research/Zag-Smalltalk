@@ -119,7 +119,7 @@ pub const Object = packed struct(u64) {
         return false;
     }
 
-    pub inline fn highPointer(_: Object, T: type) ?T {
+    pub inline fn encodedPointer(_: Object, T: type) ?T {
         @panic("Not implemented");
     }
 
@@ -209,6 +209,12 @@ pub const Object = packed struct(u64) {
     }
     pub inline fn ifHeapObject(_: object.Object) ?*HeapObject {
         return null;
+    }
+    pub fn returnLiteralClosure(_: Object, _: anytype) ?Object {
+        return null;
+    }
+    pub fn isImmediate(_: Object) bool {
+        return false;
     }
 
     const OF = object.ObjectFunctions;

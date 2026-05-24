@@ -24,6 +24,12 @@ const ClassIndex = object.ClassIndex;
 const utilities = zag.utilities;
 const largerPowerOf2 = utilities.largerPowerOf2;
 const assert = std.debug.assert;
+var randomHashSeed: usize = 0;
+fn randomHash() u24 {
+    // don't care to synchronize, as multiple CPUs getting same value is fine.
+    randomHashSeed +%= utilities.PhiHash.inversePhi(u24);
+    return @truncate(randomHashSeed);
+}
 pub const Format = enum(u7) {
     immutableSizeZero = 0,
     indexedStruct = NumberOfBytes + 1, // this is an allocated struct, not an Object
@@ -98,6 +104,9 @@ pub const Format = enum(u7) {
     pub inline fn isByteSize(s: usize) bool {
         return s <= NumberOfBytes;
     }
+    inline fn withPointers(self: Self) Self {
+        return @enumFromInt(@intFromEnum(self) | 8);
+    }
     pub inline fn byteSizeOf(s: usize) Self {
         if (isByteSize(s))
             return @as(Self, @enumFromInt(s));
@@ -157,38 +166,38 @@ test "isWeak formats" {
         }
     }
 }
-// test "isExternal formats" {
-//     for (0..Format.Last) |n| {
-//         const e: Format = @enumFromInt(n);
-//         switch (e) {
-//             .external,
-//             .externalNonObject,
-//             .free,
-//             .special,
-//             .externalWithPointers,
-//             .externalNonObjectWithPointers,
-//             .externalWeakWithPointers,
-//             => try e.expectTrue(e.isExternal()),
-//             else => try e.expectFalse(e.isExternal()),
-//         }
-//     }
-// }
-// test "HeapObject formats" {
-//     const expect = std.testing.expect;
-//     try expect(Format.immutableSizeZero.mutable().isImmutable());
-//     try expect(!Format.notIndexable.isIndexable());
-//     try expect(Format.indexed.isIndexable());
-//     try expect(Format.indexedWithPointers.isIndexable());
-//     try expect(Format.weakWithPointers.isIndexable());
-//     try expect(!Format.indexed.hasIndexPointers());
-//     try expect(Format.indexedWithPointers.hasIndexPointers());
-//     try expect(!Format.indexed.hasIndexPointers());
-//     try expect(Format.indexedWithPointers.hasIndexPointers());
-//     try expect(Format.weakWithPointers.hasIndexPointers());
-//     try expect(Format.weakWithPointers.isWeak());
-//     try expect(!Format.indexedNonObject.isWeak());
-//     try expect(!Format.notObject.isWeak());
-// }
+test "isExternal formats" {
+    //     for (0..Format.Last) |n| {
+    //         const e: Format = @enumFromInt(n);
+    //         switch (e) {
+    //             .external,
+    //             .externalNonObject,
+    //             .free,
+    //             .special,
+    //             .externalWithPointers,
+    //             .externalNonObjectWithPointers,
+    //             .externalWeakWithPointers,
+    //             => try e.expectTrue(e.isExternal()),
+    //             else => try e.expectFalse(e.isExternal()),
+    //         }
+    //     }
+}
+test "HeapObject formats" {
+    //     const expect = std.testing.expect;
+    //     try expect(Format.immutableSizeZero.mutable().isImmutable());
+    //     try expect(!Format.notIndexable.isIndexable());
+    //     try expect(Format.indexed.isIndexable());
+    //     try expect(Format.indexedWithPointers.isIndexable());
+    //     try expect(Format.weakWithPointers.isIndexable());
+    //     try expect(!Format.indexed.hasIndexPointers());
+    //     try expect(Format.indexedWithPointers.hasIndexPointers());
+    //     try expect(!Format.indexed.hasIndexPointers());
+    //     try expect(Format.indexedWithPointers.hasIndexPointers());
+    //     try expect(Format.weakWithPointers.hasIndexPointers());
+    //     try expect(Format.weakWithPointers.isWeak());
+    //     try expect(!Format.indexedNonObject.isWeak());
+    //     try expect(!Format.notObject.isWeak());
+}
 const HeapOperationError = error{ immutable, notIndexable, wrongElementSize };
 const HeapOperations = struct {
     array: *const fn (Format, HeapHeader, *const HeapObject, usize) HeapOperationError![]Object = notArray,
@@ -326,49 +335,49 @@ pub const HeapObjectIterator = struct {
         return null;
     }
 };
-// test "heapPtrIterator" {
-//     const testing = std.testing;
-//     const ho1 = AllocationInfo.calc(0, 0, Object, false).heapHeader(ClassIndex.Object, .static, 0);
-//     try testing.expectEqual(ho1.makeIterator(), null);
-//     const c = ClassIndex;
-//     const compileObject = zag.execute.compileObject;
-//     const Sym = zag.symbol.symbols;
-//     var o1b = compileObject(.{
-//         True,
-//         Sym.i_0, // alternate reference to replacement Object #1
-//         Object.tests[0],
-//         c.Class, // third HeapObject
-//     });
-//     o1b.setLiterals(&[_]Object{Nil}, &[_]ClassIndex{});
-//     const ho1b = o1b.as*HeapObject();
-//     try testing.expectEqual(ho1b.objectFormat, .notIndexable);
-//     try testing.expectEqual(ho1b.makeIterator(), null);
-//     var o2 = compileObject(.{
-//         "def",
-//         True,
-//         ":first",
-//         c.Method, // first HeapObject
+test "heapPtrIterator" {
+    //     const testing = std.testing;
+    //     const ho1 = AllocationInfo.calc(0, 0, Object, false).heapHeader(ClassIndex.Object, .static, 0);
+    //     try testing.expectEqual(ho1.makeIterator(), null);
+    //     const c = ClassIndex;
+    //     const compileObject = zag.execute.compileObject;
+    //     const Sym = zag.symbol.symbols;
+    //     var o1b = compileObject(.{
+    //         True,
+    //         Sym.i_0, // alternate reference to replacement Object #1
+    //         Object.tests[0],
+    //         c.Class, // third HeapObject
+    //     });
+    //     o1b.setLiterals(&[_]Object{Nil}, &[_]ClassIndex{});
+    //     const ho1b = o1b.as*HeapObject();
+    //     try testing.expectEqual(ho1b.objectFormat, .notIndexable);
+    //     try testing.expectEqual(ho1b.makeIterator(), null);
+    //     var o2 = compileObject(.{
+    //         "def",
+    //         True,
+    //         ":first",
+    //         c.Method, // first HeapObject
 
-//         ":second",
-//         c.replace0, // second HeapObject - runtime ClassIndex #0
-//         "first", // pointer to first object
-//         "1mref", // reference to replacement Object #1
-//         Sym.i_1, // alternate reference to replacement Object #1
-//         "second", // pointer to second object
-//         ":def",
-//         c.Class, // third HeapObject
-//     });
-//     o2.setLiterals(&[_]Object{ Nil, True }, &[_]ClassIndex{@enumFromInt(0xdead)});
-//     const ho2 = o2.as*HeapObject();
-//     try testing.expectEqual(ho2.classIndex, .Class);
-//     try testing.expectEqual(ho2.objectFormat, .notIndexableWithPointers);
-//     var i = ho2.makeIterator() orelse return error.NoIterator;
-//     try testing.expectEqual(i.next(), &o2.asObjectArray()[4]);
-//     try testing.expectEqual(i.next(), &o2.asObjectArray()[7]);
-//     try testing.expectEqual(i.next(), null);
-//     // var o3 = [_]Object{Nil,Nil,h1.asObject(),True,h1.asObject(),h2.asObject(),True};
-//     // const ho3 = AllocationInfo.calc(o3.len, null, Object, false).fillFooters(@ptrCast(&o3[o3.len-1]), ClassIndex.Object, .static, 0, Object);
-// }
+    //         ":second",
+    //         c.replace0, // second HeapObject - runtime ClassIndex #0
+    //         "first", // pointer to first object
+    //         "1mref", // reference to replacement Object #1
+    //         Sym.i_1, // alternate reference to replacement Object #1
+    //         "second", // pointer to second object
+    //         ":def",
+    //         c.Class, // third HeapObject
+    //     });
+    //     o2.setLiterals(&[_]Object{ Nil, True }, &[_]ClassIndex{@enumFromInt(0xdead)});
+    //     const ho2 = o2.as*HeapObject();
+    //     try testing.expectEqual(ho2.classIndex, .Class);
+    //     try testing.expectEqual(ho2.objectFormat, .notIndexableWithPointers);
+    //     var i = ho2.makeIterator() orelse return error.NoIterator;
+    //     try testing.expectEqual(i.next(), &o2.asObjectArray()[4]);
+    //     try testing.expectEqual(i.next(), &o2.asObjectArray()[7]);
+    //     try testing.expectEqual(i.next(), null);
+    //     // var o3 = [_]Object{Nil,Nil,h1.asObject(),True,h1.asObject(),h2.asObject(),True};
+    //     // const ho3 = AllocationInfo.calc(o3.len, null, Object, false).fillFooters(@ptrCast(&o3[o3.len-1]), ClassIndex.Object, .static, 0, Object);
+}
 inline fn hashFromPtr(ptr: anytype) u24 {
     return utilities.ProspectorHash.hash24(@truncate(@intFromPtr(ptr) >> 3));
 }
@@ -608,11 +617,11 @@ pub const Age = enum(u4) {
             else => false,
         };
     }
-    pub inline fn marked(self: Self) !Self {
+    pub inline fn marked(self: Self, check: zag.Check) !Self {
         return switch (self) {
             .global => .globalMarked,
             .aoo => .aooMarked,
-            .globalMarked, .globalScanned, .aooMarked, .aooScanned => error.alreadyMarked,
+            .globalMarked, .globalScanned, .aooMarked, .aooScanned => if (check == .check) error.alreadyMarked else self,
             else => self,
         };
     }
@@ -664,6 +673,15 @@ pub const HeapHeader = packed struct(u64) {
             try writer.print("HeapHeader{{{} {} {}{s} {} len:{}}}", .{ self.classIndex, self.hash, self.objectFormat, if (self.immutable) " immutable" else "", self.age, self.length });
         }
     }
+    fn nowHasPointers(self: HeapHeader) HeapHeader {
+        return .{
+            .classIndex = self.classIndex,
+            .hash = self.hash,
+            .objectFormat = self.objectFormat.withPointers(),
+            .age = self.age.marked(.ignore) catch unreachable,
+            .length = self.length,
+        };
+    }
     fn forwardTo(where: anytype) HeapHeader {
         return @bitCast(@intFromPtr(where) | 0x8000_0000_0000_0000);
     }
@@ -684,16 +702,13 @@ pub const HeapHeader = packed struct(u64) {
     pub inline fn size(self: HeapHeader, obj: HeapObjectConstPtr) !usize {
         return self.objectFormat.size(self, obj);
     }
-    pub inline fn objectInNursery(self: *HeapHeader, class: ClassIndex, objectSize: u11) void {
-        self.* = .{ .classIndex = class, .hash = hashFromPtr(self), .objectFormat = .directIndexed, .age = .nursery, .length = objectSize };
+    pub inline fn objectInNursery(class: ClassIndex, objectFormat: Format, objectSize: u11) HeapHeader {
+        return .{ .classIndex = class, .objectFormat = objectFormat, .age = .nursery, .length = objectSize, .hash = randomHash() };
     }
-    pub inline fn objectOnStack(class: ClassIndex, objectFormat: Format, objectSize: u11) HeapHeader {
-        return .{ .classIndex = class, .objectFormat = objectFormat, .age = .onStack, .length = objectSize };
-    }
-    pub inline fn objectOnStackWithHash(class: ClassIndex, objectFormat: Format, objectSize: u11, hash: u24) HeapHeader {
+    pub inline fn objectOnStack(class: ClassIndex, objectFormat: Format, hash: u24, objectSize: u11) HeapHeader {
         return .{ .classIndex = class, .objectFormat = objectFormat, .age = .onStack, .length = objectSize, .hash = hash };
     }
-    pub inline fn at(self: HeapHeader, where: anytype) void {
+    pub inline fn storeAt(self: HeapHeader, where: anytype) void {
         @as(*HeapHeader, @ptrCast(where)).* = self;
     }
     pub inline fn headerStatic(comptime class: ClassIndex, hash: u24, length: u11) HeapHeader {
@@ -798,12 +813,21 @@ pub const HeapObject = packed struct {
     ) !void {
         try writer.print("{{{f}, ...}}", .{self.header});
     }
+    pub fn allocator(self: *HeapObject, process: *zag.Process) *fn () void {
+        _ = .{ self, process, @panic("undefined") };
+    }
+    pub fn nowHasPointers(self: *HeapObject) void {
+        self.header = self.header.nowHasPointers();
+    }
     pub inline //
     fn alignProperBoundary(self: HeapObjectArray) HeapObjectArray {
         if (@intFromPtr(self) & 8 == 0)
             return self;
         self[0].header = HeapHeader.freeHeader(0);
         return self + 1;
+    }
+    fn hashOf(ptr: anytype) u24 {
+        return @truncate(@intFromPtr(ptr) >> 3);
     }
     pub inline fn setHeader(self: *HeapObject, aHeader: HeapHeader) void {
         self.header = aHeader;
@@ -934,19 +958,6 @@ pub const HeapObject = packed struct {
         }
         ivs[index] = obj;
     }
-    // pub fn growSizeX(maybeForwarded: HeapObjectConstPtr, stepSize: usize) !usize {
-    //     const self = maybeForwarded.forwarded();
-    //     const form = self.objectFormat;
-    //     if (!form.isIndexable()) return error.NotIndexable;
-    //     var len: usize = self.length;
-    //     if (form.hasInstVars()) {
-    //         const oa = @as([*]u64, @ptrFromInt(@intFromPtr(self)));
-    //         len = form.wordSize(oa[len + 1]);
-    //     }
-    //     len = largerPowerOf2(len * 2);
-    //     if (len > HeapHeader.maxLength and len < HeapHeader.maxLength * 2) size = HeapHeader.maxLength;
-    //     return (form.getSize() * len + stepSize - 1) / stepSize * stepSize;
-    // }
     pub inline fn inHeapSize(maybeForwarded: HeapObjectConstPtr) usize {
         const self = maybeForwarded.forwarded();
         const header = self.header;
@@ -980,7 +991,7 @@ pub const HeapObject = packed struct {
         return @as([*]Object, @ptrCast(self));
     }
     pub inline fn fromObjectPtr(op: [*]const Object) HeapObjectArray {
-        return @as(HeapObjectArray, @ptrFromInt(@intFromPtr(op)));
+        return @ptrFromInt(@intFromPtr(op));
     }
     pub inline fn asObjectArray(self: HeapObjectConstPtr) [*]align(@alignOf(u64)) Object {
         return @as([*]align(@alignOf(u64)) Object, @ptrFromInt(@intFromPtr(self))) + 1;

@@ -89,7 +89,7 @@ pub const JitBuffer = struct {
             const new_imm = target - @as(i64, @intCast(new_pc));
             return Arm64.encodeBImm(inst, new_imm);
         }
-        
+
         return inst;
     }
 

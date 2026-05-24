@@ -148,7 +148,7 @@ pub const Object = packed struct(u64) {
     pub inline fn extraValue(self: object.Object) object.Object {
         return @bitCast(@as(i64, @bitCast(self)) >> @bitSizeOf(TagAndClassType) >> 8);
     }
-    pub inline fn highPointer(self: object.Object, T: type) ?T {
+    pub inline fn encodedPointer(self: object.Object, T: type) ?T {
         return @ptrFromInt(self.rawU() >> 16);
     }
     pub const testU = rawU;
@@ -189,7 +189,7 @@ pub const Object = packed struct(u64) {
         switch (self.tag) {
             .heap => return @ptrFromInt(self.rawU()),
             .immediates => switch (self.class) {
-                .ThunkReturnLocal, .ThunkReturnInstance, .ThunkReturnObject, .ThunkReturnImmediate, .ThunkReturnCharacter, .ThunkReturnFloat, .ThunkHeap, .ThunkLocal, .ThunkInstance, .BlockAssignLocal, .BlockAssignInstance => return self.highPointer(T),
+                .ThunkReturnLocal, .ThunkReturnInstance, .ThunkReturnObject, .ThunkReturnImmediate, .ThunkReturnCharacter, .ThunkReturnFloat, .ThunkHeap, .ThunkLocal, .ThunkInstance, .BlockAssignLocal, .BlockAssignInstance => return self.encodedPointer(T),
                 else => {},
             },
             else => {},
@@ -470,6 +470,12 @@ pub const Object = packed struct(u64) {
     pub inline fn ifHeapObject(self: object.Object) ?*HeapObject {
         if (self.tag == .heap and self != Nil()) return @ptrFromInt(@as(u64, @bitCast(self)));
         return null;
+    }
+    pub fn returnLiteralClosure(_: Object, _: *Context) ?Object {
+        return null;
+    }
+    pub fn isImmediate(_: Object) bool {
+        return false;
     }
 
     pub inline fn asUntaggedI(i: i56) i64 {

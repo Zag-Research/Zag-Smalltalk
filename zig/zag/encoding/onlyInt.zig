@@ -37,11 +37,11 @@ pub const Object = packed struct(u64) {
     pub inline fn untaggedI(self: object.Object) ?i64 {
         return @bitCast(self);
     }
-    pub const taggedI = untaggedI;
-    pub inline fn fromTaggedI(i: i64, _: anytype, _: anytype) object.Object {
+    pub inline fn fromUntaggedI(i: i64, _: anytype, _: anytype) object.Object {
         return @bitCast(i);
     }
-    pub const fromUntaggedI = fromTaggedI;
+    pub const taggedI = untaggedI;
+    pub const fromTaggedI = fromUntaggedI;
     pub inline fn asUntaggedI(i: IntType) i64 {
         return i;
     }
@@ -99,7 +99,7 @@ pub const Object = packed struct(u64) {
     pub inline fn isNat(self: Object) bool {
         return self.isInt() and self.rawI() >= 0;
     }
-    pub inline fn highPointer(_: Object, T: type) ?T {
+    pub inline fn encodedPointer(_: Object, T: type) ?T {
         @panic("Not implemented");
     }
     pub inline fn pointer(_: Object, T: type) ?T {
@@ -180,6 +180,12 @@ pub const Object = packed struct(u64) {
     }
     pub inline fn ifHeapObject(_: object.Object) ?*HeapObject {
         return null;
+    }
+    pub fn returnLiteralClosure(_: Object, _: anytype) ?Object {
+        return null;
+    }
+    pub fn isImmediate(_: Object) bool {
+        return false;
     }
     pub fn extraImmediateI(_: Object) ?u8 {
         return null;

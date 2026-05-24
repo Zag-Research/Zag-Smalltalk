@@ -34,12 +34,8 @@ const largerPowerOf2 = @import("utilities.zig").largerPowerOf2;
 pub const False = Object.False;
 pub const True = Object.True;
 pub const Nil = Object.Nil;
-pub fn fromLE(comptime T: type, v: T) Object {
-    const val = @as(*const [@sizeOf(T)]u8, @ptrCast(&v));
-    return @bitCast(mem.readIntLittle(T, val));
-}
 pub const compareObject = Object.compare;
-const siIndex = 21;
+const siIndex = 24;
 const noneIndex = switch (config.objectEncoding) {
     .taggedLow, .taggedHigh => siIndex,
     else => 0,
@@ -67,14 +63,14 @@ pub const ClassIndex = enum(u16) {
     ThunkFloat,
     LLVM,
     UndefinedObject,
-    o4 = 26,
+    Float = siIndex + 1, // skipping SmallInteger.none
+    o4,
     o3,
     o2,
     o1,
     o0,
     heap,
     Context = 64,
-    Float,
     ProtoObject,
     Object,
     Array,
@@ -109,7 +105,10 @@ pub const ClassIndex = enum(u16) {
     pub const ReplacementIndices = Self.replace7;
     pub const LastSpecial = @intFromEnum(Self.Dispatch);
     const Self = @This();
-    pub const Compact = enum(switch (zag.config.objectEncoding) {.compactZ => u6, else => u5}) {
+    pub const Compact = enum(switch (zag.config.objectEncoding) {
+        .compactZ => u6,
+        else => u5,
+    }) {
         none = noneIndex,
         SmallInteger = noneIndex ^ siIndex,
         ThunkReturnLocal = 1,
@@ -132,7 +131,8 @@ pub const ClassIndex = enum(u16) {
         ThunkFloat,
         LLVM,
         UndefinedObject,
-        o4 = 26,
+        Float = siIndex + 1,
+        o4,
         o3,
         o2,
         o1,
@@ -302,7 +302,7 @@ pub const ObjectFunctions = struct {
                 return ord.eq;
             }
         }
-        std.debug.print("\nself:  0x{x:0>16}\nother: 0x{x:0>16}\n",.{self.testU(), other.testU()});
+        std.debug.print("\nself:  0x{x:0>16}\nother: 0x{x:0>16}\n", .{ self.testU(), other.testU() });
         @panic("unreachable");
     }
     pub inline fn promoteToUnmovable(self: Object) !Object {
@@ -340,9 +340,9 @@ pub const ObjectFunctions = struct {
         } else if (self.symbolHash()) |_| {
             try writer.print("#{s}", .{symbol.asString(self).arrayAsSlice(u8) catch "???"});
             // } else if (self.extraImmediateU()) |extra| {
-            //     try writer.print("{}({}) -> {*}", .{ self.which_class(), extra, self.highPointer(*zag.Context) });
+            //     try writer.print("{}({}) -> {*}", .{ self.which_class(), extra, self.encodedPointer(*zag.Context) });
             // } else if (self.extraImmediateI()) |extra| {
-            //     try writer.print("{}({}) -> {*}", .{ self.which_class(), extra, self.highPointer(*zag.Context) });
+            //     try writer.print("{}({}) -> {*}", .{ self.which_class(), extra, self.encodedPointer(*zag.Context) });
         } else if (self.equals(False())) {
             try writer.print("false", .{});
         } else if (self.equals(True())) {
