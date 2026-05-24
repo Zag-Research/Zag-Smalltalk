@@ -1,7 +1,7 @@
-pub const nRegisters = intRegisters + floatRegisters;
 const intRegisters = 31;
 const floatRegisters = 32;
-const floatOffset = intRegisters + 1;
+const floatOffset = intRegisters + 1; // offset from "float" register start; 1 sp reserverd register
+pub const nRegisters = floatOffset + floatRegisters;
 pub const pcRegister = 0;
 pub const spRegister = 1;
 pub const processRegister = 2;
@@ -27,6 +27,7 @@ const instruction_patterns = [_]InstructionPattern{
     .{ .mask = 0x1f800000, .bits = 0x12000000, .decode = decodeLogicalImmediate }, // `tst x8, #0xff8`
     .{ .mask = 0x1f000000, .bits = 0x0a000000, .decode = decodeLogicalShiftedRegister }, // `mov x1, x8`
     .{ .mask = 0x3b000000, .bits = 0x39000000, .decode = decodeLoadStoreUnsignedImmediate }, // `ldr x5, [x0, #0x10]`
+    .{ .mask = 0x3b200c00, .bits = 0x38000400, .decode = decodeLoadStorePostIndex }, // `ldr x5, [x0], #0x10`
     .{ .mask = 0x3b200c00, .bits = 0x38000000, .decode = decodeLoadStoreUnscaledImmediate }, // `stur x20, [x8, #-0x8]`
 };
 
@@ -108,7 +109,7 @@ pub fn skip(_: Operation, address: Address) Address {
 }
 
 pub fn registerTypes() [nRegisters]RegisterContents {
-    return [_]RegisterContents{ .pc, .sp, .processP, .contextP, .extra } ++ [_]RegisterContents{.unknown} ** intRegisters ++ [_]RegisterContents{.randFloat} ** floatRegisters;
+    return [_]RegisterContents{ .pc, .sp, .processP, .contextP, .extra } ++ [_]RegisterContents{.unknown} ** (floatOffset - 5) ++ [_]RegisterContents{.randFloat} ** floatRegisters;
 }
 
 pub const Aarch64 = @This();
@@ -234,6 +235,20 @@ fn decodeLoadStoreUnscaledImmediate(_: Address, inst: u32) Operation {
     };
 
     return if (is_load) .{ .load = ldst } else .{ .store = ldst };
+}
+
+fn decodeLoadStorePostIndex(_: Address, inst: u32) Operation {
+    const is_load = ((inst >> 22) & 1) == 1;
+    const imm9 = (inst >> 12) & 0x1ff;
+    const signed_offset: i16 = @intCast(signExtend(imm9, 9));
+    const offset: u16 = @bitCast(signed_offset);
+    const ldst = Operation.LoadStore{
+        .register = decodeRd(inst),
+        .base = decodeRn(inst),
+        .offset = offset,
+    };
+
+    return if (is_load) .{ .loadPostIndex = ldst } else .{ .storePostIndex = ldst };
 }
 
 fn signExtend(value: u32, bits: u8) i64 {

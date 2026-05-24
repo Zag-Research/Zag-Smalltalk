@@ -44,7 +44,7 @@ pub fn MockArch(AddressType: anytype) type {
         pub fn patch(from: anytype, to: anytype, info: Operation) void {
             // Note: This only works for [*]Operation AddressType. Maybe add different variants to this.
             // or add a comptime assert to check for the type. There is same assumption for the decoder
-            const slot: [*]Operation = @ptrCast(@alignCast(from));
+            const slot: [*]Operation = @ptrCast(@alignCast(@constCast(from)));
             slot[0] = switch (info) {
                 .branch => .{ .branch = .{ .address = @ptrCast(to) } },
                 .branchConditional => |branch| .{ .branchConditional = .{

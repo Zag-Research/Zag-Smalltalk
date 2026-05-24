@@ -1,16 +1,16 @@
-pub fn PatchTable(AddressType: anytype, InfoType: anytype, mapSize: usize, patchSize: usize) type {
+pub fn PatchTable(SourceAddressType: anytype, TargetAddressType: anytype, InfoType: anytype, mapSize: usize, patchSize: usize) type {
     const PatchElement = struct {
         next: ?*Self,
-        address: AddressType,
+        address: TargetAddressType,
         info: InfoType,
         const Self = @This();
     };
 
     const MapElement = struct {
-        source: ?AddressType,
+        source: ?SourceAddressType,
         status: Status,
         next_pending: ?*Self,
-        resolution: ?AddressType,
+        resolution: ?TargetAddressType,
         patch_head: ?*PatchElement,
 
         const Self = @This();
@@ -25,10 +25,10 @@ pub fn PatchTable(AddressType: anytype, InfoType: anytype, mapSize: usize, patch
         // Fixed allocated pool.
         map: [mapSize]MapElement,
         patch: [patchSize]PatchElement,
-        
+
         free_patch: ?*PatchElement,
         pending_head: ?*MapElement,
-        
+
         const Self = @This();
 
         pub fn init(self: *Self) void {
@@ -54,7 +54,7 @@ pub fn PatchTable(AddressType: anytype, InfoType: anytype, mapSize: usize, patch
 
         pub fn deinit(_: *Self) void {}
 
-        fn atOrDefine(self: *Self, source: AddressType) *MapElement {
+        fn atOrDefine(self: *Self, source: SourceAddressType) *MapElement {
             const hashed = (@intFromPtr(source) >> 8) % mapSize;
             // linear probe from there to the end
             for (self.map[hashed..mapSize]) |*element| {
@@ -108,7 +108,7 @@ pub fn PatchTable(AddressType: anytype, InfoType: anytype, mapSize: usize, patch
             }
         };
 
-        pub fn definition(self: *Self, define: AddressType, as: AddressType) PatchIterator {
+        pub fn definition(self: *Self, define: SourceAddressType, as: TargetAddressType) PatchIterator {
             const entry = self.atOrDefine(define);
             switch (entry.status) {
                 .new => {
@@ -128,7 +128,7 @@ pub fn PatchTable(AddressType: anytype, InfoType: anytype, mapSize: usize, patch
             return PatchIterator.new(null, &self.free_patch);
         }
 
-        pub fn reference(self: *Self, target: AddressType, from: AddressType, info: InfoType) ?AddressType {
+        pub fn reference(self: *Self, target: SourceAddressType, from: TargetAddressType, info: InfoType) ?TargetAddressType {
             const entry = self.atOrDefine(target);
             sw: switch (entry.status) {
                 .new => {
@@ -154,7 +154,7 @@ pub fn PatchTable(AddressType: anytype, InfoType: anytype, mapSize: usize, patch
             }
         }
 
-        pub fn externalReference(self: *Self, target: AddressType) void {
+        pub fn externalReference(self: *Self, target: SourceAddressType) void {
             const entry = self.atOrDefine(target);
             entry.status = .referenced;
             self.addPending(entry);
@@ -171,7 +171,7 @@ pub fn PatchTable(AddressType: anytype, InfoType: anytype, mapSize: usize, patch
             link.* = entry;
         }
 
-        pub fn popPending(self: *Self) ?AddressType {
+        pub fn popPending(self: *Self) ?SourceAddressType {
             while (self.pending_head) |pending| {
                 self.pending_head = pending.next_pending;
                 pending.next_pending = null;
@@ -183,9 +183,8 @@ pub fn PatchTable(AddressType: anytype, InfoType: anytype, mapSize: usize, patch
     };
 }
 
-
 test "patchTable external references are queued as pending work" {
-    var pt: PatchTable(*u64, u64, 5, 5) = undefined;
+    var pt: PatchTable(*u64, *u64, u64, 5, 5) = undefined;
     pt.init();
     defer pt.deinit();
 
@@ -198,7 +197,7 @@ test "patchTable external references are queued as pending work" {
 }
 
 test "patchTable defined target returns resolved address" {
-    var pt: PatchTable(*u64, u64, 5, 5) = undefined;
+    var pt: PatchTable(*u64, *u64, u64, 5, 5) = undefined;
     pt.init();
     defer pt.deinit();
 
@@ -210,7 +209,7 @@ test "patchTable defined target returns resolved address" {
 }
 
 test "patchTable pending work is popped in address order" {
-    var pt: PatchTable(*u64, u64, 5, 5) = undefined;
+    var pt: PatchTable(*u64, *u64, u64, 5, 5) = undefined;
     pt.init();
     defer pt.deinit();
 
@@ -227,7 +226,7 @@ test "patchTable pending work is popped in address order" {
 }
 
 test "patchTable definition drains patches for one target" {
-    var pt: PatchTable(*u64, u64, 5, 5) = undefined;
+    var pt: PatchTable(*u64, *u64, u64, 5, 5) = undefined;
     pt.init();
     defer pt.deinit();
 
@@ -257,7 +256,7 @@ test "patchTable definition drains patches for one target" {
 }
 
 test "patchTable defined target remains directly referenceable after draining patches" {
-    var pt: PatchTable(*u64, u64, 5, 5) = undefined;
+    var pt: PatchTable(*u64, *u64, u64, 5, 5) = undefined;
     pt.init();
     defer pt.deinit();
 

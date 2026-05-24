@@ -6,8 +6,8 @@
 /// method.jitted = @ptrCast(@alignCast(code.ptr));
 pub fn CopyAndPatch(Code: anytype, Arch: anytype, JitBuffer: anytype) type {
     const Address = Arch.Address;
-    const NativePatchType = PatchTable(Address, Operation, mapSize, patchSize);
-    const ThreadedPatchType = PatchTable([*]Code, Operation, threadedMapSize, threadedPatchSize);
+    const NativePatchType = PatchTable(Address, Address, Operation, mapSize, patchSize);
+    const ThreadedPatchType = PatchTable([*]const Code, Address, Operation, threadedMapSize, threadedPatchSize);
 
     return struct {
         buffer: JitBuffer,
@@ -33,7 +33,7 @@ pub fn CopyAndPatch(Code: anytype, Arch: anytype, JitBuffer: anytype) type {
 
         fn jitCode(self: *Self, code: []const Code) !void {
             self.buffer.makeWritable();
-            self.threaded_patch.externalReference(@ptrCast(@constCast(code)));
+            self.threaded_patch.externalReference(code.ptr);
             while (self.threaded_patch.popPending()) |cp| {
                 try self.abstractInterpret(cp);
             }
@@ -45,12 +45,13 @@ pub fn CopyAndPatch(Code: anytype, Arch: anytype, JitBuffer: anytype) type {
             self.resetAbstractState(entry_pc);
             self.native_patch.clearMap();
 
-            var decoder = Arch.decoder(initial_cp[0].threadedFn);
+            var decoder = Arch.decoder(@ptrCast(initial_cp[0].threadedFn));
             self.define(&self.threaded_patch, initial_cp);
 
             nextInstruction: while (true) {
                 const instruction = decoder.nextInstruction();
                 var inst: Operation = instruction.operation;
+                self.define(&self.native_patch, instruction.address);
                 instSw: switch (inst) {
                     .ret => break,
                     .move => |move| {
@@ -75,6 +76,17 @@ pub fn CopyAndPatch(Code: anytype, Arch: anytype, JitBuffer: anytype) type {
                             else => {},
                         }
                     },
+                    .loadPostIndex => |ldst| {
+                        switch (self.reg_type[ldst.base]) {
+                            .pc, .codeAddress => {
+                                self.reg_type[ldst.register] = .codeAddress;
+                                self.reg_value[ldst.register] = self.reg_value[ldst.base];
+                                self.reg_value[ldst.base] += ldst.offset;
+                                continue :nextInstruction;
+                            },
+                            else => {},
+                        }
+                    },
                     .addConstant => |arith| {
                         switch (self.reg_type[arith.source]) {
                             .pc, .codeAddress => {
@@ -93,7 +105,7 @@ pub fn CopyAndPatch(Code: anytype, Arch: anytype, JitBuffer: anytype) type {
                         }
                     },
                     .branchConditional => |branch| {
-                        _ = self.native_patch.reference(@ptrCast(@alignCast(@constCast(branch.address))), self.buffer.getAddress(), inst);
+                        _ = self.native_patch.reference(self.nativeAddress(branch.address), self.bufferAddress(), inst);
                         self.emitOperation(inst);
                         continue :nextInstruction;
                     },
@@ -107,10 +119,10 @@ pub fn CopyAndPatch(Code: anytype, Arch: anytype, JitBuffer: anytype) type {
                                 } };
                                 self.emitOperation(inst);
 
-                                const target: [*]Code = @ptrFromInt(self.reg_value[register]);
+                                const target: [*]const Code = @ptrFromInt(self.reg_value[register]);
 
                                 inst = .{ .branch = .{ .address = undefined } };
-                                _ = self.threaded_patch.reference(target, @ptrCast(self.buffer.getAddress()), inst);
+                                _ = self.threaded_patch.reference(target, self.bufferAddress(), inst);
 
                                 continue :sw .executableAddress;
                             },
@@ -127,7 +139,7 @@ pub fn CopyAndPatch(Code: anytype, Arch: anytype, JitBuffer: anytype) type {
                         }
                     },
                     .branch => |branch| {
-                        _ = self.native_patch.reference(@ptrCast(@alignCast(@constCast(branch.address))), self.buffer.getAddress(), inst);
+                        _ = self.native_patch.reference(self.nativeAddress(branch.address), self.bufferAddress(), inst);
                         continue :instSw .endBranch;
                     },
                     .endBranch => {
@@ -135,7 +147,6 @@ pub fn CopyAndPatch(Code: anytype, Arch: anytype, JitBuffer: anytype) type {
 
                         if (self.native_patch.popPending()) |addr| {
                             decoder.goto(addr);
-                            self.define(&self.native_patch, decoder.getAddress());
                             continue :nextInstruction;
                         } else break;
                     },
@@ -148,18 +159,26 @@ pub fn CopyAndPatch(Code: anytype, Arch: anytype, JitBuffer: anytype) type {
 
         fn emitOperation(self: *Self, operation: Operation) void {
             Arch.emitInstruction(.{
-                .address = @ptrCast(self.buffer.getAddress()),
+                .address = self.bufferAddress(),
                 .raw = undefined,
                 .operation = operation,
             }, &self.buffer);
         }
 
+        fn bufferAddress(self: *Self) Address {
+            return @ptrCast(self.buffer.getAddress());
+        }
+
+        fn nativeAddress(_: *Self, address: jit_ir.Address) Address {
+            return @ptrCast(@alignCast(@constCast(address)));
+        }
+
         fn define(self: *Self, patch_table: anytype, source_address: anytype) void {
-            const emitted_address = self.buffer.getAddress();
+            const emitted_address = self.bufferAddress();
 
             var patches = patch_table.definition(
-                @ptrCast(@constCast(source_address)),
-                @ptrCast(emitted_address),
+                source_address,
+                emitted_address,
             );
 
             while (patches.next()) |patch| {
@@ -195,7 +214,7 @@ const TestJitBuffer = struct {
     buffer: [10]Operation = undefined,
     pos: usize = 0,
     const Self = @This();
-    const Address = [*]Operation;
+    const Address = [*]const Operation;
     fn init(_: usize) !Self {
         return .{};
     }
@@ -436,9 +455,56 @@ test "conditional native branch paths dispatch to same continuation" {
     }, emitted[7]);
 }
 
+test "aarch64: copy-and-patch actual pushLiteral threadedFn" {
+    if (builtin.cpu.arch != .aarch64) return error.SkipZigTest;
+    if (builtin.mode == .Debug) return error.SkipZigTest;
+
+    const Code = zag.execute.Code;
+    const Aarch64 = @import("aarch64.zig");
+    const NativeJitBuffer = @import("jit_buffer.zig").JitBuffer;
+
+    const method = [_]Code{
+        Code.primOf(zag.controlWords.pushLiteral.threadedFn),
+        .{ .object = zag.object.Nil() },
+        Code.primOf(zag.controlWords.drop.threadedFn),
+        Code.endCode,
+    };
+
+    var cnp: CopyAndPatch(Code, Aarch64, NativeJitBuffer) = undefined;
+    try cnp.init();
+    defer cnp.deinit();
+
+    try cnp.jitCode(&method);
+
+    var decoder = Aarch64.decoder(@ptrCast(cnp.buffer.memory.ptr));
+    const end = @intFromPtr(cnp.buffer.memory.ptr) + cnp.buffer.pos;
+    var saw_pc_add = false;
+    var saw_branch = false;
+
+    while (@intFromPtr(decoder.getAddress()) < end) {
+        const instruction = decoder.nextInstruction();
+        switch (instruction.operation) {
+            .addConstant => |arith| {
+                if (arith.source == Aarch64.pcRegister and
+                    arith.target == Aarch64.pcRegister and
+                    arith.addend == 32)
+                {
+                    saw_pc_add = true;
+                }
+            },
+            .branch => saw_branch = true,
+            else => {},
+        }
+    }
+
+    try std.testing.expect(saw_pc_add);
+    try std.testing.expect(saw_branch);
+}
+
 pub const ThreadedFn = *const fn (PC, SP, *Process, *Context, Extra) Result;
 
 const std = @import("std");
+const builtin = @import("builtin");
 const debug = std.debug;
 const assert = debug.assert;
 
