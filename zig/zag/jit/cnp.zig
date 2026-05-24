@@ -195,6 +195,25 @@ pub fn CopyAndPatch(Code: anytype, Arch: anytype, JitBuffer: anytype) type {
             self.reg_value = [_]u64{0} ** Arch.nRegisters; // don't need to, but may be useful for debugging
             self.reg_value[Arch.pcRegister] = pc;
         }
+
+        pub fn dump(self: *const Self, writer: anytype) void {
+            var decoder = Arch.decoder(@ptrCast(self.buffer.memory.ptr));
+            const end = @intFromPtr(self.buffer.memory.ptr) + self.buffer.pos;
+            while (@intFromPtr(decoder.getAddress()) < end) {
+                const instruction = decoder.nextInstruction();
+                writer.print(
+                    "{any}:\t{x:0>2} {x:0>2} {x:0>2} {x:0>2}\t{any}\n",
+                    .{
+                        instruction.address,
+                        @as(u8, @truncate(instruction.raw)),
+                        @as(u8, @truncate(instruction.raw >> 8)),
+                        @as(u8, @truncate(instruction.raw >> 16)),
+                        @as(u8, @truncate(instruction.raw >> 24)),
+                        instruction.operation,
+                    },
+                );
+            }
+        }
     };
 }
 
@@ -475,6 +494,7 @@ test "aarch64: copy-and-patch actual pushLiteral threadedFn" {
     defer cnp.deinit();
 
     try cnp.jitCode(&method);
+    cnp.dump(std.debug);
 
     var decoder = Aarch64.decoder(@ptrCast(cnp.buffer.memory.ptr));
     const end = @intFromPtr(cnp.buffer.memory.ptr) + cnp.buffer.pos;

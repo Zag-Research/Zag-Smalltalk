@@ -109,7 +109,7 @@ pub fn skip(_: Operation, address: Address) Address {
 }
 
 pub fn registerTypes() [nRegisters]RegisterContents {
-    return [_]RegisterContents{ .pc, .sp, .processP, .contextP, .extra } ++ [_]RegisterContents{.unknown} ** (floatOffset - 5) ++ [_]RegisterContents{.randFloat} ** floatRegisters;
+    return [_]RegisterContents{ .pc, .sp, .process, .context, .extra } ++ [_]RegisterContents{.unknown} ** (floatOffset - 5) ++ [_]RegisterContents{.randFloat} ** floatRegisters;
 }
 
 pub const Aarch64 = @This();
