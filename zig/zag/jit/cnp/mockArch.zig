@@ -9,6 +9,7 @@ pub fn MockArch(AddressType: anytype) type {
         pub const processRegister = 2;
         pub const contextRegister = 3;
         pub const extraRegister = 4;
+        pub const dispatchRegister = 5;
         pub const Address = AddressType;
         const Decoder = struct {
             address: [*]const Operation,

@@ -60,7 +60,7 @@ pub fn CopyAndPatch(Code: anytype, Arch: anytype, JitBuffer: anytype) type {
                     },
                     .load => |ldst| {
                         switch (self.reg_type[ldst.base]) {
-                            .pc => {
+                            .pc => if (ldst.register == Arch.dispatchRegister) {
                                 self.reg_type[ldst.register] = .codeAddress;
                                 self.reg_value[ldst.register] = self.reg_value[ldst.base] + ldst.offset;
                                 continue;
@@ -105,8 +105,7 @@ pub fn CopyAndPatch(Code: anytype, Arch: anytype, JitBuffer: anytype) type {
                         }
                     },
                     .branchConditional => |branch| {
-                        _ = self.native_patch.reference(self.nativeAddress(branch.address), self.bufferAddress(), inst);
-                        self.emitOperation(inst);
+                        self.emitNativeBranchReference(self.nativeAddress(branch.address), inst);
                         continue :nextInstruction;
                     },
                     .branchRegister => |register| {
@@ -139,8 +138,12 @@ pub fn CopyAndPatch(Code: anytype, Arch: anytype, JitBuffer: anytype) type {
                         }
                     },
                     .branch => |branch| {
-                        _ = self.native_patch.reference(self.nativeAddress(branch.address), self.bufferAddress(), inst);
-                        continue :instSw .endBranch;
+                        self.emitNativeBranchReference(self.nativeAddress(branch.address), inst);
+
+                        if (self.native_patch.popPending()) |addr| {
+                            decoder.goto(addr);
+                            continue :nextInstruction;
+                        } else break;
                     },
                     .endBranch => {
                         self.emitOperation(inst);
@@ -163,6 +166,15 @@ pub fn CopyAndPatch(Code: anytype, Arch: anytype, JitBuffer: anytype) type {
                 .raw = undefined,
                 .operation = operation,
             }, &self.buffer);
+        }
+
+        fn emitNativeBranchReference(self: *Self, target: Address, operation: Operation) void {
+            const branch_site = self.bufferAddress();
+            const resolved = self.native_patch.reference(target, branch_site, operation);
+            self.emitOperation(operation);
+            if (resolved) |emitted_target| {
+                Arch.patch(branch_site, emitted_target, operation);
+            }
         }
 
         fn bufferAddress(self: *Self) Address {

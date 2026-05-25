@@ -7,6 +7,7 @@ pub const spRegister = 1;
 pub const processRegister = 2;
 pub const contextRegister = 3;
 pub const extraRegister = 4;
+pub const dispatchRegister = 5;
 pub const maxInstructionsPerTemplate = 4096;
 pub const Address = jit_ir.Address;
 
