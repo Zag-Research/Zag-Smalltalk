@@ -1,9 +1,3 @@
-/// Example Usage:
-/// var jit: CopyAndPatch(currentArch) = undefined;
-/// try jit.init();
-/// defer jit.deinit();
-/// const code = try jit.jitMethod(method);
-/// method.jitted = @ptrCast(@alignCast(code.ptr));
 pub fn CopyAndPatch(Code: anytype, Arch: anytype, JitBuffer: anytype) type {
     const Address = Arch.Address;
     const NativePatchType = PatchTable(Address, Address, Operation, mapSize, patchSize);
@@ -235,6 +229,47 @@ const mapSize = 1000;
 const patchSize = 2000;
 const maxMethodJitSize = 32768;
 
+const CnPArch = switch (builtin.cpu.arch) {
+    .aarch64 => switch (builtin.os.tag) {
+        .macos => @import("aarch64.zig"),
+        else => @compileError("CnP execution JIT is not supported on this OS"),
+    },
+    else => @compileError("CnP execution JIT is not supported on this CPU"),
+};
+
+const CnPBuffer = switch (builtin.os.tag) {
+    .macos, .linux => @import("jit_buffer.zig").JitBuffer,
+    else => @compileError("CnP JIT buffer is not supported on this OS"),
+};
+
+cnp: CopyAndPatch(zag.execute.Code, CnPArch, CnPBuffer) = undefined,
+
+/// Example Usage:
+/// var jit: CopyAndPatch(currentArch) = undefined;
+/// try jit.init();
+/// defer jit.deinit();
+/// const code = try jit.jitMethod(method);
+/// method.jitted = @ptrCast(@alignCast(code.ptr));
+pub fn init() !CnPExecutor {
+    var self: CnPExecutor = .{};
+    try self.cnp.init();
+    return self;
+}
+
+pub fn deinit(self: *CnPExecutor) void {
+    self.cnp.deinit();
+}
+
+pub fn install(self: *CnPExecutor, method: anytype) !void {
+    try self.cnp.jitCode(method.code[0..]);
+    method.asCompiledMethodPtr().executeFn = @ptrCast(@alignCast(self.cnp.buffer.memory.ptr));
+}
+
+// this command (with the magic corrected) can be used to test CopyAndPatch
+// zig test --dep zag -Mroot=cnp.zig --dep options -Mzag=../zag.zig -Moptions=.../.zig-cache/c/.../options.zig
+// to find the right path, use the most recent of:
+// find ../../.zig-cache/c -name options.zig -ls
+
 const TestCode = union(enum) {
     object: i64,
     threadedFn: [*]const Operation,
@@ -268,12 +303,7 @@ const TestJitBuffer = struct {
 
 const TestArch = MockArch(TestJitBuffer.Address);
 
-// this command (with the magic corrected) can be used to test CopyAndPatch
-// zig test --dep zag -Mroot=cnp.zig --dep options -Mzag=../zag.zig -Moptions=.../.zig-cache/c/.../options.zig
-// to find the right path, use the most recent of:
-// find ../../.zig-cache/c -name options.zig -ls
-
-test "smoke: copy linear test" {
+test "cnp: simple linear test" {
     const tf1 = [_]Operation{ .{ .tst = .{ .source = 5, .mask = 7 } }, .ret };
     const m1 = [_]TestCode{.{ .threadedFn = &tf1 }};
 
@@ -288,7 +318,7 @@ test "smoke: copy linear test" {
     }, cnp.buffer.slice());
 }
 
-test "patch threaded branch" {
+test "cnp: patch threaded branch" {
     const dispatch = [_]Operation{
         .{ .load = .{ .register = 5, .base = TestArch.pcRegister, .offset = 0 } },
         .{ .branchRegister = 5 },
@@ -333,7 +363,7 @@ test "patch threaded branch" {
     }, emitted[2]);
 }
 
-test "operand-consuming threaded word " {
+test "cnp: operand-consuming threaded word " {
     const dispatch = [_]Operation{
         // Entry PC is &method[1]. This simulates consuming one operand/literal slot,
         // so the next threaded function lives at &method[2].
@@ -400,7 +430,7 @@ test "operand-consuming threaded word " {
     }, emitted[2]);
 }
 
-test "conditional native branch paths dispatch to same continuation" {
+test "cnp: conditional native branch paths dispatch to same continuation" {
     const continuation = [_]Operation{
         .{ .tst = .{ .source = 9, .mask = 9 } },
         .ret,
@@ -490,18 +520,14 @@ test "aarch64: copy-and-patch actual pushLiteral threadedFn" {
     if (builtin.cpu.arch != .aarch64) return error.SkipZigTest;
     if (builtin.mode == .Debug) return error.SkipZigTest;
 
-    const Code = zag.execute.Code;
-    const Aarch64 = @import("aarch64.zig");
-    const NativeJitBuffer = @import("jit_buffer.zig").JitBuffer;
-
-    const method = [_]Code{
-        Code.primOf(zag.controlWords.pushLiteral.threadedFn),
+    const method = [_]ZagCode{
+        ZagCode.primOf(zag.controlWords.pushLiteral.threadedFn),
         .{ .object = zag.object.Nil() },
-        Code.primOf(zag.controlWords.drop.threadedFn),
-        Code.endCode,
+        ZagCode.primOf(zag.controlWords.drop.threadedFn),
+        ZagCode.endCode,
     };
 
-    var cnp: CopyAndPatch(Code, Aarch64, NativeJitBuffer) = undefined;
+    var cnp: CopyAndPatch(ZagCode, Aarch64, NativeJitBuffer) = undefined;
     try cnp.init();
     defer cnp.deinit();
 
@@ -533,6 +559,27 @@ test "aarch64: copy-and-patch actual pushLiteral threadedFn" {
     try std.testing.expect(saw_branch);
 }
 
+test "runtime: cnp pushLiteral matches threaded execution" {
+    if (builtin.cpu.arch != .aarch64) return error.SkipZigTest;
+    if (builtin.mode == .Debug) return error.SkipZigTest;
+
+    // TODO: Remove this guard when CnP handles executable termination/ret and call relocation.
+    if (true) return error.SkipZigTest;
+
+    var exe = Execution.initTest("cnp pushLiteral", .{
+        tf.pushLiteral,
+        o1,
+        tf.pushLiteral,
+        o0,
+    });
+
+    try exe.runJittedTest(
+        CnPExecutor,
+        &[_]Object{},
+        &[_]Object{ o0, o1 },
+    );
+}
+
 pub const ThreadedFn = *const fn (PC, SP, *Process, *Context, Extra) Result;
 
 const std = @import("std");
@@ -541,6 +588,10 @@ const debug = std.debug;
 const assert = debug.assert;
 
 const zag = @import("zag");
+const object = zag.object;
+const Object = object.Object;
+const o0 = object.testObjects[0];
+const o1 = object.testObjects[1];
 const Context = zag.Context;
 const Process = zag.Process;
 const Extra = Context.Extra;
@@ -548,6 +599,13 @@ const PC = zag.execute.PC;
 const SP = Process.SP;
 const Result = zag.execute.Result;
 const CompiledMethod = zag.execute.CompiledMethod;
+const Execution = zag.execute.Execution;
+const tf = zag.threadedFn.Enum;
+
+const CnPExecutor = @This();
+const ZagCode = zag.execute.Code;
+const Aarch64 = @import("aarch64.zig");
+const NativeJitBuffer = @import("jit_buffer.zig").JitBuffer;
 
 const MockArch = @import("cnp/mockArch.zig").MockArch;
 const jit_ir = @import("jit_ir.zig");

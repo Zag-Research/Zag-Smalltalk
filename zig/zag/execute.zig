@@ -1059,6 +1059,19 @@ pub const Execution = struct {
                 try self.resolve(objects);
                 try self.runWithValidator(&validate, source, expected);
             }
+            pub fn runJittedTest(self: *Self, comptime JitTechnique: type, source: []const Object, expected: []const Object) !void {
+                return self.runJittedTestWithObjects(JitTechnique, Object.empty, source, expected);
+            }
+            pub fn runJittedTestWithObjects(self: *Self, comptime JitTechnique: type, objects: []const Object, source: []const Object, expected: []const Object) !void {
+                try self.resolve(objects);
+
+                var jit = try JitTechnique.init();
+                defer jit.deinit();
+                try jit.install(&self.method);
+
+                self.execute(source);
+                try self.matchStack(expected);
+            }
             pub const ValidateErrors = error{
                 TestAborted,
                 TestExpectedEqual,
