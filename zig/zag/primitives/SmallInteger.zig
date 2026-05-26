@@ -1,5 +1,6 @@
 //std imports
 const std = @import("std");
+const mod = std.math.mod;
 const divFloor = std.math.divFloor;
 const divExact = std.math.divExact;
 
@@ -42,6 +43,14 @@ const True = object.True;
 const False = object.False;
 const Object = object.Object;
 const empty = &[0]Object{};
+
+//TODO: abstract function functions
+//fn MakePrimitive(primNumber: comptime_int, symbol: anytype, fn(Object, Object, SP, *Context) !Object) type{
+//    return struct{
+//        pub fn primitive(){}
+//    }
+//}
+//pub const @"+" = MakePrimitive(primNumber: comptime_int, symbol: anytype, fn (Object, Object, *Stack, *context) !Object)
 
 pub const moduleName = "SmallInteger";
 pub fn init() void {}
@@ -363,7 +372,6 @@ pub const @"*" = struct {
     }
 };
 
-// TODO: handle overflow where maxInt/-1
 //number = 10
 pub const @"/" = struct {
     pub const number = 10;
@@ -371,7 +379,7 @@ pub const @"/" = struct {
     inline fn with(self: i64, other: Object, sp: SP, context: *Context) !Object { // Divide
         if (other.nativeI()) |native| {
             const result = divExact(i64, self, native) catch return error.primitiveError; //TODO mult div untagged values
-            return Object.fromNativeI(result, sp, context);
+            return Object.fromNativeI(@intCast(result), sp, context);
         }
         return error.primitiveError;
     }
@@ -400,8 +408,8 @@ pub const @"\\\\" = struct {
     pub const inlined = signature(.@"\\\\", number);
     inline fn with(self: i64, other: Object, sp: SP, context: *Context) !Object { // modulo
         if (other.nativeI()) |native| {
-            const result = @mod(self, native) catch return error.primitiveError;
-            return Object.fromNativeI(result, sp, context);
+            const result = mod(i64, self, native) catch return error.primitiveError;
+            return Object.fromNativeI(@intCast(result), sp, context);
         }
         return error.primitiveError;
     }
@@ -431,13 +439,13 @@ pub const @"//" = struct {
     pub const inlined = signature(.@"//", number);
     inline fn with(self: i64, other: Object, sp: SP, context: *Context) !Object { // div floor
         if (other.nativeI()) |native| {
-            const result = divFloor(self.taggedI_noCheck(), native) catch return error.primitiveError; //TODO verify we want to return error
-            return Object.fromNativeI(result, sp, context);
+            const result = divFloor(i64, self, native) catch return error.primitiveError; //TODO verify we want to return error
+            return Object.fromNativeI(@intCast(result), sp, context);
         }
         return error.primitiveError;
     }
     pub fn primitive(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result { // SmallInteger>>#//
-        if (sp.next.untaggedI()) |self| {
+        if (sp.next.nativeI()) |self| {
             const newSp = sp.dropPut(with(self, sp.top, sp, context) catch
                 return @call(tailCall, Extra.primitiveFailed, .{ pc, sp, process, context, extra }));
             return @call(tailCall, process.check(context.npc), .{ context.tpc, newSp, process, context, Extra.fromContextData(context.contextDataPtr(sp)) });
@@ -445,7 +453,7 @@ pub const @"//" = struct {
         unreachable;
     }
     pub fn inlinePrimitive(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
-        if (sp.next.untaggedI()) |self| {
+        if (sp.next.nativeI()) |self| {
             const newSp = sp.dropPut(with(self, sp.top, sp, context) catch
                 return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, extra }));
             return @call(tailCall, process.check(pc.prim3()), .{ pc.next3(), newSp, process, context, extra });
