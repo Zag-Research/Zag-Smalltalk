@@ -47,7 +47,10 @@ pub fn CopyAndPatch(Code: anytype, Arch: anytype, JitBuffer: anytype) type {
                 var inst: Operation = instruction.operation;
                 self.define(&self.native_patch, instruction.address);
                 instSw: switch (inst) {
-                    .ret => break,
+                    .ret => {
+                        Arch.emitInstruction(instruction, &self.buffer);
+                        break;
+                    },
                     .move => |move| {
                         self.reg_type[move.destination] = self.reg_type[move.source];
                         self.reg_value[move.destination] = self.reg_value[move.source];
@@ -262,6 +265,9 @@ pub fn deinit(self: *CnPExecutor) void {
 
 pub fn install(self: *CnPExecutor, method: anytype) !void {
     try self.cnp.jitCode(method.code[0..]);
+    // if (std.posix.getenv("ZAG_DUMP_CNP_RUNTIME_TEST") != null) {
+    //     self.cnp.dump(std.debug);
+    // }
     method.asCompiledMethodPtr().executeFn = @ptrCast(@alignCast(self.cnp.buffer.memory.ptr));
 }
 
@@ -315,6 +321,7 @@ test "cnp: simple linear test" {
 
     try std.testing.expectEqualSlices(Operation, &.{
         .{ .tst = .{ .source = 5, .mask = 7 } },
+        .ret,
     }, cnp.buffer.slice());
 }
 
@@ -342,7 +349,7 @@ test "cnp: patch threaded branch" {
 
     const emitted = cnp.buffer.slice();
 
-    try std.testing.expectEqual(@as(usize, 3), emitted.len);
+    try std.testing.expectEqual(@as(usize, 4), emitted.len);
 
     try std.testing.expectEqual(Operation{
         .addConstant = .{
@@ -361,6 +368,8 @@ test "cnp: patch threaded branch" {
     try std.testing.expectEqual(Operation{
         .tst = .{ .source = 7, .mask = 3 },
     }, emitted[2]);
+
+    try std.testing.expectEqual(Operation.ret, emitted[3]);
 }
 
 test "cnp: operand-consuming threaded word " {
@@ -409,7 +418,7 @@ test "cnp: operand-consuming threaded word " {
 
     const emitted = cnp.buffer.slice();
 
-    try std.testing.expectEqual(@as(usize, 3), emitted.len);
+    try std.testing.expectEqual(@as(usize, 4), emitted.len);
 
     try std.testing.expectEqual(Operation{
         .addConstant = .{
@@ -428,6 +437,8 @@ test "cnp: operand-consuming threaded word " {
     try std.testing.expectEqual(Operation{
         .tst = .{ .source = 7, .mask = 3 },
     }, emitted[2]);
+
+    try std.testing.expectEqual(Operation.ret, emitted[3]);
 }
 
 test "cnp: conditional native branch paths dispatch to same continuation" {
@@ -466,7 +477,7 @@ test "cnp: conditional native branch paths dispatch to same continuation" {
 
     const emitted = cnp.buffer.slice();
 
-    try std.testing.expectEqual(@as(usize, 8), emitted.len);
+    try std.testing.expectEqual(@as(usize, 9), emitted.len);
 
     try std.testing.expectEqual(Operation{
         .branchConditional = .{
@@ -514,6 +525,8 @@ test "cnp: conditional native branch paths dispatch to same continuation" {
     try std.testing.expectEqual(Operation{
         .tst = .{ .source = 9, .mask = 9 },
     }, emitted[7]);
+
+    try std.testing.expectEqual(Operation.ret, emitted[8]);
 }
 
 test "aarch64: copy-and-patch actual pushLiteral threadedFn" {
@@ -562,9 +575,6 @@ test "aarch64: copy-and-patch actual pushLiteral threadedFn" {
 test "runtime: cnp pushLiteral matches threaded execution" {
     if (builtin.cpu.arch != .aarch64) return error.SkipZigTest;
     if (builtin.mode == .Debug) return error.SkipZigTest;
-
-    // TODO: Remove this guard when CnP handles executable termination/ret and call relocation.
-    if (true) return error.SkipZigTest;
 
     var exe = Execution.initTest("cnp pushLiteral", .{
         tf.pushLiteral,

@@ -74,8 +74,8 @@ fn decodeOperation(address: Address, inst: u32) Operation {
 pub fn emitInstruction(instruction: Instruction, buffer: anytype) void {
     const from: Address = @ptrCast(buffer.getAddress());
     switch (instruction.operation) {
-        .ret, .endBranch => {},
-        .raw => writeInstruction(buffer, instruction.raw),
+        .ret, .raw => writeInstruction(buffer, instruction.raw),
+        .endBranch => {},
         .branch => writeInstruction(buffer, encodeBranchImmediate(from, from)),
         .branchConditional => |branch| writeInstruction(buffer, encodeBranchConditional(from, from, branch.condition)),
         .addConstant => |arith| writeInstruction(buffer, encodeAddImmediate(arith)),

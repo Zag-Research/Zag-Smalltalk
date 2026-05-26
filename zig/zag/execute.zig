@@ -427,7 +427,7 @@ pub const StackStructure = packed struct {
     _fillerHigh: zag.UInt(64 - 48 - @bitSizeOf(Object.HighTagType)) = 0,
     highTag: Object.HighTagType = Object.highTagSmallInteger,
 };
-pub const endMethod = CompiledMethod.init(Sym.value, Code.end);
+pub const endMethod = CompiledMethod.init(Sym.value, Code.end, 1);
 pub const CompiledMethod = struct {
     header: HeapHeader,
     signature: Signature,
@@ -567,6 +567,7 @@ fn CompileTimeMethod(comptime counts: usize) type {
         stackStructure: StackStructure, // f1 - locals, f3 - selfOffset
         executeFn: *const fn (PC, SP, *Process, *Context, Extra) Result,
         jitted: ?*const fn (PC, SP, *Process, *Context, Extra) Result,
+        size: usize,
         code: [codes]Code,
         offsets: [codes]OffsetType align(8),
         const OffsetType = enum(u2) {
@@ -600,6 +601,7 @@ fn CompileTimeMethod(comptime counts: usize) type {
                 .stackStructure = StackStructure{ .locals = locals, .selfOffset = locals + name.numArgs() + 1 },
                 .executeFn = &Code.panic,
                 .jitted = function,
+                .size = codes,
                 .code = undefined,
                 .offsets = [_]OffsetType{.none} ** codes,
             };
