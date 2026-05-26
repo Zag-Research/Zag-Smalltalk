@@ -102,6 +102,16 @@
     "cwd": "$ZED_WORKTREE_ROOT/zig",
   },
   {
+    "label": "trace fib NaN",
+    "command": "zig build -Dtrace -Dencoding=nan -Doptimize=Debug -freference-trace=5 && ./zig-out/bin/fib",
+    "cwd": "$ZED_WORKTREE_ROOT/zig",
+  },
+  {
+    "label": "trace fib zag",
+    "command": "zig build -Dtrace -Dencoding=zag -Doptimize=Debug -freference-trace=5 && ./zig-out/bin/fib",
+    "cwd": "$ZED_WORKTREE_ROOT/zig",
+  },
+  {
     "label": "trace fib zagAlt",
     "command": "zig build -Dtrace -Dencoding=zagAlt -Doptimize=Debug -freference-trace=5 && ./zig-out/bin/fib",
     "cwd": "$ZED_WORKTREE_ROOT/zig",
@@ -109,6 +119,11 @@
   {
     "label": "trace fib onlyInt",
     "command": "zig build -Dtrace -Dencoding=onlyInt -Doptimize=Debug -freference-trace=5 && ./zig-out/bin/fib",
+    "cwd": "$ZED_WORKTREE_ROOT/zig",
+  },
+  {
+    "label": "trace fib taggedInt",
+    "command": "zig build -Dtrace -Dencoding=taggedInt -Doptimize=Debug -freference-trace=5 && ./zig-out/bin/fib",
     "cwd": "$ZED_WORKTREE_ROOT/zig",
   },
   {

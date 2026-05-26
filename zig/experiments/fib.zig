@@ -253,9 +253,9 @@ const fibIntegerBr = struct {
     }
 };
 
-const fibIntegerCl = struct {
-    const exclude: []const Encoding = &[_]Encoding{.onlyFloat};
-    var info = Info{ .name = "IntegerCl" };
+const fibIntegerClosure = struct {
+    const exclude: []const Encoding = &[_]Encoding{ .onlyInt, .onlyFloat};
+    var info = Info{ .name = "IntegerClosure" };
     const self = zag.Context.makeVariable(0, 1, .Parameter, &.{});
     const leq = tf.@"inline<=I";
     const plus = tf.@"inline+I";
@@ -339,7 +339,7 @@ const fibIntegerCl = struct {
             const native = fibCheck(fibN);
             if (threaded != native) {
                 std.log.err("threaded={}, native={}\n", .{ threaded, native });
-                @panic("mismatch IntegerCl");
+                @panic("mismatch IntegerClosure");
             }
         }
     }
@@ -416,6 +416,106 @@ const fibFloat = struct {
         return proof;
     }
 };
+const fibFloatClosure = struct {
+    const exclude: []const Encoding = &[_]Encoding{ .onlyInt, .onlyFloat};
+    var info = Info{ .name = "FloatClosure" };
+    const self = zag.Context.makeVariable(0, 1, .Parameter, &.{});
+    const leq = tf.@"inline<=F";
+    const plus = tf.@"inline+F";
+    const minus = tf.@"inline-F";
+    const classes = object.PackedObject.classes;
+    const signature = zag.symbol.signature;
+    const nullMethod = zag.dispatch.nullMethod;
+    const primitive = zag.execute.Signature.fromPrimitive;
+    var TifTrue align(codeAlignment) =
+        compileMethod(Sym.@"ifTrue:", 0, .True, .{ tf.dup, tf.value, tf.returnTop });
+    var FifTrue align(codeAlignment) =
+        compileMethod(Sym.@"ifTrue:", 0, .False, .{tf.returnSelf});
+    var SIplus align(codeAlignment) =
+        compileMethod(Sym.@"+", 0, .Float, .{ tf.primitive, primitive(41), tf.fail });
+    var SIminus align(codeAlignment) =
+        compileMethod(Sym.@"-", 0, .Float, .{ tf.primitive, primitive(42), tf.fail });
+    var SIleq align(codeAlignment) =
+        compileMethod(Sym.@"<=", 0, .Float, .{ tf.primitive, primitive(45), tf.fail });
+    var fib align(codeAlignment) =
+        compileMethod(Sym.fibonacci, 0, .Float, .{
+            //            tf.debug,
+            tf.push,                self,
+            tf.pushLiteral,         "2const",
+            tf.send,                signature(.@"<="),
+            &nullMethod,            tf.returnLocalClosure,
+            "3const 1I",            tf.send,
+            signature(.@"ifTrue:"), &nullMethod,
+            tf.drop,                tf.push,
+            self,                   tf.pushLiteral,
+            "1const",               tf.send,
+            signature(.@"-"),       &nullMethod,
+            tf.send,                signature(.fibonacci),
+            &nullMethod,            tf.push,
+            self,                   tf.pushLiteral,
+            "2const",               tf.send,
+            signature(.@"-"),       &nullMethod,
+            tf.send,                signature(.fibonacci),
+            &nullMethod,            tf.send,
+            signature(.@"+"),       &nullMethod,
+            tf.returnTop,
+        });
+    var exe: MainExecutor = undefined;
+    var zero_: Object.StaticObject = undefined;
+    var one_: Object.StaticObject = undefined;
+    var two_: Object.StaticObject = undefined;
+    var oneI_: Object.StaticObject = undefined;
+    fn init(fibN: u32) void {
+        exe = MainExecutor.new();
+        const zero = zero_.init(0.0);
+        const one = one_.init(1.0);
+        const two = two_.init(2.0);
+        const oneI = oneI_.init(1);
+        fib.resolve(&[_]Object{ zero, one, two, oneI }) catch @panic("Failed to resolve");
+        fib.initExecute();
+        zag.dispatch.addMethod(@ptrCast(&fib));
+        TifTrue.resolve(Object.empty) catch @panic("Failed to resolve");
+        TifTrue.initExecute();
+        zag.dispatch.addMethod(@ptrCast(&TifTrue));
+        FifTrue.resolve(Object.empty) catch @panic("Failed to resolve");
+        FifTrue.initExecute();
+        zag.dispatch.addMethod(@ptrCast(&FifTrue));
+        SIplus.resolve(Object.empty) catch @panic("Failed to resolve");
+        SIplus.initExecute();
+        zag.dispatch.addMethod(@ptrCast(&SIplus));
+        SIminus.resolve(Object.empty) catch @panic("Failed to resolve");
+        SIminus.initExecute();
+        zag.dispatch.addMethod(@ptrCast(&SIminus));
+        SIleq.resolve(Object.empty) catch @panic("Failed to resolve");
+        SIleq.initExecute();
+        zag.dispatch.addMethod(@ptrCast(&SIleq));
+        if (zag.config.show_trace) {
+            std.debug.print("\n", .{});
+            std.debug.print("address of one {*}\n", .{&one});
+            fib.dump();
+            TifTrue.dump();
+            FifTrue.dump();
+            SIplus.dump();
+            SIminus.dump();
+            SIleq.dump();
+            zag.execute.endMethod.dump();
+        } else {
+            const obj = exe.sendTo(Sym.fibonacci.asObject(), exe.object(@as(f64, @floatFromInt(fibN)))) catch unreachable;
+            if (obj.nativeF()) |threaded| {
+                const native: f64 = @floatFromInt(fibCheck(fibN));
+                if (threaded != native) {
+                    std.log.err("threaded={}, native={}\n", .{ threaded, native });
+                    @panic("mismatch FloatClosure");
+                }
+            }
+        }
+    }
+    fn runIt(fibN: u32, proof: usize) usize {
+        const receiver = exe.object(@as(f64, @floatFromInt(fibN)));
+        _ = exe.sendTo(Sym.fibonacci.asObject(), receiver) catch @panic("Error sending message");
+        return proof;
+    }
+};
 const print = std.debug.print;
 fn showDelta(infos: ?*Info, new: u64, target: []const u8) void {
     if (infos) |info| {
@@ -466,13 +566,13 @@ pub fn timing(args: []const []const u8, nRuns: usize, fibN: u32, default: bool) 
             zag.config.printConfig();
         } else if (eql(u8, arg, "Header")) {
             print("for '{} fibonacci'\n", .{fibN});
-            print("          Median   Mean   StdDev  SD/Mean GeomMean({} run{s}, {} warmup{s})\n", .{ stat.runs, if (stat.runs != 1) "s" else "", stat.warmups, if (stat.warmups != 1) "s" else "" });
+            print("               Median   Mean   StdDev  SD/Mean GeomMean({} run{s}, {} warmup{s})\n", .{ stat.runs, if (stat.runs != 1) "s" else "", stat.warmups, if (stat.warmups != 1) "s" else "" });
         } else {
             var anyRun = false;
-            inline for (&.{ fibNative, fibNativeFloat, fibInteger, fibInteger0, fibIntegerBr, fibFloat, fibIntegerCl }) |benchmark| {
+            inline for (&.{ fibNative, fibNativeFloat, fibInteger, fibInteger0, fibIntegerBr, fibFloat, fibIntegerClosure, fibFloatClosure }) |benchmark| {
                 if (includeFor(benchmark) and std.mem.eql(u8, name(arg), benchmark.info.name)) {
                     anyRun = true;
-                    print("{s:>9}", .{benchmark.info.name});
+                    print("{s:>14}", .{benchmark.info.name});
                     benchmark.init(fibN);
                     stat.reset();
                     stat.time(benchmark.runIt, fibN);
@@ -495,7 +595,8 @@ pub fn main() !void {
         "Config",            "Header",
         //"Native",            "NativeF",
         //"Integer",
-        //"IntegerCl",
+        "FloatClosure",
+        "IntegerClosure",
         "IntegerBr?Integer",
         //"Integer0?Integer",
         //"IntegerCnP",

@@ -686,9 +686,10 @@ fn CompileTimeMethod(comptime counts: usize) type {
                         const index: usize = @bitCast(c.offset);
                         if (resolution) |literals| {
                             if (index >= literals.len) return error.Unresolved;
-                            if (Signature.ifSignature(literals[index])) |signature| {
-                                c.* = Code.signatureOf(signature);
-                            } else c.* = Code.objectOf(literals[index]);
+                            // if (Signature.ifSignature(literals[index])) |signature| {
+                            //     c.* = Code.signatureOf(signature);
+                            // } else
+                            c.* = Code.objectOf(literals[index]);
                             offset.* = .none;
                         }
                     },
@@ -1090,7 +1091,7 @@ pub const Execution = struct {
         }
         pub fn sendTo(self: *MainExecutor, selector: Object, receiver: Object) !Object {
             var exe = &self.exe;
-            trace("Sending: {f} to {f}", .{ selector, receiver });
+            trace("Sending: {f} ({x}) to {f}", .{ selector, selector.testU(), receiver });
             exe.init(Object.empty);
             exe.getContext().setReturn(PC.exit());
             trace("SendTo: context {*} {*} {f}", .{ exe.getContext(), exe.getContext().npc, exe.getContext().tpc });
