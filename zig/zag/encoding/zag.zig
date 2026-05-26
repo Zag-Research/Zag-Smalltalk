@@ -95,7 +95,7 @@ pub const Object = packed struct(u64) {
     pub inline fn nativeI(self: object.Object) ?i64 {
         if (self.taggedI()) |int| {
             @branchHint(.likely);
-            return int >> 2;
+            return int >> intShift;
         }
         return null;
     }
