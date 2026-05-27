@@ -23,6 +23,7 @@ const instruction_patterns = [_]InstructionPattern{
     .{ .mask = 0xffffffff, .bits = 0xd65f03c0, .decode = decodeRet }, // `ret`
     .{ .mask = 0xfffffc1f, .bits = 0xd61f0000, .decode = decodeBranchRegister }, // `br x5`
     .{ .mask = 0xfc000000, .bits = 0x14000000, .decode = decodeBranchImmediate }, // `b label`
+    .{ .mask = 0xfc000000, .bits = 0x94000000, .decode = decodeBranchLinkImmediate }, // `bl label`
     .{ .mask = 0xff000010, .bits = 0x54000000, .decode = decodeBranchConditional }, // `b.eq label`
     .{ .mask = 0x1f000000, .bits = 0x11000000, .decode = decodeAddSubImmediate }, // `add x0, x0, #0x20`
     .{ .mask = 0x1f800000, .bits = 0x12000000, .decode = decodeLogicalImmediate }, // `tst x8, #0xff8`
@@ -77,6 +78,7 @@ pub fn emitInstruction(instruction: Instruction, buffer: anytype) void {
         .ret, .raw => writeInstruction(buffer, instruction.raw),
         .endBranch => {},
         .branch => writeInstruction(buffer, encodeBranchImmediate(from, from)),
+        .branchLink => |branch| writeInstruction(buffer, encodeBranchLinkImmediate(from, branch.address)),
         .branchConditional => |branch| writeInstruction(buffer, encodeBranchConditional(from, from, branch.condition)),
         .addConstant => |arith| writeInstruction(buffer, encodeAddImmediate(arith)),
         else => writeInstruction(buffer, instruction.raw),
@@ -154,6 +156,10 @@ fn decodeBranchRegister(_: Address, inst: u32) Operation {
 
 fn decodeBranchImmediate(address: Address, inst: u32) Operation {
     return .{ .branch = .{ .address = relativeAddress(address, decodeBImm(inst)) } };
+}
+
+fn decodeBranchLinkImmediate(address: Address, inst: u32) Operation {
+    return .{ .branchLink = .{ .address = relativeAddress(address, decodeBImm(inst)) } };
 }
 
 fn decodeBranchConditional(address: Address, inst: u32) Operation {
@@ -275,6 +281,16 @@ fn encodeBranchImmediate(from: Address, to: Address) u32 {
     return 0x14000000 | @as(u32, @intCast(@as(u26, @bitCast(imm26))));
 }
 
+fn encodeBranchLinkImmediate(from: Address, to: Address) u32 {
+    const from_int: i64 = @intCast(@intFromPtr(from));
+    const to_int: i64 = @intCast(@intFromPtr(to));
+    const offset = to_int - from_int;
+
+    assert(offset & 0x3 == 0);
+    const imm26 = std.math.cast(i26, offset >> 2) orelse @panic("branch-link target out of range");
+    return 0x94000000 | @as(u32, @intCast(@as(u26, @bitCast(imm26))));
+}
+
 fn encodeBranchConditional(from: Address, to: Address, condition: Operation.Condition) u32 {
     const from_int: i64 = @intCast(@intFromPtr(from));
     const to_int: i64 = @intCast(@intFromPtr(to));
@@ -342,6 +358,7 @@ test "decode basic instruction subset" {
     try std.testing.expectEqual(Operation{ .addConstant = .{ .target = 0, .source = 0, .addend = 32 } }, decodeOperation(base, 0x91008000));
     try std.testing.expectEqual(Operation{ .move = .{ .source = 8, .destination = 1 } }, decodeOperation(base, 0xaa0803e1));
     try std.testing.expectEqual(Operation{ .branchRegister = 5 }, decodeOperation(base, 0xd61f00a0));
+    try std.testing.expectEqual(Operation{ .branchLink = .{ .address = @ptrFromInt(0x1100) } }, decodeOperation(base, 0x94000040));
     try std.testing.expectEqual(Operation.ret, decodeOperation(base, 0xd65f03c0));
 }
 
@@ -404,7 +421,7 @@ test "decode pushLiteral threaded function instructions" {
         .{ .move = .{ .source = 2, .destination = 19 } },
         .{ .move = .{ .source = 3, .destination = 2 } },
         .{ .move = .{ .source = 4, .destination = 3 } },
-        .{ .raw = 0x94000000 },
+        .{ .branchLink = .{ .address = @ptrFromInt(0x5e20) } },
         .{ .raw = 0xa9408fe1 },
         .{ .load = .{ .register = 4, .base = 31, .offset = 24 } },
         .{ .raw = 0xf81f8c34 },
@@ -446,7 +463,11 @@ test "emit instructions" {
 
     emitInstruction(operationInstruction(.{ .branchConditional = .{ .condition = 0, .address = undefined } }), &buffer);
     try std.testing.expectEqual(@as(u32, 0x54000000), std.mem.readInt(u32, memory[12..16], .little));
-    try std.testing.expectEqual(@as(usize, 16), buffer.pos);
+
+    emitInstruction(operationInstruction(.{ .branchLink = .{ .address = @ptrCast(&memory[0x14]) } }), &buffer);
+    try std.testing.expectEqual(@as(u32, 0x94000001), std.mem.readInt(u32, memory[16..20], .little));
+
+    try std.testing.expectEqual(@as(usize, 20), buffer.pos);
 }
 
 test "decode actual threadedFn dispatch tail" {

@@ -35,6 +35,7 @@ pub const Operation = union(enum) {
     store: LoadStore,
     storePostIndex: LoadStore,
     branch: Branch,
+    branchLink: Branch,
     branchRegister: Register,
     branchConditional: BranchConditional,
     add: Arithmetic,

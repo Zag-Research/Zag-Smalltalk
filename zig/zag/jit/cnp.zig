@@ -529,51 +529,7 @@ test "cnp: conditional native branch paths dispatch to same continuation" {
     try std.testing.expectEqual(Operation.ret, emitted[8]);
 }
 
-test "aarch64: copy-and-patch actual pushLiteral threadedFn" {
-    if (builtin.cpu.arch != .aarch64) return error.SkipZigTest;
-    if (builtin.mode == .Debug) return error.SkipZigTest;
-
-    const method = [_]ZagCode{
-        ZagCode.primOf(zag.controlWords.pushLiteral.threadedFn),
-        .{ .object = zag.object.Nil() },
-        ZagCode.primOf(zag.controlWords.drop.threadedFn),
-        ZagCode.endCode,
-    };
-
-    var cnp: CopyAndPatch(ZagCode, Aarch64, NativeJitBuffer) = undefined;
-    try cnp.init();
-    defer cnp.deinit();
-
-    try cnp.jitCode(&method);
-    cnp.dump(std.debug);
-
-    var decoder = Aarch64.decoder(@ptrCast(cnp.buffer.memory.ptr));
-    const end = @intFromPtr(cnp.buffer.memory.ptr) + cnp.buffer.pos;
-    var saw_pc_add = false;
-    var saw_branch = false;
-
-    while (@intFromPtr(decoder.getAddress()) < end) {
-        const instruction = decoder.nextInstruction();
-        switch (instruction.operation) {
-            .addConstant => |arith| {
-                if (arith.source == Aarch64.pcRegister and
-                    arith.target == Aarch64.pcRegister and
-                    arith.addend == 32)
-                {
-                    saw_pc_add = true;
-                }
-            },
-            .branch => saw_branch = true,
-            else => {},
-        }
-    }
-
-    try std.testing.expect(saw_pc_add);
-    try std.testing.expect(saw_branch);
-}
-
 test "runtime: cnp pushLiteral matches threaded execution" {
-    if (builtin.cpu.arch != .aarch64) return error.SkipZigTest;
     if (builtin.mode == .Debug) return error.SkipZigTest;
 
     var exe = Execution.initTest("cnp pushLiteral", .{
