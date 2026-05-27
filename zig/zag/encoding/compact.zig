@@ -81,7 +81,7 @@ pub const Object = packed struct(u64) {
         switch (encoding) {
             .compactZ => return @as(u64, @bitCast(self)) >> 58,
             .compact1 => return rotl(u64, @bitCast(self), 5) & 0x3f,
-            .compact2, .compactI1 => return rotl(u64, @bitCast(self), 5) & 0x7f,
+            .compact2, .compact4, .compactI1 => return rotl(u64, @bitCast(self), 5) & 0x7f,
             else => return rotl(u64, @bitCast(self), 5) & 0xff,
         }
     }
