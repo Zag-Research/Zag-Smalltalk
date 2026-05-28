@@ -337,6 +337,7 @@ fn createBenchStep(
                 .compactI2,
                 .compactI4,
                 .compactI6,
+                .compactY,
                 .compactZ,
                 .compactA2,
                 .spur,

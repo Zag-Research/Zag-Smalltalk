@@ -11,6 +11,7 @@ pub const Encoding = enum {
     compactI2,
     compactI4,
     compactI6,
+    compactY,
     compactZ,
     compactA2,
     nan,
@@ -43,7 +44,7 @@ pub fn module(self: anytype) type {
         .zag => @import("zag.zig"),
         .zagSpur => @import("zagSpur.zig"),
         .zagOrig => @import("zagOrig.zig"),
-        .compact1, .compact2, .compact4, .compact6, .compactI1, .compactI2, .compactI4, .compactI6, .compactA2, .compactZ => @import("compact.zig"),
+        .compact1, .compact2, .compact4, .compact6, .compactI1, .compactI2, .compactI4, .compactI6, .compactA2, .compactY, .compactZ => @import("compact.zig"),
         .nan => @import("nan.zig"),
         .spur, .spurOpt, .spurNZ, .spurFST => @import("spur.zig"),
         .taggedLow => @import("taggedLow.zig"),
@@ -76,6 +77,7 @@ test "fromName" {
     try expect(try match("compactI2") == .compactI2);
     try expect(try match("compactI4") == .compactI4);
     try expect(try match("compactI6") == .compactI6);
+    try expect(try match("compactY") == .compactY);
     try expect(try match("compactZ") == .compactZ);
     try expect(try match("compactA2") == .compactA2);
     try expect(try match("spur") == .spur);

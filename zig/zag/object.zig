@@ -106,7 +106,7 @@ pub const ClassIndex = enum(u16) {
     pub const LastSpecial = @intFromEnum(Self.Dispatch);
     const Self = @This();
     pub const Compact = enum(switch (zag.config.objectEncoding) {
-        .compactZ => u6,
+        .compactY, .compactZ => u6,
         else => u5,
     }) {
         none = noneIndex,
@@ -177,7 +177,7 @@ comptime {
 }
 pub const Object = zag.encoding.module(config.objectEncoding).Object;
 pub const testObjects = blk: {
-    var testArray: [5]Object = undefined;
+    var testArray: [if (zag.config.is_test) 5 else 0]Object = undefined;
     for (&testArray, 0..) |*elem, i| {
         elem.* = @bitCast(7777777777777777 << 8 | 1 | (@intFromEnum(ClassIndex.o0) - i) << 3);
     }
@@ -316,12 +316,10 @@ pub const ObjectFunctions = struct {
             try writer.print("({x})", .{@as(u64, @bitCast(self))});
             //return;
         }
-        if (zag.config.is_test) {
-            for (0..testObjects.len) |i| {
-                if (testObjects[i].equals(self)) {
-                    try writer.print("testObject[{}]", .{i});
-                    return;
-                }
+        for (0..testObjects.len) |i| {
+            if (testObjects[i].equals(self)) {
+                try writer.print("testObject[{}]", .{i});
+                return;
             }
         }
         if (checkThreadedFn(@bitCast(self))) |name| {

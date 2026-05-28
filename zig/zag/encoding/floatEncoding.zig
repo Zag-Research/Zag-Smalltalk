@@ -229,6 +229,7 @@ pub fn Fst2(MATCH: u64) type {
             2 => "2,3 (6,7 reserved)",
             4 => "4,5 (6,7 reserved)",
             6 => "4,6 (5,7 reserved)",
+            1, 7 => "6,7 in high bits",
             else => @compileError("only 2, 4, 6 supported"),
         };
         pub inline fn encode(x: f64) EncodeError!u64 {
@@ -247,27 +248,56 @@ pub fn Fst2(MATCH: u64) type {
                         return (u & ~@as(u64, 1)) | 2;
                     }
                 },
+                1 => {
+                    const u = rotl(u64, @bitCast(x), 2) -% 0x2000_0000_0000_0000;
+                    if (u >= 0xc000_0000_0000_0000) {
+                        @branchHint(.likely);
+                        return u;
+                    }
+                },
+                7 => {
+                    const u = rotl(u64, @bitCast(x), 5) -% 1;
+                    if (u & 7 >= 6) {
+                        @branchHint(.likely);
+                        return rotr(u64, u, 3);
+                    }
+                },
             }
             return error.Unencodable;
         }
         pub inline fn decode(self: u64) ?f64 {
-            if (self & MATCH != 0) {
-                @branchHint(.likely);
-                switch (MATCH) {
-                    else => {
-                        return @bitCast(rotr(u64, self -% (MATCH + 1), 5));
-                    },
-                    6 => switch (builtin.target.cpu.arch) {
-                        .x86_64 => { // better on x86-64
-                            const b2 = self & 4;
-                            return @bitCast(rotr(u64, self ^ 2 ^ (b2 >> 1) ^ (b2 >> 2), 5));
+            switch (MATCH) {
+                else => if (self & MATCH != 0) {
+                    @branchHint(.likely);
+                    switch (MATCH) {
+                        else => {
+                            return @bitCast(rotr(u64, self -% (MATCH + 1), 5));
                         },
-                        else => { // better on aarch64
-                            const b2 = (self >> 2) & 1;
-                            return @bitCast(rotr(u64, self ^ (2 - b2), 5));
+                        6 => switch (builtin.target.cpu.arch) {
+                            .x86_64 => { // better on x86-64
+                                const b2 = self & 4;
+                                return @bitCast(rotr(u64, self ^ 2 ^ (b2 >> 1) ^ (b2 >> 2), 5));
+                            },
+                            else => { // better on aarch64
+                                const b2 = (self >> 2) & 1;
+                                return @bitCast(rotr(u64, self ^ (2 - b2), 5));
+                            },
                         },
-                    },
-                }
+                    }
+                },
+                1 => {
+                    if (self >= 0xc000_0000_0000_0000) {
+                        @branchHint(.likely);
+                        return @bitCast(rotr(u64, self +% 0x2000_0000_0000_0000, 2));
+                    }
+                },
+                7 => {
+                    const u = rotl(u64, self, 3);
+                    if (u & 7 >= 6) {
+                        @branchHint(.likely);
+                        return @bitCast(rotr(u64, u +% 1, 5));
+                    }
+                },
             }
             return null;
         }
@@ -417,18 +447,18 @@ fn expectEqualHex(actual: anytype, expected: @TypeOf(actual)) !void {
     }
 }
 test "encode patterns" {
-    inline for (.{ Spur, SpurNZ, Fst1(1), Fst1(2), Fst1(4), Fst2(2), Fst2(4), Fst2(6), Fst4, Zag4, Zag6 }) |encoding| {
+    inline for (.{ Spur, SpurNZ, Fst1(1), Fst1(2), Fst1(4), Fst2(1), Fst2(2), Fst2(4), Fst2(6), Fst2(7), Fst4, Zag4, Zag6 }) |encoding| {
         std.debug.print("for {s}\n", .{encoding.name});
         for (&[_]f64{ 0, 1, 2, 5, 42, 1e6 }) |value| {
             if (value > 0 or encoding.valid_ranges[0].low == 0)
-                std.debug.print("  0x{x:0>16} from {}\n", .{ try encoding.encode(value), value });
+                std.debug.print("  0x{x:0>16}->0x{x:0>16} from {}\n", .{ @as(u64, @bitCast(value)), try encoding.encode(value), value });
         }
     }
     try expectEqualHex(try Fst1(1).encode(0.0), 0x8000000000000001);
 }
 
 test "encode/decode" {
-    inline for (.{ Spur, SpurAlt1, SpurAlt2, SpurNZ, Fst1(1), Fst1(2), Fst1(4), Fst2(2), Fst2(4), Fst2(6), Fst4, Zag4, Zag6 }) |encoding| {
+    inline for (.{ Spur, SpurAlt1, SpurAlt2, SpurNZ, Fst1(1), Fst1(2), Fst1(4), Fst2(1), Fst2(2), Fst2(4), Fst2(6), Fst2(7), Fst4, Zag4, Zag6 }) |encoding| {
         var valid_v: [likely_values.len]f64 = undefined;
         var invalid_v: [likely_values.len]f64 = undefined;
         var decode_v: [likely_values.len]u64 = undefined;
@@ -560,7 +590,7 @@ pub fn main() void {
     switch (do_what) {
         .encode11 => {
             // doesn't catch much of interest except +/-0.0 and +/-2.0
-            inline for (.{ Spur, SpurAlt1, SpurAlt2, SpurNZ, Fst1(1), Fst1(2), Fst1(4), Fst2(2), Fst2(4), Fst2(6), Fst4, Zag4, Zag6, NaN, NuN }) |encoding| {
+            inline for (.{ Spur, SpurAlt1, SpurAlt2, SpurNZ, Fst1(1), Fst1(2), Fst1(4), Fst2(1), Fst2(2), Fst2(4), Fst2(6), Fst2(7), Fst4, Zag4, Zag6, NaN, NuN }) |encoding| {
                 std.debug.print("{s}\n", .{encoding.name});
                 for (0..2047) |u| {
                     const e = (u >> 6 << 59) | (u & 0x3f);
@@ -572,7 +602,7 @@ pub fn main() void {
             }
         },
         .benchmark => {
-            inline for (.{ Spur, SpurAlt1, SpurAlt2, SpurNZ, Fst1(1), Fst1(2), Fst1(4), Fst2(2), Fst2(4), Fst2(6), Fst4, Zag4, Zag6, NaN, NuN }) |encoding|
+            inline for (.{ Spur, SpurAlt1, SpurAlt2, SpurNZ, Fst1(1), Fst1(2), Fst1(4), Fst2(1), Fst2(2), Fst2(4), Fst2(6), Fst2(7), Fst4, Zag4, Zag6, NaN, NuN }) |encoding|
                 benchmark(encoding);
         },
         .ranges => {
