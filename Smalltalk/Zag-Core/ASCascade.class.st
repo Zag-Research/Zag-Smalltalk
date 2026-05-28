@@ -30,7 +30,7 @@ ASCascade >> = other [
 ASCascade >> asPharoAST [
 	| pharoSends |
 	pharoSends := sends collect: [ :send | send target: target; asPharoAST ].
-	OCCascadeNode messages: pharoSends.
+	^OCCascadeNode messages: pharoSends.
 ]
 
 { #category : 'accessing' }
