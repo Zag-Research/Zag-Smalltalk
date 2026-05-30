@@ -21,49 +21,58 @@ const HeapObjectConstPtr = heap.HeapObjectConstPtr;
 const HeapHeader = heap.HeapHeader;
 
 const TagBaseType = u16;
-pub const Tag = enum(TagBaseType) {
-    ThunkReturnLocal = 0x7ff0,
-    ThunkReturnInstance,
-    ThunkReturnObject,
-    ThunkReturnImmediate,
-    ThunkLocal,
-    BlockAssignLocal,
-    ThunkInstance,
-    BlockAssignInstance,
-    ThunkHeap,
-    ThunkImmediate,
-    Symbol,
-    False,
-    True,
-    Character,
-    Signature,
-    heap,
-    smallInteger = 0xfffc,
-    _,
-    inline fn u(cg: Tag) TagBaseType {
-        return @intFromEnum(cg);
-    }
-    inline fn g(cg: Tag) u64 {
-        return @as(u64, cg.u()) << 48;
-    }
-    // inline
-    fn from(c: ClassIndex) Tag {
-        const cls = @intFromEnum(c);
-        assert(cls <= 15);
-        return @enumFromInt(cls + @intFromEnum(Tag.ThunkReturnLocal) - 1);
-    }
-    inline fn class(t: Tag) ClassIndex {
-        const tag = @intFromEnum(t);
-        return @enumFromInt(tag - @intFromEnum(Tag.ThunkReturnLocal) + 1);
-    }
-    comptime {
-        assert(class(from(.Signature)) == .Signature);
-        assert(from(.ThunkReturnLocal) == .ThunkReturnLocal);
-    }
-};
 pub const Object = packed struct(u64) {
     data: u48,
     tag: Tag,
+    const Tag = zag.DeriveEnum(
+        Compact,
+        TagBaseType,
+        0x7ff0,
+        .{
+            .{ .base = 0xfffc, .names = .{ "smallInteger" }},
+        }
+    );
+    pub const Compact = enum(u4) {
+        ThunkReturnLocal, // can't be 0 or looks like a +inf
+        ThunkReturnInstance,
+        ThunkReturnObject,
+        ThunkReturnImmediate,
+        ThunkLocal,
+        BlockAssignLocal,
+        ThunkInstance,
+        BlockAssignInstance,
+        ThunkHeap, // can't be 0 or looks like a NaN on Arm
+        ThunkImmediate,
+        heap,
+        Symbol,
+        False,
+        True,
+        Character,
+        Signature,
+        pub inline fn classIndex(cp: Compact) ClassIndex {
+            return @enumFromInt(@intFromEnum(cp));
+        }
+        pub inline fn from(ci: ClassIndex) Compact {
+            return @enumFromInt(@intFromEnum(ci));
+        }
+        pub const immutableClasses = 16;
+        pub const mutableClasses = 16;
+    };
+    inline fn intFromTag(cg: Tag) TagBaseType {
+        return @intFromEnum(cg);
+    }
+    inline fn u64FromTag(cg: Tag) u64 {
+         return @as(u64, @intFromEnum(cg)) << 48;
+     }
+    inline fn tagFromClassIndex(c: ClassIndex) Tag {
+        const cls = @intFromEnum(c);
+        assert(cls <= 15);
+        return @enumFromInt(cls + @intFromEnum(Tag.ThunkReturnLocal));
+    }
+    inline fn classIndexFromTag(t: Tag) ClassIndex {
+        const tag = @intFromEnum(t);
+        return @enumFromInt(tag - @intFromEnum(Tag.ThunkReturnLocal));
+    }
     const intShift = 64 - @bitSizeOf(IntType);
     pub const IntType = i50;
     pub const maxInt = 0x3_ffff_ffff_ffff;
@@ -80,7 +89,7 @@ pub const Object = packed struct(u64) {
     pub const LowTagType = u0;
     pub const lowTagSmallInteger = 0;
     pub const HighTagType = TagBaseType;
-    pub const highTagSmallInteger: HighTagType = Tag.u(.smallInteger);
+    pub const highTagSmallInteger: HighTagType = intFromTag(.smallInteger);
     pub const PackedTagType = u3;
     pub const packedTagSmallInteger = 1;
     pub const signatureTag = 0;
@@ -92,12 +101,11 @@ pub const Object = packed struct(u64) {
         assert(tagAndClassBits == @bitSizeOf(TagAndClassType));
     }
     const extraMask = 7;
-    const integerTag = Tag.u(.smallInteger) >> 2;
+    const integerTag = intFromTag(.smallInteger) >> 2;
     inline fn isInt(self: Object) bool {
         switch (zag.arch) {
             .x86_64 => {
-                return self.rawU() >= Tag.g(.smallInteger);
-                // return self.rawU() >> (64 - intShift) >= integerTag;
+                return self.rawU() >= u64FromTag(.smallInteger);
             },
             else => {
                 return (self.rawI() >> 64 - intShift) + 1 == 0;
@@ -117,13 +125,13 @@ pub const Object = packed struct(u64) {
     }
     pub inline //
     fn isImmediateClass(self: Object, comptime class: ClassIndex) bool {
-        return self.tag == Tag.from(class);
+        return self.tag == tagFromClassIndex(class);
     }
     inline //
     fn oImm(c: ClassIndex, h: u48) Object {
         if (c == .UndefinedObject)
             return .{ .tag = .heap, .data = 0 };
-        return .{ .tag = Tag.from(c), .data = h };
+        return .{ .tag = tagFromClassIndex(c), .data = h };
     }
     pub inline fn symbolHash(self: Object) ?u24 {
         if (self.isSymbol()) return self.hash24();
@@ -372,13 +380,13 @@ pub const Object = packed struct(u64) {
                     .ThunkReturnLocal, .ThunkHeap => |tag| {
                         @branchHint(.unlikely);
                         if (self.data == 0) return .Float;
-                        return tag.class();
+                        return classIndexFromTag(tag);
                     },
                     .ThunkReturnInstance, .ThunkReturnObject, .ThunkReturnImmediate, .ThunkLocal, .BlockAssignLocal, .ThunkInstance, .BlockAssignInstance, .ThunkImmediate, .Signature => |tag| {
                         @branchHint(.unlikely);
-                        return tag.class();
+                        return classIndexFromTag(tag);
                     },
-                    .Symbol, .False, .True, .Character => |tag| return tag.class(),
+                    .Symbol, .False, .True, .Character => |tag| return classIndexFromTag(tag),
                     else => |tag| {
                         @branchHint(.likely);
                         if (@intFromEnum(tag) >= @intFromEnum(Tag.smallInteger)) return .SmallInteger;
@@ -413,7 +421,7 @@ pub const Object = packed struct(u64) {
                                 @branchHint(.unlikely);
                                 return .Float;
                             }
-                            return tag.class();
+                            return classIndexFromTag(tag);
                         },
                     }
                 }

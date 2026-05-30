@@ -242,16 +242,16 @@ test "add/lookup" {
     const sig = Signature.fromNameClass(selector, class);
     const emptyMethod = dummyCompiledMethod(sig);
     addMethod(&emptyMethod);
-    try std.testing.expectEqual(class.lookupMethodForClass(sig), &emptyMethod);
+    try std.testing.expectEqual(lookupMethodForClass(class, sig), &emptyMethod);
     const altMethod = dummyCompiledMethod(Signature.fromNameClass(selector, class));
     addMethod(&altMethod);
-    try std.testing.expectEqual(class.lookupMethodForClass(sig), &altMethod);
+    try std.testing.expectEqual(lookupMethodForClass(class, sig), &altMethod);
     const stats = DispatchHandler.stats(class);
     try std.testing.expectEqual(1, stats.active);
     try std.testing.expectEqual(5, stats.nMethods);
     try std.testing.expectEqual(7, stats.total);
     defaultForTest.called = false;
-    try std.testing.expectEqual(class.lookupMethodForClass(Signature.fromNameClass(symbols.@"new:", class)), &defaultForTest.dummyMethod);
+    try std.testing.expectEqual(lookupMethodForClass(class, Signature.fromNameClass(symbols.@"new:", class)), &defaultForTest.dummyMethod);
     try std.testing.expectEqual(true, defaultForTest.called);
 }
 pub const threadedFunctions = struct {
@@ -334,8 +334,8 @@ pub const threadedFunctions = struct {
         if (signature == requiredSignature) {
             return pc.next().method();
         }
-        const method = class.lookupMethodForClass(requiredSignature);
-        if (signature.getClass() == .none) {
+        const method = lookupMethodForClass(class, requiredSignature);
+        if (@intFromEnum(signature.getClass()) == 0) {
             trace("getMethod: patch {f} {any}", .{ requiredSignature, method });
             pc.patchPtr().patchMethod(requiredSignature, method);
         } else {

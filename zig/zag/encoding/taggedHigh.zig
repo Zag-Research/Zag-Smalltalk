@@ -20,6 +20,40 @@ const immFloatMask: u48 = 1;
 pub const Object = packed struct(u64) {
     intOrAddress: u48,
     class: ClassIndex,
+    pub const Compact = enum(u5) {
+        heap,
+        ThunkReturnLocal,
+        ThunkReturnInstance,
+        ThunkReturnObject,
+        ThunkReturnImmediate,
+        ThunkLocal,
+        BlockAssignLocal,
+        ThunkInstance,
+        BlockAssignInstance,
+        ThunkHeap,
+        ThunkImmediate,
+        SmallInteger,
+        Symbol,
+        False,
+        True,
+        Character,
+        Signature,
+        ThunkReturnCharacter,
+        ThunkReturnFloat,
+        ThunkFloat,
+        LLVM,
+        UndefinedObject,
+        Float,
+        _,
+        pub inline fn classIndex(cp: Compact) ClassIndex {
+            return @enumFromInt(@intFromEnum(cp));
+        }
+        pub inline fn from(ci: ClassIndex) Compact {
+            return @enumFromInt(@intFromEnum(ci));
+        }
+        pub const immutableClasses = 0;
+        pub const mutableClasses = 32;
+    };
 
     const Self = @This();
     const intShift = 64 - @bitSizeOf(IntType);
@@ -28,7 +62,7 @@ pub const Object = packed struct(u64) {
 
     pub const ZERO: Object = @bitCast(@as(u64, 0));
 
-    inline fn oImm(c: ClassIndex.Compact, h: u48) Self {
+    inline fn oImm(c: Compact, h: u48) Self {
         return Self{ .class = c.classIndex(), .intOrAddress = h };
     }
     pub inline fn False() Object {
@@ -110,7 +144,7 @@ pub const Object = packed struct(u64) {
     pub inline fn numArgs(self: Object) u4 {
         return @truncate(self.intOrAddress);
     }
-    pub fn makeSymbol(class: ClassIndex.Compact, hash: u24, arity: u4) Object {
+    pub fn makeSymbol(class: Compact, hash: u24, arity: u4) Object {
         return makeImmediate(class, @as(u32, hash) << 8 | arity);
     }
     pub inline fn isSymbol(self: object.Object) bool {
@@ -131,10 +165,10 @@ pub const Object = packed struct(u64) {
         return null;
     }
 
-    pub inline fn makeThunk(_: ClassIndex.Compact, _: anytype, _: u8) Object {
+    pub inline fn makeThunk(_: Compact, _: anytype, _: u8) Object {
         @panic("makeThunk not supported in taggedHigh encoding");
     }
-    pub inline fn makeThunkNoArg(_: ClassIndex.Compact, _: u56) Object {
+    pub inline fn makeThunkNoArg(_: Compact, _: u56) Object {
         @panic("makeThunkNoArg not supported in taggedHigh encoding");
     }
     pub fn extraImmediateU(_: Object) ?u8 {
@@ -162,7 +196,7 @@ pub const Object = packed struct(u64) {
         const cls = if (@hasField(Child, "header"))
             @as(*const Child, @ptrCast(value)).header.classIndex
         else
-            .none;
+            @as(ClassIndex,@enumFromInt(0));
         return Object{ .intOrAddress = @truncate(addr), .class = cls };
     }
 
@@ -272,7 +306,7 @@ pub const Object = packed struct(u64) {
     pub fn extraU(_: Object) u0 {
         @panic("not implemented");
     }
-    pub inline fn isImmediateClass(self: object.Object, comptime class: ClassIndex.Compact) bool {
+    pub inline fn isImmediateClass(self: object.Object, comptime class: Compact) bool {
         return self.class == class.classIndex();
     }
     inline fn immediateDouble(self: object.Object) ?u32 {
@@ -295,7 +329,7 @@ pub const Object = packed struct(u64) {
         }
         return null;
     }
-    pub inline fn makeImmediate(cls: ClassIndex.Compact, hash: u56) object.Object {
+    pub inline fn makeImmediate(cls: Compact, hash: u56) object.Object {
         return Object{ .class = cls.classIndex(), .intOrAddress = @truncate(hash) };
     }
     pub inline fn hash24(self: object.Object) u24 {

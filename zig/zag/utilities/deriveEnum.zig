@@ -3,24 +3,37 @@ const EnumField = std.builtin.Type.EnumField;
 
 pub fn DeriveEnum(
     comptime BaseEnum: type,
+    comptime tag_type: type,
+    offset: usize,
     comptime blocks: anytype,
 ) type {
+    @setEvalBranchQuota(10000);
     const base_info = @typeInfo(BaseEnum).@"enum";
     const base_fields = base_info.fields;
 
     // 1. Calculate maximum possible fields assuming zero duplicates
     comptime var max_extra: usize = 0;
+    comptime var max_value: usize = 0;
+    for (base_fields) |f| {
+        max_value = @max(max_value, f.value + offset);
+    }
     inline for (blocks) |block| {
         max_extra += block.names.len;
+        max_value = @max(max_value, block.base + block.names.len);
     }
     const max_fields_count = base_fields.len + max_extra;
 
+    comptime var used = [_]bool{false} ** max_value;
     var out_fields: [max_fields_count]EnumField = undefined;
     var i: usize = 0;
 
     // 2. Populate the starting array with the base enum fields
     for (base_fields) |f| {
-        out_fields[i] = f;
+        out_fields[i] = EnumField{
+            .name = f.name,
+            .value = f.value + offset,
+        };
+        used[f.value + offset] = true;
         i += 1;
     }
 
@@ -31,23 +44,15 @@ pub fn DeriveEnum(
         names: inline for (block.names) |name| {
             // Check if the name has already been defined (in BaseEnum or prior blocks)
             var name_exists = false;
-            for (out_fields[0..i]) |f| {
+            for (base_fields) |f| {
                 if (std.mem.eql(u8, f.name, name)) {
                     name_exists = true;
                     continue :names;
                 }
             }
 
-            // Find the lowest available integer >= current_val
-            while (true) {
-                var val_taken = false;
-                for (out_fields[0..i]) |f| {
-                    if (f.value == current_val) {
-                        val_taken = true;
-                        break;
-                    }
-                }
-                if (!val_taken) break;
+            // Find the lowest available value >= current_val
+            while (used[current_val]) {
                 current_val += 1;
             }
 
@@ -55,6 +60,7 @@ pub fn DeriveEnum(
                 .name = name,
                 .value = current_val,
             };
+            used[current_val] = true;
             i += 1;
             current_val += 1;
         }
@@ -69,10 +75,10 @@ pub fn DeriveEnum(
 
     return @Type(.{
         .@"enum" = .{
-            .tag_type = base_info.tag_type,
+            .tag_type = tag_type,
             .fields = &final_fields,
             .decls = &[_]std.builtin.Type.Declaration{},
-            .is_exhaustive = base_info.is_exhaustive,
+            .is_exhaustive = base_info.tag_type == tag_type and base_info.is_exhaustive,
         },
     });
 }
@@ -83,7 +89,7 @@ const Status = enum(u32) {
 };
 
 pub fn main() !void {
-    const ExtendedStatus = DeriveEnum(Status, .{
+    const ExtendedStatus = DeriveEnum(Status, u32, .{
         // Block 1: Low-range values
         .{
             .base = 0,

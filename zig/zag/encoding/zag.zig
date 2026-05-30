@@ -9,7 +9,6 @@ const zag = @import("../zag.zig");
 const trace = zag.config.trace;
 const object = zag.object;
 const ClassIndex = object.ClassIndex;
-const Compact = ClassIndex.Compact;
 const Process = zag.Process;
 const SP = Process.SP;
 const Context = zag.Context;
@@ -41,6 +40,40 @@ pub const Object = packed struct(u64) {
     hash: u45 = 0,
     extra: u11 = 0,
     class: Compact = @enumFromInt(0),
+    pub const Compact = enum(u5) {
+        heap,
+        ThunkReturnLocal,
+        ThunkReturnInstance,
+        ThunkReturnObject,
+        ThunkReturnImmediate,
+        ThunkLocal,
+        BlockAssignLocal,
+        ThunkInstance,
+        BlockAssignInstance,
+        ThunkHeap,
+        ThunkImmediate,
+        SmallInteger,
+        Symbol,
+        False,
+        True,
+        Character,
+        Signature,
+        ThunkReturnCharacter,
+        ThunkReturnFloat,
+        ThunkFloat,
+        LLVM,
+        UndefinedObject,
+        Float,
+        _,
+        pub inline fn classIndex(cp: Compact) ClassIndex {
+            return @enumFromInt(@intFromEnum(cp));
+        }
+        pub inline fn from(ci: ClassIndex) Compact {
+            return @enumFromInt(@intFromEnum(ci));
+        }
+        pub const immutableClasses = 0;
+        pub const mutableClasses = 32;
+    };
     const Self = @This();
     const intShift = 64 - @bitSizeOf(IntType);
     pub const IntType = i62;
@@ -302,7 +335,7 @@ pub const Object = packed struct(u64) {
             }
         }
         const class = self.class;
-        if (class == .none) {
+        if (class == .heap) {
             if (u == 0) {
                 @branchHint(.unlikely);
                 return .UndefinedObject;
@@ -352,7 +385,7 @@ pub const Object = packed struct(u64) {
         _ = sp;
         switch (class) {
             .ThunkReturnObject, .ThunkReturnLocal, .ThunkReturnInstance, .ThunkReturnImmediate, .ThunkReturnCharacter, .ThunkReturnFloat => {
-                return oImmAddr(class.compact(), context, sig.primitive());
+                return oImmAddr(Compact.from(class), context, sig.primitive());
             },
             else => return null,
         }

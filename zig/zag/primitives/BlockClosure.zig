@@ -19,7 +19,7 @@ const object = zag.object;
 const Object = object.Object;
 const o0 = object.testObjects[0];
 const ClassIndex = object.ClassIndex;
-const Compact = ClassIndex.Compact;
+const Compact = Object.Compact;
 const True = object.True;
 const False = object.False;
 const Nil = object.Nil;
@@ -371,8 +371,7 @@ pub const threadedFns = struct {
         return switch (@as(Compact, @enumFromInt(extra >> 3))) {
             .True => True(),
             .False => False(),
-            .none => Nil(),
-            else => unreachable,
+            else => Nil(),
         };
     }
     pub const value = struct {

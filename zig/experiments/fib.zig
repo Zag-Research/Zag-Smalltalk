@@ -566,13 +566,13 @@ pub fn timing(args: []const []const u8, nRuns: usize, fibN: u32, default: bool) 
             zag.config.printConfig();
         } else if (eql(u8, arg, "Header")) {
             print("for '{} fibonacci'\n", .{fibN});
-            print("               Median   Mean   StdDev  SD/Mean GeomMean({} run{s}, {} warmup{s})\n", .{ stat.runs, if (stat.runs != 1) "s" else "", stat.warmups, if (stat.warmups != 1) "s" else "" });
+            print("                Median   Mean   StdDev  SD/Mean GeomMean({} run{s}, {} warmup{s})\n", .{ stat.runs, if (stat.runs != 1) "s" else "", stat.warmups, if (stat.warmups != 1) "s" else "" });
         } else {
             var anyRun = false;
             inline for (&.{ fibNative, fibNativeFloat, fibInteger, fibInteger0, fibIntegerBr, fibFloat, fibIntegerClosure, fibFloatClosure }) |benchmark| {
                 if (includeFor(benchmark) and std.mem.eql(u8, name(arg), benchmark.info.name)) {
                     anyRun = true;
-                    print("{s:>14}", .{benchmark.info.name});
+                    print("{s:>14} ", .{benchmark.info.name});
                     benchmark.init(fibN);
                     stat.reset();
                     stat.time(benchmark.runIt, fibN);
