@@ -228,7 +228,14 @@ pub const SpurFast = struct {
     const name = "spurFast";
     const uses = "4 (5,6,7 reserved)";
     const TAG = 0b100; // immediate float tag
-    pub const encode = encodeN1;
+    pub const encode = switch (builtin.target.cpu.arch) {
+	    .x86_64 => encodeN1,
+	    else => decodeO,
+	};
+    pub const decode = switch (builtin.target.cpu.arch) {
+	    .x86_64 => decodeN2,
+	    else => decodeO,
+	};
     pub inline fn encodeBreakCSE(value: f64) EncodeError!u64 { // 660ms
         const bits: u64 = @bitCast(value);
 
@@ -309,7 +316,7 @@ pub const SpurFast = struct {
         const offset = cleared + adjustment;
         return @bitCast(rotr(u64, offset, 5));
     }
-    pub inline fn decode(self: u64) ?f64 {
+    pub inline fn decodeO(self: u64) ?f64 {
         if (self & TAG == 0) {
             @branchHint(.unlikely);
             return null;
@@ -320,7 +327,10 @@ pub const SpurFast = struct {
         const low = @as(u4, @truncate(x));
         return (low -% 7) <= 1;
     }
-    const transform = transformCreatedConstant;
+    const transform = switch (builtin.target.cpu.arch) {
+	    .x86_64 => transformShiftedConstant,
+	    else => transformCreatedConstant,
+	};
     inline fn transformCreatedConstant(x: u64) u64 {
         return x ^ (3 + ((x >> 3) & 1));
     }
