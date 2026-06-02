@@ -230,7 +230,7 @@ pub const SpurFast = struct {
     const TAG = 0b100; // immediate float tag
     pub const encode = switch (builtin.target.cpu.arch) {
 	    .x86_64 => encodeN1,
-	    else => decodeO,
+	    else => encodeN1,
 	};
     pub const decode = switch (builtin.target.cpu.arch) {
 	    .x86_64 => decodeN2,
