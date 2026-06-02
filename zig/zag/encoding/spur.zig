@@ -17,12 +17,12 @@ const HeapObjectConstPtr = zag.heap.HeapObjectConstPtr;
 const InMemory = zag.InMemory;
 const encode = switch (zag.config.objectEncoding) {
     .spur => @import("floatEncoding.zig").Spur.encode,
-    .spurNZ => @import("floatEncoding.zig").SpurNZ.encode,
+    .spurNZ => @import("floatEncoding.zig").SpurFast.encode,
     .spurFST => @import("floatEncoding.zig").Fst1(4).encode,
     else => @import("floatEncoding.zig").FastSpur.encode,
 };
 const decode = switch (zag.config.objectEncoding) {
-    .spurNZ => @import("floatEncoding.zig").SpurNZ.decode,
+    .spurNZ => @import("floatEncoding.zig").SpurFast.decode,
     .spurFST => @import("floatEncoding.zig").Fst1(4).decode,
     else => @import("floatEncoding.zig").Spur.decode,
 };

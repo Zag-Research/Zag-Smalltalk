@@ -254,7 +254,7 @@ const fibIntegerBr = struct {
 };
 
 const fibIntegerClosure = struct {
-    const exclude: []const Encoding = &[_]Encoding{ .onlyInt, .onlyFloat};
+    const exclude: []const Encoding = &[_]Encoding{ .onlyInt, .onlyFloat };
     var info = Info{ .name = "IntegerClosure" };
     const self = zag.Context.makeVariable(0, 1, .Parameter, &.{});
     const leq = tf.@"inline<=I";
@@ -417,7 +417,7 @@ const fibFloat = struct {
     }
 };
 const fibFloatClosure = struct {
-    const exclude: []const Encoding = &[_]Encoding{ .onlyInt, .onlyFloat};
+    const exclude: []const Encoding = &[_]Encoding{ .onlyInt, .onlyFloat };
     var info = Info{ .name = "FloatClosure" };
     const self = zag.Context.makeVariable(0, 1, .Parameter, &.{});
     const leq = tf.@"inline<=F";
@@ -599,8 +599,7 @@ pub fn main() !void {
         //"Integer0?Integer",
         //"IntegerCnP",
         "IntegerClosure",
-        "Float",
-        "FloatClosure",
+        "Float",             "FloatClosure",
     };
     // var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     // const allocator = gpa.allocator();
@@ -631,6 +630,6 @@ pub fn main() !void {
     try timing(if (default) @constCast(do_all[0..]) else args[start..], nRuns, fibN, default);
 }
 const testRun = zag.config.testRun;
-const defaultFib = if (testRun) 3 else 30;
+const defaultFib = if (testRun) 3 else 34;
 const defaultRuns = if (testRun) 1 else 10;
 const warmups = if (testRun) 0 else null;

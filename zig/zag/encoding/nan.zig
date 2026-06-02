@@ -24,14 +24,9 @@ const TagBaseType = u16;
 pub const Object = packed struct(u64) {
     data: u48,
     tag: Tag,
-    const Tag = zag.DeriveEnum(
-        Compact,
-        TagBaseType,
-        0x7ff0,
-        .{
-            .{ .base = 0xfffc, .names = .{ "smallInteger" }},
-        }
-    );
+    const Tag = zag.DeriveEnum(Compact, TagBaseType, 0x7ff0, .{
+        .{ .base = 0xfffc, .names = .{"smallInteger"} },
+    });
     pub const Compact = enum(u4) {
         ThunkReturnLocal, // can't be 0 or looks like a +inf
         ThunkReturnInstance,
@@ -62,8 +57,8 @@ pub const Object = packed struct(u64) {
         return @intFromEnum(cg);
     }
     inline fn u64FromTag(cg: Tag) u64 {
-         return @as(u64, @intFromEnum(cg)) << 48;
-     }
+        return @as(u64, @intFromEnum(cg)) << 48;
+    }
     inline fn tagFromClassIndex(c: ClassIndex) Tag {
         const cls = @intFromEnum(c);
         assert(cls <= 15);
@@ -201,15 +196,7 @@ pub const Object = packed struct(u64) {
         return fromUntaggedI(asUntaggedI(int), null, null);
     }
     pub inline fn nativeF(self: Object) ?f64 {
-        const f: f64 = @bitCast(self);
-        if (!math.isNan(f)) {
-            @branchHint(.likely);
-            return f;
-        } else if (@as(u64, @bitCast(self)) == NaN) {
-            @branchHint(.unlikely);
-            return f;
-        }
-        return null;
+        return @import("floatEncoding.zig").NaN.decode(@bitCast(self));
     }
     pub inline fn fromNativeF(t: f64, _: anytype, _: anytype) Object {
         return @bitCast(t);
@@ -367,34 +354,8 @@ pub const Object = packed struct(u64) {
         return @as(u48, @truncate(@as(usize, @bitCast(self))));
     }
     pub inline fn which_class(self: Object) ClassIndex {
-        switch (zag.arch) {
-            .propeller => {
-                switch (self.tag) {
-                    .heap => {
-                        if (self.data == 0) {
-                            @branchHint(.unlikely);
-                            return .UndefinedObject;
-                        }
-                        return self.toUnchecked(*HeapObject).*.getClass();
-                    },
-                    .ThunkReturnLocal, .ThunkHeap => |tag| {
-                        @branchHint(.unlikely);
-                        if (self.data == 0) return .Float;
-                        return classIndexFromTag(tag);
-                    },
-                    .ThunkReturnInstance, .ThunkReturnObject, .ThunkReturnImmediate, .ThunkLocal, .BlockAssignLocal, .ThunkInstance, .BlockAssignInstance, .ThunkImmediate, .Signature => |tag| {
-                        @branchHint(.unlikely);
-                        return classIndexFromTag(tag);
-                    },
-                    .Symbol, .False, .True, .Character => |tag| return classIndexFromTag(tag),
-                    else => |tag| {
-                        @branchHint(.likely);
-                        if (@intFromEnum(tag) >= @intFromEnum(Tag.smallInteger)) return .SmallInteger;
-                        return .Float;
-                    },
-                }
-            },
-            else => {
+        switch (0) {
+            0 => {
                 const tagBits = (self.rawI() >> 64 - intShift) + 1;
                 if (tagBits == 0) {
                     @branchHint(.likely);
@@ -424,6 +385,94 @@ pub const Object = packed struct(u64) {
                             return classIndexFromTag(tag);
                         },
                     }
+                }
+            },
+            1 => {
+                if (!math.isNan(@as(f64, @bitCast(self)))) {
+                    @branchHint(.likely);
+                    return .Float;
+                } else if (self.isInt()) {
+                    @branchHint(.likely);
+                    return .SmallInteger;
+                } else {
+                    @branchHint(.unlikely);
+                    switch (self.tag) {
+                        .heap => {
+                            @branchHint(.likely);
+                            if (self == Nil()) {
+                                @branchHint(.unlikely);
+                                return .UndefinedObject;
+                            }
+                            return self.toUnchecked(*HeapObject).*.getClass();
+                        },
+                        else => |tag| {
+                            if (self.rawU() == NaN) {
+                                @branchHint(.unlikely);
+                                return .Float;
+                            } else if (self.rawU() == Inf) {
+                                @branchHint(.unlikely);
+                                return .Float;
+                            }
+                            return classIndexFromTag(tag);
+                        },
+                    }
+                }
+            },
+            2 => {
+                if (self.isInt()) {
+                    @branchHint(.likely);
+                    return .SmallInteger;
+                } else if (!math.isNan(@as(f64, @bitCast(self)))) {
+                    @branchHint(.likely);
+                    return .Float;
+                } else {
+                    @branchHint(.unlikely);
+                    switch (self.tag) {
+                        .heap => {
+                            @branchHint(.likely);
+                            if (self == Nil()) {
+                                @branchHint(.unlikely);
+                                return .UndefinedObject;
+                            }
+                            return self.toUnchecked(*HeapObject).*.getClass();
+                        },
+                        else => |tag| {
+                            if (self.rawU() == NaN) {
+                                @branchHint(.unlikely);
+                                return .Float;
+                            } else if (self.rawU() == Inf) {
+                                @branchHint(.unlikely);
+                                return .Float;
+                            }
+                            return classIndexFromTag(tag);
+                        },
+                    }
+                }
+            },
+            else => {
+                switch (self.tag) {
+                    .heap => {
+                        if (self.data == 0) {
+                            @branchHint(.unlikely);
+                            return .UndefinedObject;
+                        }
+                        return self.toUnchecked(*HeapObject).*.getClass();
+                    },
+                    .ThunkReturnLocal, .ThunkHeap => |tag| {
+                        @branchHint(.unlikely);
+                        if (self.data == 0) return .Float;
+                        return classIndexFromTag(tag);
+                    },
+                    .ThunkReturnInstance, .ThunkReturnObject, .ThunkReturnImmediate, .ThunkLocal, .BlockAssignLocal, .ThunkInstance, .BlockAssignInstance, .ThunkImmediate, .Signature => |tag| {
+                        @branchHint(.unlikely);
+                        return classIndexFromTag(tag);
+                    },
+                    .Symbol, .False, .True, .Character => |tag| return classIndexFromTag(tag),
+                    else => |tag| {
+                        @branchHint(.likely);
+                        if (@intFromEnum(tag) >= @intFromEnum(Tag.smallInteger)) return .SmallInteger;
+                        return .Float;
+                    },
                 }
             },
         }

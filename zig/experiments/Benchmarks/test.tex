@@ -53,13 +53,13 @@
     ybar,
     bar width=5pt,
     width=\columnwidth,
-    height=\columnwidth,
+    height=\columnwidth*0.6,
     ylabel={Execution Time (ms)},
 %    xlabel={Benchmark},
-    symbolic x coords={IntegerBr, Float},
+    symbolic x coords={Integer, Float},
     xtick=data,
     ymin=0,
-    ymax=3950, %#1,
+    ymax=4050, %#1,
     legend style={
         at={(0.02,0.98)},
         anchor=north west,
@@ -130,7 +130,7 @@ We calculate the mean, median and geometric mean for each example and they are e
       \end{minipage}
 \end{table*}
 
-Tables~\ref{tab:aarch64} and ~\ref{tab:x86} present the net execution times for each encoding across the two benchmark configurations on AArch64 (Apple M1) and x86-64 respectively. Each row reports the time for a single encoding under two conditions: \textbf{IntegerBr} (inlined branching integer Fibonacci), and \textbf{Float} (inlined float Fibonacci).
+Tables~\ref{tab:aarch64} and ~\ref{tab:x86} present the net execution times for each encoding across the two benchmark configurations on AArch64 (Apple M1) and x86-64 respectively. Each row reports the time for a single encoding under two conditions: \textbf{Integer} (inlined branching integer Fibonacci), and \textbf{Float} (inlined float Fibonacci).
 \fi
 \subsubsection{Pareto Analysis}
 The Pareto frontier contains the points that represent optimal trade-offs between two parameters.
@@ -139,14 +139,26 @@ The Pareto frontiers don't intersect, showing that the Aarch64 dominates the x86
 \begin{figure}[htbp]
     \centering
     \aarchScatterPlot
-    \caption{IntegerBr vs Float - AARCH64}
+    \caption{Integer vs Float - AARCH64}
     \label{paretoA}
 \end{figure}
 \begin{figure}[htbp]
     \centering
     \xScatterPlot
-    \caption{IntegerBr vs Float - X86-64}
+    \caption{Integer vs Float - X86-64}
     \label{paretoX}
+\end{figure}
+\begin{figure}[htbp]
+    \centering
+    \aarchScatterPlotClosure
+    \caption{Integer vs Float - BlockClosures - AARCH64}
+    \label{paretoAC}
+\end{figure}
+\begin{figure}[htbp]
+    \centering
+    \xScatterPlotClosure
+    \caption{Integer vs Float - BlockClosures - X86-64}
+    \label{paretoXC}
 \end{figure}
 \begin{figure}[htbp]
     \centering
