@@ -206,7 +206,7 @@ pub const Object = packed struct(u64) {
     pub inline fn fromNativeF(t: f64, _: anytype, _: anytype) Object {
         return @bitCast(t);
     }
-    pub inline fn extraValue(self: Object) Object {
+    pub fn extraValue(self: Object) Object {
         _ = self;
         @panic("not implemented");
     }
@@ -214,23 +214,25 @@ pub const Object = packed struct(u64) {
         //        return (self.rawU()^other.rawU())&0xffffffffffff == 0; // may be false positive
         return self.rawU() == other.rawU();
     }
-    pub inline fn isNat(self: Object) bool {
-        if (self.untaggedI()) |value| return value >= 0;
-        return false;
-    }
     pub inline fn encodedPointer(self: Object, T: type) ?T {
-        return @ptrFromInt(self.rawU() & 0xFFFF_FFFF_FFF8);
-    }
-    pub inline fn pointer(self: Object, T: type) ?T {
-        switch (self.tag) {
-            .heap => {
-                @branchHint(.likely);
-                return self.encodedPointer(T);
+        switch (builtin.target.cpu.arch) {
+            .x86_64 => {
+                // Cast to a signed integer to trigger an Arithmetic Shift.
+                // Shifting left by 16 discards the tag/aux metadata.
+                // Shifting right copies bit 47 (the new sign bit) back into 63..48.
+                const signed: isize = @bitCast(self);
+                return @ptrFromInt(@as(usize, @bitCast(((signed >> 3) << 19) >> 16)));
             },
-            .ThunkReturnLocal, .ThunkReturnInstance, .ThunkReturnObject, .ThunkReturnImmediate, .ThunkLocal, .ThunkInstance, .ThunkHeap => return self.encodedPointer(T),
-            else => {},
+            else => {
+                // On ARM, we use a Logical Shift (zero-filling).
+                // The compiler will likely emit a single 'UBFX' instruction.
+                const unsigned: usize = @bitCast(self);
+                return @ptrFromInt(((unsigned >> 3) << 19) >> 16);
+            },
         }
-        return null;
+    }
+    pub inline fn pointer(self: object.Object, T: type) ?T {
+        return self.encodedPointer(T);
     }
     pub inline fn hasHeapReference(self: Object) bool {
         return switch (self.tag) {
@@ -425,8 +427,8 @@ pub const Object = packed struct(u64) {
     pub fn returnLiteralClosure(_: Object, _: *Context) ?Object {
         return null;
     }
-    pub fn isImmediate(_: Object) bool {
-        return false;
+    pub fn isImmediate(self: Object) bool {
+        return self.tag != Tag.heap;
     }
     const OF = object.ObjectFunctions;
     pub const arrayAsSlice = OF.arrayAsSlice;

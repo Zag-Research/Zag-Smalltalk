@@ -51,16 +51,16 @@ pub const Object = packed struct(u64) {
     pub inline fn fromNativeI(t: IntType, _: anytype, _: anytype) object.Object {
         return @bitCast(t);
     }
-    pub inline fn nativeF(_: object.Object) ?f64 {
+    pub fn nativeF(_: object.Object) ?f64 {
         @panic("not implemented");
     }
-    pub inline fn isFloat(_: object.Object) bool {
+    pub fn isFloat(_: object.Object) bool {
         @panic("not implemented");
     }
-    pub inline fn fromNativeF(_: f64, _: anytype, _: anytype) object.Object {
+    pub fn fromNativeF(_: f64, _: anytype, _: anytype) object.Object {
         @panic("not implemented");
     }
-    pub inline fn symbolHash(self: object.Object) ?u24 {
+    pub fn symbolHash(self: object.Object) ?u24 {
         return self.hash24();
     }
     pub inline fn numArgs(self: object.Object) u4 {
@@ -96,16 +96,13 @@ pub const Object = packed struct(u64) {
     inline fn isInt(_: Object) bool {
         return true;
     }
-    pub inline fn isNat(self: Object) bool {
-        return self.isInt() and self.rawI() >= 0;
-    }
-    pub inline fn encodedPointer(_: Object, T: type) ?T {
+    pub fn encodedPointer(_: Object, T: type) ?T {
         @panic("Not implemented");
     }
-    pub inline fn pointer(_: Object, T: type) ?T {
+    pub fn pointer(_: object.Object, T: type) ?T {
         @panic("Not implemented");
     }
-    pub inline fn toIntNoCheck(self: Object) i64 {
+    pub fn toIntNoCheck(self: Object) i64 {
         return @bitCast(self);
     }
     pub inline fn toNatNoCheck(self: Object) u64 {
@@ -160,9 +157,6 @@ pub const Object = packed struct(u64) {
         switch (T) {
             i64 => {
                 return self.toIntNoCheck();
-            },
-            u64 => {
-                return self.toNatNoCheck();
             },
             bool => {
                 return self.toBoolNoCheck();

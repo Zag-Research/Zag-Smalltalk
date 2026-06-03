@@ -109,9 +109,6 @@ pub const Object = packed struct(u64) {
     inline fn isInt(self: object.Object) bool {
         return @as(u64, @bitCast(self)) & Tag.u(.smallinteger) != 0;
     }
-    pub inline fn isNat(self: object.Object) bool {
-        return self.isInt() and self.rawI() >= 0;
-    }
 
     pub inline fn nativeF(self: object.Object) ?f64 {
         if (decode(@bitCast(self))) |flt| {
@@ -153,9 +150,25 @@ pub const Object = packed struct(u64) {
     pub inline fn extraValue(self: object.Object) object.Object {
         return @bitCast(self.nativeI_noCheck() >> 8);
     }
-    pub inline fn encodedPointer(self: object.Object, T: type) ?T {
-        const unsigned: usize = @bitCast(self);
-        return @ptrFromInt(unsigned & 0xffff_ffff_fff8);
+    pub inline fn encodedPointer(self: Object, T: type) ?T {
+        switch (builtin.target.cpu.arch) {
+            .x86_64 => {
+                // Cast to a signed integer to trigger an Arithmetic Shift.
+                // Shifting left by 16 discards the tag/aux metadata.
+                // Shifting right copies bit 47 (the new sign bit) back into 63..48.
+                const signed: isize = @bitCast(self);
+                return @ptrFromInt(@as(usize, @bitCast(((signed >> 3) << 19) >> 16)));
+            },
+            else => {
+                // On ARM, we use a Logical Shift (zero-filling).
+                // The compiler will likely emit a single 'UBFX' instruction.
+                const unsigned: usize = @bitCast(self);
+                return @ptrFromInt(((unsigned >> 3) << 19) >> 16);
+            },
+        }
+    }
+    pub inline fn pointer(self: object.Object, T: type) ?T {
+        return @ptrFromInt(@as(usize, @bitCast(self)));
     }
     pub const testU = rawU;
     pub const testI = rawI;
@@ -177,13 +190,6 @@ pub const Object = packed struct(u64) {
     }
     inline fn oImmAddr(c: Compact, ptr: anytype, e: u11) Self {
         return Self{ .tag = .immediates, .class = c, .hash = @truncate(@intFromPtr(ptr) >> 3), .extra = e };
-    }
-    pub inline fn pointer(self: object.Object, T: type) ?T {
-        switch (self.tag) {
-            .heap, .ThunkReturnLocal, .ThunkReturnInstance, .ThunkReturnObject, .ThunkReturnImmediate, .ThunkReturnCharacter, .ThunkReturnFloat, .ThunkHeap, .ThunkLocal, .ThunkInstance, .BlockAssignLocal, .BlockAssignInstance => return self.encodedPointer(T),
-            else => {},
-        }
-        return null;
     }
     pub inline fn makeImmediate(cls: Compact, hash: u45) object.Object {
         return oImm(cls, hash);
@@ -306,8 +312,8 @@ pub const Object = packed struct(u64) {
     }
 
     pub inline fn isImmediate(self: Object) bool {
-        if (self.rawU() & 6 != 0) return true;
-        return !self.hasHeapReference();
+        if (self.rawU() & 7 != 0) return true;
+        return self.tag != .heap;
     }
 
     pub inline fn hasHeapReference(self: Object) bool {

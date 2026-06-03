@@ -1,5 +1,6 @@
 //! This module implements Object encoding for ZagOrig encoding
 const std = @import("std");
+const builtin = @import("builtin");
 const expectEqual = std.testing.expectEqual;
 const expect = std.testing.expect;
 const assert = std.debug.assert;
@@ -108,9 +109,6 @@ pub const Object = packed struct(u64) {
     inline fn isInt(self: object.Object) bool {
         return self.isImmediateClass(.SmallInteger);
     }
-    pub inline fn isNat(self: object.Object) bool {
-        return self.isInt() and self.rawI() >= 0;
-    }
     pub inline fn nativeI(self: object.Object) ?i64 {
         if (self.isInt()) {
             @branchHint(.likely);
@@ -149,7 +147,21 @@ pub const Object = packed struct(u64) {
         return @bitCast(@as(i64, @bitCast(self)) >> @bitSizeOf(TagAndClassType) >> 8);
     }
     pub inline fn encodedPointer(self: object.Object, T: type) ?T {
-        return @ptrFromInt(self.rawU() >> 16);
+        switch (builtin.target.cpu.arch) {
+            .x86_64 => {
+                // Cast to a signed integer to trigger an Arithmetic Shift.
+                const signed: isize = @bitCast(self);
+                return @ptrFromInt(@as(usize, @bitCast(signed >> 16)));
+            },
+            else => {
+                // On ARM, we use a Logical Shift (zero-filling).
+                const unsigned: usize = @bitCast(self);
+                return @ptrFromInt(unsigned >> 16);
+            },
+        }
+    }
+    pub inline fn pointer(self: object.Object, T: type) ?T {
+        return @ptrFromInt(@as(usize, @bitCast(self)));
     }
     pub const testU = rawU;
     pub const testI = rawI;
@@ -184,17 +196,6 @@ pub const Object = packed struct(u64) {
     inline fn hasPointer(self: object.Object) bool {
         const bits = math.rotr(TagAndClassType, self.tagbits(), 3);
         return bits <= math.rotr(TagAndClassType, oImm(.ThunkHeap, 0).tagbits(), 3) and bits != 0;
-    }
-    pub inline fn pointer(self: object.Object, T: type) ?T {
-        switch (self.tag) {
-            .heap => return @ptrFromInt(self.rawU()),
-            .immediates => switch (self.class) {
-                .ThunkReturnLocal, .ThunkReturnInstance, .ThunkReturnObject, .ThunkReturnImmediate, .ThunkReturnCharacter, .ThunkReturnFloat, .ThunkHeap, .ThunkLocal, .ThunkInstance, .BlockAssignLocal, .BlockAssignInstance => return self.encodedPointer(T),
-                else => {},
-            },
-            else => {},
-        }
-        return null;
     }
     pub inline fn makeImmediate(cls: Compact, hash: u56) object.Object {
         return oImm(cls, hash);
@@ -474,8 +475,8 @@ pub const Object = packed struct(u64) {
     pub fn returnLiteralClosure(_: Object, _: *Context) ?Object {
         return null;
     }
-    pub fn isImmediate(_: Object) bool {
-        return false;
+    pub fn isImmediate(self: Object) bool {
+        return self.rawU() & 7 != 0;
     }
 
     pub inline fn asUntaggedI(i: i56) i64 {

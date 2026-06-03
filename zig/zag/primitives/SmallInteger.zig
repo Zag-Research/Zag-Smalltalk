@@ -129,6 +129,7 @@ pub const @"<=" = struct {
                 return @call(tailCall, Extra.primitiveFailed, .{ pc, sp, process, context, extra });
             });
             trace("success: npc={} tpc={f}", .{ context.npc, context.tpc });
+            trace("  top={f} {x} True={f} {x} False={f} {x}", .{ newSp.top, @as(u64, @bitCast(newSp.top)), Object.True(), Object.True().testU(), Object.False(), Object.False().testU() });
             return @call(tailCall, process.check(context.npc), .{ context.tpc, newSp, process, context, Extra.fromContextData(context.contextDataPtr(sp)) });
         }
         unreachable;

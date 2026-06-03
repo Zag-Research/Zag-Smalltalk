@@ -114,7 +114,7 @@ pub const Signature = packed struct {
         return @bitCast(self);
     }
     pub inline fn primitive(self: Signature) u8 {
-        return @intCast(self.hash);
+        return @intCast(self.hash & 0xff);
     }
     pub inline fn getClassIndex(self: Signature) u16 {
         return @intFromEnum(self.getClass());
@@ -132,18 +132,9 @@ pub const Signature = packed struct {
         if (self.isEmpty()) {
             try writer.print("Signature{{empty}}", .{});
         } else {
-            switch (self.getClass()) {
-                .none => switch (0) { // FIXME self.primitive()) {
-                    0 => try writer.print("?", .{}),
-                    else => |prim| try writer.print("{}", .{prim}),
-                },
-                else => |class| try writer.print("{}", .{class}),
-            }
-            if (self.hash < 256) {
-                try writer.print(" prim: {}", .{self.hash});
-            } else {
-                try writer.print(" #{s}", .{symbol.asStringFromHash(@intCast((self.asInt() & 0xffffff00) >> 8)).arrayAsSlice(u8) catch "???"});
-            }
+            if (self.getClass() == .none and self.primitive() < 256) {
+                try writer.print(" prim: {}", .{self.primitive()});
+            } else try writer.print("{} >> #{s}", .{ self.getClass(), symbol.asString(self.asSymbol()).arrayAsSlice(u8) catch "???" });
         }
     }
 };
@@ -1113,7 +1104,7 @@ pub const Execution = struct {
         }
         pub fn sendTo(self: *MainExecutor, selector: Object, receiver: Object) !Object {
             var exe = &self.exe;
-            trace("Sending: {f} to {f}", .{ selector, receiver });
+            trace("Sending: {f} ({x}) to {f}", .{ selector, selector.testU(), receiver });
             exe.init(Object.empty);
             exe.getContext().setReturn(PC.exit());
             trace("SendTo: context {*} {*} {f}", .{ exe.getContext(), exe.getContext().npc, exe.getContext().tpc });

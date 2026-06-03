@@ -1,5 +1,6 @@
 //! taggedHigh encoding: class index in high 16 bits, pointer/integer in low 48 bits.
 const std = @import("std");
+const builtin = @import("builtin");
 const math = std.math;
 const assert = std.debug.assert;
 const zag = @import("../zag.zig");
@@ -77,9 +78,6 @@ pub const Object = packed struct(u64) {
 
     inline fn isInt(self: object.Object) bool {
         return self.class == .SmallInteger;
-    }
-    pub inline fn isNat(self: object.Object) bool {
-        return self.isInt() and self.nativeI_noCheck() >= 0;
     }
     pub inline fn nativeI(self: object.Object) ?i64 {
         if (self.isInt()) return self.nativeI_noCheck();
@@ -313,13 +311,25 @@ pub const Object = packed struct(u64) {
         }
         return 0;
     }
-    pub inline fn encodedPointer(self: object.Object, T: type) ?T {
-        if (self.isHeapObject()) return @ptrFromInt(self.heapAddr());
-        return null;
+    pub fn encodedPointer(_: Object, T: type) ?T {
+        @panic("Not implemented");
     }
     pub inline fn pointer(self: object.Object, T: type) ?T {
-        if (self.isHeapObject()) return @ptrFromInt(self.heapAddr());
-        return null;
+        switch (builtin.target.cpu.arch) {
+            .x86_64 => {
+                // Cast to a signed integer to trigger an Arithmetic Shift.
+                // Shifting left by 16 discards the tag/aux metadata.
+                // Shifting right copies bit 47 (the new sign bit) back into 63..48.
+                const signed: isize = @bitCast(self);
+                return @ptrFromInt(@as(usize, @bitCast((signed << 16) >> 16)));
+            },
+            else => {
+                // On ARM, we use a Logical Shift (zero-filling).
+                // The compiler will likely emit a single 'UBFX' instruction.
+                const unsigned: usize = @bitCast(self);
+                return @ptrFromInt((unsigned << 16) >> 16);
+            },
+        }
     }
     pub inline fn asUntaggedI(i: IntType) i64 {
         return @as(i64, i) << intShift;

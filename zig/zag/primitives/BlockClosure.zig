@@ -387,7 +387,10 @@ pub const threadedFns = struct {
                     returnFromContext = val.encodedPointer(*Context);
                     result = result_;
                 }
-            } else {}
+            } else if (nonLocalReturningFromObject(val, class, sp, context)) |result_| {
+                returnFromContext = result_.context;
+                result = result_.result;
+            }
             if (returnFromContext) |theContext| {
                 const newSp, const newContext = theContext.pop(sp);
                 const newExtra = Extra.fromContextData(newContext.contextDataPtr(newSp));
@@ -438,6 +441,25 @@ pub const threadedFns = struct {
                 //         .BlockAssignLocal, .BlockAssignInstance => {
                 //             @panic("unreachable");
                 //         },
+                else => {
+                    return null;
+                },
+            }
+        }
+        const ContextResult = struct {
+            context: *Context,
+            result: Object,
+        };
+        inline fn nonLocalReturningFromObject(val: Object, class: ClassIndex, sp: SP, _: *Context) ?ContextResult {
+            const ptr = val.pointer(*HeapObject).?.start();
+            trace("for class: {} {*}", .{class, ptr});
+            switch (class) {
+                .ThunkReturnLocal => {
+                    const targetContext = ptr[1].pointer(*Context).?;
+                    const localAddress = targetContext.contextDataPtr(sp).localAddress(@bitCast(ptr[2].nativeI().?));
+                    trace("val: 0x{x:0>16} context: {*} localAddress: {*} variable: {f}", .{ val.testU(), targetContext, localAddress, localAddress[0] });
+                    return .{ .context = targetContext, .result = localAddress[0]};
+                },
                 else => {
                     return null;
                 },

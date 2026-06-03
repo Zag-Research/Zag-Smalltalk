@@ -116,9 +116,6 @@ pub const Object = packed union {
     inline fn isInt(self: Object) bool {
         return self.isTag(.smallInteger);
     }
-    pub inline fn isNat(self: Object) bool {
-        return self.isInt() and self.rawI() >= 0;
-    }
 
     pub inline fn nativeF(self: Object) ?f64 {
         if (decode(@bitCast(self))) |flt| return flt;
@@ -158,9 +155,6 @@ pub const Object = packed union {
     pub inline fn extraValue(self: Object) Object {
         return @bitCast(self.nativeI_noCheck() >> 8);
     }
-    pub inline fn encodedPointer(self: Object, T: type) ?T {
-        return @ptrFromInt(self.rawU() >> 16);
-    }
     pub const testU = rawU;
     pub const testI = rawI;
     inline fn rawU(self: Object) u64 {
@@ -182,16 +176,11 @@ pub const Object = packed union {
     inline fn oImmContext(c: ClassIndex.Compact, context: *Context, e: u8) Self {
         return Self{ .immediate = .{ .class = c, .hash = @as(u56, @intCast(@intFromPtr(context))) << 8 | e } };
     }
-    pub inline fn pointer(self: Object, T: type) ?T {
-        switch (self.tag) {
-            .heap => return @ptrFromInt(self.rawU()),
-            .immediates => switch (self.class) {
-                .ThunkReturnLocal, .ThunkReturnInstance, .ThunkReturnObject, .ThunkReturnImmediate, .ThunkReturnCharacter, .ThunkReturnFloat, .ThunkHeap, .ThunkLocal, .ThunkInstance, .BlockAssignLocal, .BlockAssignInstance => return self.encodedPointer(T),
-                else => {},
-            },
-            else => {},
-        }
-        return null;
+    pub fn encodedPointer(_: Object, T: type) ?T {
+        @panic("Not implemented");
+    }
+    pub inline fn pointer(self: object.Object, T: type) ?T {
+        return @ptrFromInt(@as(usize, @bitCast(self)));
     }
     pub inline fn makeImmediate(cls: ClassIndex.Compact, hash: u56) Object {
         return oImm(cls, hash);
@@ -311,8 +300,8 @@ pub const Object = packed union {
     pub fn returnLiteralClosure(_: Object, _: *Context) ?Object {
         return null;
     }
-    pub fn isImmediate(_: Object) bool {
-        return false;
+    pub fn isImmediate(self: Object) bool {
+        return self.rawU() & 7 != 0;
     }
 
     pub fn returnObjectClosure(self: Object, context: *Context) ?Object {

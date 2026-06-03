@@ -146,12 +146,12 @@ pub const ClassIndex = enum(u16) {
             return @as(u8, @intFromEnum(self)) << 3 | 1;
         }
     };
-    pub fn isImmediate(self: ClassIndex) bool {
-        switch (self) {
-            .Symbol, .False, .True, .Character => return true,
-            else => return false,
-        }
-    }
+    // pub fn isImmediate(self: ClassIndex) bool {
+    //     switch (self) {
+    //         .Symbol, .False, .True, .Character => return true,
+    //         else => return false,
+    //     }
+    // }
     pub inline fn compact(ci: ClassIndex) Compact {
         return @enumFromInt(@intFromEnum(ci));
     }
@@ -230,11 +230,6 @@ pub const ObjectFunctions = struct {
     }
     pub inline fn toBoolNoCheck(self: Object) bool {
         return self.equals(Object.True());
-    }
-    pub inline //
-    fn toNat(self: Object) !u64 {
-        if (self.isNat()) return self.toNatNoCheck();
-        return error.wrongType;
     }
     pub inline //
     fn toDouble(self: Object) !f64 {

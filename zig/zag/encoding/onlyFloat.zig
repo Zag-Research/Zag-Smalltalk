@@ -14,7 +14,7 @@ pub const Object = packed struct(u64) {
 
     const Self = @This();
     const intShift = 64 - @bitSizeOf(IntType);
-    pub const IntType = u64;
+    pub const IntType = i64;
     pub const ZERO: Object = @bitCast(@as(f64, 0));
     pub inline fn False() Object {
         return @bitCast(@as(u64, 0));
@@ -39,22 +39,25 @@ pub const Object = packed struct(u64) {
     pub const LowTag = u0;
     pub const HighTag = u8;
 
-    pub inline fn untaggedI(_: Object) ?i64 {
+    pub fn untaggedI(_: Object) ?i64 {
         @panic("not implemented");
     }
 
     pub const taggedI = untaggedI;
 
-    pub inline fn fromTaggedI(_: IntType, _: anytype, _: anytype) Object {
+    pub fn fromTaggedI(_: IntType, _: anytype, _: anytype) Object {
         @panic("not implemented");
     }
 
     pub const fromUntaggedI = fromTaggedI;
 
-    pub inline fn nativeI(_: Object) ?i64 {
+    pub fn nativeI(_: Object) ?i64 {
         @panic("not implemented");
     }
-    pub inline fn fromNativeI(_: IntType, _: anytype, _: anytype) Object {
+    pub fn fromNativeI(_: IntType, _: anytype, _: anytype) Object {
+        @panic("not implemented");
+    }
+    pub inline fn asUntaggedI(_: IntType) i64 {
         @panic("not implemented");
     }
 
@@ -115,27 +118,22 @@ pub const Object = packed struct(u64) {
         return false;
     }
 
-    pub inline fn isNat(_: Object) bool {
-        return false;
+    pub fn encodedPointer(_: Object, T: type) ?T {
+        @panic("Not implemented");
     }
-
-    pub inline fn encodedPointer(_: Object, T: type) ?T {
+    pub fn pointer(_: object.Object, T: type) ?T {
         @panic("Not implemented");
     }
 
-    pub inline fn pointer(_: Object, T: type) ?T {
-        @panic("Not implemented");
-    }
-
-    pub inline fn toIntNoCheck(_: Object) i64 {
+    pub fn toIntNoCheck(_: Object) i64 {
         @panic("not implemented");
     }
 
-    pub inline fn toNatNoCheck(_: Object) u64 {
+    pub fn toNatNoCheck(_: Object) u64 {
         @panic("not implemented");
     }
 
-    inline fn toDoubleFromMemory(_: Object) f64 {
+    fn toDoubleFromMemory(_: Object) f64 {
         @panic("Not implemented");
     }
     pub fn returnObjectClosure(_: Object, _: anytype) ?Object {

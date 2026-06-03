@@ -152,15 +152,14 @@ pub const Object = packed struct(u64) {
         }
         return false;
     }
-    pub inline fn isNat(self: Object) bool {
+    inline fn isNat(self: Object) bool {
         return self.isInt() and self.rawI() >= 0;
     }
-    pub inline fn encodedPointer(self: Object, T: type) ?T {
-        return @ptrCast(self.ref.data.objects);
+    pub fn encodedPointer(_: Object, T: type) ?T {
+        @panic("Not implemented");
     }
-    pub inline fn pointer(self: Object, T: type) ?T {
-        if (self.hasHeapReference()) return @ptrCast(@constCast(self.ref));
-        return null;
+    pub inline fn pointer(self: object.Object, T: type) ?T {
+        return @ptrFromInt(@as(usize, @bitCast(self)));
     }
     pub inline fn toIntNoCheck(self: Object) i64 {
         return self.ref.data.int;
@@ -226,9 +225,6 @@ pub const Object = packed struct(u64) {
             },
             i64 => {
                 if (self.nativeI()) |int| return int;
-            },
-            u64 => {
-                if (!check or self.isNat()) return self.toNatNoCheck();
             },
             bool => {
                 if (!check or self.isBool()) return self.toBoolNoCheck();

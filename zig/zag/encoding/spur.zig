@@ -130,9 +130,6 @@ pub const Object = packed union {
     inline fn isInt(self: Object) bool {
         return self.isTag(.smallInteger);
     }
-    pub inline fn isNat(self: Object) bool {
-        return self.isInt() and self.rawI() >= 0;
-    }
     pub inline fn nativeI(self: Object) ?i64 {
         if (self.isInt()) {
             @branchHint(.likely);
@@ -175,11 +172,14 @@ pub const Object = packed union {
         return self.isTag(.pointer);
     }
 
-    pub inline fn extraValue(_: Object) Object {
+    pub fn extraValue(_: Object) Object {
         @panic("Not implemented");
     }
-    pub inline fn encodedPointer(_: Object, T: type) ?T {
+    pub fn encodedPointer(_: Object, T: type) ?T {
         @panic("Not implemented");
+    }
+    pub inline fn pointer(self: object.Object, T: type) ?T {
+        return @ptrFromInt(@as(usize, @bitCast(self)));
     }
     pub const testU = rawU;
     pub const testI = rawI;
@@ -216,10 +216,6 @@ pub const Object = packed union {
         return Self{ .immediate = .{ .tag = c, .hash = h } };
     }
 
-    pub inline fn pointer(self: Object, T: type) ?T {
-        if (self.isHeapObject()) return @ptrFromInt(self.rawU());
-        return null;
-    }
     pub inline fn makeImmediate(cls: ClassIndex, hash: u61) Object {
         // Map ClassIndex to appropriate Tag
         return oImm(Tag.fromClassIndex(cls), hash);

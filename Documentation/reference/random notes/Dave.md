@@ -30,3 +30,7 @@ See [this blog](https://ziggit.dev/t/debugging-zig-with-a-debugger/7160) which [
 
 ## SICP Lectures
 [Where it all starts](https://akovantsev.github.io/corpus/sicp#) click on the timeline
+
+## Scaling from the ground up
+[NAND to Tetris](https://www.nand2tetris.org/)
+Ben Eater’s video series [gates to CPU](https://www.youtube.com/playlist?list=PLowKtXNTBypGqImE405J2565dvjafglHU) [microprocessor to BASIC](https://www.youtube.com/playlist?list=PLowKtXNTBypFbtuVMUVXNR0z1mu7dp7eH)
