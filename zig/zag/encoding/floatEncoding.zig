@@ -14,7 +14,32 @@ pub const FastSpur = switch (builtin.target.cpu.arch) {
     .aarch64 => SpurAlt2,
     else => @compileError("unsupported"),
 }; // used by spur.zig
-pub const EncodeError = error{ Unencodable, PosInf, NegInf, NaN, PosZero, NegZero };
+pub const EncodeError = error{ Unencodeable, PosInf, NegInf, NaN, PosZero, NegZero };
+inline fn unencodeable(value: f64) EncodeError!u64 {
+    // this could be a real NaN which might be worth checking for and using a static value
+    if (std.math.isNan(value)) {
+        @branchHint(.unlikely);
+        return error.NaN;
+    }
+    // this could be +/-inf which might be worth checking for and using a static value
+    // note that need 2 values
+    if (std.math.isInf(value)) {
+        @branchHint(.unlikely);
+        if (std.math.signbit(value)) return error.NegInf;
+        return error.PosInf;
+    }
+    return error.Unencodeable;
+}
+inline fn unencodeableCheck0(value: f64) EncodeError!u64 {
+    // this could be +/-0.0 which might be worth checking for and using a static value
+    // note that need 2 values
+    if (value == 0) {
+        @branchHint(.unlikely);
+        if (std.math.signbit(value)) return error.NegZero;
+        return error.PosZero;
+    }
+    return unencodeable(value);
+}
 
 // immediate float layout: [exp8(8)][mant(52)][sign(1)][tag(3)]
 // Ref: https://clementbera.wordpress.com/2018/11/09/64-bits-immediate-floats/
@@ -77,11 +102,11 @@ pub const Spur = struct {
         debug_print("spur value= {}\n bits=    {b:0>64}\n rotated= {b:0>64}\n offset=  {b:0>64}\n shifted= {b:0>64} unencodeable={}\n", .{ value, bits, rotated, offset, shifted, shifted & 7 != 0 or offset == 0 });
         if (shifted & 7 != 0) {
             @branchHint(.unlikely);
-            return error.Unencodable;
+            return unencodeable(value);
         }
         if (offset == 0) {
             @branchHint(.unlikely);
-            return error.Unencodable;
+            return unencodeable(value);
         }
         return shifted + TAG;
     }
@@ -117,7 +142,7 @@ const SpurAlt1 = struct {
         }
         if (inc == 1) return 0x4;
         if (inc == 17) return 0xC;
-        return error.Unencodable;
+        return unencodeable(value);
     }
     pub const decode = SpurAlt2.decode;
     const valid_ranges = Spur.valid_ranges;
@@ -147,7 +172,7 @@ pub const SpurAlt2 = struct {
                 return y;
             }
         }
-        return error.Unencodable;
+        return unencodeable(v);
     }
     pub inline fn decode(self: u64) ?f64 {
         if (self & TAG == 0) {
@@ -191,14 +216,7 @@ pub const SpurNZ = struct {
             const shifted = rotl(u64, offset, 3);
             return shifted + TAG;
         }
-        // this could be +/-0.0 which might be worth checking for and using a static value
-        // note that need 2 values and can check if negative with SpurNZ.isNegative
-        if (value == 0) {
-            @branchHint(.unlikely);
-            if (std.math.signbit(value)) return error.NegZero;
-            return error.PosZero;
-        }
-        return error.Unencodable;
+        return unencodeableCheck0(value);
     }
     pub inline fn encodeO(value: f64) EncodeError!u64 {
         const bits: u64 = @bitCast(value);
@@ -210,7 +228,7 @@ pub const SpurNZ = struct {
             @branchHint(.likely);
             return shifted + TAG;
         }
-        return error.Unencodable;
+        return unencodeableCheck0(value);
     }
     pub inline fn decode(self: u64) ?f64 {
         if (self & TAG == 0) {
@@ -254,7 +272,7 @@ pub const SpurFast = struct {
             return (rotated & 0xFFFFFFFFFFFFFFF8) | TAG;
         }
 
-        return error.Unencodable;
+        return unencodeableCheck0(value);
     }
     pub inline fn encodeN1(value: f64) EncodeError!u64 { //630ms
         const bits: u64 = @bitCast(value);
@@ -263,7 +281,7 @@ pub const SpurFast = struct {
             @branchHint(.likely);
             return (rotated & 0xFFFFFFFFFFFFFFF8) | TAG;
         }
-        return error.Unencodable;
+        return unencodeableCheck0(value);
     }
     pub inline fn encodeO(value: f64) EncodeError!u64 { // 694ms
         const bits: u64 = @bitCast(value);
@@ -272,7 +290,7 @@ pub const SpurFast = struct {
             @branchHint(.likely);
             return transform(rotated);
         }
-        return error.Unencodable;
+        return unencodeableCheck0(value);
     }
     pub inline fn decodeN2(self: u64) ?f64 {
         if (self & TAG == 0) {
@@ -368,7 +386,7 @@ pub fn Fst1(MATCH: u64) type {
                 @branchHint(.likely);
                 return u;
             }
-            return error.Unencodable;
+            return unencodeable(x);
         }
         pub inline fn decode(self: u64) ?f64 {
             if (self & MATCH != 0) {
@@ -425,7 +443,7 @@ pub fn Fst2(MATCH: u64) type {
                     }
                 },
             }
-            return error.Unencodable;
+            return unencodeable(x);
         }
         pub inline fn decode(self: u64) ?f64 {
             switch (MATCH) {
@@ -480,7 +498,7 @@ pub const Fst4 = struct {
             @branchHint(.likely);
             return u;
         }
-        return error.Unencodable;
+        return unencodeable(x);
     }
     pub inline fn decode(self: u64) ?f64 {
         if (self & 2 != 0) {
@@ -505,7 +523,7 @@ pub const Zag4 = struct {
             @branchHint(.likely);
             return u;
         }
-        return error.Unencodable;
+        return unencodeable(x);
     }
     pub inline fn decode(self: u64) ?f64 {
         if (@as(i64, @bitCast(self)) < 0) {
@@ -529,7 +547,7 @@ pub const Zag6 = struct {
             @branchHint(.likely);
             return u;
         }
-        return error.Unencodable;
+        return unencodeable(x);
     }
     pub inline fn decode(self: u64) ?f64 {
         if (self & 6 != 0) {
@@ -574,7 +592,7 @@ pub const NuN = struct {
     }
     pub inline fn decode(self: u64) ?f64 {
         if (switch (0) {
-            0 => self >= NuN_bias, // better on AArch64
+            0 => self >= NuN_bias, // better on AArch64 and x86-64
             1 => self >> 51 != 0,
             else => @compileError("not supported"),
         }) {
