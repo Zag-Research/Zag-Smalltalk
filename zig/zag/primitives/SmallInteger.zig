@@ -186,11 +186,9 @@ pub const @"*" = struct {
         process.init();
         const sp = process.getSp();
         const context = process.getContext();
-        std.debug.print("* {f} {f}\n", .{ Object.from(12, sp, context), try with(3, Object.from(4, sp, context), sp, context) });
-        std.debug.print("* {x} {}\n", .{ Object.from(12, sp, context).testU(), (try with(3, Object.from(4, sp, context), sp, context)).testU() });
-        try expectEqual(Object.from(12, sp, context), with(3, Object.from(4, sp, context), sp, context));
-        try expectEqual(error.primitiveError, with(0x1_0000_0000, Object.from(0x100_0000, sp, context), sp, context));
-        try expectEqual(error.primitiveError, with(0x1_0000_0000, Object.from(0x80_0000, sp, context), sp, context));
+        try expectEqual(Object.from(12, sp, context), with(Object.asUntaggedI(3), Object.from(4, sp, context), sp, context));
+        try expectEqual(error.primitiveError, with(std.math.maxInt(i64), Object.from(2, sp, context), sp, context));
+        try expectEqual(error.primitiveError, with(std.math.minInt(i64), Object.from(-1, sp, context), sp, context));
     }
 };
 pub const threadedFns = struct {
