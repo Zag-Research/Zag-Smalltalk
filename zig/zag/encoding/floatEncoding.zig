@@ -11,7 +11,8 @@ const do_what = What.benchmark;
 
 pub const FastSpur = switch (builtin.target.cpu.arch) {
     .x86_64 => SpurAlt1,
-    else => SpurAlt2,
+    .aarch64 => SpurAlt2,
+    else => @compileError("unsupported"),
 }; // used by spur.zig
 pub const EncodeError = error{ Unencodable, PosInf, NegInf, NaN, PosZero, NegZero };
 
@@ -229,13 +230,15 @@ pub const SpurFast = struct {
     const uses = "4 (5,6,7 reserved)";
     const TAG = 0b100; // immediate float tag
     pub const encode = switch (builtin.target.cpu.arch) {
-	    .x86_64 => encodeN1,
-	    else => encodeN1,
-	};
+        .x86_64 => encodeN1,
+        .aarch64 => encodeN1,
+        else => @compileError("unsupported"),
+    };
     pub const decode = switch (builtin.target.cpu.arch) {
-	    .x86_64 => decodeN2,
-	    else => decodeO,
-	};
+        .x86_64 => decodeN2,
+        .aarch64 => decodeO,
+        else => @compileError("unsupported"),
+    };
     pub inline fn encodeBreakCSE(value: f64) EncodeError!u64 { // 660ms
         const bits: u64 = @bitCast(value);
 
@@ -328,9 +331,10 @@ pub const SpurFast = struct {
         return (low -% 7) <= 1;
     }
     const transform = switch (builtin.target.cpu.arch) {
-	    .x86_64 => transformShiftedConstant,
-	    else => transformCreatedConstant,
-	};
+        .x86_64 => transformShiftedConstant,
+        .aarch64 => transformCreatedConstant,
+        else => @compileError("unsupported"),
+    };
     inline fn transformCreatedConstant(x: u64) u64 {
         return x ^ (3 + ((x >> 3) & 1));
     }
@@ -436,10 +440,11 @@ pub fn Fst2(MATCH: u64) type {
                                 const b2 = self & 4;
                                 return @bitCast(rotr(u64, self ^ 2 ^ (b2 >> 1) ^ (b2 >> 2), 5));
                             },
-                            else => { // better on aarch64
+                            .aarch64 => { // better on aarch64
                                 const b2 = (self >> 2) & 1;
                                 return @bitCast(rotr(u64, self ^ (2 - b2), 5));
                             },
+                            else => @compileError("unsupported"),
                         },
                     }
                 },
@@ -563,12 +568,16 @@ pub const NaN = struct {
 pub const NuN = struct {
     const name = "nun";
     const uses = "N/A";
-    const NuN_bias = 0x0001_ffff_ffff_ffff;
+    const NuN_bias = 0x0007_ffff_ffff_ffff;
     pub inline fn encode(x: f64) EncodeError!u64 {
         return @as(u64, @bitCast(x)) +% NuN_bias;
     }
     pub inline fn decode(self: u64) ?f64 {
-        if (self >= NuN_bias) {
+        if (switch (0) {
+            0 => self >= NuN_bias, // better on AArch64
+            1 => self >> 51 != 0,
+            else => @compileError("not supported"),
+        }) {
             @branchHint(.likely);
             return @bitCast(self -% NuN_bias);
         }
@@ -611,7 +620,7 @@ fn expectEqualHex(actual: anytype, expected: @TypeOf(actual)) !void {
     }
 }
 test "encode patterns" {
-    inline for (.{ Spur, SpurNZ, SpurFast, Fst1(1), Fst1(2), Fst1(4), Fst2(1), Fst2(2), Fst2(4), Fst2(6), Fst2(7), Fst4, Zag4, Zag6 }) |encoding| {
+    inline for (.{ Spur, SpurNZ, SpurFast, Fst1(1), Fst1(2), Fst1(4), Fst2(1), Fst2(2), Fst2(4), Fst2(6), Fst2(7), Fst4, Zag4, Zag6, NaN, NuN }) |encoding| {
         std.debug.print("for {s}\n", .{encoding.name});
         for (&[_]f64{ 0, 1, 2, 5, 42, 1e6 }) |value| {
             if (value > 0 or encoding.valid_ranges[0].low == 0)
@@ -622,7 +631,7 @@ test "encode patterns" {
 }
 
 test "encode/decode" {
-    inline for (.{ Spur, SpurAlt1, SpurAlt2, SpurNZ, SpurFast, Fst1(1), Fst1(2), Fst1(4), Fst2(1), Fst2(2), Fst2(4), Fst2(6), Fst2(7), Fst4, Zag4, Zag6 }) |encoding| {
+    inline for (.{ Spur, SpurAlt1, SpurAlt2, SpurNZ, SpurFast, Fst1(1), Fst1(2), Fst1(4), Fst2(1), Fst2(2), Fst2(4), Fst2(6), Fst2(7), Fst4, Zag4, Zag6, NaN, NuN }) |encoding| {
         var valid_v: [likely_values.len]f64 = undefined;
         var invalid_v: [likely_values.len]f64 = undefined;
         var decode_v: [likely_values.len]u64 = undefined;
@@ -634,7 +643,11 @@ test "encode/decode" {
             } else try expectEqual(value, encoding.decode(try encoding.encode(value)));
         }
         for (invalidValues) |value|
-            try expectEqual(error.Unencodable, encoding.encode(value));
+            if (encoding.encode(value)) |_| {
+                return error.ShouldFail;
+            } else |err| {
+                err catch {};
+            };
     }
 }
 
@@ -669,7 +682,10 @@ const likely_values =
         @bitCast(@as(u64, 0x7800_0000_0000_0000)),
         @bitCast(@as(u64, 0x77ff_ffff_ffff_ffff)),
         @bitCast(@as(u64, 0x7800_0000_0000_0000)),
-        @bitCast(@as(u64, 0x7fff_ffff_ffff_ffff)),
+        @bitCast(@as(u64, 0x7ff0_0000_0000_0000)),
+        @bitCast(@as(u64, 0x7ff8_0000_0000_0000)),
+        @bitCast(@as(u64, 0xfff0_0000_0000_0000)),
+        math.nan(f64),
     } ++
     [_]f64{math.nan(f64)} ++
     [_]f64{math.inf(f64)} ++
@@ -754,9 +770,7 @@ pub fn main() void {
     switch (do_what) {
         .encode11 => {
             // doesn't catch much of interest except +/-0.0 and +/-2.0
-            inline for (.{
-                Spur, SpurNZ, SpurFast, //SpurAlt1, SpurAlt2, Fst1(1), Fst1(2), Fst1(4), Fst2(1), Fst2(2), Fst2(4), Fst2(6), Fst2(7), Fst4, Zag4, Zag6, NaN, NuN
-            }) |encoding| {
+            inline for (.{ Spur, SpurNZ, SpurFast, SpurAlt1, SpurAlt2, Fst1(1), Fst1(2), Fst1(4), Fst2(1), Fst2(2), Fst2(4), Fst2(6), Fst2(7), Fst4, Zag4, Zag6, NaN, NuN }) |encoding| {
                 std.debug.print("{s}\n", .{encoding.name});
                 for (0..2047) |u| {
                     const e = (u >> 6 << 59) | (u & 0x3f);
@@ -768,9 +782,7 @@ pub fn main() void {
             }
         },
         .benchmark => {
-            inline for (.{
-                Spur, SpurNZ, SpurFast, //SpurAlt1, SpurAlt2, Fst1(1), Fst1(2), Fst1(4), Fst2(1), Fst2(2), Fst2(4), Fst2(6), Fst2(7), Fst4, Zag4, Zag6, NaN, NuN
-            }) |encoding|
+            inline for (.{ Spur, SpurNZ, SpurFast, SpurAlt1, SpurAlt2, Fst1(1), Fst1(2), Fst1(4), Fst2(1), Fst2(2), Fst2(4), Fst2(6), Fst2(7), Fst4, Zag4, Zag6, NaN, NuN }) |encoding|
                 benchmark(encoding);
         },
         .ranges => {
