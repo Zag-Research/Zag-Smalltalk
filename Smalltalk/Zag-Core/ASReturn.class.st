@@ -29,6 +29,11 @@ ASReturn >> accept: aVisitor [
 	^ aVisitor visitReturn: self
 ]
 
+{ #category : 'converting' }
+ASReturn >> asPharoAST [
+	^OCReturnNode value: expression asPharoAST.
+]
+
 { #category : 'accessing' }
 ASReturn >> blocks [
 	^expression blocks

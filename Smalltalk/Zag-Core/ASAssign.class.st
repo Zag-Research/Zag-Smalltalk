@@ -24,6 +24,11 @@ ASAssign >> = other [
 	^ self class = other class and: [ self variable = other variable and: [ self expression = other expression ] ]
 ]
 
+{ #category : 'converting' }
+ASAssign >> asPharoAST [
+	^OCAssignmentNode variable: variable asPharoAST value: expression asPharoAST.
+]
+
 { #category : 'accessing' }
 ASAssign >> blocks [
 	^expression blocks

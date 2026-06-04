@@ -25,6 +25,12 @@ AST >> accept: aVisitor [
 AST >> asAST [
 ]
 
+{ #category : 'converting' }
+AST >> asPharoAST [
+	"Converts me to the associated Pharo AST."
+	self subclassResponsibility.
+]
+
 { #category : 'printing' }
 AST >> printOn: aStream [
 
