@@ -8,11 +8,11 @@ const rotr = std.math.rotr;
 
 const What = enum { encode11, benchmark, ranges };
 const do_what = What.benchmark;
+comptime {
+    @setEvalBranchQuota(10_000);
+}
 
-pub const FastSpur = switch (builtin.target.cpu.arch) {
-    .x86_64 => SpurAlt1,
-    else => SpurAlt2,
-}; // used by spur.zig
+pub const FastSpur = SpurAlt2; // used by spur.zig
 pub const EncodeError = error{ Unencodable, PosInf, NegInf, NaN };
 
 // immediate float layout: [exp8(8)][mant(52)][sign(1)][tag(3)]
@@ -278,6 +278,782 @@ pub fn Fst2(MATCH: u64) type {
         };
     };
 }
+pub const Fst2NoHint = struct {
+    const name = "fst2NoHint";
+    const uses = "4,5 (6,7 reserved)";
+    pub inline fn encode(x: f64) EncodeError!u64 {
+        const u = rotl(u64, @bitCast(x), 5) +% 5;
+        if (u & 6 == 4) return u;
+        return error.Unencodable;
+    }
+    pub inline fn decode(self: u64) ?f64 {
+        if (self & 4 != 0) return @bitCast(rotr(u64, self -% 5, 5));
+        return null;
+    }
+    const valid_ranges = Fst2(4).valid_ranges;
+};
+pub const Fst2Strict = struct {
+    const name = "fst2Strict";
+    const uses = "4,5 (6,7 reserved)";
+    pub inline fn encode(x: f64) EncodeError!u64 {
+        return Fst2(4).encode(x);
+    }
+    pub inline fn decode(self: u64) ?f64 {
+        if (self & 6 == 4) {
+            @branchHint(.likely);
+            return @bitCast(rotr(u64, self -% 5, 5));
+        }
+        return null;
+    }
+    const valid_ranges = Fst2(4).valid_ranges;
+};
+pub const Fst2FastApi = struct {
+    const name = "fst2FastApi";
+    const uses = "4,5 (6,7 reserved)";
+    pub inline fn encodeOptional(x: f64) ?u64 {
+        const u = rotl(u64, @bitCast(x), 5) +% 5;
+        if (u & 6 == 4) {
+            @branchHint(.likely);
+            return u;
+        }
+        return null;
+    }
+    pub inline fn encode(x: f64) EncodeError!u64 {
+        return encodeOptional(x) orelse error.Unencodable;
+    }
+    pub inline fn decodeKnown(self: u64) f64 {
+        return @bitCast(rotr(u64, self -% 5, 5));
+    }
+    pub inline fn decode(self: u64) ?f64 {
+        if (self & 4 != 0) {
+            @branchHint(.likely);
+            return decodeKnown(self);
+        }
+        return null;
+    }
+    const valid_ranges = Fst2(4).valid_ranges;
+};
+pub const Fst2OrZero = struct {
+    const name = "fst2OrZero";
+    const uses = "4,5 (6,7 reserved)";
+    pub inline fn encodeOrZero(x: f64) u64 {
+        const u = rotl(u64, @bitCast(x), 5) +% 5;
+        if (u & 6 == 4) {
+            @branchHint(.likely);
+            return u;
+        }
+        return 0;
+    }
+    pub inline fn encodeOptional(x: f64) ?u64 {
+        const u = encodeOrZero(x);
+        return if (u != 0) u else null;
+    }
+    pub inline fn encode(x: f64) EncodeError!u64 {
+        return encodeOptional(x) orelse error.Unencodable;
+    }
+    pub inline fn decodeKnown(self: u64) f64 {
+        return @bitCast(rotr(u64, self -% 5, 5));
+    }
+    pub inline fn decode(self: u64) ?f64 {
+        if (self & 4 != 0) {
+            @branchHint(.likely);
+            return decodeKnown(self);
+        }
+        return null;
+    }
+    const valid_ranges = Fst2(4).valid_ranges;
+};
+pub const Fst2XorMask = struct {
+    const name = "fst2XorMask";
+    const uses = "4,5 (6,7 reserved)";
+    pub inline fn encodeOptional(x: f64) ?u64 {
+        const u = rotl(u64, @bitCast(x), 5) +% 5;
+        if ((u ^ 4) & 6 == 0) {
+            @branchHint(.likely);
+            return u;
+        }
+        return null;
+    }
+    pub inline fn encode(x: f64) EncodeError!u64 {
+        return encodeOptional(x) orelse error.Unencodable;
+    }
+    pub const decodeKnown = Fst2FastApi.decodeKnown;
+    pub const decode = Fst2FastApi.decode;
+    const valid_ranges = Fst2(4).valid_ranges;
+};
+pub const Fst2BitPair = struct {
+    const name = "fst2BitPair";
+    const uses = "4,5 (6,7 reserved)";
+    pub inline fn encodeOptional(x: f64) ?u64 {
+        const u = rotl(u64, @bitCast(x), 5) +% 5;
+        if (u & 4 != 0 and u & 2 == 0) {
+            @branchHint(.likely);
+            return u;
+        }
+        return null;
+    }
+    pub inline fn encode(x: f64) EncodeError!u64 {
+        return encodeOptional(x) orelse error.Unencodable;
+    }
+    pub const decodeKnown = Fst2FastApi.decodeKnown;
+    pub const decode = Fst2FastApi.decode;
+    const valid_ranges = Fst2(4).valid_ranges;
+};
+pub const Fst2Precheck = struct {
+    const name = "fst2Precheck";
+    const uses = "4,5 (6,7 reserved)";
+    pub inline fn encodeOptional(x: f64) ?u64 {
+        const r = rotl(u64, @bitCast(x), 5);
+        if ((r +% 1) & 6 == 0) {
+            @branchHint(.likely);
+            return r +% 5;
+        }
+        return null;
+    }
+    pub inline fn encode(x: f64) EncodeError!u64 {
+        return encodeOptional(x) orelse error.Unencodable;
+    }
+    pub const decodeKnown = Fst2FastApi.decodeKnown;
+    pub const decode = Fst2FastApi.decode;
+    const valid_ranges = Fst2(4).valid_ranges;
+};
+pub const Fst2PrecheckLt = struct {
+    const name = "fst2PreLt";
+    const uses = "4,5 (6,7 reserved)";
+    pub inline fn encodeOptional(x: f64) ?u64 {
+        const r = rotl(u64, @bitCast(x), 5);
+        if ((r +% 1) & 7 < 2) {
+            @branchHint(.likely);
+            return r +% 5;
+        }
+        return null;
+    }
+    pub inline fn encode(x: f64) EncodeError!u64 {
+        return encodeOptional(x) orelse error.Unencodable;
+    }
+    pub const decodeKnown = Fst2FastApi.decodeKnown;
+    pub const decode = Fst2FastApi.decode;
+    const valid_ranges = Fst2(4).valid_ranges;
+};
+pub const Fst2Switch = struct {
+    const name = "fst2Switch";
+    const uses = "4,5 (6,7 reserved)";
+    pub inline fn encodeOptional(x: f64) ?u64 {
+        const r = rotl(u64, @bitCast(x), 5);
+        switch (@as(u3, @truncate(r))) {
+            0, 7 => {
+                @branchHint(.likely);
+                return r +% 5;
+            },
+            else => return null,
+        }
+    }
+    pub inline fn encode(x: f64) EncodeError!u64 {
+        return encodeOptional(x) orelse error.Unencodable;
+    }
+    pub const decodeKnown = Fst2FastApi.decodeKnown;
+    pub const decode = Fst2FastApi.decode;
+    const valid_ranges = Fst2(4).valid_ranges;
+};
+pub const Fst2ExpShift = struct {
+    const name = "fst2ExpShift";
+    const uses = "4,5 (6,7 reserved)";
+    pub inline fn encodeOptional(x: f64) ?u64 {
+        const bits: u64 = @bitCast(x);
+        if (((bits >> 59) +% 1) & 6 == 0) {
+            @branchHint(.likely);
+            return rotl(u64, bits, 5) +% 5;
+        }
+        return null;
+    }
+    pub inline fn encode(x: f64) EncodeError!u64 {
+        return encodeOptional(x) orelse error.Unencodable;
+    }
+    pub const decodeKnown = Fst2FastApi.decodeKnown;
+    pub const decode = Fst2FastApi.decode;
+    const valid_ranges = Fst2(4).valid_ranges;
+};
+pub const Fst2ExpMask = struct {
+    const name = "fst2ExpMask";
+    const uses = "4,5 (6,7 reserved)";
+    const EXP_CHECK_INC: u64 = 0x0800_0000_0000_0000;
+    const EXP_CHECK_MASK: u64 = 0x3000_0000_0000_0000;
+    pub inline fn encodeOptional(x: f64) ?u64 {
+        const bits: u64 = @bitCast(x);
+        if ((bits +% EXP_CHECK_INC) & EXP_CHECK_MASK == 0) {
+            @branchHint(.likely);
+            return rotl(u64, bits, 5) +% 5;
+        }
+        return null;
+    }
+    pub inline fn encode(x: f64) EncodeError!u64 {
+        return encodeOptional(x) orelse error.Unencodable;
+    }
+    pub const decodeKnown = Fst2FastApi.decodeKnown;
+    pub const decode = Fst2FastApi.decode;
+    const valid_ranges = Fst2(4).valid_ranges;
+};
+pub const Fst2ExpMaskOrZero = struct {
+    const name = "fst2ExpZero";
+    const uses = "4,5 (6,7 reserved)";
+    pub inline fn encodeOrZero(x: f64) u64 {
+        const bits: u64 = @bitCast(x);
+        if ((bits +% Fst2ExpMask.EXP_CHECK_INC) & Fst2ExpMask.EXP_CHECK_MASK == 0) {
+            @branchHint(.likely);
+            return rotl(u64, bits, 5) +% 5;
+        }
+        return 0;
+    }
+    pub inline fn encodeOptional(x: f64) ?u64 {
+        const u = encodeOrZero(x);
+        return if (u != 0) u else null;
+    }
+    pub inline fn encode(x: f64) EncodeError!u64 {
+        return encodeOptional(x) orelse error.Unencodable;
+    }
+    pub const decodeKnown = Fst2FastApi.decodeKnown;
+    pub const decode = Fst2FastApi.decode;
+    const valid_ranges = Fst2(4).valid_ranges;
+};
+pub const Fst2RotSubDecode = struct {
+    const name = "fst2TagDec";
+    const uses = "4,5 (6,7 reserved)";
+    pub const encodeOptional = Fst2FastApi.encodeOptional;
+    pub const encode = Fst2FastApi.encode;
+    pub inline fn decodeKnown(self: u64) f64 {
+        if (self & 1 != 0) {
+            @branchHint(.likely);
+            return @bitCast(rotr(u64, self ^ 5, 5));
+        }
+        return @bitCast(rotr(u64, self -% 5, 5));
+    }
+    pub inline fn decode(self: u64) ?f64 {
+        if (self & 4 != 0) {
+            @branchHint(.likely);
+            return decodeKnown(self);
+        }
+        return null;
+    }
+    const valid_ranges = Fst2(4).valid_ranges;
+};
+pub const Fst2OrZeroRotSub = struct {
+    const name = "fst2ZeroTag";
+    const uses = "4,5 (6,7 reserved)";
+    pub const encodeOrZero = Fst2OrZero.encodeOrZero;
+    pub const encodeOptional = Fst2OrZero.encodeOptional;
+    pub const encode = Fst2OrZero.encode;
+    pub const decodeKnown = Fst2RotSubDecode.decodeKnown;
+    pub const decode = Fst2RotSubDecode.decode;
+    const valid_ranges = Fst2(4).valid_ranges;
+};
+pub const Fst2P1Or = struct {
+    const name = "fst2P1Or";
+    const uses = "4,5 (6,7 reserved)";
+    pub inline fn encodeOptional(x: f64) ?u64 {
+        const p = rotl(u64, @bitCast(x), 5) +% 1;
+        if (p & 6 == 0) {
+            @branchHint(.likely);
+            return p | 4;
+        }
+        return null;
+    }
+    pub inline fn encode(x: f64) EncodeError!u64 {
+        return encodeOptional(x) orelse error.Unencodable;
+    }
+    pub const decodeKnown = Fst2FastApi.decodeKnown;
+    pub const decode = Fst2FastApi.decode;
+    const valid_ranges = Fst2(4).valid_ranges;
+};
+pub const Fst2P1Xor = struct {
+    const name = "fst2P1Xor";
+    const uses = "4,5 (6,7 reserved)";
+    pub inline fn encodeOptional(x: f64) ?u64 {
+        const p = rotl(u64, @bitCast(x), 5) +% 1;
+        if (p & 6 == 0) {
+            @branchHint(.likely);
+            return p ^ 4;
+        }
+        return null;
+    }
+    pub inline fn encode(x: f64) EncodeError!u64 {
+        return encodeOptional(x) orelse error.Unencodable;
+    }
+    pub const decodeKnown = Fst2FastApi.decodeKnown;
+    pub const decode = Fst2FastApi.decode;
+    const valid_ranges = Fst2(4).valid_ranges;
+};
+pub const Fst2P1Add = struct {
+    const name = "fst2P1Add";
+    const uses = "4,5 (6,7 reserved)";
+    pub inline fn encodeOptional(x: f64) ?u64 {
+        const p = rotl(u64, @bitCast(x), 5) +% 1;
+        if (p & 6 == 0) {
+            @branchHint(.likely);
+            return p +% 4;
+        }
+        return null;
+    }
+    pub inline fn encode(x: f64) EncodeError!u64 {
+        return encodeOptional(x) orelse error.Unencodable;
+    }
+    pub const decodeKnown = Fst2FastApi.decodeKnown;
+    pub const decode = Fst2FastApi.decode;
+    const valid_ranges = Fst2(4).valid_ranges;
+};
+pub const Fst2P1OrZero = struct {
+    const name = "fst2P1OrZero";
+    const uses = "4,5 (6,7 reserved)";
+    pub inline fn encodeOrZero(x: f64) u64 {
+        const p = rotl(u64, @bitCast(x), 5) +% 1;
+        if (p & 6 == 0) {
+            @branchHint(.likely);
+            return p | 4;
+        }
+        return 0;
+    }
+    pub inline fn encodeOptional(x: f64) ?u64 {
+        const u = encodeOrZero(x);
+        return if (u != 0) u else null;
+    }
+    pub inline fn encode(x: f64) EncodeError!u64 {
+        return encodeOptional(x) orelse error.Unencodable;
+    }
+    pub const decodeKnown = Fst2FastApi.decodeKnown;
+    pub inline fn decode(self: u64) ?f64 {
+        if (self & 6 == 4) {
+            @branchHint(.likely);
+            return decodeKnown(self);
+        }
+        return null;
+    }
+    const valid_ranges = Fst2(4).valid_ranges;
+};
+pub const Fst2P1XorZero = struct {
+    const name = "fst2P1XorZero";
+    const uses = "4,5 (6,7 reserved)";
+    pub inline fn encodeOrZero(x: f64) u64 {
+        const p = rotl(u64, @bitCast(x), 5) +% 1;
+        if (p & 6 == 0) {
+            @branchHint(.likely);
+            return p ^ 4;
+        }
+        return 0;
+    }
+    pub inline fn encodeOptional(x: f64) ?u64 {
+        const u = encodeOrZero(x);
+        return if (u != 0) u else null;
+    }
+    pub inline fn encode(x: f64) EncodeError!u64 {
+        return encodeOptional(x) orelse error.Unencodable;
+    }
+    pub const decodeKnown = Fst2FastApi.decodeKnown;
+    pub const decode = Fst2FastApi.decode;
+    const valid_ranges = Fst2(4).valid_ranges;
+};
+pub const Fst2P1AddZero = struct {
+    const name = "fst2P1AddZero";
+    const uses = "4,5 (6,7 reserved)";
+    pub inline fn encodeOrZero(x: f64) u64 {
+        const p = rotl(u64, @bitCast(x), 5) +% 1;
+        if (p & 6 == 0) {
+            @branchHint(.likely);
+            return p +% 4;
+        }
+        return 0;
+    }
+    pub inline fn encodeOptional(x: f64) ?u64 {
+        const u = encodeOrZero(x);
+        return if (u != 0) u else null;
+    }
+    pub inline fn encode(x: f64) EncodeError!u64 {
+        return encodeOptional(x) orelse error.Unencodable;
+    }
+    pub const decodeKnown = Fst2FastApi.decodeKnown;
+    pub const decode = Fst2FastApi.decode;
+    const valid_ranges = Fst2(4).valid_ranges;
+};
+pub const Fst2Low3Cmp = struct {
+    const name = "fst2Low3Cmp";
+    const uses = "4,5 (6,7 reserved)";
+    pub inline fn encodeOptional(x: f64) ?u64 {
+        const r = rotl(u64, @bitCast(x), 5);
+        const low = r & 7;
+        if (low == 0 or low == 7) {
+            @branchHint(.likely);
+            return r +% 5;
+        }
+        return null;
+    }
+    pub inline fn encode(x: f64) EncodeError!u64 {
+        return encodeOptional(x) orelse error.Unencodable;
+    }
+    pub const decodeKnown = Fst2FastApi.decodeKnown;
+    pub const decode = Fst2FastApi.decode;
+    const valid_ranges = Fst2(4).valid_ranges;
+};
+pub const Fst2Low3Switch = struct {
+    const name = "fst2Low3Switch";
+    const uses = "4,5 (6,7 reserved)";
+    pub inline fn encodeOptional(x: f64) ?u64 {
+        const r = rotl(u64, @bitCast(x), 5);
+        switch (@as(u3, @truncate(r))) {
+            0, 7 => {
+                @branchHint(.likely);
+                return r +% 5;
+            },
+            else => return null,
+        }
+    }
+    pub inline fn encode(x: f64) EncodeError!u64 {
+        return encodeOptional(x) orelse error.Unencodable;
+    }
+    pub const decodeKnown = Fst2FastApi.decodeKnown;
+    pub const decode = Fst2FastApi.decode;
+    const valid_ranges = Fst2(4).valid_ranges;
+};
+pub const Fst2Low3OrZero = struct {
+    const name = "fst2Low3Zero";
+    const uses = "4,5 (6,7 reserved)";
+    pub inline fn encodeOrZero(x: f64) u64 {
+        const r = rotl(u64, @bitCast(x), 5);
+        const low = r & 7;
+        if (low == 0 or low == 7) {
+            @branchHint(.likely);
+            return r +% 5;
+        }
+        return 0;
+    }
+    pub inline fn encodeOptional(x: f64) ?u64 {
+        const u = encodeOrZero(x);
+        return if (u != 0) u else null;
+    }
+    pub inline fn encode(x: f64) EncodeError!u64 {
+        return encodeOptional(x) orelse error.Unencodable;
+    }
+    pub const decodeKnown = Fst2FastApi.decodeKnown;
+    pub const decode = Fst2FastApi.decode;
+    const valid_ranges = Fst2(4).valid_ranges;
+};
+pub const Fst2High5P1 = struct {
+    const name = "fst2High5P1";
+    const uses = "4,5 (6,7 reserved)";
+    pub inline fn encodeOptional(x: f64) ?u64 {
+        const bits: u64 = @bitCast(x);
+        const high = bits >> 59;
+        if ((high +% 1) & 6 == 0) {
+            @branchHint(.likely);
+            return rotl(u64, bits, 5) +% 5;
+        }
+        return null;
+    }
+    pub inline fn encode(x: f64) EncodeError!u64 {
+        return encodeOptional(x) orelse error.Unencodable;
+    }
+    pub const decodeKnown = Fst2FastApi.decodeKnown;
+    pub const decode = Fst2FastApi.decode;
+    const valid_ranges = Fst2(4).valid_ranges;
+};
+pub const Fst2High5P1Zero = struct {
+    const name = "fst2High5Zero";
+    const uses = "4,5 (6,7 reserved)";
+    pub inline fn encodeOrZero(x: f64) u64 {
+        const bits: u64 = @bitCast(x);
+        const high = bits >> 59;
+        if ((high +% 1) & 6 == 0) {
+            @branchHint(.likely);
+            return rotl(u64, bits, 5) +% 5;
+        }
+        return 0;
+    }
+    pub inline fn encodeOptional(x: f64) ?u64 {
+        const u = encodeOrZero(x);
+        return if (u != 0) u else null;
+    }
+    pub inline fn encode(x: f64) EncodeError!u64 {
+        return encodeOptional(x) orelse error.Unencodable;
+    }
+    pub const decodeKnown = Fst2FastApi.decodeKnown;
+    pub const decode = Fst2FastApi.decode;
+    const valid_ranges = Fst2(4).valid_ranges;
+};
+pub const Fst2High5Byte = struct {
+    const name = "fst2High5Byte";
+    const uses = "4,5 (6,7 reserved)";
+    pub inline fn encodeOptional(x: f64) ?u64 {
+        const bits: u64 = @bitCast(x);
+        const high: u8 = @truncate(bits >> 59);
+        if ((high +% 1) & 6 == 0) {
+            @branchHint(.likely);
+            return rotl(u64, bits, 5) +% 5;
+        }
+        return null;
+    }
+    pub inline fn encode(x: f64) EncodeError!u64 {
+        return encodeOptional(x) orelse error.Unencodable;
+    }
+    pub const decodeKnown = Fst2FastApi.decodeKnown;
+    pub const decode = Fst2FastApi.decode;
+    const valid_ranges = Fst2(4).valid_ranges;
+};
+pub const Fst2High5ByteZero = struct {
+    const name = "fst2High5BZero";
+    const uses = "4,5 (6,7 reserved)";
+    pub inline fn encodeOrZero(x: f64) u64 {
+        const bits: u64 = @bitCast(x);
+        const high: u8 = @truncate(bits >> 59);
+        if ((high +% 1) & 6 == 0) {
+            @branchHint(.likely);
+            return rotl(u64, bits, 5) +% 5;
+        }
+        return 0;
+    }
+    pub inline fn encodeOptional(x: f64) ?u64 {
+        const u = encodeOrZero(x);
+        return if (u != 0) u else null;
+    }
+    pub inline fn encode(x: f64) EncodeError!u64 {
+        return encodeOptional(x) orelse error.Unencodable;
+    }
+    pub const decodeKnown = Fst2FastApi.decodeKnown;
+    pub const decode = Fst2FastApi.decode;
+    const valid_ranges = Fst2(4).valid_ranges;
+};
+pub const Fst2High5U5 = struct {
+    const name = "fst2High5U5";
+    const uses = "4,5 (6,7 reserved)";
+    pub inline fn encodeOptional(x: f64) ?u64 {
+        const bits: u64 = @bitCast(x);
+        const high: u5 = @truncate(bits >> 59);
+        if ((high +% 1) & 6 == 0) {
+            @branchHint(.likely);
+            return rotl(u64, bits, 5) +% 5;
+        }
+        return null;
+    }
+    pub inline fn encode(x: f64) EncodeError!u64 {
+        return encodeOptional(x) orelse error.Unencodable;
+    }
+    pub const decodeKnown = Fst2FastApi.decodeKnown;
+    pub const decode = Fst2FastApi.decode;
+    const valid_ranges = Fst2(4).valid_ranges;
+};
+pub const Fst2ExpMaskRFirst = struct {
+    const name = "fst2ExpRFirst";
+    const uses = "4,5 (6,7 reserved)";
+    pub inline fn encodeOptional(x: f64) ?u64 {
+        const bits: u64 = @bitCast(x);
+        const r = rotl(u64, bits, 5);
+        if ((bits +% Fst2ExpMask.EXP_CHECK_INC) & Fst2ExpMask.EXP_CHECK_MASK == 0) {
+            @branchHint(.likely);
+            return r +% 5;
+        }
+        return null;
+    }
+    pub inline fn encode(x: f64) EncodeError!u64 {
+        return encodeOptional(x) orelse error.Unencodable;
+    }
+    pub const decodeKnown = Fst2FastApi.decodeKnown;
+    pub const decode = Fst2FastApi.decode;
+    const valid_ranges = Fst2(4).valid_ranges;
+};
+pub const Fst2GenericStrict = struct {
+    const name = "fst2GenStrict";
+    const uses = "4,5 (6,7 reserved)";
+    pub const encodeOptional = Fst2FastApi.encodeOptional;
+    pub const encode = Fst2FastApi.encode;
+    pub inline fn decode(self: u64) ?f64 {
+        if (self & 6 == 4) {
+            @branchHint(.likely);
+            return @bitCast(rotr(u64, self -% 5, 5));
+        }
+        return null;
+    }
+    const valid_ranges = Fst2(4).valid_ranges;
+};
+pub const Fst2GenericXor = struct {
+    const name = "fst2GenXor";
+    const uses = "4,5 (6,7 reserved)";
+    pub const encodeOptional = Fst2FastApi.encodeOptional;
+    pub const encode = Fst2FastApi.encode;
+    pub inline fn decode(self: u64) ?f64 {
+        if ((self ^ 4) & 6 == 0) {
+            @branchHint(.likely);
+            return @bitCast(rotr(u64, self -% 5, 5));
+        }
+        return null;
+    }
+    const valid_ranges = Fst2(4).valid_ranges;
+};
+pub const Fst2GenericBitPair = struct {
+    const name = "fst2GenBits";
+    const uses = "4,5 (6,7 reserved)";
+    pub const encodeOptional = Fst2FastApi.encodeOptional;
+    pub const encode = Fst2FastApi.encode;
+    pub inline fn decode(self: u64) ?f64 {
+        if (self & 4 != 0 and self & 2 == 0) {
+            @branchHint(.likely);
+            return @bitCast(rotr(u64, self -% 5, 5));
+        }
+        return null;
+    }
+    const valid_ranges = Fst2(4).valid_ranges;
+};
+pub const Fst2GenericSwitch = struct {
+    const name = "fst2GenSwitch";
+    const uses = "4,5 (6,7 reserved)";
+    pub const encodeOptional = Fst2FastApi.encodeOptional;
+    pub const encode = Fst2FastApi.encode;
+    pub inline fn decode(self: u64) ?f64 {
+        switch (@as(u3, @truncate(self))) {
+            4, 5 => {
+                @branchHint(.likely);
+                return @bitCast(rotr(u64, self -% 5, 5));
+            },
+            else => return null,
+        }
+    }
+    const valid_ranges = Fst2(4).valid_ranges;
+};
+pub const Fst2GenericNoHint = struct {
+    const name = "fst2GenNoHint";
+    const uses = "4,5 (6,7 reserved)";
+    pub const encodeOptional = Fst2FastApi.encodeOptional;
+    pub const encode = Fst2FastApi.encode;
+    pub inline fn decode(self: u64) ?f64 {
+        if (self & 4 != 0) return @bitCast(rotr(u64, self -% 5, 5));
+        return null;
+    }
+    const valid_ranges = Fst2(4).valid_ranges;
+};
+pub const Fst2KnownDecode = struct {
+    const name = "fst2Known";
+    const uses = "4,5 (6,7 reserved)";
+    pub inline fn encode(x: f64) EncodeError!u64 {
+        return Fst2(4).encode(x);
+    }
+    pub inline fn decodeKnown(self: u64) f64 {
+        return @bitCast(rotr(u64, self -% 5, 5));
+    }
+    pub inline fn decode(self: u64) ?f64 {
+        if (self & 4 != 0) {
+            @branchHint(.likely);
+            return decodeKnown(self);
+        }
+        return null;
+    }
+    const valid_ranges = Fst2(4).valid_ranges;
+};
+pub const Fst2Finite = struct {
+    const name = "fst2Finite";
+    const uses = "4,5 (6,7 reserved)";
+    fn tag5(index: u64) u64 {
+        return 4 + (index & 1) + ((index & 6) << 2);
+    }
+    fn untag5(tag: u64) u64 {
+        const payload = tag - 4;
+        return (payload & 1) | ((payload >> 2) & 6);
+    }
+    pub inline fn encode(x: f64) EncodeError!u64 {
+        const bits: u64 = @bitCast(x);
+        const high5 = bits >> 59;
+        const exp4 = high5 & 0xf;
+        const exp_index = if (exp4 <= 1) exp4 else if (exp4 -% 7 <= 1) exp4 - 5 else return error.Unencodable;
+        const index = (high5 >> 2 & 4) | exp_index;
+        return (rotl(u64, bits, 5) & ~@as(u64, 0x1f)) | tag5(index);
+    }
+    pub inline fn decode(self: u64) ?f64 {
+        if (self & 6 == 4) {
+            @branchHint(.likely);
+            const index = untag5(self & 0x1f);
+            const exp_index = index & 3;
+            const exp4 = if (exp_index <= 1) exp_index else exp_index + 5;
+            const high5 = ((index & 4) << 2) | exp4;
+            return @bitCast(rotr(u64, (self & ~@as(u64, 0x1f)) | high5, 5));
+        }
+        return null;
+    }
+    const valid_ranges = [_]Range{
+        .{ .low = 0x0000_0000_0000_0000, .high = 0x0FFF_FFFF_FFFF_FFFF },
+        .{ .low = 0x3800_0000_0000_0000, .high = 0x47FF_FFFF_FFFF_FFFF },
+    };
+};
+pub fn Mapped(
+    comptime NAME: []const u8,
+    comptime USES: []const u8,
+    comptime tags: []const u64,
+    comptime exp4s: []const u64,
+) type {
+    const map_len = exp4s.len * 2;
+    comptime {
+        if (tags.len * 4 < map_len) @compileError("not enough tag slots for mapped float encoding");
+    }
+    const high5s = blk: {
+        var arr: [map_len]u64 = undefined;
+        var n: usize = 0;
+        inline for (exp4s) |exp4| {
+            arr[n] = exp4;
+            n += 1;
+            arr[n] = exp4 | 0x10;
+            n += 1;
+        }
+        break :blk arr;
+    };
+    const low5s = blk: {
+        var arr: [map_len]u64 = undefined;
+        var n: usize = 0;
+        for (0..32) |slot| {
+            inline for (tags) |tag| {
+                if ((slot & 7) == tag and n < map_len) {
+                    arr[n] = slot;
+                    n += 1;
+                }
+            }
+        }
+        break :blk arr;
+    };
+    const ranges = blk: {
+        var arr: [exp4s.len]Range = undefined;
+        inline for (exp4s, 0..) |exp4, i| {
+            const low = exp4 << 59;
+            arr[i] = .{ .low = low, .high = low | 0x07ff_ffff_ffff_ffff };
+        }
+        break :blk arr;
+    };
+    return struct {
+        const name = NAME;
+        const uses = USES;
+        pub inline fn encode(x: f64) EncodeError!u64 {
+            const bits: u64 = @bitCast(x);
+            const high5 = bits >> 59;
+            inline for (high5s, low5s) |high, low| {
+                if (high5 == high) {
+                    @branchHint(.likely);
+                    return (rotl(u64, bits, 5) & ~@as(u64, 0x1f)) | low;
+                }
+            }
+            return error.Unencodable;
+        }
+        pub inline fn decode(self: u64) ?f64 {
+            const low5 = self & 0x1f;
+            inline for (low5s, high5s) |low, high| {
+                if (low5 == low) {
+                    @branchHint(.likely);
+                    return @bitCast(rotr(u64, (self & ~@as(u64, 0x1f)) | high, 5));
+                }
+            }
+            return null;
+        }
+        const valid_ranges = ranges;
+    };
+}
+pub const Map2Current = Mapped("map2Current", "4,5 table", &.{ 4, 5 }, &.{ 0, 7, 8, 15 });
+pub const Map2Finite = Mapped("map2Finite", "4,5 table", &.{ 4, 5 }, &.{ 0, 1, 7, 8 });
+pub const Map3Exp1 = Mapped("map3Exp1", "4,5,6 table", &.{ 4, 5, 6 }, &.{ 0, 1, 7, 8, 15 });
+pub const Map3Exp16 = Mapped("map3Exp16", "4,5,6 table", &.{ 4, 5, 6 }, &.{ 0, 1, 6, 7, 8, 15 });
+pub const Map4Simple = Mapped("map4Simple", "2,3,6,7 table", &.{ 2, 3, 6, 7 }, &.{ 0, 1, 6, 7, 8, 9, 14, 15 });
+pub const Map4Best = Mapped("map4Best", "2,3,6,7 table", &.{ 2, 3, 6, 7 }, &.{ 0, 1, 3, 4, 5, 6, 7, 8 });
+pub const Map6Simple = Mapped("map6Simple", "2,3,4,5,6,7 table", &.{ 2, 3, 4, 5, 6, 7 }, &.{ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 14, 15 });
+pub const Map6Best = Mapped("map6Best", "2,3,4,5,6,7 table", &.{ 2, 3, 4, 5, 6, 7 }, &.{ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 11, 15 });
 pub const Fst4 = struct {
     const name = "fst4";
     const uses = "2,3,6,7";
@@ -417,7 +1193,8 @@ fn expectEqualHex(actual: anytype, expected: @TypeOf(actual)) !void {
     }
 }
 test "encode patterns" {
-    inline for (.{ Spur, SpurNZ, Fst1(1), Fst1(2), Fst1(4), Fst2(2), Fst2(4), Fst2(6), Fst4, Zag4, Zag6 }) |encoding| {
+    @setEvalBranchQuota(10_000);
+    inline for (.{ Spur, SpurNZ, Fst1(1), Fst1(2), Fst1(4), Fst2(2), Fst2(4), Fst2(6), Fst2NoHint, Fst2Strict, Fst2FastApi, Fst2OrZero, Fst2XorMask, Fst2BitPair, Fst2Precheck, Fst2PrecheckLt, Fst2Switch, Fst2ExpShift, Fst2ExpMask, Fst2ExpMaskOrZero, Fst2RotSubDecode, Fst2OrZeroRotSub, Fst2P1Or, Fst2P1Xor, Fst2P1Add, Fst2P1OrZero, Fst2P1XorZero, Fst2P1AddZero, Fst2Low3Cmp, Fst2Low3Switch, Fst2Low3OrZero, Fst2High5P1, Fst2High5P1Zero, Fst2High5Byte, Fst2High5ByteZero, Fst2High5U5, Fst2ExpMaskRFirst, Fst2GenericStrict, Fst2GenericXor, Fst2GenericBitPair, Fst2GenericSwitch, Fst2GenericNoHint, Fst2KnownDecode, Fst2Finite, Map2Current, Map2Finite, Map3Exp1, Map3Exp16, Map4Simple, Map4Best, Map6Simple, Map6Best, Fst4, Zag4, Zag6 }) |encoding| {
         std.debug.print("for {s}\n", .{encoding.name});
         for (&[_]f64{ 0, 1, 2, 5, 42, 1e6 }) |value| {
             if (value > 0 or encoding.valid_ranges[0].low == 0)
@@ -428,7 +1205,8 @@ test "encode patterns" {
 }
 
 test "encode/decode" {
-    inline for (.{ Spur, SpurAlt1, SpurAlt2, SpurNZ, Fst1(1), Fst1(2), Fst1(4), Fst2(2), Fst2(4), Fst2(6), Fst4, Zag4, Zag6 }) |encoding| {
+    @setEvalBranchQuota(10_000);
+    inline for (.{ Spur, SpurAlt1, SpurAlt2, SpurNZ, Fst1(1), Fst1(2), Fst1(4), Fst2(2), Fst2(4), Fst2(6), Fst2NoHint, Fst2Strict, Fst2FastApi, Fst2OrZero, Fst2XorMask, Fst2BitPair, Fst2Precheck, Fst2PrecheckLt, Fst2Switch, Fst2ExpShift, Fst2ExpMask, Fst2ExpMaskOrZero, Fst2RotSubDecode, Fst2OrZeroRotSub, Fst2P1Or, Fst2P1Xor, Fst2P1Add, Fst2P1OrZero, Fst2P1XorZero, Fst2P1AddZero, Fst2Low3Cmp, Fst2Low3Switch, Fst2Low3OrZero, Fst2High5P1, Fst2High5P1Zero, Fst2High5Byte, Fst2High5ByteZero, Fst2High5U5, Fst2ExpMaskRFirst, Fst2GenericStrict, Fst2GenericXor, Fst2GenericBitPair, Fst2GenericSwitch, Fst2GenericNoHint, Fst2KnownDecode, Fst2Finite, Map2Current, Map2Finite, Map3Exp1, Map3Exp16, Map4Simple, Map4Best, Map6Simple, Map6Best, Fst4, Zag4, Zag6 }) |encoding| {
         var valid_v: [likely_values.len]f64 = undefined;
         var invalid_v: [likely_values.len]f64 = undefined;
         var decode_v: [likely_values.len]u64 = undefined;
@@ -513,6 +1291,21 @@ fn validAndNot(comptime encoding: anytype, valid_v: []f64, invalid_v: []f64, dec
         vp.* = v;
     return .{ valid_v, invalid_v[0..invalid_n], decode_v };
 }
+inline fn encodeForBenchmark(comptime encoding: anytype, val: f64) u64 {
+    if (@hasDecl(encoding, "encodeOrZero")) {
+        return encoding.encodeOrZero(val);
+    }
+    if (@hasDecl(encoding, "encodeOptional")) {
+        return encoding.encodeOptional(val) orelse 0;
+    }
+    return encoding.encode(val) catch 0;
+}
+inline fn decodeForBenchmark(comptime encoding: anytype, val: u64) ?f64 {
+    if (@hasDecl(encoding, "decodeKnown")) {
+        return encoding.decodeKnown(val);
+    }
+    return encoding.decode(val);
+}
 fn benchmark(comptime encoding: anytype) void {
     var valid_v: [likely_values.len]f64 = undefined;
     var invalid_v: [likely_values.len]f64 = undefined;
@@ -524,21 +1317,21 @@ fn benchmark(comptime encoding: anytype) void {
     _ = timer.lap();
     for (0..iterations / validValues.len) |_| {
         for (validValues) |val| {
-            std.mem.doNotOptimizeAway(encoding.encode(val) catch 0);
+            std.mem.doNotOptimizeAway(encodeForBenchmark(encoding, val));
         }
     }
     const valid_time = timer.lap();
     if (invalidValues.len > 0) {
         for (0..iterations / invalidValues.len) |_| {
             for (invalidValues) |val| {
-                std.mem.doNotOptimizeAway(encoding.encode(val) catch 0);
+                std.mem.doNotOptimizeAway(encodeForBenchmark(encoding, val));
             }
         }
     }
     const invalid_time = timer.lap();
     for (0..iterations / decodeValues.len) |_| {
         for (decodeValues) |val| {
-            if (encoding.decode(val)) |decoded|
+            if (decodeForBenchmark(encoding, val)) |decoded|
                 _ = std.mem.doNotOptimizeAway(decoded);
         }
     }
@@ -560,7 +1353,7 @@ pub fn main() void {
     switch (do_what) {
         .encode11 => {
             // doesn't catch much of interest except +/-0.0 and +/-2.0
-            inline for (.{ Spur, SpurAlt1, SpurAlt2, SpurNZ, Fst1(1), Fst1(2), Fst1(4), Fst2(2), Fst2(4), Fst2(6), Fst4, Zag4, Zag6, NaN, NuN }) |encoding| {
+            inline for (.{ Spur, SpurAlt1, SpurAlt2, SpurNZ, Fst1(1), Fst1(2), Fst1(4), Fst2(2), Fst2(4), Fst2(6), Fst2NoHint, Fst2Strict, Fst2FastApi, Fst2OrZero, Fst2XorMask, Fst2BitPair, Fst2Precheck, Fst2PrecheckLt, Fst2Switch, Fst2ExpShift, Fst2ExpMask, Fst2ExpMaskOrZero, Fst2RotSubDecode, Fst2OrZeroRotSub, Fst2P1Or, Fst2P1Xor, Fst2P1Add, Fst2P1OrZero, Fst2P1XorZero, Fst2P1AddZero, Fst2Low3Cmp, Fst2Low3Switch, Fst2Low3OrZero, Fst2High5P1, Fst2High5P1Zero, Fst2High5Byte, Fst2High5ByteZero, Fst2High5U5, Fst2ExpMaskRFirst, Fst2GenericStrict, Fst2GenericXor, Fst2GenericBitPair, Fst2GenericSwitch, Fst2GenericNoHint, Fst2KnownDecode, Fst2Finite, Map2Current, Map2Finite, Map3Exp1, Map3Exp16, Map4Simple, Map4Best, Map6Simple, Map6Best, Fst4, Zag4, Zag6, NaN, NuN }) |encoding| {
                 std.debug.print("{s}\n", .{encoding.name});
                 for (0..2047) |u| {
                     const e = (u >> 6 << 59) | (u & 0x3f);
@@ -572,7 +1365,7 @@ pub fn main() void {
             }
         },
         .benchmark => {
-            inline for (.{ Spur, SpurAlt1, SpurAlt2, SpurNZ, Fst1(1), Fst1(2), Fst1(4), Fst2(2), Fst2(4), Fst2(6), Fst4, Zag4, Zag6, NaN, NuN }) |encoding|
+            inline for (.{ Spur, SpurAlt1, SpurAlt2, SpurNZ, Fst1(1), Fst1(2), Fst1(4), Fst2(2), Fst2(4), Fst2(6), Fst2NoHint, Fst2Strict, Fst2FastApi, Fst2OrZero, Fst2XorMask, Fst2BitPair, Fst2Precheck, Fst2PrecheckLt, Fst2Switch, Fst2ExpShift, Fst2ExpMask, Fst2ExpMaskOrZero, Fst2RotSubDecode, Fst2OrZeroRotSub, Fst2P1Or, Fst2P1Xor, Fst2P1Add, Fst2P1OrZero, Fst2P1XorZero, Fst2P1AddZero, Fst2Low3Cmp, Fst2Low3Switch, Fst2Low3OrZero, Fst2High5P1, Fst2High5P1Zero, Fst2High5Byte, Fst2High5ByteZero, Fst2High5U5, Fst2ExpMaskRFirst, Fst2GenericStrict, Fst2GenericXor, Fst2GenericBitPair, Fst2GenericSwitch, Fst2GenericNoHint, Fst2KnownDecode, Fst2Finite, Map2Current, Map2Finite, Map3Exp1, Map3Exp16, Map4Simple, Map4Best, Map6Simple, Map6Best, Fst4, Zag4, Zag6, NaN, NuN }) |encoding|
                 benchmark(encoding);
         },
         .ranges => {
@@ -619,7 +1412,7 @@ pub fn main() void {
                 }
                 const cover = @as(f64, @floatFromInt(coverage)) * 100.0 / @as(f64, @floatFromInt(total));
                 std.debug.print("{d:.2}\\%", .{cover});
-                inline for (.{ Spur, SpurNZ, Fst1(4), Fst2(4), Fst4, Zag4, Zag6, NaN }) |encoding| {
+                inline for (.{ Spur, SpurNZ, Fst1(4), Fst2(4), Fst2NoHint, Fst2Strict, Fst2FastApi, Fst2OrZero, Fst2XorMask, Fst2BitPair, Fst2Precheck, Fst2PrecheckLt, Fst2Switch, Fst2ExpShift, Fst2ExpMask, Fst2ExpMaskOrZero, Fst2RotSubDecode, Fst2OrZeroRotSub, Fst2P1Or, Fst2P1Xor, Fst2P1Add, Fst2P1OrZero, Fst2P1XorZero, Fst2P1AddZero, Fst2Low3Cmp, Fst2Low3Switch, Fst2Low3OrZero, Fst2High5P1, Fst2High5P1Zero, Fst2High5Byte, Fst2High5ByteZero, Fst2High5U5, Fst2ExpMaskRFirst, Fst2GenericStrict, Fst2GenericXor, Fst2GenericBitPair, Fst2GenericSwitch, Fst2GenericNoHint, Fst2KnownDecode, Fst2Finite, Map2Current, Map2Finite, Map3Exp1, Map3Exp16, Map4Simple, Map4Best, Map6Simple, Map6Best, Fst4, Zag4, Zag6, NaN }) |encoding| {
                     if (Range.covers(&encoding.valid_ranges, range.low) and
                         Range.covers(&encoding.valid_ranges, range.high))
                     {

@@ -19,7 +19,7 @@ const HeapObjectConstPtr = zag.heap.HeapObjectConstPtr;
 const InMemory = zag.InMemory;
 const execute = zag.execute;
 const Signature = execute.Signature;
-const floatEncoding = @import("floatEncoding.zig").Fst2(4);
+const floatEncoding = @import("floatEncoding.zig").Fst2P1OrZero;
 const encode = floatEncoding.encode;
 const decode = floatEncoding.decode;
 
@@ -118,10 +118,19 @@ pub const Object = packed struct(u64) {
         if (self.isMemoryDouble()) return self.toDoubleFromMemory();
         return null;
     }
+    inline fn encodeImmediateFloat(t: f64) ?u64 {
+        if (@hasDecl(floatEncoding, "encodeOrZero")) {
+            const encoded = floatEncoding.encodeOrZero(t);
+            return if (encoded != 0) encoded else null;
+        }
+        if (@hasDecl(floatEncoding, "encodeOptional")) {
+            return floatEncoding.encodeOptional(t);
+        }
+        return encode(t) catch null;
+    }
     pub inline fn fromNativeF(t: f64, sp: SP, context: *Context) object.Object {
-        return @bitCast(encode(t) catch {
-            return InMemory.float(t, sp, context);
-        });
+        if (encodeImmediateFloat(t)) |encoded| return @bitCast(encoded);
+        return InMemory.float(t, sp, context);
     }
     inline fn isMemoryDouble(self: object.Object) bool {
         return if (self.ifHeapObject()) |ptr|
@@ -211,9 +220,9 @@ pub const Object = packed struct(u64) {
             switch (@typeInfo(@TypeOf(value))) {
                 .int, .comptime_int => return fromNativeI(value, null, null),
                 .comptime_float => {
-                    if (encode(value)) |encoded| {
+                    if (encodeImmediateFloat(value)) |encoded| {
                         return @bitCast(encoded);
-                    } else |_| return fromAddress(ptr.set(.Float, value));
+                    } else return fromAddress(ptr.set(.Float, value));
                 },
                 .bool => return if (value) object.Object.True() else object.Object.False(),
                 else => @panic("Unsupported type for compile-time object creation"),
