@@ -278,7 +278,7 @@ pub const threadedFunctions = struct {
         test "primitive not found" {
             var exe = Execution.initTest("primitive: not found", .{
                 tf.primitive,
-                comptime fromPrimitive(255),
+                comptime fromPrimitive(254),
                 tf.pushLiteral,
                 o0,
             });

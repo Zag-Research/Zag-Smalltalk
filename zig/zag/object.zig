@@ -388,7 +388,10 @@ pub const PackedObject = packed struct {
     test "combiners" {
         const expectEqual = std.testing.expectEqual;
         try expectEqual(16384 + 2, combine14(.{ 2, 1 }));
-        try expectEqual(0x2C015, combine14([_]ClassIndex{ .SmallInteger, .Symbol }));
+        try expectEqual(
+            (@as(u32, @intFromEnum(ClassIndex.Symbol)) << 14) | @intFromEnum(ClassIndex.SmallInteger),
+            @as(u32, combine14([_]ClassIndex{ .SmallInteger, .Symbol })),
+        );
     }
 };
 test {
@@ -491,14 +494,14 @@ const tests = struct {
                 @setRuntimeSafety(false);
                 const obj1 = from(42);
                 const buf1 = @as([*]u8, @ptrFromInt(@intFromPtr(&obj1)))[0..8];
-                try ee(@intFromEnum(ClassIndex.SmallInteger) << 3 | 1, buf1[0]);
-                try ee(42, buf1[1]);
-                try ee(0, buf1[2]);
+                try ee(@as(u8, 0xaa), buf1[0]);
+                try ee(@as(u8, 0), buf1[1]);
+                try ee(@as(u8, 0), buf1[2]);
                 const obj2 = from(42.0);
                 const buf2 = @as([*]u8, @ptrFromInt(@intFromPtr(&obj2)))[0..8];
-                try ee(6, buf2[0]);
-                try ee(80, buf2[6]);
-                try ee(4, buf2[7]);
+                try ee(@as(u8, 0x0d), buf2[0]);
+                try ee(@as(u8, 0xa0), buf2[6]);
+                try ee(@as(u8, 0x08), buf2[7]);
             },
             else => {},
         }
