@@ -130,9 +130,6 @@ pub const Object = packed struct(u64) {
         if (self.class == .Float) return self.toDoubleFromMemory();
         return null;
     }
-    pub inline fn isFloat(self: object.Object) bool {
-        return self.class == .Float;
-    }
     pub inline fn fromNativeI(i: IntType, _: anytype, _: anytype) Object {
         return Object{ .intOrAddress = @bitCast(i), .class = .SmallInteger };
     }

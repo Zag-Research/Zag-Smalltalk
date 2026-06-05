@@ -326,6 +326,7 @@ fn createBenchStep(
         else
             &[_]Encoding{
                 .nan,
+                .nun,
                 .zag,
                 .zagSpur,
                 .zagOrig,

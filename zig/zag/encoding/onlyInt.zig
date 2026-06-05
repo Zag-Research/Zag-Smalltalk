@@ -88,9 +88,6 @@ pub const Object = packed struct(u64) {
     pub fn nativeF(_: object.Object) ?f64 {
         @panic("not implemented");
     }
-    pub fn isFloat(_: object.Object) bool {
-        @panic("not implemented");
-    }
     pub fn fromNativeF(_: f64, _: anytype, _: anytype) object.Object {
         @panic("not implemented");
     }

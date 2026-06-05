@@ -586,7 +586,7 @@ pub const NaN = struct {
 pub const NuN = struct {
     const name = "nun";
     const uses = "N/A";
-    const NuN_bias = 0x0007_ffff_ffff_ffff;
+    const NuN_bias = 0x0007_ffff_ffff_ffff; // 0x0004_0000_0000_0000
     pub inline fn encode(x: f64) EncodeError!u64 {
         return @as(u64, @bitCast(x)) +% NuN_bias;
     }

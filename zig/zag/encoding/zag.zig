@@ -24,13 +24,10 @@ const decode = floatEncoding.decode;
 
 pub const Tag = enum(u3) {
     heap = 0,
-    immediates,
-    smallinteger,
-    unused3,
-    floatA,
+    smallinteger = 2,
+    floatA = 4,
     floatB,
-    unused6,
-    unused7,
+    _,
     inline fn u(cg: Tag) u3 {
         return @intFromEnum(cg);
     }
@@ -219,10 +216,10 @@ pub const Object = packed struct(u64) {
         return self.tagMatch(comptime oImm(class, 0));
     }
     inline fn oImm(c: Compact, h: u45) Self {
-        return Self{ .tag = .immediates, .class = c, .hash = h };
+        return Self{ .tag = .heap, .class = c, .hash = h };
     }
     inline fn oImmAddr(c: Compact, ptr: anytype, e: u11) Self {
-        return Self{ .tag = .immediates, .class = c, .hash = @truncate(@intFromPtr(ptr) >> 3), .extra = e };
+        return Self{ .tag = .heap, .class = c, .hash = @truncate(@intFromPtr(ptr) >> 3), .extra = e };
     }
     pub inline fn makeImmediate(cls: Compact, hash: u45) object.Object {
         return oImm(cls, hash);
@@ -345,12 +342,11 @@ pub const Object = packed struct(u64) {
     }
 
     pub inline fn isImmediate(self: Object) bool {
-        if (self.rawU() & 7 != 0) return true;
-        return self.tag != .heap;
+        return self.tag != .heap or self.class != .heap;
     }
 
     pub inline fn hasHeapReference(self: Object) bool {
-        return self.tag == .heap and self != Nil();
+        return self.tag == .heap and self.class == .heap and self != Nil();
     }
     pub inline fn ifHeapObject(self: object.Object) ?*HeapObject {
         if (self.hasHeapReference()) return self.encodedPointer(*HeapObject);

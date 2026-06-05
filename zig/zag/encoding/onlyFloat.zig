@@ -99,10 +99,6 @@ pub const Object = packed struct(u64) {
         return @bitCast(self);
     }
 
-    pub inline fn isFloat(_: Object) bool {
-        return true;
-    }
-
     pub inline fn fromNativeF(f: f64, _: anytype, _: anytype) Object {
         return @bitCast(f);
     }
