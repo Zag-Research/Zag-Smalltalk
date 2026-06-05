@@ -18,6 +18,7 @@ MEASURE = "mean"
 REPORT_ENCODINGS = [
     "ptr",
     "nan",
+    "nun",
     "zag",
     "zagSpur",
     "spur",
