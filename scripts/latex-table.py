@@ -2,11 +2,12 @@
 import argparse
 import math
 import re
+import sys
 
 ENCODING_RE = re.compile(r"objectEncoding\s*=\s*\.(\w+)")
 CPU_RE = re.compile(r"cpu\s*=.*\.([a-z]+)")
 DATA_RE = re.compile(
-    r"^\s{0,8}(\w+)\s+(\d+)ms\s+(\d+)ms\s+([\d.]+)ms"
+    r"^\s{0,12}(\w+)\s+(\d+)ms\s+(\d+)ms\s+([\d.]+)ms"
     r"(?:\s+([\d.]+)%)?\s+([\d.]+)ms\s*$",
     re.MULTILINE,
 )
@@ -14,6 +15,25 @@ METRICS = ["median", "mean", "stddev", "sdpct", "geomean"]
 METRIC_LABELS = ["Median", "Mean", "StdDev", r"SD\%", "GeoM"]
 NATIVES = {"Native", "NativeF"}
 MEASURE = "mean"
+REPORT_ENCODINGS = [
+    "ptr",
+    "nan",
+    "nun",
+    "zag",
+    "zagSpur",
+    "spur",
+    "spurNZ",
+    "taggedInt",
+    "onlyInt",
+    "onlyFloat",
+    "cachedPtr",
+    "compact2",
+    "compactI1",
+    "compactI2",
+    "compactI4",
+    "compactI6",
+    "compactA2",
+]
 
 
 def parse(file_content):
@@ -29,15 +49,23 @@ def parse(file_content):
         if not enc_match:
             continue
         enc = enc_match.group(1)
-        if enc == "zag":
-            enc = "ultra"
-        elif enc == "zagSpur":
-            enc = "maxSpur"
-        elif enc == "zagMixed":
-            enc = "max"
+        if enc not in REPORT_ENCODINGS:
+            continue
+        # if enc == "zag":
+        #     enc = "ultra"
+        # elif enc == "zagSpur":
+        #     enc = "maxSpur"
+        # elif enc == "zagMixed":
+        #     enc = "max"
         results[enc] = {}
         for m in DATA_RE.finditer(block):
             name = m.group(1)
+            if name == "IntegerBr":
+                name = "Integer"
+            elif name == "IntegerClosure":
+                name = "IClosure"
+            elif name == "FloatClosure":
+                name = "FClosure"
             results[enc][name] = {
                 "median": int(m.group(2)),
                 "mean": int(m.group(3)),
@@ -53,9 +81,9 @@ def parse(file_content):
 def get_base(benchmark, results):
     if False:
         return {"median": 0, "mean": 0, "geomean": 0}
-    if benchmark.startswith("Integer"):
+    if benchmark.startswith("I"):
         return results.get("onlyInt", {}).get(benchmark)
-    if benchmark.startswith("Float"):
+    if benchmark.startswith("F"):
         return results.get("onlyFloat", {}).get(benchmark)
     return None
 
@@ -107,49 +135,50 @@ def per_encoding_tables(results, benchmark_order):
 
 summary_order = [
     "nan",
-    "max",
-    "maxSpur",
-    "ultra",
+    #    "zagMixed",
+    "zag",
+    "zagSpur",
     "spur",
-    "spurOpt",
+    #    "spurOpt",
     "spurNZ",
-    "spurFST",
-    "compact1",
-    "compact2",
-    "compact4",
-    "compact6",
-    "compactI1",
-    "compactI2",
-    "compactI4",
-    "compactI6",
-    "compactZ",
-    "compactA2",
-    "taggedLow",
-    "taggedHigh",
+    #    "spurFST",
+    #    "compact1",
+    #    "compact2",
+    #    "compact4",
+    #    "compact6",
+    #    "compactI1",
+    #    "compactI2",
+    #    "compactI4",
+    #    "compactI6",
+    #    "compactY",
+    #    "compactZ",
+    #    "compactA2",
+    #    "taggedLow",
+    #    "taggedHigh",
     "taggedInt",
-    "taggedSMI",
-    "cachedPtr",
+    #    "taggedSMI",
+    #    "cachedPtr",
     "ptr",
 ]
 colours = [
     "blue",
     "cyan!35",
     "cyan!50",
-    "cyan!65",
-    "cyan!80",
-    "cyan!95",
+    #    "cyan!65",
+    #    "cyan!80",
+    #    "cyan!95",
     "orange!40",
     "orange!60",
     "green!20",
-    "green!40",
-    "green!60",
-    "green!80",
-    "green!20!black",
-    "green!40!black",
-    "green!60!black",
-    "green!80!black",
-    "blue!50",
-    "blue!50!black",
+    #    "green!40",
+    #    "green!60",
+    #    "green!80",
+    #    "green!20!black",
+    #    "green!40!black",
+    #    "green!60!black",
+    #    "green!80!black",
+    #    "blue!20",
+    #    "blue!50!black",
     "red!50",
     "red!50!black",
     "olive!70",
@@ -213,29 +242,30 @@ def measure_graph(results, benchmark_order):
 
 SCATTER_ENCODINGS = [
     "cachedPtr",
-    "nan",
-    "ptr",
-    "spur",
-    "spurOpt",
-    "spurNZ",
-    "spurFST",
-    "compact1",
-    "compact2",
-    "compact4",
-    "compact6",
-    "compactI1",
-    "compactI2",
-    "compactI4",
-    "compactI6",
-    "compactZ",
-    "compactA2",
     "taggedInt",
     #    "taggedSMI",
     #    "taggedLow",
-    "taggedHigh",
-    "max",
-    "maxSpur",
-    "ultra",
+    #   "taggedHigh",
+    "ptr",
+    "nan",
+    "spur",
+    #    "spurOpt",
+    "spurNZ",
+    #    "spurFST",
+    #    "compact1",
+    "compact2",
+    #    "compact4",
+    #    "compact6",
+    "compactI1",
+    "compactI2",
+    "compactI4",
+    #    "compactI6",
+    #    "compactY",
+    #    "compactZ",
+    "compactA2",
+    #   "zagMixed",
+    "zagSpur",
+    "zag",
 ]
 
 
@@ -251,24 +281,25 @@ def latex_arch_label(arch):
     return arch
 
 
-def scatter_points(results):
+def scatter_points(results, x_tag, y_tag, absolute):
     if not results:
         return {}
-    base_int = get_base("IntegerBr", results)
-    base_float = get_base("Float", results)
-    if not base_int or not base_float:
-        raise ValueError("Missing onlyInt/onlyFloat baselines for scatter plot.")
-    # base_int = {MEASURE: 0}
-    # base_float = {MEASURE: 0}
+    base_x = not absolute and get_base(x_tag, results) or {MEASURE: 0}
+    base_y = not absolute and get_base(y_tag, results) or {MEASURE: 0}
     points = {}
+    include = absolute
     for enc in SCATTER_ENCODINGS:
-        entry = results.get(enc, {})
-        int_entry = entry.get("IntegerBr")
-        float_entry = entry.get("Float")
-        if not int_entry or not float_entry:
+        if enc == "nan":
+            include = True
+        if not include:
             continue
-        dx = int(round(int_entry[MEASURE] - base_int[MEASURE]))
-        dy = int(round(float_entry[MEASURE] - base_float[MEASURE]))
+        entry = results.get(enc, {})
+        x_entry = entry.get(x_tag)
+        y_entry = entry.get(y_tag)
+        if not x_entry or not y_entry:
+            continue
+        dx = int(round(x_entry[MEASURE] - base_x[MEASURE]))
+        dy = int(round(y_entry[MEASURE] - base_y[MEASURE]))
         points[enc] = (dx, dy)
     return points
 
@@ -300,16 +331,16 @@ def pareto_frontier(all_points):
 def axis_limits(points):
     xs = [p[0] for p in points]
     ys = [p[1] for p in points]
-    min_x = min(xs)
+    min_x = min(xs)  # test
     max_x = max(xs)
     pad_x = max(10, int(math.ceil(max_x * 0.03)))
     min_y = min(ys)
     max_y = max(ys)
     pad_y = max(10, int(math.ceil(max_y * 0.05)))
-    xmin = min(int(math.floor((min_x - pad_x) / 10.0) * 10), 0)
-    ymin = int(math.floor((min_y - pad_y) / 10.0) * 10)
-    xmax = int(math.ceil((max_x + pad_x) / 10.0) * 10)
-    ymax = int(math.ceil((max_y + pad_y) / 10.0) * 10)
+    xmin = int(math.floor((min_x - pad_x) / 100.0) * 100)
+    ymin = int(math.floor((min_y - pad_y) / 100.0) * 100)
+    xmax = int(math.ceil((max_x + pad_x) / 100.0) * 100)
+    ymax = int(math.ceil((max_y + pad_y) / 100.0) * 100)
     return xmin, xmax, ymin, ymax
 
 
@@ -321,26 +352,28 @@ def label_anchor(y, ymin, ymax):
     return "south west"
 
 
-def scatter_plot_raw(results_a, arch_a, results_b=None, arch_b=None):
-    points_a = scatter_points(results_a)
-    points_b = scatter_points(results_b)
-    all_points = list(points_a.values()) + list(points_b.values())
-    xmin, xmax, ymin, ymax = axis_limits(all_points)
-    frontier_a = pareto_frontier(list(points_a.values()))
-    frontier_b = pareto_frontier(list(points_b.values()))
-    if not results_b:
-        xmax = 1400
-        ymax = 1400
-
+def scatter_plot_raw(absolute, include_pareto, records):
     lines = []
+    all_points = []
+    for record in records:
+        record["points"] = scatter_points(
+            record["results"], record["x"], record["y"], absolute
+        )
+        all_points = list(all_points) + list(record["points"].values())
+    if not all_points:
+        return ""
+    xmin, xmax, ymin, ymax = axis_limits(all_points)
+    if xmin < xmax * 0.35 and ymin < ymax * 0.35:
+        xmin = 0
+        ymin = 0
     lines.append("\\begin{tikzpicture}")
     lines.append("\\begin{axis}[")
     lines.append("    width=\\columnwidth,")
     lines.append("    height=\\columnwidth,")
-    lines.append("    xlabel={IntegerBr (ms)},")
+    lines.append("    xlabel={Integer (ms)},")
     lines.append("    ylabel={Float (ms)},")
-    lines.append(f"    xmin={min(0, xmin)}, xmax={xmax},")
-    lines.append(f"    ymin={min(0, ymin)}, ymax={ymax},")
+    lines.append(f"    xmin={min(xmin, ymin)}, xmax={max(xmax, ymax)},")
+    lines.append(f"    ymin={min(xmin, ymin)}, ymax={max(xmax, ymax)},")
     lines.append("    grid=major,")
     lines.append("    grid style={line width=0.2pt, draw=gray!30},")
     lines.append("    legend style={")
@@ -351,63 +384,43 @@ def scatter_plot_raw(results_a, arch_a, results_b=None, arch_b=None):
     lines.append("        legend columns=1,")
     lines.append("    },")
     lines.append("]")
-    lines.append("    \\addplot[blue!60, thick, dashed, forget plot] coordinates {")
-    lines.append(
-        "        " + " ".join(f"({x},{y})" for x, y in frontier_a) + "\n    };"
-    )
-    lines.append("    \\addplot[red!60, thick, dashed, forget plot] coordinates {")
-    lines.append(
-        "        " + " ".join(f"({x},{y})" for x, y in frontier_b) + "\n    };"
-    )
-    lines.append(
-        "    \\addplot[only marks, mark=*, mark size=3pt, blue!80!black] coordinates {"
-    )
-    lines.append(
-        "        "
-        + " ".join(
-            f"({points_a[e][0]},{points_a[e][1]})"
-            for e in SCATTER_ENCODINGS
-            if e in points_a
-        )
-        + "\n    };"
-    )
-    lines.append(f"    \\addlegendentry{{{latex_arch_label(arch_a)}}}")
-    if arch_b:
+    for record in records:
+        points = record["points"]
+        if include_pareto:
+            frontier = pareto_frontier(list(points.values()))
+            lines.append(
+                f"    \\addplot[{record['colour']}, thick, dashed, forget plot] coordinates {{"
+            )
+            lines.append(
+                "        " + " ".join(f"({x},{y})" for x, y in frontier) + "\n    };"
+            )
         lines.append(
-            "    \\addplot[only marks, mark=*, mark size=3pt, red!70!black] coordinates {"
+            f"    \\addplot[only marks, mark=*, mark size=3pt, {record['colour']}] coordinates {{"
         )
         lines.append(
             "        "
             + " ".join(
-                f"({points_b[e][0]},{points_b[e][1]})"
+                f"({points[e][0]},{points[e][1]})"
                 for e in SCATTER_ENCODINGS
-                if e in points_b
+                if e in points
             )
             + "\n    };"
         )
-        lines.append(f"    \\addlegendentry{{{latex_arch_label(arch_b)}}}")
-    lines.append(
-        "    \\addplot[gray!60, thick, dashed] coordinates {(-100,-100) (-100,-100)};"
-    )
-    lines.append("    \\addlegendentry{Pareto frontier}")
-    lines.append(f"    % {latex_arch_label(arch_a)} labels")
-    for enc in SCATTER_ENCODINGS:
-        if enc not in points_a:
-            continue
-        x, y = points_a[enc]
-        anchor = label_anchor(y, ymin, ymax)
         lines.append(
-            f"    \\node[font=\\tiny, blue!80!black, anchor={anchor}] at (axis cs:{x + 2},{y + 3}) {{{enc}}};"
+            f"    \\addlegendentry{{{latex_arch_label(record['arch'])}{' Closure' if record['x'].endswith('Closure') else ''}}}"
         )
-    if arch_b:
-        lines.append(f"    % {latex_arch_label(arch_b)} labels")
+        if include_pareto:
+            lines.append(
+                f"    \\addplot[{record['colour']}, thick, dashed] coordinates {{(-100,-100) (-100,-100)}};"
+            )
+            lines.append("    \\addlegendentry{Pareto frontier}")
         for enc in SCATTER_ENCODINGS:
-            if enc not in points_b:
+            if enc not in points:
                 continue
-            x, y = points_b[enc]
+            x, y = points[enc]
             anchor = label_anchor(y, ymin, ymax)
             lines.append(
-                f"    \\node[font=\\tiny, red!70!black, anchor={anchor}] at (axis cs:{x + 2},{y + 3}) {{{enc}}};"
+                f"    \\node[font=\\tiny, {record['colour']}!black, anchor={anchor}] at (axis cs:{x + 2},{y + 3}) {{{enc}}};"
             )
     lines.append("\\end{axis}")
     lines.append("\\end{tikzpicture}")
@@ -434,8 +447,40 @@ def main():
         print("\\newcommand{\\" + arch + "BarChart}{")
         print(measure_graph(results, benchmark_summary))
         print("}")
+        colour = "blue" if arch == "aarch" else "red"
         print("\\newcommand{\\" + arch + "ScatterPlot}{")
-        print(scatter_plot_raw(results, arch))
+        print(
+            scatter_plot_raw(
+                False,
+                True,
+                [
+                    {
+                        "x": "Integer",
+                        "y": "Float",
+                        "arch": arch,
+                        "colour": colour + "!90",
+                        "results": results,
+                    },
+                ],
+            )
+        )
+        print("}")
+        print("\\newcommand{\\" + arch + "ScatterPlotClosure}{")
+        print(
+            scatter_plot_raw(
+                False,
+                True,
+                [
+                    {
+                        "x": "IClosure",
+                        "y": "FClosure",
+                        "arch": arch,
+                        "colour": colour + "!30",
+                        "results": results,
+                    },
+                ],
+            )
+        )
         print("}")
     elif len(args.filename) == 2:
         with open(args.filename[0]) as f:
@@ -444,7 +489,42 @@ def main():
             results_b, _, arch_b = parse(f.read())
         print("\\newcommand{\\scatterPlotRaw}{")
         print("% ── Scatter plot (raw ms) ──")
-        print(scatter_plot_raw(results_a, arch_a, results_b, arch_b))
+        print(
+            scatter_plot_raw(
+                True,
+                False,
+                [
+                    {
+                        "x": "Integer",
+                        "y": "Float",
+                        "arch": arch_a,
+                        "colour": "blue!90",
+                        "results": results_a,
+                    },
+                    {
+                        "x": "IClosure",
+                        "y": "FClosure",
+                        "arch": arch_a,
+                        "colour": "blue!30",
+                        "results": results_a,
+                    },
+                    {
+                        "x": "Integer",
+                        "y": "Float",
+                        "arch": arch_b,
+                        "colour": "red!90",
+                        "results": results_b,
+                    },
+                    {
+                        "x": "IClosure",
+                        "y": "FClosure",
+                        "arch": arch_b,
+                        "colour": "red!30",
+                        "results": results_b,
+                    },
+                ],
+            )
+        )
         print("}")
     else:
         raise SystemExit("Provide one file (tables) or two files (scatter plot).")

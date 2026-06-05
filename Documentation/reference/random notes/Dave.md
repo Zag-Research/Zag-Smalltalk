@@ -20,7 +20,7 @@ See [this blog](https://ziggit.dev/t/debugging-zig-with-a-debugger/7160) which [
 
 [Hash Function Prospector](https://github.com/skeeto/hash-prospector?tab=readme-ov-file)
 
-[Big Idea Initiaitive](https://www.bigideainitiative.org/)
+[Big Idea Initiative](https://www.bigideainitiative.org/)
 
 ## Zig <--> Rust interface
 [Calling rust from zig from rust from zig](https://www.youtube.com/watch?v=QQGRd_r12fw) watched first hour
@@ -34,3 +34,6 @@ See [this blog](https://ziggit.dev/t/debugging-zig-with-a-debugger/7160) which [
 ## Scaling from the ground up
 [NAND to Tetris](https://www.nand2tetris.org/)
 Ben Eater’s video series [gates to CPU](https://www.youtube.com/playlist?list=PLowKtXNTBypGqImE405J2565dvjafglHU) [microprocessor to BASIC](https://www.youtube.com/playlist?list=PLowKtXNTBypFbtuVMUVXNR0z1mu7dp7eH)
+
+## Trinket
+[Trinket](https://github.com/trinketapp/trinket-oss) is a browser-based IDE that supports Python, Java, and more.

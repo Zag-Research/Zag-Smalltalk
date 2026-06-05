@@ -42,7 +42,7 @@ pub const Signature = packed struct {
     _filler1: zag.UInt(8 - @bitSizeOf(Object.LowTag)) = 0,
     hash: zag.UInt(32 - @max(8, @bitSizeOf(Object.LowTag))) = 0,
     high: Object.HighTag = 0,
-    class: ClassIndex = .none,
+    class: ClassIndex = @enumFromInt(0),
     _filler2: zag.UInt(16 - @bitSizeOf(Object.HighTag)) = 0,
     fn isTagged(self: Signature) bool {
         switch (Object.signatureTag) {
@@ -129,7 +129,7 @@ pub const Signature = packed struct {
         self: Signature,
         writer: anytype,
     ) !void {
-        if (self.isEmpty()) {
+        if (self.isEmpty() or true) {
             try writer.print("Signature{{empty}}", .{});
         } else {
             if (self.getClass() == .none and self.primitive() < 256) {
@@ -851,7 +851,7 @@ fn CompileTimeObject(comptime counts: usize) type {
                         header.age == .static)
                     {
                         if (@intFromEnum(header.classIndex) >= @intFromEnum(ClassIndex.ReplacementIndices)) {
-                            header.classIndex = classes[@intFromEnum(ClassIndex.replace0) - @intFromEnum(header.classIndex)];
+                            header.classIndex = classes[@intFromEnum(header.classIndex) - @intFromEnum(ClassIndex.ReplacementIndices)];
                         }
                         header.hash ^= zag.utilities.ProspectorHash.hash24(@truncate(@intFromPtr(o) >> 3));
                         lastHeader = header;
@@ -1086,8 +1086,9 @@ pub const Execution = struct {
             exe.getContext().setReturn(PC.exit());
             trace("SendTo: context {*} {*} {f}", .{ exe.getContext(), exe.getContext().npc, exe.getContext().tpc });
             const class = receiver.which_class();
+            trace("selector: 0x{x:0>16}",.{@as(u64,@bitCast(selector))});
             const signature = if (selector.symbolHash()) |hsh| Signature.from(hsh, selector.numArgs(), class) else unreachable;
-            exe.method = class.lookupMethodForClass(signature);
+            exe.method = zag.dispatch.lookupMethodForClass(class, signature);
             exe.execute(&[_]Object{receiver});
             return exe.fullStack()[0];
         }

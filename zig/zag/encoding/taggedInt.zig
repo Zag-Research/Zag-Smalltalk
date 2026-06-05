@@ -37,6 +37,40 @@ pub const Object = packed union {
         tag: Tag,
         hash: u63,
     },
+    pub const Compact = enum(u5) {
+        heap,
+        ThunkReturnLocal,
+        ThunkReturnInstance,
+        ThunkReturnObject,
+        ThunkReturnImmediate,
+        ThunkLocal,
+        BlockAssignLocal,
+        ThunkInstance,
+        BlockAssignInstance,
+        ThunkHeap,
+        ThunkImmediate,
+        SmallInteger,
+        Symbol,
+        False,
+        True,
+        Character,
+        Signature,
+        ThunkReturnCharacter,
+        ThunkReturnFloat,
+        ThunkFloat,
+        LLVM,
+        UndefinedObject,
+        Float,
+        _,
+        pub inline fn classIndex(cp: Compact) ClassIndex {
+            return @enumFromInt(@intFromEnum(cp));
+        }
+        pub inline fn from(ci: ClassIndex) Compact {
+            return @enumFromInt(@intFromEnum(ci));
+        }
+        pub const immutableClasses = 0;
+        pub const mutableClasses = 32;
+    };
 
     const pointerTag = Tag.u(.pointer);
     const SmallIntegerTag = Tag.u(.smallInteger);

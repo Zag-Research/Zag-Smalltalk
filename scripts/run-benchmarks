@@ -35,7 +35,9 @@ fi
 #tar zxf *.tgz 2>/dev/null && cd `expr *.tgz : '\(.*\).tgz'`
 cd `dirname $0`
 echo "Using prefix: $PREFIX"
+date
 for i in ./fib-* ./floatEncoding
 do
 	$PREFIX $i --fib 40
 done
+date

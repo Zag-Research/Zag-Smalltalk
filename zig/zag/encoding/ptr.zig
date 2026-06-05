@@ -19,6 +19,40 @@ const SP = Process.SP;
 const Context = zag.Context;
 pub const Object = packed struct(u64) {
     ref: *const InMemory.PointedObject,
+    pub const Compact = enum(u5) {
+        heap,
+        ThunkReturnLocal,
+        ThunkReturnInstance,
+        ThunkReturnObject,
+        ThunkReturnImmediate,
+        ThunkLocal,
+        BlockAssignLocal,
+        ThunkInstance,
+        BlockAssignInstance,
+        ThunkHeap,
+        ThunkImmediate,
+        SmallInteger,
+        Symbol,
+        False,
+        True,
+        Character,
+        Signature,
+        ThunkReturnCharacter,
+        ThunkReturnFloat,
+        ThunkFloat,
+        LLVM,
+        UndefinedObject,
+        Float,
+        _,
+        pub inline fn classIndex(cp: Compact) ClassIndex {
+            return @enumFromInt(@intFromEnum(cp));
+        }
+        pub inline fn from(ci: ClassIndex) Compact {
+            return @enumFromInt(@intFromEnum(ci));
+        }
+        pub const immutableClasses = 0;
+        pub const mutableClasses = 32;
+    };
     const Self = @This();
     const intShift = 64 - @bitSizeOf(IntType);
     pub const IntType = i64;
@@ -50,7 +84,7 @@ pub const Object = packed struct(u64) {
     pub const highTagSmallInteger = 0;
     pub const PackedTagType = u3;
     pub const packedTagSmallInteger = 1;
-    pub const signatureTag = @as(u8, @intFromEnum(ClassIndex.Compact.Signature)) << 3 | 1;
+    pub const signatureTag = @as(u8, @intFromEnum(Compact.Signature)) << 3 | 1;
     pub const LowTag = u8;
     pub const HighTag = u8;
     pub inline fn untaggedI(self: object.Object) ?i64 {
@@ -170,11 +204,11 @@ pub const Object = packed struct(u64) {
     inline fn toDoubleFromMemory(self: object.Object) f64 {
         return self.to(*InMemory.MemoryFloat).*.value;
     }
-    pub inline fn makeImmediate(cls: ClassIndex.Compact, hash: u64) Object {
+    pub inline fn makeImmediate(cls: Compact, hash: u64) Object {
         //@compileLog(cls, hash);
         _ = .{ cls, hash, unreachable };
     }
-    pub inline fn makeThunk(cls: ClassIndex.Compact, ptr: anytype, extra: u8) Object {
+    pub inline fn makeThunk(cls: Compact, ptr: anytype, extra: u8) Object {
         _ = .{ cls, ptr, extra, unreachable };
     }
     pub inline fn hash24(self: Object) u24 {

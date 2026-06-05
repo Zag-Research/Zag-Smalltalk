@@ -44,13 +44,47 @@ pub const Object = packed union {
     ref: ?*InMemory.PointedObject,
     immediate: packed struct(u64) {
         tag: Tag = .immediates,
-        class: ClassIndex.Compact,
+        class: Compact,
         hash: u56,
     },
     int: packed struct(u64) {
         tag: Tag,
         hash: u61,
     },
+    pub const Compact = enum(u5) {
+        heap,
+        ThunkReturnLocal,
+        ThunkReturnInstance,
+        ThunkReturnObject,
+        ThunkReturnImmediate,
+        ThunkLocal,
+        BlockAssignLocal,
+        ThunkInstance,
+        BlockAssignInstance,
+        ThunkHeap,
+        ThunkImmediate,
+        SmallInteger,
+        Symbol,
+        False,
+        True,
+        Character,
+        Signature,
+        ThunkReturnCharacter,
+        ThunkReturnFloat,
+        ThunkFloat,
+        LLVM,
+        UndefinedObject,
+        Float,
+        _,
+        pub inline fn classIndex(cp: Compact) ClassIndex {
+            return @enumFromInt(@intFromEnum(cp));
+        }
+        pub inline fn from(ci: ClassIndex) Compact {
+            return @enumFromInt(@intFromEnum(ci));
+        }
+        pub const immutableClasses = 0;
+        pub const mutableClasses = 32;
+    };
     const Self = @This();
     const intShift = 64 - @bitSizeOf(IntType);
     pub const IntType = i61;
@@ -71,11 +105,11 @@ pub const Object = packed union {
     pub const highTagSmallInteger = 0;
     pub const PackedTagType = Tag;
     pub const packedTagSmallInteger = Tag.smallInteger;
-    pub const signatureTag = @as(u8, @intFromEnum(ClassIndex.Compact.Signature)) << 3 | Tag.u(.immediates);
+    pub const signatureTag = @as(u8, @intFromEnum(Compact.Signature)) << 3 | Tag.u(.immediates);
     pub const LowTag = u8;
     pub const HighTag = u8;
     const TagAndClassType = u8;
-    const tagAndClassBits = @bitSizeOf(Tag) + @bitSizeOf(ClassIndex.Compact);
+    const tagAndClassBits = @bitSizeOf(Tag) + @bitSizeOf(Compact);
     comptime {
         assert(tagAndClassBits == @bitSizeOf(TagAndClassType));
     }
@@ -145,7 +179,7 @@ pub const Object = packed union {
     pub inline fn numArgs(self: Object) u4 {
         return @truncate(self.rawU() >> 32);
     }
-    pub fn makeSymbol(class: ClassIndex.Compact, hash: u24, arity: u4) Object {
+    pub fn makeSymbol(class: Compact, hash: u24, arity: u4) Object {
         return makeImmediate(class, @as(u32, hash) | (@as(u32, arity) << 24));
     }
     pub inline fn isSymbol(self: Object) bool {
@@ -167,13 +201,13 @@ pub const Object = packed union {
         // there are no invalid objects in this encoding
         return null;
     }
-    pub inline fn isImmediateClass(self: Object, comptime class: ClassIndex.Compact) bool {
+    pub inline fn isImmediateClass(self: Object, comptime class: Compact) bool {
         return self.tagbits() == oImm(class, 0).tagbits();
     }
-    inline fn oImm(c: ClassIndex.Compact, h: u56) Self {
+    inline fn oImm(c: Compact, h: u56) Self {
         return Self{ .immediate = .{ .class = c, .hash = h } };
     }
-    inline fn oImmContext(c: ClassIndex.Compact, context: *Context, e: u8) Self {
+    inline fn oImmContext(c: Compact, context: *Context, e: u8) Self {
         return Self{ .immediate = .{ .class = c, .hash = @as(u56, @intCast(@intFromPtr(context))) << 8 | e } };
     }
     pub fn encodedPointer(_: Object, T: type) ?T {
@@ -182,7 +216,7 @@ pub const Object = packed union {
     pub inline fn pointer(self: object.Object, T: type) ?T {
         return @ptrFromInt(@as(usize, @bitCast(self)));
     }
-    pub inline fn makeImmediate(cls: ClassIndex.Compact, hash: u56) Object {
+    pub inline fn makeImmediate(cls: Compact, hash: u56) Object {
         return oImm(cls, hash);
     }
     pub inline fn hash24(self: Object) u24 {
@@ -326,7 +360,7 @@ pub const Object = packed union {
         const class = sig.getClass();
         _ = sp;
         return switch (class) {
-            .ThunkReturnObject, .ThunkReturnLocal, .ThunkReturnInstance, .ThunkReturnImmediate, .ThunkReturnCharacter, .ThunkReturnFloat => oImm(class.compact(), @intCast(@intFromPtr(context) << 8 | sig.primitive())),
+            .ThunkReturnObject, .ThunkReturnLocal, .ThunkReturnInstance, .ThunkReturnImmediate, .ThunkReturnCharacter, .ThunkReturnFloat => oImm(Compact.from(class), @intCast(@intFromPtr(context) << 8 | sig.primitive())),
             else => null,
         };
     }
@@ -378,10 +412,10 @@ pub const Object = packed union {
             _ = .{ ctx, obj };
         }
     };
-    pub inline fn makeThunk(class: ClassIndex.Compact, obj: anytype, tag: u8) Object {
+    pub inline fn makeThunk(class: Compact, obj: anytype, tag: u8) Object {
         return oImm(class, @truncate((@intFromPtr(obj) << 8) | tag));
     }
-    pub inline fn makeThunkNoArg(class: ClassIndex.Compact, value: u56) Object {
+    pub inline fn makeThunkNoArg(class: Compact, value: u56) Object {
         return .oImm(class, value);
     }
     pub inline fn extraU(self: object.Object) u8 {

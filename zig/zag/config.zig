@@ -25,11 +25,11 @@ const show_error_stack = debugging;
 pub const show_trace = debugging or options.trace;
 
 pub const immediateIntegers = switch (objectEncoding) {
-    .zag, .nan, .zagSpur, .zagOrig, .compact1, .compact2, .compact4, .compact6, .compactI1, .compactI2, .compactI4, .compactI6, .compactZ, .compactA2, .spur, .spurOpt, .spurNZ, .spurFST, .onlyInt, .taggedInt, .taggedLow, .taggedHigh => true,
+    .zag, .nan, .nun, .zagSpur, .zagOrig, .compact1, .compact2, .compact4, .compact6, .compactI1, .compactI2, .compactI4, .compactI6, .compactY, .compactZ, .compactA2, .spur, .spurOpt, .spurNZ, .spurFST, .onlyInt, .taggedInt, .taggedLow, .taggedHigh => true,
     else => false,
 };
 pub const immediateSymbols = switch (objectEncoding) {
-    .zag, .nan, .zagSpur, .zagOrig, .compact1, .compact2, .compact4, .compact6, .compactI1, .compactI2, .compactI4, .compactI6, .compactZ, .compactA2, .onlyInt, .onlyFloat, .taggedLow, .taggedHigh => true,
+    .zag, .nan, .nun, .zagSpur, .zagOrig, .compact1, .compact2, .compact4, .compact6, .compactI1, .compactI2, .compactI4, .compactI6, .compactY, .compactZ, .compactA2, .onlyInt, .onlyFloat, .taggedLow, .taggedHigh => true,
     else => false,
 };
 pub const notZag = objectEncoding != .zag;
