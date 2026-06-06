@@ -90,6 +90,9 @@ pub const Spur = struct {
     const TAG = 0b100; // immediate float tag
     const EXPONENT_OFFS: u64 = 0x7000000000000000;
     pub inline fn encode(value: f64) EncodeError!u64 {
+        return encodeIt(value) orelse unencodeable(value);
+    }
+    inline fn encodeIt(value: f64) ?u64 {
         const bits: u64 = @bitCast(value);
         const rotated = rotl(u64, bits, 1);
         if (rotated <= 1) {
@@ -102,11 +105,11 @@ pub const Spur = struct {
         debug_print("spur value= {}\n bits=    {b:0>64}\n rotated= {b:0>64}\n offset=  {b:0>64}\n shifted= {b:0>64} unencodeable={}\n", .{ value, bits, rotated, offset, shifted, shifted & 7 != 0 or offset == 0 });
         if (shifted & 7 != 0) {
             @branchHint(.unlikely);
-            return unencodeable(value);
+            return null;
         }
         if (offset == 0) {
             @branchHint(.unlikely);
-            return unencodeable(value);
+            return null;
         }
         return shifted + TAG;
     }
@@ -129,6 +132,9 @@ const SpurAlt1 = struct {
     const uses = Spur.uses;
     const TAG = Spur.TAG;
     pub inline fn encode(value: f64) EncodeError!u64 {
+        return encodeIt(value) orelse unencodeable(value);
+    }
+    inline fn encodeIt(value: f64) ?u64 {
         const bits: u64 = @bitCast(value);
         const rotated = rotl(u64, bits, 5);
         const inc = rotated +% 1;
@@ -142,7 +148,7 @@ const SpurAlt1 = struct {
         }
         if (inc == 1) return 0x4;
         if (inc == 17) return 0xC;
-        return unencodeable(value);
+        return null;
     }
     pub const decode = SpurAlt2.decode;
     const valid_ranges = Spur.valid_ranges;
@@ -151,7 +157,10 @@ pub const SpurAlt2 = struct {
     const name = "spurAlt2";
     const uses = Spur.uses;
     const TAG = Spur.TAG;
-    pub inline fn encode(v: f64) EncodeError!u64 {
+    pub inline fn encode(value: f64) EncodeError!u64 {
+        return encodeIt(value) orelse unencodeable(value);
+    }
+    inline fn encodeIt(v: f64) ?u64 {
         var y = rotl(u64, @bitCast(v), 5);
         if (y <= 0x10) { // probably 0
             @branchHint(.unlikely);
@@ -172,7 +181,7 @@ pub const SpurAlt2 = struct {
                 return y;
             }
         }
-        return unencodeable(v);
+        return null;
     }
     pub inline fn decode(self: u64) ?f64 {
         if (self & TAG == 0) {
@@ -201,6 +210,9 @@ pub const SpurNZ = struct {
     const EXPONENT_OFFS: u64 = 0x7000_0000_0000_0000;
     const version = 2;
     pub inline fn encode(value: f64) EncodeError!u64 {
+        return encodeIt(value) orelse unencodeableCheck0(value);
+    }
+    inline fn encodeIt(value: f64) ?u64 {
         const bits: u64 = @bitCast(value);
         const rotated = rotl(u64, bits, 1);
         const offset = rotated -% EXPONENT_OFFS;
@@ -216,9 +228,9 @@ pub const SpurNZ = struct {
             const shifted = rotl(u64, offset, 3);
             return shifted + TAG;
         }
-        return unencodeableCheck0(value);
+        return null;
     }
-    pub inline fn encodeO(value: f64) EncodeError!u64 {
+    pub inline fn encodeO(value: f64) ?u64 {
         const bits: u64 = @bitCast(value);
         const rotated = rotl(u64, bits, 1);
         const offset = rotated -% EXPONENT_OFFS;
@@ -228,7 +240,7 @@ pub const SpurNZ = struct {
             @branchHint(.likely);
             return shifted + TAG;
         }
-        return unencodeableCheck0(value);
+        return null;
     }
     pub inline fn decode(self: u64) ?f64 {
         if (self & TAG == 0) {
@@ -247,17 +259,15 @@ pub const SpurFast = struct {
     const name = "spurFast";
     const uses = "4 (5,6,7 reserved)";
     const TAG = 0b100; // immediate float tag
-    pub const encode = switch (builtin.target.cpu.arch) {
-        .x86_64 => encodeN1,
-        .aarch64 => encodeN1,
-        else => @compileError("unsupported"),
-    };
+    pub inline fn encode(value: f64) EncodeError!u64 {
+        return encodeN1(value) orelse unencodeableCheck0(value);
+    }
     pub const decode = switch (builtin.target.cpu.arch) {
         .x86_64 => decodeN2,
         .aarch64 => decodeO,
         else => @compileError("unsupported"),
     };
-    pub inline fn encodeBreakCSE(value: f64) EncodeError!u64 { // 660ms
+    inline fn encodeBreakCSE(value: f64) ?u64 { // 660ms
         const bits: u64 = @bitCast(value);
 
         // 1. Validation Chain: Check the raw exponent bits directly.
@@ -272,27 +282,27 @@ pub const SpurFast = struct {
             return (rotated & 0xFFFFFFFFFFFFFFF8) | TAG;
         }
 
-        return unencodeableCheck0(value);
+        return null;
     }
-    pub inline fn encodeN1(value: f64) EncodeError!u64 { //630ms
+    inline fn encodeN1(value: f64) ?u64 { //630ms
         const bits: u64 = @bitCast(value);
         const rotated = rotl(u64, bits, 5);
         if (isSevenOrEight(rotated)) {
             @branchHint(.likely);
             return (rotated & 0xFFFFFFFFFFFFFFF8) | TAG;
         }
-        return unencodeableCheck0(value);
+        return null;
     }
-    pub inline fn encodeO(value: f64) EncodeError!u64 { // 694ms
+    inline fn encodeO(value: f64) ?u64 { // 694ms
         const bits: u64 = @bitCast(value);
         const rotated = rotl(u64, bits, 5);
         if (isSevenOrEight(rotated)) {
             @branchHint(.likely);
             return transform(rotated);
         }
-        return unencodeableCheck0(value);
+        return null;
     }
-    pub inline fn decodeN2(self: u64) ?f64 {
+    inline fn decodeN2(self: u64) ?f64 {
         if (self & TAG == 0) {
             @branchHint(.unlikely);
             return null;
@@ -307,7 +317,7 @@ pub const SpurFast = struct {
         const offset = (self & 0xFFFFFFFFFFFFFFF8) | original_low_bits;
         return @bitCast(rotr(u64, offset, 5));
     }
-    pub inline fn decodeN3(self: u64) ?f64 {
+    inline fn decodeN3(self: u64) ?f64 {
         if (self & TAG == 0) {
             @branchHint(.unlikely);
             return null;
@@ -318,7 +328,7 @@ pub const SpurFast = struct {
         const offset = (self & 0xFFFFFFFFFFFFFFF8) | original_low_bits;
         return @bitCast(rotr(u64, offset, 5));
     }
-    pub inline fn decodeN1(self: u64) ?f64 {
+    inline fn decodeN1(self: u64) ?f64 {
         if (self & TAG == 0) {
             @branchHint(.unlikely);
             return null;
@@ -337,7 +347,7 @@ pub const SpurFast = struct {
         const offset = cleared + adjustment;
         return @bitCast(rotr(u64, offset, 5));
     }
-    pub inline fn decodeO(self: u64) ?f64 {
+    inline fn decodeO(self: u64) ?f64 {
         if (self & TAG == 0) {
             @branchHint(.unlikely);
             return null;
@@ -380,13 +390,16 @@ pub fn Fst1(MATCH: u64) type {
             else => @compileError("only 1, 2, 4 supported"),
         };
         const OFFSET: u64 = (MATCH * 2 + 1) << 58;
-        pub inline fn encode(x: f64) EncodeError!u64 {
+        pub inline fn encode(value: f64) EncodeError!u64 {
+            return encodeIt(value) orelse unencodeable(value);
+        }
+        inline fn encodeIt(x: f64) ?u64 {
             const u = rotl(u64, @as(u64, @bitCast(x)) +% OFFSET, 5);
             if (u & 7 == MATCH) {
                 @branchHint(.likely);
                 return u;
             }
-            return unencodeable(x);
+            return null;
         }
         pub inline fn decode(self: u64) ?f64 {
             if (self & MATCH != 0) {
@@ -412,7 +425,10 @@ pub fn Fst2(MATCH: u64) type {
             1, 7 => "6,7 in high bits",
             else => @compileError("only 2, 4, 6 supported"),
         };
-        pub inline fn encode(x: f64) EncodeError!u64 {
+        pub inline fn encode(value: f64) EncodeError!u64 {
+            return encodeIt(value) orelse unencodeable(value);
+        }
+        inline fn encodeIt(x: f64) ?u64 {
             switch (MATCH) {
                 else => {
                     const u = rotl(u64, @bitCast(x), 5) +% (MATCH + 1);
@@ -443,7 +459,7 @@ pub fn Fst2(MATCH: u64) type {
                     }
                 },
             }
-            return unencodeable(x);
+            return null;
         }
         pub inline fn decode(self: u64) ?f64 {
             switch (MATCH) {
@@ -492,13 +508,16 @@ pub fn Fst2(MATCH: u64) type {
 pub const Fst4 = struct {
     const name = "fst4";
     const uses = "2,3,6,7";
-    pub inline fn encode(x: f64) EncodeError!u64 {
+    pub inline fn encode(value: f64) EncodeError!u64 {
+        return encodeIt(value) orelse unencodeable(value);
+    }
+    inline fn encodeIt(x: f64) ?u64 {
         const u = rotl(u64, @bitCast(x), 4) +% 3;
         if (u & 2 != 0) {
             @branchHint(.likely);
             return u;
         }
-        return unencodeable(x);
+        return null;
     }
     pub inline fn decode(self: u64) ?f64 {
         if (self & 2 != 0) {
@@ -517,13 +536,16 @@ pub const Zag4 = struct {
     const name = "zag4";
     const uses = "80, c0";
     const OFFSET: u64 = 0xC000_0000_0000_0000;
-    pub inline fn encode(x: f64) EncodeError!u64 {
+    pub inline fn encode(value: f64) EncodeError!u64 {
+        return encodeIt(value) orelse unencodeable(value);
+    }
+    inline fn encodeIt(x: f64) ?u64 {
         const u = rotl(u64, @bitCast(x), 2) +% OFFSET;
         if (@as(i64, @bitCast(u)) < 0) {
             @branchHint(.likely);
             return u;
         }
-        return unencodeable(x);
+        return null;
     }
     pub inline fn decode(self: u64) ?f64 {
         if (@as(i64, @bitCast(self)) < 0) {
@@ -541,13 +563,16 @@ pub const Zag4 = struct {
 pub const Zag6 = struct {
     const name = "zag6";
     const uses = "2,3,4,5,6,7";
-    pub inline fn encode(x: f64) EncodeError!u64 {
+    pub inline fn encode(value: f64) EncodeError!u64 {
+        return encodeIt(value) orelse unencodeable(value);
+    }
+    inline fn encodeIt(x: f64) ?u64 {
         const u = rotl(u64, @bitCast(x), 4) +% 3;
         if (u & 6 != 0) {
             @branchHint(.likely);
             return u;
         }
-        return unencodeable(x);
+        return null;
     }
     pub inline fn decode(self: u64) ?f64 {
         if (self & 6 != 0) {
@@ -605,10 +630,10 @@ pub const NuN = struct {
         .{ .low = 0x0000_0000_0000_0000, .high = 0x7FFF_FFFF_FFFF_FFFF },
     };
 };
-fn checkEqual(str: []const u8, i: usize, expected: anytype, actual: @TypeOf(expected)) !void {
+fn checkEqual(str: []const u8, f: f64, expected: anytype, actual: @TypeOf(expected)) !void {
     if (expectEqual(expected, actual)) |_| {} else |err| {
-        const f: f64 = @bitCast(i << (64 - BITS));
-        std.debug.print("for i={}({x})({}) in {s}\n", .{ i, i, f, str });
+        const i: u64 = @bitCast(f);
+        std.debug.print("for i=({b:0>12})({}) in {s}\n", .{ i >> 52, f, str });
         return err;
     }
 }
@@ -616,19 +641,22 @@ const BITS = 6;
 test "encode accuracy - spurAlt1" {
     for (0..1 << BITS) |i| {
         const f: f64 = @bitCast(i << (64 - BITS));
-        try checkEqual("spurAlt1", i, SpurAlt1.encode(f), Spur.encode(f));
+        try checkEqual("spurAlt1", f, Spur.encode(f), SpurAlt1.encode(f));
     }
 }
 test "encode accuracy - spurAlt2" {
     for (0..1 << BITS) |i| {
         const f: f64 = @bitCast(i << (64 - BITS));
-        try checkEqual("spurAlt2", i, SpurAlt2.encode(f), Spur.encode(f));
+        try checkEqual("spurAlt2", f, Spur.encode(f), SpurAlt2.encode(f));
     }
 }
 test "encode accuracy - spurNZ" {
-    for (1..1 << BITS) |i| {
-        const f: f64 = @bitCast(i << (64 - BITS));
-        checkEqual("spurNZ", i, SpurNZ.encode(f), Spur.encode(f)) catch {};
+    for (0..1 << BITS) |i| {
+        var f: f64 = @bitCast(i << (64 - BITS));
+        if (f != 0) {
+            f =  @bitCast((i << (64 - BITS)) | 1); //because Spur uses 0b001110...0 to encode 0
+            try checkEqual("spurNZ", f, Spur.encode(f), SpurNZ.encode(f));
+        }
     }
 }
 fn expectEqualHex(actual: anytype, expected: @TypeOf(actual)) !void {
@@ -640,7 +668,7 @@ fn expectEqualHex(actual: anytype, expected: @TypeOf(actual)) !void {
 test "encode patterns" {
     inline for (.{ Spur, SpurNZ, SpurFast, Fst1(1), Fst1(2), Fst1(4), Fst2(1), Fst2(2), Fst2(4), Fst2(6), Fst2(7), Fst4, Zag4, Zag6, NaN, NuN }) |encoding| {
         std.debug.print("for {s}\n", .{encoding.name});
-        for (&[_]f64{ 0, 1, 2, 5, 42, 1e6 }) |value| {
+        for (&[_]f64{ 0.5, 0, 1, 2, 5, 42, 1e6 }) |value| {
             if (value > 0 or encoding.valid_ranges[0].low == 0)
                 std.debug.print("  0x{x:0>16}->0x{x:0>16} from {}\n", .{ @as(u64, @bitCast(value)), try encoding.encode(value), value });
         }
