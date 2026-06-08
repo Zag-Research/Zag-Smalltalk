@@ -37,3 +37,6 @@ Ben Eater’s video series [gates to CPU](https://www.youtube.com/playlist?list=
 
 ## Trinket
 [Trinket](https://github.com/trinketapp/trinket-oss) is a browser-based IDE that supports Python, Java, and more.
+
+## NotebookLM
+[Describes how to use NptebookLM to learn](https://pub.towardsai.net/the-notebooklm-workflow-that-changed-how-i-learn-any-technology-373f430a17e5)

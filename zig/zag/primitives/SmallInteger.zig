@@ -32,6 +32,7 @@ const expectEqual = std.testing.expectEqual;
 pub const @"+" = struct {
     pub const number = 1;
     pub const inlined = signature(.@"+", number);
+    pub const name = moduleName ++ "_add";
     inline fn with(self: i64, other: Object, sp: SP, context: *Context) !Object { // INLINED - Add
         if (other.untaggedI()) |untagged| {
             const result, const overflow = @addWithOverflow(self, untagged);
@@ -80,7 +81,7 @@ pub const @"+" = struct {
                 return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, extra }));
             return @call(tailCall, process.check(pc.prim3()), .{ pc.next3(), newSp, process, context, extra });
         }
-        trace("Float>>#inlinePrimitive: + {f}", .{sp.next});
+        trace("SmallInteger>>#inlinePrimitive: + {f}", .{sp.next});
         return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, extra });
     }
 };
@@ -192,16 +193,16 @@ pub const @"*" = struct {
     }
 };
 pub const threadedFns = struct {
-    pub const @"inline+I" = struct {
+    pub const SmallInteger_add = struct {
         pub const threadedFn = @"+".inlinePrimitive;
     };
-    pub const @"inline-I" = struct {
+    pub const SmallInteger_sub = struct {
         pub const threadedFn = @"-".inlinePrimitive;
     };
-    pub const @"inline*I" = struct {
+    pub const SmallInteger_mul = struct {
         pub const threadedFn = @"*".inlinePrimitive;
     };
-    pub const @"inline<=I" = struct {
+    pub const SmallInteger_leq = struct {
         pub const threadedFn = @"<=".inlinePrimitive;
     };
     pub const countDown = struct {

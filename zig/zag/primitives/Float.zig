@@ -157,16 +157,16 @@ pub const @"*" = struct {
     }
 };
 pub const threadedFns = struct {
-    pub const @"inline+F" = struct {
+    pub const Float_add = struct {
         pub const threadedFn = @"+".inlinePrimitive;
     };
-    pub const @"inline-F" = struct {
+    pub const Float_sub = struct {
         pub const threadedFn = @"-".inlinePrimitive;
     };
-    pub const @"inline*F" = struct {
+    pub const Float_mul = struct {
         pub const threadedFn = @"*".inlinePrimitive;
     };
-    pub const @"inline<=F" = struct {
+    pub const Float_leq = struct {
         pub const threadedFn = @"<=".inlinePrimitive;
     };
 };
