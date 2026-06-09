@@ -66,6 +66,25 @@ fn usage() void {
 fn version() void {
     std.debug.print("Zag Smalltalk {s} using {} object encoding\n", .{ config.git_version, config.objectEncoding });
 }
+fn smalltalkThreadedFns() void {
+    std.debug.print("zagThreadesFns\n\t^ #(\n",.{});
+    for (0..500) |tf|
+        switch (@as(threadedFn.Enum,@enumFromInt(tf))) {
+            ._end => break,
+            else => |tag| std.debug.print("\t#T_{s}\n",.{@tagName(tag)}),
+        };
+    std.debug.print(")\n", .{});
+}
+fn smalltalkClasses() void {
+    std.debug.print("zagClasses\n\n\t^ #(\n",.{});
+    for (0..500) |cl|
+        if (std.enums.tagName(object.ClassIndex, @enumFromInt(cl))) |tagName| {
+            if (tagName[0] <= 'Z')
+                std.debug.print("\t#Class{s} {}\n",.{tagName, cl});
+        };
+        std.debug.print("\t)\n", .{});
+}
+
 fn extensionMatches(name: []const u8, ext: []const u8) bool {
     if (name.len <= ext.len) return false;
     for (name[name.len - ext.len ..], ext) |n, e| {
@@ -227,6 +246,8 @@ pub fn main() !void {
             switch (std.meta.stringToEnum(ValidSwitches, arg) orelse .invalid) {
                 .@"--help", .@"-h" => return usage(),
                 .@"--version", .@"-v" => return version(),
+                .@"--SmalltalkTf" => return smalltalkThreadedFns(),
+                .@"--SmalltalkClasses" => return smalltalkClasses(),
                 .invalid => {
                     std.debug.print("Error: '{s}' is not a valid switch.\n", .{arg});
                     return;
@@ -244,5 +265,7 @@ const ValidSwitches = enum {
     @"-h",
     @"--version",
     @"-v",
+    @"--SmalltalkTf",
+    @"--SmalltalkClasses",
     invalid,
 };
