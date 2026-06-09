@@ -9,7 +9,7 @@ Class {
 { #category : 'setup' }
 ASMixImageTest >> encoderClass [
 
-	^ ZagImageEncodeMix
+	^ ZagImageEncodeZag
 ]
 
 { #category : 'tests' }

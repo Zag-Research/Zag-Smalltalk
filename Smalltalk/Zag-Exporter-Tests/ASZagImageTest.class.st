@@ -15,7 +15,7 @@ Class {
 { #category : 'setup' }
 ASZagImageTest >> encoderClass [
 
-	^ ZagImageEncodeZag
+	^ ZagImageEncodeZagOrig
 ]
 
 { #category : 'tests' }
