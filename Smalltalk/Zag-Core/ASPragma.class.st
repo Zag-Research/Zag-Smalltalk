@@ -27,6 +27,12 @@ ASPragma >> arguments [
 	^ args
 ]
 
+{ #category : 'converting' }
+ASPragma >> asPharoAST [
+	"Warning: ASPragma seems to be missing the selector that OCPragmaNode wants."
+	^OCPragmaNode selector: nil arguments: (args collect: #asPharoAST).
+]
+
 { #category : 'printing' }
 ASPragma >> inspectZagASTOn: aStream [
 	super inspectZagASTOn: aStream.

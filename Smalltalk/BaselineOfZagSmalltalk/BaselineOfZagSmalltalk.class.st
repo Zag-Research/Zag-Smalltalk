@@ -48,7 +48,6 @@ BaselineOfZagSmalltalk >> baseline: spec [
 			package: 'Zag-Output-Tests' with: [
 				spec requires: #( 'Zag-Output' 'Zag-Compiler-Tests'
 					   'Zag-Core' ) ];
-			package: 'Benchmarks' with: [ spec requires: #( 'Zag-Core' ) ];
 			package: 'Zag-Library' ]
 ]
 

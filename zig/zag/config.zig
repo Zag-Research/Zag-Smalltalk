@@ -25,18 +25,20 @@ const show_error_stack = debugging;
 pub const show_trace = debugging or options.trace;
 
 pub const immediateIntegers = switch (objectEncoding) {
-    .zag, .nan, .zagSpur, .zagMixed, .spur, .onlyInt, .taggedInt, .taggedPtr, .taggedHigh => true,
+    .zag, .nan, .nun, .zagSpur, .zagOrig, .compact1, .compact2, .compact4, .compact6, .compactI1, .compactI2, .compactI4, .compactI6, .compactY, .compactZ, .compactA2, .spur, .spurOpt, .spurNZ, .spurFST, .onlyInt, .taggedInt, .taggedLow, .taggedHigh => true,
     else => false,
 };
 pub const immediateSymbols = switch (objectEncoding) {
-    .zag, .nan, .zagSpur, .zagMixed, .onlyInt, .onlyFloat, .taggedPtr, .taggedHigh => true,
+    .zag, .nan, .nun, .zagSpur, .zagOrig, .compact1, .compact2, .compact4, .compact6, .compactI1, .compactI2, .compactI4, .compactI6, .compactY, .compactZ, .compactA2, .onlyInt, .onlyFloat, .taggedLow, .taggedHigh => true,
     else => false,
 };
 pub const notZag = objectEncoding != .zag;
 pub fn skipNotZag() !void {
     if (notZag) return error.SkipZigTest;
 }
-pub const skipForDebugging = error.SkipZigTest;
+pub fn skipForDebugging() !void {
+    return error.SkipZigTest;
+}
 pub fn printConfig() void {
     std.debug.print(
         \\

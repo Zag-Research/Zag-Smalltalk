@@ -23,6 +23,11 @@ ASArray >> = other [
 			  self statements = other statements ]
 ]
 
+{ #category : 'converting' }
+ASArray >> asPharoAST [
+	self error: 'ASArray seems to be missing instance variables!'.
+]
+
 { #category : 'printing' }
 ASArray >> do: aBlock [
 	1 to: self size do: [ : idx| aBlock value: (self at: idx) ]

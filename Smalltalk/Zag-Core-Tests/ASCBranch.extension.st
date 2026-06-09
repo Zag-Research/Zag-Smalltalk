@@ -1,7 +1,9 @@
 Extension { #name : 'ASCBranch' }
 
 { #category : '*Zag-Core-Tests' }
-ASCBranch >> interpretFor: aSemanticInterpreter [
-
-	^ aSemanticInterpreter branch: bb
+ASCBranch >> interpretFor: anInterpreter [
+	bb ifNotNil: [^ anInterpreter branch: bb].
+	^ anInterpreter
+		  return: anInterpreter top
+		  selfOffset: stack offset
 ]

@@ -12,6 +12,7 @@ const Object = object.Object;
 const True = object.True;
 const False = object.False;
 const ClassIndex = object.ClassIndex;
+const o0 = object.testObjects[0];
 const execute = zag.execute;
 const PC = execute.PC;
 const SP = Process.SP;
@@ -24,7 +25,7 @@ const Context = zag.Context;
 const Extra = Context.Extra;
 const globalArena = zag.globalArena;
 const symbol = zag.symbol;
-const symbols = symbol.symbols;
+const symbols = symbol.Symbols;
 const HeapHeader = zag.heap.HeapHeader;
 const smallestPrimeAtLeast = @import("utilities.zig").smallestPrimeAtLeast;
 // note that self and other could become invalid after any method call if they are heap objects, so will need to be re-loaded from context.fields if needed thereafter
@@ -43,7 +44,7 @@ const DispatchHandler = struct {
     fn loadMethodForClass(ci: ClassIndex, signature: Signature) *const CompiledMethod {
         if (defaultForTest != void)
             return defaultForTest.loadMethodForClass(ci, signature);
-        std.log.err("loadMethodForClass({} {b} {f} {})\n", .{ ci, @as(u64, @bitCast(signature)), signature, signature.fullHash() });
+        std.log.err("Class: {} signature: {f}) - ", .{ ci, signature });
         @panic("Method not found");
     }
     fn stats(index: ClassIndex) Dispatch.Stats {
@@ -54,7 +55,7 @@ const DispatchHandler = struct {
     }
     fn addMethod(method: *const CompiledMethod) void {
         const index = method.signature.getClassIndex();
-        trace("addMethod({b} {f} {}) {} {*}\n", .{ @as(u64, @bitCast(method.signature)), method.signature, method.signature.fullHash(), index, dispatches[index] });
+        trace("addMethod({b} {f} {}) {} {*}", .{ @as(u64, @bitCast(method.signature)), method.signature, method.signature.fullHash(), index, dispatches[index] });
         if (dispatches[index].addIfAllocated(method)) return;
         while (true) {
             if (dispatches[index].lock()) |dispatch| {
@@ -241,16 +242,16 @@ test "add/lookup" {
     const sig = Signature.fromNameClass(selector, class);
     const emptyMethod = dummyCompiledMethod(sig);
     addMethod(&emptyMethod);
-    try std.testing.expectEqual(class.lookupMethodForClass(sig), &emptyMethod);
+    try std.testing.expectEqual(lookupMethodForClass(class, sig), &emptyMethod);
     const altMethod = dummyCompiledMethod(Signature.fromNameClass(selector, class));
     addMethod(&altMethod);
-    try std.testing.expectEqual(class.lookupMethodForClass(sig), &altMethod);
+    try std.testing.expectEqual(lookupMethodForClass(class, sig), &altMethod);
     const stats = DispatchHandler.stats(class);
     try std.testing.expectEqual(1, stats.active);
     try std.testing.expectEqual(5, stats.nMethods);
     try std.testing.expectEqual(7, stats.total);
     defaultForTest.called = false;
-    try std.testing.expectEqual(class.lookupMethodForClass(Signature.fromNameClass(symbols.@"new:", class)), &defaultForTest.dummyMethod);
+    try std.testing.expectEqual(lookupMethodForClass(class, Signature.fromNameClass(symbols.@"new:", class)), &defaultForTest.dummyMethod);
     try std.testing.expectEqual(true, defaultForTest.called);
 }
 pub const threadedFunctions = struct {
@@ -266,11 +267,12 @@ pub const threadedFunctions = struct {
                 return @call(tailCall, process.check(context.npc), .{ context.tpc, newSp, process, context, newExtra });
             }
             const newSp, const callerContext = context.pop(sp);
-            newSp.traceStack("returnSelf after pop", context, extra);
-            return @call(tailCall, process.branchCheck(callerContext.getNPc()), .{ callerContext.getTPc(), newSp, process, callerContext, Extra.fromContextData(callerContext.contextData) });
+            const newExtra = Extra.fromContextData(callerContext.contextDataPtr(sp));
+            newSp.traceStack("returnSelf after pop", context, newExtra);
+            return @call(tailCall, process.branchCheck(callerContext.getNPc()), .{ callerContext.getTPc(), newSp, process, callerContext, newExtra });
         }
         test {
-            if (true) return config.skipForDebugging;
+            if (true) return config.skipForDebugging();
             var exe = Execution.initTest("returnSelf", .{
                 tf.pushLiteral,
                 91,
@@ -303,12 +305,12 @@ pub const threadedFunctions = struct {
             return @call(tailCall, process.branchCheck(callerContext.npc), .{ callerContext.tpc, newSp, process, callerContext, Extra.fromContextData(callerContext.contextDataPtr(sp)) });
         }
         test {
-            if (true) return config.skipForDebugging;
+            if (true) return config.skipForDebugging();
             var exe = Execution.initTest("returnTopNoContext", .{
                 tf.pushLiteral,
                 91,
                 tf.pushLiteral,
-                Object.tests[0],
+                o0,
                 tf.returnTop,
                 2,
                 tf.pushLiteral,
@@ -326,14 +328,14 @@ pub const threadedFunctions = struct {
         }
     };
     inline fn getMethod(pc: PC, signature: Signature, receiver: Object) *const CompiledMethod {
-        const class = receiver.get_class();
+        const class = receiver.which_class();
         const requiredSignature = signature.withClass(class);
-        trace("getMethod: {} {f} {f} {f}\n", .{ class, signature, receiver, requiredSignature });
+        trace("getMethod: {} {f} {f} {f}", .{ class, signature, receiver, requiredSignature });
         if (signature == requiredSignature) {
             return pc.next().method();
         }
-        const method = class.lookupMethodForClass(requiredSignature);
-        if (signature.getClass() == .none) {
+        const method = lookupMethodForClass(class, requiredSignature);
+        if (@intFromEnum(signature.getClass()) == 0) {
             trace("getMethod: patch {f} {any}", .{ requiredSignature, method });
             pc.patchPtr().patchMethod(requiredSignature, method);
         } else {
@@ -345,16 +347,20 @@ pub const threadedFunctions = struct {
         pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
             sp.traceStack("send", context, extra);
             const signature = pc.signature();
-            const numArgs = signature.numArgs;
+            const numArgs = signature.numArgs();
             const selfAddr = sp.unreserve(numArgs);
             const method = getMethod(pc, signature, selfAddr.top);
+            trace("method: {f}", .{method});
             const newPc = method.codePc();
+            trace("newPc: {f}", .{newPc});
             if (extra.installContextIfNone(sp, process, context)) |new| {
                 const newSp = new.sp;
                 const newContext = new.context;
                 newContext.setReturn(pc.next2());
                 const newExtra = Extra.forMethod(method, newSp.unreserve(numArgs));
+                trace("newExtra {x} {f}", .{ @as(u64, @bitCast(newExtra)), newExtra });
                 newSp.traceStack("send new stack", newContext, newExtra);
+                trace("newPc: {f} {?}", .{ newPc, @import("threadedFn.zig").find(method.executeFn) });
                 return @call(tailCall, method.executeFn, .{ newPc.next(), newSp, process, newContext, newExtra });
             }
             context.setReturn(pc.next2());
@@ -381,7 +387,7 @@ pub const threadedFunctions = struct {
     pub const tailSend = struct {
         pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
             const signature = pc.signature();
-            const method = getMethod(pc, signature, sp.at(signature.numArgs));
+            const method = getMethod(pc, signature, sp.at(signature.numArgs()));
             const newPc = method.codePc();
             _ = extra; // have to move parameters to self position
             if (true) @panic("unreachable");
@@ -431,7 +437,7 @@ const DispatchMethod = struct {
         const method = self.method;
         if (method.signature.equals(signature))
             return method;
-        trace("match {*} {f} {f}", .{ self, method.signature, signature });
+        trace("match {*} {f} {f} ({x} {x})", .{ self, method.signature, signature, @as(u64, @bitCast(method.signature)), @as(u64, @bitCast(signature)) });
         return null;
     }
     inline //

@@ -23,6 +23,11 @@ ASRef >> = other [
 	^ self class = other class and: [ self variable = other variable ]
 ]
 
+{ #category : 'converting' }
+ASRef >> asPharoAST [
+	^OCVariableNode named: variable.
+]
+
 { #category : 'printing' }
 ASRef >> inspectZagASTOn: aStream [
 	super inspectZagASTOn: aStream.

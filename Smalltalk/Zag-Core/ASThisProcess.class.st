@@ -9,6 +9,11 @@ Class {
 	#tag : 'AST'
 }
 
+{ #category : 'converting' }
+ASThisProcess >> asPharoAST [
+	^OCVariableNode thisProcessNode.
+]
+
 { #category : 'compiling' }
 ASThisProcess >> zigWalk: aGenerator [
 

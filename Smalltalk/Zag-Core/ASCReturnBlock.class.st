@@ -76,3 +76,8 @@ ASCReturnBlock >> selector [
 
 	^self  methodBlock selector
 ]
+
+{ #category : 'as yet unclassified' }
+ASCReturnBlock >> sourceBlock [
+	^ sourceBlocks detect: [ :each | ^each ].
+]

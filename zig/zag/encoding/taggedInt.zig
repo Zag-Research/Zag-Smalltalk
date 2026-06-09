@@ -1,0 +1,421 @@
+//! This module implements Object encoding for integers flagged
+const std = @import("std");
+const math = std.math;
+const expectEqual = std.testing.expectEqual;
+const expect = std.testing.expect;
+const zag = @import("../zag.zig");
+const trace = zag.config.trace;
+const object = zag.object;
+const Process = zag.Process;
+const SP = Process.SP;
+const Context = zag.Context;
+const testing = std.testing;
+const ClassIndex = object.ClassIndex;
+const heap = zag.heap;
+const HeapHeader = heap.HeapHeader;
+const HeapObject = heap.HeapObject;
+const HeapObjectConstPtr = heap.HeapObjectConstPtr;
+const InMemory = zag.InMemory;
+
+const Tag = enum(Object.LowTagType) {
+    pointer = pointerTag,
+    smallInteger = pointerTag ^ 1,
+    const pointerTag = if (zag.config.objectEncoding == .taggedInt) 0 else 1;
+    inline fn u(cg: Tag) u1 {
+        return @intFromEnum(cg);
+    }
+    inline fn isSet(obj: Object, comptime tag: Tag) bool {
+        return switch (@intFromEnum(tag)) {
+            0 => obj.rawU() & 1 == 0,
+            else => obj.rawU() & 1 != 0,
+        };
+    }
+};
+pub const Object = packed union {
+    ref: *InMemory.PointedObject,
+    immediate: packed struct(u64) {
+        tag: Tag,
+        hash: u63,
+    },
+    pub const Compact = enum(u5) {
+        heap,
+        ThunkReturnLocal,
+        ThunkReturnInstance,
+        ThunkReturnObject,
+        ThunkReturnImmediate,
+        ThunkLocal,
+        BlockAssignLocal,
+        ThunkInstance,
+        BlockAssignInstance,
+        ThunkHeap,
+        ThunkImmediate,
+        SmallInteger,
+        Symbol,
+        False,
+        True,
+        Character,
+        Signature,
+        ThunkReturnCharacter,
+        ThunkReturnFloat,
+        ThunkFloat,
+        LLVM,
+        UndefinedObject,
+        Float,
+        _,
+        pub inline fn classIndex(cp: Compact) ClassIndex {
+            return @enumFromInt(@intFromEnum(cp));
+        }
+        pub inline fn from(ci: ClassIndex) Compact {
+            return @enumFromInt(@intFromEnum(ci));
+        }
+        pub const immutableClasses = 0;
+        pub const mutableClasses = 32;
+    };
+
+    const pointerTag = Tag.u(.pointer);
+    const SmallIntegerTag = Tag.u(.smallInteger);
+
+    const Self = @This();
+    const intShift = 64 - @bitSizeOf(IntType);
+    pub const IntType = i63;
+    pub const maxInt = 0x3fff_ffff_ffff_ffff;
+    pub const ZERO: Object = @bitCast(@as(u64, 0));
+    pub inline fn False() Object {
+        return Object.fromAddress(&InMemory.False);
+    }
+
+    pub inline fn True() Object {
+        return Object.fromAddress(&InMemory.True);
+    }
+
+    pub inline fn Nil() Object {
+        return Object.fromAddress(&InMemory.Nil);
+    }
+
+    inline fn addr(self: Object) *InMemory.PointedObject {
+        const ptr = @as(u64, @bitCast(self)) - pointerTag;
+        @setRuntimeSafety(false);
+        return @ptrFromInt(ptr);
+    }
+
+    pub const LowTagType = TagAndClassType;
+    pub const lowTagSmallInteger = makeImmediate(.SmallInteger, 0).tagbits();
+    pub const HighTagType = u0;
+    pub const highTagSmallInteger = 0;
+    pub const PackedTagType = u3;
+    pub const packedTagSmallInteger = 1;
+    pub const signatureTag = Tag.u(.smallInteger);
+    pub const LowTag = u1;
+    pub const HighTag = u8;
+    const TagAndClassType = u1;
+    inline fn tagbits(self: Self) TagAndClassType {
+        return @truncate(self.rawU());
+    }
+
+    pub inline fn untaggedI(self: object.Object) ?i64 {
+        if (self.isInt()) return untaggedI_noCheck(self);
+        return null;
+    }
+
+    inline fn untaggedI_noCheck(self: Object) i64 {
+        return @bitCast(self.rawU() - SmallIntegerTag);
+    }
+
+    pub inline fn taggedI(self: Object) ?i64 {
+        if (self.isInt()) return taggedI_noCheck(self);
+        return null;
+    }
+
+    inline fn taggedI_noCheck(self: Object) i64 {
+        return @bitCast(self);
+    }
+
+    pub inline fn fromTaggedI(i: i64, _: anytype, _: anytype) Object {
+        return @bitCast(i);
+    }
+
+    pub inline fn fromUntaggedI(i: i64, _: anytype, _: anytype) Object {
+        return @bitCast(@as(u64, @bitCast(i)) + SmallIntegerTag);
+    }
+
+    inline fn isInt(self: Object) bool {
+        return Tag.isSet(self, .smallInteger);
+    }
+    pub inline fn nativeI(self: Object) ?i64 {
+        if (self.isInt()) return self.nativeI_noCheck();
+        return null;
+    }
+    pub inline fn nativeI_noCheck(self: Object) i64 {
+        return @as(i64, self.rawI()) >> 1;
+    }
+    pub inline fn fromNativeI(i: IntType, _: anytype, _: anytype) Object {
+        return @bitCast((@as(u64, @bitCast(@as(i64, i))) << 1) + SmallIntegerTag);
+    }
+
+    inline fn isHeapObject(self: Object) bool {
+        return Tag.isSet(self, .pointer);
+    }
+    pub fn encodedPointer(_: Object, T: type) ?T {
+        @panic("Not implemented");
+    }
+    pub inline fn pointer(self: object.Object, T: type) ?T {
+        return @ptrFromInt(@as(usize, @bitCast(self)) - pointerTag);
+    }
+
+    pub inline fn isImmediateClass(self: object.Object, comptime class: ClassIndex) bool {
+        if (self.isInt()) return class == .SmallInteger;
+        return false;
+    }
+
+    pub const MaxImmediateCharacter = 0x10FFFF;
+
+    pub inline fn isCharacter(_: Object) bool {
+        return false;
+    }
+
+    pub inline fn characterValue(self: Self) ?u32 {
+        if (self.isCharacter())
+            return @intCast(self.raw >> 3);
+        return null;
+    }
+
+    pub inline fn isBool(self: Object) bool {
+        return self.equals(Object.True()) or self.equals(Object.False());
+    }
+
+    inline fn oImm(c: Tag, h: u61) Self {
+        return Self{ .immediate = .{ .tag = c, .hash = h } };
+    }
+    pub inline fn makeImmediate(cls: ClassIndex, hash: u61) object.Object {
+        // Map ClassIndex to appropriate Tag
+        const group = switch (cls) {
+            .SmallInteger => Tag.smallInteger,
+            .Float => Tag.float,
+            else => Tag.pointer, // heap objects
+        };
+        return oImm(group, hash);
+    }
+
+    pub inline fn nativeF(self: object.Object) ?f64 {
+        if (self.isMemoryDouble()) return self.toDoubleFromMemory();
+        return null;
+    }
+    pub inline fn fromNativeF(t: f64, sp: SP, context: *Context) object.Object {
+        return memoryFloat(t, sp, context);
+    }
+
+    pub inline fn symbolHash(self: Object) ?u24 {
+        if (self.isSymbol()) return self.hash24();
+        return null;
+    }
+    pub inline fn numArgs(self: Object) u4 {
+        return @truncate(self.hash32());
+    }
+    pub fn makeSymbol(_: anytype, _: anytype, _: anytype) Object {
+        @panic("not implemented");
+    }
+    pub inline fn isSymbol(self: Object) bool {
+        // symbols are heap objects
+        return self.addr().header.classIndex == .Symbol;
+    }
+
+    // Hash helpers
+    pub inline fn hash24(self: Object) u24 {
+        return self.addr().header.hash;
+    }
+    pub inline fn hash32(self: Object) u32 {
+        return @truncate(self.addr().data.unsigned);
+    }
+
+    // Raw access
+    pub const testU = rawU;
+    pub const testI = rawI;
+    inline fn rawU(self: Object) u64 {
+        return @bitCast(self);
+    }
+
+    inline fn rawI(self: Object) i64 {
+        return @bitCast(self.rawU());
+    }
+    pub inline fn invalidObject(self: object.Object) ?u64 {
+        const value: u64 = @bitCast(self);
+        if (value == 0) return value;
+        if (value & 6 != 0) return value;
+        return null;
+    }
+
+    fn memoryFloat(value: f64, sp: SP, context: *Context) object.Object {
+        if (math.isNan(value)) return object.Object.fromAddress(&InMemory.nanMemObject);
+        if (math.inf(f64) == value) return object.Object.fromAddress(&InMemory.pInfMemObject);
+        if (math.inf(f64) == -value) return object.Object.fromAddress(&InMemory.nInfMemObject);
+        return InMemory.float(value, sp, context);
+    }
+
+    pub fn fromAddress(value: anytype) Object {
+        if (@inComptime()) return Object{ .ref = undefined };
+        return @bitCast(@intFromPtr(value) + pointerTag);
+    }
+    pub const StaticObject = struct {
+        obj: InMemory.PointedObject,
+        pub fn init(self: *StaticObject, comptime value: anytype) object.Object {
+            const ptr: *InMemory.PointedObject = @ptrCast(self);
+            switch (@typeInfo(@TypeOf(value))) {
+                .int, .comptime_int => return fromNativeI(value, null, null),
+                .comptime_float => return fromAddress(ptr.set(.Float, value)),
+                .bool => return if (value) object.Object.True() else object.Object.False(),
+                else => @panic("Unsupported type for compile-time object creation"),
+            }
+            return fromAddress(ptr);
+        }
+    };
+    // Conversion from Zig types
+    pub inline fn from(value: anytype, sp: SP, context: *Context) Object {
+        const T = @TypeOf(value);
+        if (T == Object) return value;
+        switch (@typeInfo(T)) {
+            .int, .comptime_int => return fromNativeI(value, sp, context),
+            .float, .comptime_float => return fromNativeF(value, sp, context),
+            .bool => return if (value) Object.True() else Object.False(),
+            .null => return Object.Nil(),
+            .pointer => |ptr_info| {
+                switch (ptr_info.size) {
+                    .one, .many => return fromAddress(value),
+                    else => {},
+                }
+            },
+            else => {},
+        }
+        @compileError("Can't convert \"" ++ @typeName(T) ++ "\"");
+    }
+
+    inline fn isMemoryDouble(self: object.Object) bool {
+        return if (self.ifHeapObject()) |ptr|
+            ptr.getClass() == .Float
+        else
+            false;
+    }
+
+    inline fn toDoubleFromMemory(self: object.Object) f64 {
+        return self.to(*InMemory.MemoryFloat).*.value;
+    }
+
+    // Conversion to Zig types (partial)
+    pub fn toWithCheck(self: Object, comptime T: type, comptime check: bool) T {
+        switch (T) {
+            f64 => {
+                if (!check or self.isMemoryDouble()) return self.toDoubleFromMemory();
+            },
+            i64 => {
+                if (self.nativeI()) |int| return int;
+            },
+            bool => {
+                if (!check or self.isBool()) return self.toBoolNoCheck();
+            },
+            else => {
+                switch (@typeInfo(T)) {
+                    .pointer => |ptrInfo| {
+                        switch (@typeInfo(ptrInfo.child)) {
+                            .@"fn" => {},
+                            .@"struct" => {
+                                if (!check or (self.hasHeapReference() and (!@hasDecl(ptrInfo.child, "ClassIndex") or self.to(HeapObjectConstPtr).classIndex == ptrInfo.child.ClassIndex))) {
+                                    if (@hasField(ptrInfo.child, "header") or (@hasDecl(ptrInfo.child, "includesHeader") and ptrInfo.child.includesHeader)) {
+                                        return @as(T, @ptrCast(self.addr()));
+                                    } else {
+                                        return @as(T, @ptrFromInt(@sizeOf(HeapHeader) + @intFromPtr(self.addr())));
+                                    }
+                                }
+                            },
+                            else => {},
+                        }
+                    },
+                    else => {},
+                }
+            },
+        }
+        @panic("Trying to convert Object to " ++ @typeName(T));
+    }
+
+    // Class detection (stub)
+    pub inline fn which_class(self: Object) ClassIndex {
+        if (self.isInt()) {
+            @branchHint(.likely);
+            return .SmallInteger;
+        }
+        return self.addr().header.classIndex;
+    }
+    pub const hasHeapReference = isHeapObject;
+    pub inline fn ifHeapObject(self: Object) ?*HeapObject {
+        if (self.isHeapObject()) return @ptrCast(@constCast(self.addr()));
+        return null;
+    }
+    pub fn returnLiteralClosure(_: Object, _: *Context) ?Object {
+        return null;
+    }
+    pub fn isImmediate(self: Object) bool {
+        return self.isInt();
+    }
+    pub fn extraU(_: Object) u0 {
+        @panic("not implemented");
+    }
+
+    pub inline fn asUntaggedI(i: i64) i64 {
+        return i << 1;
+    }
+    pub fn returnObjectClosure(_: Object, _: anytype) ?Object {
+        return null;
+    }
+    pub fn returnLocalClosure(_: Object, _: anytype) ?Object {
+        return null;
+    }
+    pub fn immediateClosure(_: anytype, _: anytype, _: anytype) ?Object {
+        return null;
+    }
+
+    pub fn extraImmediateU(_: Object) ?u8 {
+        return null;
+    }
+
+    pub fn extraImmediateI(_: Object) ?i8 {
+        return null;
+    }
+
+    pub fn extraI(_: Object) i8 {
+        return 0;
+    }
+
+    // Add missing methods
+    pub inline fn signature(_: Object) ?zag.execute.Signature {
+        // Spur doesn't use immediate signatures like other encodings
+        return null;
+    }
+
+    pub inline fn extraValue(self: Object) Object {
+        // For spur encoding, extract value from immediate objects
+        // if (self.isImmediate()) {
+        //     return fromSmallInteger(self.immediate.hash);
+        // }
+        // return self;
+        _ = .{ self, @panic("Not implemented") };
+    }
+
+    const OF = object.ObjectFunctions;
+    pub const arrayAsSlice = OF.arrayAsSlice;
+    pub const asObjectArray = OF.asObjectArray;
+    pub const asZeroTerminatedString = OF.asZeroTerminatedString;
+    pub const compare = OF.compare;
+    pub const empty = OF.empty;
+    pub const equals = OF.equals;
+    pub const format = OF.format;
+    pub const getField = OF.getField;
+    pub const toBoolNoCheck = OF.toBoolNoCheck;
+    pub const isIndexable = OF.isIndexable;
+    pub const isNil = OF.isNil;
+    pub const isUnmoving = OF.isUnmoving;
+    pub const promoteToUnmovable = OF.promoteToUnmovable;
+    pub const rawFromU = OF.rawFromU;
+    pub const to = OF.to;
+    pub const toUnchecked = OF.toUnchecked;
+    pub const asVariable = zag.Context.asVariable;
+    pub const setField = OF.setField;
+    pub const tests = OF.tests;
+};

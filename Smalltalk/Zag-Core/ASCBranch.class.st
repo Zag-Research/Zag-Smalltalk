@@ -38,6 +38,7 @@ ASCBranch >> inlineWithFixedCFG: anASCodeGenerator [
 ASCBranch >> inspectZagASTOn: aStream [
 
 	super inspectZagASTOn: aStream.
+	bb ifNil: [ ^self ].
 	aStream
 		<< ' -> ';
 		<< bb label

@@ -50,6 +50,13 @@ ASSend >> args [
 	^ args
 ]
 
+{ #category : 'converting' }
+ASSend >> asPharoAST [
+	| pharoArgs |
+	pharoArgs := args ifNil: [ #() ] ifNotNil: [ args collect: #asPharoAST ].
+	^OCMessageNode receiver: target asPharoAST selector: selector arguments: pharoArgs.
+]
+
 { #category : 'accessing' }
 ASSend >> blocks [
 

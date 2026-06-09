@@ -448,6 +448,11 @@ ASCompileTestClass1 >> testAssignment [
 ]
 
 { #category : 'testing - examples' }
+ASCompileTestClass1 >> testYourself [
+	^ #yourself yourself
+]
+
+{ #category : 'testing - examples' }
 ASCompileTestClass1 >> unaries [
 	^ 23 negated abs
 ]

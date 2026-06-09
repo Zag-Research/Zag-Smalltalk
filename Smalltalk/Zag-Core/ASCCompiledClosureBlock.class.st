@@ -55,8 +55,8 @@ ASCCompiledClosureBlock >> hasNonLocalReturn [
 
 { #category : 'initialization' }
 ASCCompiledClosureBlock >> initNamedIndirect: aBasicBlock [
-
-	stack := stack initNamedIndirect myScope: aBasicBlock sourceElements
+	stack := stack initNamedIndirect myScope: (self copyStackFrom: aBasicBlock)
+	"stack := stack initNamedIndirect myScope: aBasicBlock sourceElements"
 ]
 
 { #category : 'initialization' }

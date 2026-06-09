@@ -17,7 +17,7 @@ const opsInfo = jitmethod.opsInfo;
 const harness = @import("test_harness.zig");
 const print = std.debug.print;
 
-const fib_n = 40;
+const fib_n = 36;
 const fib_rounds = 5;
 const warmup_rounds = 3;
 
@@ -39,22 +39,23 @@ const FibSetup = struct {
     const sig = symbol.signature;
 
     const tup = .{
-        tf.push,             self,
-        tf.pushLiteral,      "1const",
-        tf.@"inline<=I",     tf.fail, tf.fail,
-        tf.branchFalse,      "false",
-        tf.returnSelf,       ":false",
-        tf.push,             self,
-        tf.pushLiteral,      "0const",
-        tf.@"inline-I",      tf.fail, tf.fail,
-        tf.send,             sig(.fibonacci, 0),
-        &nullMethod,         tf.push,
-        self,                tf.pushLiteral,
-        "1const",
-        tf.@"inline-I",      tf.fail, tf.fail,
-        tf.send,             sig(.fibonacci, 0),
-        &nullMethod,
-        tf.@"inline+I",      tf.fail, tf.fail,
+        tf.push,         self,
+        tf.pushLiteral,  "1const",
+        tf.@"inline<=I", tf.fail,
+        tf.fail,         tf.branchFalse,
+        "false",         tf.returnSelf,
+        ":false",        tf.push,
+        self,            tf.pushLiteral,
+        "0const",        tf.@"inline-I",
+        tf.fail,         tf.fail,
+        tf.send,         sig(.fibonacci),
+        &nullMethod,     tf.push,
+        self,            tf.pushLiteral,
+        "1const",        tf.@"inline-I",
+        tf.fail,         tf.fail,
+        tf.send,         sig(.fibonacci),
+        &nullMethod,     tf.@"inline+I",
+        tf.fail,         tf.fail,
         tf.returnTop,
     };
     const info = opsInfo(tup);

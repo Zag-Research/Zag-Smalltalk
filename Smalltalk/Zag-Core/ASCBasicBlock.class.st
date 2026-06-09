@@ -341,7 +341,7 @@ ASCBasicBlock >> inspectionStack: aBuilder [
 ASCBasicBlock >> inspectionStart: aBuilder [
 
 	<inspectorPresentationOrder: 1 title: 'Source'>
-	^ aBuilder newTable
+"	^ aBuilder newTable
 		  addColumn: (SpStringTableColumn new
 				   title: 'Stack Elements';
 				   evaluated: [ :each | StObjectPrinter asTruncatedTextFrom: each ];
@@ -349,6 +349,12 @@ ASCBasicBlock >> inspectionStart: aBuilder [
 				   beNotSortable;
 				   yourself);
 		  items: (sourceElements asOrderedCollectionFor: self);
+		  yourself"
+		^ (aBuilder instantiate: SpTreeTablePresenter)
+		  roots: operations;
+		  children: [ :aNode | aNode children ];
+		  addColumn:
+			  (SpStringTableColumn evaluated: [ :each | StObjectPrinter asTruncatedTextFrom: each ]);
 		  yourself
 ]
 

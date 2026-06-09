@@ -171,7 +171,6 @@ pub fn JitMethod(comptime ops: []const tf, comptime branch_targets: []const usiz
     };
 }
 
-
 fn isLabelDef(comptime field: anytype) bool {
     return switch (@typeInfo(@TypeOf(field))) {
         .pointer => |ptr| switch (@typeInfo(ptr.child)) {

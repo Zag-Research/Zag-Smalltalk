@@ -17,8 +17,9 @@ const Context = zag.Context;
 const Extra = Context.Extra;
 const object = zag.object;
 const Object = object.Object;
+const o0 = object.testObjects[0];
 const ClassIndex = object.ClassIndex;
-const Compact = ClassIndex.Compact;
+const Compact = Object.Compact;
 const True = object.True;
 const False = object.False;
 const Nil = object.Nil;
@@ -41,7 +42,7 @@ pub const ThunkReturnObject = struct {
         if (true) @panic("unreachable");
         const val = sp.top;
         const result = Object.from(@as(i50, val.extraI()), null);
-        const targetContext = val.highPointer(*Context).?;
+        const targetContext = val.encodedPointer(*Context).?;
         const newSp, const callerContext = targetContext.popTargetContext(process, result);
         return @call(tailCall, process.check(callerContext.getNPc()), .{ callerContext.getTPc(), newSp, process, callerContext, Extra.fromContextData(callerContext.contextData) });
     }
@@ -54,177 +55,25 @@ pub const ThunkReturnObject = struct {
 };
 
 pub const threadedFns = struct {
-    /// codeword: asThunk
-    /// converts the value on top of the stack to a thunk that will evaluate to that value
-    /// most values will become ThunkHeap, ThunkImmediate, or ThunkFloat
-    /// however, values that don't fit will allocate a 1 element array on the heap and return a ThunkInstance that references it
-    pub const asThunk = struct {
-        pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
-            const result = blk: {
-                if (switch (objectEncoding) {
-                    .zag => encodeZag(sp.top),
-                    .nan => encodeNan(sp.top),
-                    else => unreachable,
-                }) |encoded| {
-                    break :blk encoded;
-                } else {
-                    const ar = process.allocArray(&[_]Object{sp.top}, sp, context);
-                    break :blk Object.makeThunk(.ThunkInstance, ar, 1);
-                }
-            };
-            sp.top = result;
-            return @call(tailCall, process.check(pc.prim()), .{ pc.next(), sp, process, context, extra });
-        }
-        inline fn encodeZag(obj: Object) ?Object {
-            switch (obj.tag) {
-                .heap => return Object.makeThunk(.ThunkHeap, obj.to(*HeapObject), 0),
-                .immediates => {
-                    const original: i64 = @bitCast(obj);
-                    const signExtended: i56 = @truncate(original << 8 >> 8);
-                    if (signExtended == original)
-                        return Object.makeThunkNoArg(.ThunkImmediate, @bitCast(signExtended));
-                },
-                else => { // float
-                    const raw: u64 = @bitCast(obj);
-                    trace(
-                        \\float: raw = 0x{x}
-                        \\   encoded = 0x{x}
-                        \\   thunk   = 0x{x}
-                        \\
-                    , .{
-                        raw,
-                        ((raw & 0xffff_ffff_ffff_f000) >> 8) | (raw & 0xf),
-                        Object.makeThunkNoArg(.ThunkFloat, @truncate(((raw & 0xffff_ffff_ffff_f000) >> 8) | (raw & 0xf))).testU(),
-                    });
-                    if (raw & 0xff0 == 0)
-                        return Object.makeThunkNoArg(.ThunkFloat, @truncate(((raw & 0xffff_ffff_ffff_f000) >> 8) | (raw & 0xf)));
-                },
-            }
-            return null;
-        }
-        inline fn encodeNan(obj: Object) ?Object {
-            _ = obj;
-            return failed;
-            // switch (obj.tag) {
-            //     .heap => _ = unreachable,
-            //     .immediates => unreachable,
-            //     else => unreachable,
-            // }
-            // return null;
-        }
-        test "asThunk int" {
-            try config.skipNotZag();
-            if (true) return config.skipForDebugging;
-            var exe = Execution.initTest("asThunk int", .{tf.asThunk});
-            try exe.runTestWithValidator(
-                @ptrCast(&validateInt),
-                &[_]Object{exe.object(2)},
-                Object.empty,
-            );
-        }
-        fn validateInt(exe: anytype, _: []const Object) !void {
-            switch (objectEncoding) {
-                .zag => try execute.expectEqualSlices(&[_]Object{Object.makeImmediate(.ThunkImmediate, @truncate(exe.object(2).testU()))}, exe.stack()),
-                else => return error.TestAborted,
-            }
-        }
-
-        test "asThunk ptr" {
-            try config.skipNotZag();
-            const obj = Object.fromAddress(&ThunkReturnObject.primitive);
-            var exe = Execution.initTest("asThunk ptr", .{tf.asThunk});
-            if (true) return config.skipForDebugging;
-            try exe.runTestWithValidator(
-                @ptrCast(&validatePtr),
-                &[_]Object{obj},
-                &[_]Object{obj},
-            );
-        }
-        fn validatePtr(exe: anytype, expected: []const Object) !void {
-            const obj = expected[0];
-            switch (objectEncoding) {
-                .zag => try execute.expectEqualSlices(&[_]Object{Object.makeImmediate(.ThunkHeap, @truncate(obj.testU() << 8))}, exe.stack()),
-                else => return error.TestAborted,
-            }
-        }
-
-        test "asThunk True" {
-            try config.skipNotZag();
-            if (true) return config.skipForDebugging;
-            var exe = Execution.initTest("asThunk True", .{tf.asThunk});
-            try exe.runTestWithValidator(
-                @ptrCast(&validateTrue),
-                &[_]Object{True()},
-                Object.empty,
-            );
-        }
-        fn validateTrue(exe: anytype, _: []const Object) !void {
-            switch (objectEncoding) {
-                .zag => try execute.expectEqualSlices(&[_]Object{Object.makeImmediate(.ThunkImmediate, @truncate(True().testU()))}, exe.stack()),
-                else => return error.TestAborted,
-            }
-        }
-
-        test "asThunk float" {
-            try config.skipNotZag();
-            if (true) return config.skipForDebugging;
-            var exe = Execution.initTest("asThunk float", .{tf.asThunk});
-            try exe.runTestWithValidator(
-                @ptrCast(&validateFloat),
-                &[_]Object{exe.object(-32767.75)},
-                Object.empty,
-            );
-        }
-        fn validateFloat(exe: anytype, _: []const Object) !void {
-            switch (objectEncoding) {
-                .zag => try execute.expectEqualSlices(&[_]Object{@bitCast(@as(u64, 0x0dffff0000000e69))}, exe.stack()),
-                else => return error.TestAborted,
-            }
-        }
-
-        test "asThunk doesn't fit" {
-            try config.skipNotZag();
-            var exe = Execution.initTest("asThunk doesn't fit", .{tf.asThunk});
-            const obj = exe.object(1.0 / 5.0);
-            if (true) return config.skipForDebugging;
-            try exe.runTestWithValidator(
-                @ptrCast(&validateNone),
-                &[_]Object{obj},
-                &[_]Object{obj},
-            );
-        }
-        fn validateNone(exe: anytype, expected: []const Object) !void {
-            const obj = expected[0];
-            const result = exe.stack()[0];
-            const exeheap = exe.getHeap();
-            switch (objectEncoding) {
-                .zag => {
-                    try expectEqual(.ThunkInstance, result.which_class());
-                    try expectEqual(2, exeheap.len);
-                    try expectEqual(obj, exeheap[1].asObjectValue());
-                },
-                else => return error.TestAborted,
-            }
-        }
-    };
     pub const returnLiteralClosure = struct {
         pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
             sp.traceStack("returnLiteralClosure", context, extra);
             if (extra.installContextIfNone(sp, process, context)) |new| {
                 const newSp = new.sp;
                 const newContext = new.context;
-                newContext.setReturn(pc.next());
+                newContext.setReturn(pc.next2());
                 const newExtra = new.extra;
                 newSp.traceStack("returnLiteralClosure new stack", newContext, newExtra);
                 return @call(tailCall, threadedFn, .{ pc, newSp, process, newContext, newExtra });
             }
-            if (pc.object().returnObjectClosure(context)) |closure| {
+            if (pc.object().returnLiteralClosure(context)) |closure| {
                 if (sp.push(closure)) |newSp| {
                     return @call(tailCall, process.check(pc.prim2()), .{ pc.next2(), newSp, process, context, extra });
                 }
                 const newSp, const newContext, const newExtra = sp.spillStack(context, extra);
                 return @call(tailCall, threadedFn, .{ pc, newSp, process, newContext, newExtra });
             }
+            std.log.err("returnLiteralClosure: {f} - ", .{pc.object()});
             @panic("Unexpected object encoding");
         }
     };
@@ -234,19 +83,23 @@ pub const threadedFns = struct {
             if (extra.installContextIfNone(sp, process, context)) |new| {
                 const newSp = new.sp;
                 const newContext = new.context;
-                newContext.setReturn(pc.next());
                 const newExtra = new.extra;
+                newContext.setReturn(pc.next2());
                 newSp.traceStack("returnLocalClosure new stack", newContext, newExtra);
                 return @call(tailCall, threadedFn, .{ pc, newSp, process, newContext, newExtra });
             }
             if (pc.object().returnLocalClosure(context)) |closure| {
+                trace("returnLocalClosure: 0x{x:0>16} {f}", .{ closure.testU(), closure });
                 if (sp.push(closure)) |newSp| {
                     return @call(tailCall, process.check(pc.prim2()), .{ pc.next2(), newSp, process, context, extra });
                 }
-                const newSp, const newContext, const newExtra = sp.spillStack(context, extra);
-                return @call(tailCall, threadedFn, .{ pc, newSp, process, newContext, newExtra });
             }
-            @panic("Unexpected object encoding");
+            const closure, const newSp, const newContext, const newExtra = context.pushClosure(.ThunkReturnLocal, 2, sp, extra);
+            const fields: [*]Object = @ptrCast(closure);
+            fields[1] = Object.fromAddress(newContext);
+            fields[2] = pc.object();
+            closure.nowHasPointers();
+            return @call(tailCall, process.check(pc.prim2()), .{ pc.next2(), newSp, process, newContext, newExtra });
         }
     };
     pub const pushClosure = struct {
@@ -279,12 +132,12 @@ pub const threadedFns = struct {
             return @call(tailCall, process.check(pc.skip(2).prim()), .{ pc.skip(2).next(), newSp, process, newContext, newExtra });
         }
         test "pushClosure" {
-            if (true) return config.skipForDebugging;
+            if (true) return config.skipForDebugging();
             const exe1 = Execution.init(.{});
             const testMethod = exe1.method;
             var exe = Execution.initTest("pushClosure", .{
                 tf.pushLiteral,
-                Object.tests[0],
+                o0,
                 tf.pushLiteral,
                 "1True",
                 tf.pushLiteral,
@@ -361,42 +214,51 @@ pub const threadedFns = struct {
         }
         return Object.fromAddress(closureAddress);
     }
-    inline fn extraToObject(extra: u8) Object {
-        return switch (@as(Compact, @enumFromInt(extra >> 3))) {
-            .True => True(),
-            .False => False(),
-            .none => Nil(),
-            else => unreachable,
-        };
+    inline fn extraToObject(_: u8) Object {
+        unreachable;
     }
     pub const value = struct {
         pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
             sp.traceStack("value", context, extra);
             const val = sp.top;
             const class = val.which_class();
-            if (nonLocalReturning(val, class, sp, context)) |result| {
-                const newSp, const newContext = val.highPointer(*Context).?.pop(sp);
+            var returnFromContext: ?*Context = null;
+            var result: Object = undefined;
+            if (val.isImmediate()) {
+                if (nonLocalReturningFromImmediate(val, class, sp, context)) |result_| {
+                    returnFromContext = val.encodedPointer(*Context);
+                    result = result_;
+                }
+            } else if (nonLocalReturningFromObject(val, class, sp, context)) |result_| {
+                returnFromContext = result_.context;
+                result = result_.result;
+            }
+            if (returnFromContext) |theContext| {
+                const newSp, const newContext = theContext.pop(sp);
                 const newExtra = Extra.fromContextData(newContext.contextDataPtr(newSp));
                 trace("newSp = {*}..{*} newConect = {*} newExtra = {x} newContext.npc = {*}", .{ newSp, newSp.endOfStack(), newContext, @as(u64, @bitCast(newExtra)), newContext.npc });
                 newSp.top = result;
                 newSp.traceStack("value after", newContext, newExtra);
                 return @call(tailCall, process.check(newContext.npc), .{ newContext.tpc, newSp, process, newContext, newExtra });
             }
+            std.log.err("class: {} - ", .{class});
             _ = .{ pc, @panic("Unimplemented class") };
         }
-        inline fn nonLocalReturning(val: Object, class: ClassIndex, sp: SP, context: *Context) ?Object {
+        inline fn nonLocalReturningFromImmediate(val: Object, class: ClassIndex, sp: SP, context: *Context) ?Object {
+            trace("for class: {}", .{class});
             switch (class) {
-                .ThunkReturnObject => {
-                    return Object.from(val.extraI(), sp, context);
+                .ThunkReturnObject => return Object.from(val.extraI(), sp, context),
+                .ThunkReturnImmediate => {
+                    const u: u64 = val.extraU();
+                    return @bitCast((u >> 6 << 59) | (u & 0x3f));
                 },
-                // .ThunkReturnImmediate => {
-                //     result = @bitCast(val.rawU() << 48 >> 56);
-                //     continue :sw .reserved;
-                // },
-                // .ThunkReturnCharacter => {
-                //     result = Object.makeImmediate(.Character, val.rawU() << 48 >> 56);
-                //     continue :sw .reserved;
-                // },
+                .ThunkReturnCharacter => return Object.makeImmediate(.Character, val.extraU()),
+                .ThunkReturnLocal => {
+                    const targetContext: *Context = val.encodedPointer(*Context).?;
+                    const localAddress = targetContext.contextDataPtr(sp).localAddress(val.extraU());
+                    trace("val: 0x{x:0>16} context: {*} localAddress: {*} variable: {}", .{ val.testU(), targetContext, localAddress, val.extraU() });
+                    return localAddress[0];
+                },
                 // .ThunkReturnFloat => {
                 //     const sign_exponent = (val.rawU() & 0xc000) << 48;
                 //     const exponent_mantissa = @as(u64, @bitCast(@as(i64, @bitCast((val.rawU() & 0x3f00) << 50)) >> 6)) >> 2;
@@ -408,9 +270,6 @@ pub const threadedFns = struct {
                 // => { // this is the common part for ThunkReturns
                 //     const targetContext: Context = @ptrFromInt(val >> 16);
                 //     switch (val.class) {
-                //         .ThunkReturnLocal => {
-                //             result = targetContext.getLocal((val.rawU() >> 8) and 0xFF);
-                //         },
                 //         .ThunkReturnInstance => {
                 //             result = targetContext.getSelfInstVar((val.rawU() >> 8) and 0xFF);
                 //         },
@@ -424,6 +283,25 @@ pub const threadedFns = struct {
                 //         .BlockAssignLocal, .BlockAssignInstance => {
                 //             @panic("unreachable");
                 //         },
+                else => {
+                    return null;
+                },
+            }
+        }
+        const ContextResult = struct {
+            context: *Context,
+            result: Object,
+        };
+        inline fn nonLocalReturningFromObject(val: Object, class: ClassIndex, sp: SP, _: *Context) ?ContextResult {
+            const ptr = val.pointer(*HeapObject).?.start();
+            trace("for class: {} {*}", .{ class, ptr });
+            switch (class) {
+                .ThunkReturnLocal => {
+                    const targetContext = ptr[1].pointer(*Context).?;
+                    const localAddress = targetContext.contextDataPtr(sp).localAddress(@bitCast(ptr[2].nativeI().?));
+                    trace("val: 0x{x:0>16} context: {*} localAddress: {*} variable: {f}", .{ val.testU(), targetContext, localAddress, localAddress[0] });
+                    return .{ .context = targetContext, .result = localAddress[0] };
+                },
                 else => {
                     return null;
                 },
@@ -500,7 +378,7 @@ pub const inlines = struct {
     pub fn immutableClosure(sp: SP, process: *Process) SP {
         // const val = sp.top;
         // var newSp = sp;
-        _ = .{ sp, process, @panic("immutableClosure")};
+        _ = .{ sp, process, @panic("immutableClosure") };
         // if (val.isInt() and val.rawU() <= Object.from(0x3fff_ffff_ffff).rawU() and val.rawU() >= Object.from(-0x4000_0000_0000).rawU()) {
         //     sp.top = Object.makeGroup(.numericThunk, @as(u47, @truncate(val.u())));
         // } else if (val.isDouble() and (val.u() & 0x1ffff) == 0) {

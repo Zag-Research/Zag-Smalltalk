@@ -14,8 +14,9 @@ const symbol = zag.symbol;
 const utilities = zag.utilities;
 const threadedFn = zag.threadedFn;
 const llvm = zag.llvm;
+const crc = std.hash.Crc32;
 
-const references = execute.ebmedded.references;
+const references = execute.embedded.references;
 fn format_timestamp(seconds: u64, out_buffer: []u8) void {
     if (std.debug.runtime_safety) std.debug.assert(out_buffer.len >= 27);
     const epoch_seconds: std.time.epoch.EpochSeconds = .{ .secs = seconds };
@@ -53,18 +54,37 @@ const ZagImageHeader = struct {
             return 0x616D4967615A + (tag << 48); // "ZagIma" in little-endian
         return 0;
     }
-    const intHash = std.hash.int;
+    const crcHash = std.hash.Crc32.hash;
 };
 var zagImageHeader: ZagImageHeader = undefined;
 fn usage() void {
-    std.log.err(
-        \\Usage: zag image-directory
+    std.debug.print(
+        \\Usage: zag [--help|--version|image-directory]
         \\
     , .{});
 }
 fn version() void {
-    std.log.err("{s}\n", .{config.git_version});
+    std.debug.print("Zag Smalltalk {s} using {} object encoding\n", .{ config.git_version, config.objectEncoding });
 }
+fn smalltalkThreadedFns() void {
+    std.debug.print("zagThreadesFns\n\t^ #(\n",.{});
+    for (0..500) |tf|
+        switch (@as(threadedFn.Enum,@enumFromInt(tf))) {
+            ._end => break,
+            else => |tag| std.debug.print("\t#T_{s}\n",.{@tagName(tag)}),
+        };
+    std.debug.print(")\n", .{});
+}
+fn smalltalkClasses() void {
+    std.debug.print("zagClasses\n\n\t^ #(\n",.{});
+    for (0..500) |cl|
+        if (std.enums.tagName(object.ClassIndex, @enumFromInt(cl))) |tagName| {
+            if (tagName[0] <= 'Z')
+                std.debug.print("\t#Class{s} {}\n",.{tagName, cl});
+        };
+        std.debug.print("\t)\n", .{});
+}
+
 fn extensionMatches(name: []const u8, ext: []const u8) bool {
     if (name.len <= ext.len) return false;
     for (name[name.len - ext.len ..], ext) |n, e| {
@@ -123,7 +143,7 @@ fn loadClassTable() !void {
     assert(zagImageHeader.classTable.equals(object.Nil()));
 }
 fn loadDispatchTable(file: std.fs.File) !void {
-//    execute.loadIntrinsicsDispatch();
+    //    execute.loadIntrinsicsDispatch();
     const stat = try file.stat();
     assert(stat.size == @sizeOf(ZagImageHeader)); // no dispatch to read
     //    _ = references;
@@ -152,7 +172,7 @@ fn processHeader(file: std.fs.File) !void {
 }
 fn runImage() !void {
     @panic("runImage");
-//    _ = try execute.mainSendTo(zagImageHeader.selector, zagImageHeader.target);
+    //    _ = try execute.mainSendTo(zagImageHeader.selector, zagImageHeader.target);
 }
 fn readHeap(file: std.fs.File, address: u64) !void {
     //const stat = try file.stat();std.log.err("heap stat: {}\naddress: 0x{x}\n", .{ stat, address });
@@ -210,31 +230,42 @@ fn loadAndRun(directory: [*:0]const u8) !void {
         try processHeader(file);
         try runImage();
     } else {
-        std.log.err("no header file found in: {s}",.{directory});
+        std.log.err("no header file found in: {s}", .{directory});
     }
 }
 pub fn main() !void {
     const allocator = std.heap.page_allocator;
-    var argsIterator = try std.process.ArgIterator.initWithAllocator(allocator);
-    defer argsIterator.deinit();
+    var args = try std.process.ArgIterator.initWithAllocator(allocator);
+    defer args.deinit();
 
-    _ = argsIterator.next(); // Skip executable
+    _ = args.next(); // Skip executable
 
-    if (argsIterator.next()) |arg| {
-        if (std.mem.orderZ(u8, arg, "-v") == .eq or std.mem.orderZ(u8, arg, "--version") == .eq) {
-            version();
-        } else if (std.mem.orderZ(u8, arg, "-h") == .eq or std.mem.orderZ(u8, arg, "--help") == .eq) {
-            usage();
+    while (args.next()) |arg| {
+        // You manually define what the valid switches are here:
+        if (std.mem.startsWith(u8, arg, "-")) {
+            switch (std.meta.stringToEnum(ValidSwitches, arg) orelse .invalid) {
+                .@"--help", .@"-h" => return usage(),
+                .@"--version", .@"-v" => return version(),
+                .@"--SmalltalkTf" => return smalltalkThreadedFns(),
+                .@"--SmalltalkClasses" => return smalltalkClasses(),
+                .invalid => {
+                    std.debug.print("Error: '{s}' is not a valid switch.\n", .{arg});
+                    return;
+                },
+            }
         } else {
             _ = zag.controlWords.drop.threadedFn;
-            try loadAndRun(arg);
+            return loadAndRun(arg);
         }
-        while (argsIterator.next()) |extra|
-            std.log.err(
-                \\unused argument: {s}
-                \\
-            , .{extra});
-    } else {
-        usage();
     }
+    usage();
 }
+const ValidSwitches = enum {
+    @"--help",
+    @"-h",
+    @"--version",
+    @"-v",
+    @"--SmalltalkTf",
+    @"--SmalltalkClasses",
+    invalid,
+};

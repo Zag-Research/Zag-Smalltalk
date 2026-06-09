@@ -4,7 +4,7 @@ Extension { #name : 'ASCTailSend' }
 ASCTailSend >> interpretFor: anInterpreter [
 "tail sends don't need contexts, its possible a block may need a context TBD"
 	^ anInterpreter
-		  beforeTailSend;
+		  beforeTailSend: selector;
 		  send: selector
 		  "installContextIfNone;
 		  resetBeforeCall.
