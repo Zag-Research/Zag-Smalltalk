@@ -62,6 +62,10 @@ pub const Object = packed struct(u64) {
         UndefinedObject,
         Float,
         _,
+        const heapBits = object.heapBits();
+        inline fn isHeap(self: Compact) bool {
+            return (heapBits >> @intFromEnum(self)) & 1 != 0;
+        }
         pub inline fn classIndex(cp: Compact) ClassIndex {
             return @enumFromInt(@intFromEnum(cp));
         }
@@ -346,7 +350,7 @@ pub const Object = packed struct(u64) {
     }
 
     pub inline fn hasHeapReference(self: Object) bool {
-        return self.tag == .heap and self.class == .heap and self != Nil();
+        return self.tag == .heap and self.class.isHeap() and self != Nil();
     }
     pub inline fn ifHeapObject(self: object.Object) ?*HeapObject {
         if (self.hasHeapReference()) return self.encodedPointer(*HeapObject);
