@@ -33,6 +33,11 @@ ASLiteral >> asPharoAST [
 	^OCLiteralNode value: literal.
 ]
 
+{ #category : 'comparing' }
+ASLiteral >> hash [
+	^{ self class . self literal } hash
+]
+
 { #category : 'accessing' }
 ASLiteral >> inferType: aClass [
 

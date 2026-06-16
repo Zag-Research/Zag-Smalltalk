@@ -138,9 +138,9 @@ ZagSmalltalk >> visitId: anId [
 ]
 
 { #category : 'visiting' }
-ZagSmalltalk >> visitLiteral: anObject [
+ZagSmalltalk >> visitLiteral: aLiteral [
 
-	stream print: anObject
+	stream print: aLiteral literal
 ]
 
 { #category : 'visiting' }
