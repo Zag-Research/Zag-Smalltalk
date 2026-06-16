@@ -17,6 +17,11 @@ ASPragma class >> args: pramaArgs [
 	^ASPragma new args: pramaArgs 
 ]
 
+{ #category : 'visiting' }
+ASPragma >> accept: aVisitor [
+	^aVisitor visitPragma: self
+]
+
 { #category : 'accessing' }
 ASPragma >> args: paramaArgs [
 	args := paramaArgs 

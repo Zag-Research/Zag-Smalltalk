@@ -59,7 +59,6 @@ ASMethodNode >> = other [
 
 { #category : 'visiting' }
 ASMethodNode >> accept: aVisitor [
-
 	^ aVisitor visitMethod: self
 ]
 

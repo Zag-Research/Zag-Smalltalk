@@ -158,6 +158,13 @@ ManifestZagCore class >> ruleSendsDifferentSuperRuleV1FalsePositive [
 ]
 
 { #category : 'code-critics' }
+ManifestZagCore class >> ruleSentNotImplementedRuleV1FalsePositive [
+
+	<ignoreForCoverage>
+	^ #(#(#(#RGPackageDefinition #(#'Zag-Core')) #'2026-06-16T17:43:07.562-05:00') )
+]
+
+{ #category : 'code-critics' }
 ManifestZagCore class >> ruleStringConcatenationRuleV1FalsePositive [
 	^ #(#(#(#RGPackageDefinition #(#'Zag-Core')) #'2021-03-28T13:56:56.834147-04:00') )
 ]

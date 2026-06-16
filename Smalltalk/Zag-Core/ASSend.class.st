@@ -45,6 +45,11 @@ ASSend >> = other [
 			  self target = other target and: [ self args = other args ] ] ]
 ]
 
+{ #category : 'visiting' }
+ASSend >> accept: aVisitor [
+	^aVisitor visitSend: self
+]
+
 { #category : 'parsing' }
 ASSend >> args [
 	^ args

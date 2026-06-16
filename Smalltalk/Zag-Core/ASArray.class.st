@@ -23,6 +23,11 @@ ASArray >> = other [
 			  self statements = other statements ]
 ]
 
+{ #category : 'visiting' }
+ASArray >> accept: aVisitor [
+	^aVisitor visitArray: self
+]
+
 { #category : 'converting' }
 ASArray >> asPharoAST [
 	self error: 'ASArray seems to be missing instance variables!'.

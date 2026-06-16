@@ -25,8 +25,7 @@ ASLiteral >> = other [
 
 { #category : 'visiting' }
 ASLiteral >> accept: aVisitor [
-
-	^ aVisitor visitLiteral: literal
+	^ aVisitor visitLiteral: self
 ]
 
 { #category : 'converting' }

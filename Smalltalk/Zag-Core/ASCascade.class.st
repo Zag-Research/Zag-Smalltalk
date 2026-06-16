@@ -26,6 +26,11 @@ ASCascade >> = other [
 			  self sends = other sends ] ]
 ]
 
+{ #category : 'visiting' }
+ASCascade >> accept: aVisitor [
+	^aVisitor visitCascade: self
+]
+
 { #category : 'converting' }
 ASCascade >> asPharoAST [
 	| pharoSends |
