@@ -49,6 +49,12 @@ ASArray >> fillFrom: aCollection with: aBlock [
 		self at: (index := index + 1) put: (aBlock value: each) ]
 ]
 
+{ #category : 'accessing' }
+ASArray >> statements [
+	"Returns a list containing all my statements."
+	^(1 to: self size) collect: [ :i | self at: i ]
+]
+
 { #category : 'compiling' }
 ASArray >> zigWalk: aGenerator [
 
