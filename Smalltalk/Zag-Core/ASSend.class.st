@@ -90,7 +90,7 @@ ASSend >> children [
 	| childeren |
 	childeren := OrderedCollection new.
 	target ifNotNil: [ :t | childeren add: t ].
-	childeren addAll: args.
+	args ifNotNil: [ childeren addAll: args ].
 	^ childeren
 ]
 
