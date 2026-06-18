@@ -77,6 +77,13 @@ ASCascade >> target: expression [
 ]
 
 { #category : 'compiling' }
+ASCascade >> targetNeedsBrackets [
+	"Returns whether or not my target needs brackets."
+	^(ASSend target: self target selector: self sends first selector args: self sends first args)
+		targetNeedsBrackets
+]
+
+{ #category : 'compiling' }
 ASCascade >> zigWalk: aGenerator [
 | size |
 	size := sends size.

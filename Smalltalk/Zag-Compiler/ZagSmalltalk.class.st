@@ -105,6 +105,14 @@ ZagSmalltalk >> visit: anAST [
 ]
 
 { #category : 'visiting' }
+ZagSmalltalk >> visit: anObject withSurroundingBrackets: bracketsEnabled [
+	"Visits anObject.  If bracketsEnabled, print brackets around it."
+	bracketsEnabled ifTrue: [ stream nextPut: $( ].
+	anObject accept: self.
+	bracketsEnabled ifTrue: [ stream nextPut: $) ].
+]
+
+{ #category : 'visiting' }
 ZagSmalltalk >> visitArray: anArray [
 	| isFirst |
 	isFirst := true.
@@ -133,9 +141,7 @@ ZagSmalltalk >> visitBlock: aBlock [
 { #category : 'visiting' }
 ZagSmalltalk >> visitCascade: aCascade [
 	| isFirst |
-	stream nextPut: $(.
-	aCascade target accept: self.
-	stream nextPutAll: ') '.
+	self visitSendTarget: aCascade.
 	isFirst := true.
 	aCascade sends do: [ :send |
 		isFirst
@@ -227,30 +233,25 @@ ZagSmalltalk >> visitReturn: anASReturn [
 
 { #category : 'visiting' }
 ZagSmalltalk >> visitSend: aSend [
-	stream nextPut: $(.
-	aSend target accept: self.
-	stream nextPut: $).
-	self visitSendArguments: aSend.
+	self visitSendTarget: aSend; visitSendArguments: aSend.
 ]
 
 { #category : 'visiting' }
 ZagSmalltalk >> visitSendArguments: aSend [
 	"Accepts an ASSend and adds its selector/arguments to my stream.  Does NOT print its target."
-	| selectorString |
-	selectorString := aSend selector asString.
-	(selectorString includes: $:)
-		ifTrue: [ self visitSendArgumentsKeyword: aSend ]
-		ifFalse: [ (selectorString allSatisfy: #isSpecial)
-			ifTrue: [ self visitSendArgumentsBinary: aSend ]
-			ifFalse: [ self visitSendArgumentsUnary: aSend ]].
+	aSend 
+		ifUnary: [ self visitSendArgumentsUnary: aSend ]
+		ifBinary: [ self visitSendArgumentsBinary: aSend ]
+		ifKeyword: [ self visitSendArgumentsKeyword: aSend ].
 ]
 
 { #category : 'visiting' }
 ZagSmalltalk >> visitSendArgumentsBinary: aSend [
 	"visitSendArguments:, where the ASSend is unary."
-	stream nextPut: Character space; nextPutAll: aSend selector; nextPutAll: ' ('.
+	stream nextPut: Character space; nextPutAll: aSend selector; nextPut: Character space.
+	(aSend argNeedsBrackets: aSend args first) ifTrue: [ stream nextPut: $( ].
 	aSend args first accept: self.
-	stream nextPut: $).
+	(aSend argNeedsBrackets: aSend args first) ifTrue: [ stream nextPut: $) ].
 ]
 
 { #category : 'visiting' }
@@ -260,9 +261,10 @@ ZagSmalltalk >> visitSendArgumentsKeyword: aSend [
 	sendParts := (aSend selector asString splitOn: ':') allButLast.
 	sendParts size = aSend args size ifFalse: [ self error: 'ASSend has wrong number of arguments.' ].
 	1 to: sendParts size do: [ :i |
-		stream nextPut: Character space; nextPutAll: (sendParts at: i); nextPutAll: ': ('.
+		stream nextPut: Character space; nextPutAll: (sendParts at: i); nextPutAll: ': '.
+		(aSend argNeedsBrackets: (aSend args at: i)) ifTrue: [ stream nextPut: $( ].
 		(aSend args at: i) accept: self.
-		stream nextPut: $).
+		(aSend argNeedsBrackets: (aSend args at: i)) ifTrue: [ stream nextPut: $) ].
 	]
 ]
 
@@ -270,4 +272,12 @@ ZagSmalltalk >> visitSendArgumentsKeyword: aSend [
 ZagSmalltalk >> visitSendArgumentsUnary: aSend [
 	"visitSendArguments:, where the ASSend is unary."
 	stream nextPut: Character space; nextPutAll: aSend selector.
+]
+
+{ #category : 'visiting' }
+ZagSmalltalk >> visitSendTarget: aSend [
+	"Prints the target of an ASSend or ASCascade."
+	aSend targetNeedsBrackets ifTrue: [ stream nextPut: $( ].
+	aSend target accept: self.
+	aSend targetNeedsBrackets ifTrue: [ stream nextPut: $) ].
 ]
