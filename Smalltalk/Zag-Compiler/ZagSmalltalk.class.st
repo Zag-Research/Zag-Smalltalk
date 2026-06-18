@@ -146,7 +146,7 @@ ZagSmalltalk >> visitCascade: aCascade [
 	aCascade sends do: [ :send |
 		isFirst
 			ifTrue: [ isFirst := false ]
-			ifFalse: [ stream nextPutAll: '; ' ].
+			ifFalse: [ stream nextPut: $; ].
 		self visitSendArguments: send.
 	]
 ]
