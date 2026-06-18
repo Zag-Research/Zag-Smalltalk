@@ -4,9 +4,36 @@ const std = @import("std");
 pub const Arm64 = struct {
     /// Check if instruction is BR Xn (tail branch).
     /// We intentionally exclude BLR (indirect call), which is not a patch site.
+    const InstructionCode = enum{
+        br,
+    };
+    const Instruction = struct {
+        op: InstructionCode,
+        mask: u32,
+        code: u32,
+        fn match(self: *const Instruction, inst: u32) bool {
+            return self.mask & inst == self.code;
+        }
+        fn matchAny(self: []const Instruction, inst: u32) ?*const Instruction {
+            for (self) |*op| {
+                if (op.match(inst)) return op;
+            }
+            return null;
+        }
+        fn matchExact(self: []const Instruction, inst: u32, code: InstructionCode) bool {
+            for (self) |*op| {
+                if (op.match(inst))
+                    return op.op == code;
+            }
+            return false;
+        }
+    };
+    const instructions = [_]Instruction{
+        .{.op = .br, .mask = 0xFFFFFC1F, .code = 0xD61F0000},
+    };
+    const matchExact = Instruction.matchExact;
     pub fn isBranchRegister(inst: u32) bool {
-        const masked = inst & 0xFFFFFC1F;
-        return masked == 0xD61F0000;
+        return matchExact(&instructions,inst,.br);
     }
 
     pub fn isAdr(inst: u32) bool {
@@ -125,5 +152,11 @@ pub const Arm64 = struct {
         if ((inst & 0xFFC003FF) == 0xD10003FF) return true;
 
         return false;
+    }
+    pub fn printInstruction(start: [*]const u8) void {
+        const inst = std.mem.readInt(u32, start[0..4], .little);
+        if (Instruction.matchAny(&instructions,inst)) |code| {
+            std.debug.print("0x{x:0>10}: {}\n",.{@intFromPtr(start),code.op});
+        }
     }
 };
