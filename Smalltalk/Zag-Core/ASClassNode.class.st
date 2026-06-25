@@ -21,6 +21,11 @@ ASClassNode >> = other [
 	^ name = other name
 ]
 
+{ #category : 'visiting' }
+ASClassNode >> accept: aVisitor [
+	^aVisitor visitClass: self
+]
+
 { #category : 'adding' }
 ASClassNode >> addMethod: anASMethodNode [ 
 

@@ -105,6 +105,53 @@ ZagSmalltalk >> visit: anAST [
 ]
 
 { #category : 'visiting' }
+ZagSmalltalk >> visit: anObject withSurroundingBrackets: bracketsEnabled [
+	"Visits anObject.  If bracketsEnabled, print brackets around it."
+	bracketsEnabled ifTrue: [ stream nextPut: $( ].
+	anObject accept: self.
+	bracketsEnabled ifTrue: [ stream nextPut: $) ].
+]
+
+{ #category : 'visiting' }
+ZagSmalltalk >> visitArray: anArray [
+	| isFirst |
+	isFirst := true.
+	stream nextPutAll: '{ '.
+	anArray do: [ :each |
+		isFirst
+			ifTrue: [ isFirst := false ]
+			ifFalse: [ stream nextPutAll: '. ' ].
+		each accept: self.
+	].
+	stream nextPutAll: ' }'.
+]
+
+{ #category : 'visiting' }
+ZagSmalltalk >> visitAssign: anAssign [
+	anAssign variable accept: self.
+	stream nextPutAll: ' := '.
+	anAssign expression accept: self.
+]
+
+{ #category : 'visiting' }
+ZagSmalltalk >> visitBlock: aBlock [
+	^self visitCodeBlock: aBlock
+]
+
+{ #category : 'visiting' }
+ZagSmalltalk >> visitCascade: aCascade [
+	| isFirst |
+	self visitSendTarget: aCascade.
+	isFirst := true.
+	aCascade sends do: [ :send |
+		isFirst
+			ifTrue: [ isFirst := false ]
+			ifFalse: [ stream nextPut: $; ].
+		self visitSendArguments: send.
+	]
+]
+
+{ #category : 'visiting' }
 ZagSmalltalk >> visitCodeBlock: aCodeBlock [
 
 	| first |
@@ -117,7 +164,7 @@ ZagSmalltalk >> visitCodeBlock: aCodeBlock [
 				stream nextPutAll: '| '.
 				first := false ]
 			ifFalse: [ stream nextPut: $  ].
-		self visitId: local ].
+		local accept: self ].
 	first ifFalse: [
 			stream nextPutAll: ' |
 ' ].
@@ -138,9 +185,9 @@ ZagSmalltalk >> visitId: anId [
 ]
 
 { #category : 'visiting' }
-ZagSmalltalk >> visitLiteral: anObject [
+ZagSmalltalk >> visitLiteral: aLiteral [
 
-	stream print: anObject
+	stream print: aLiteral literal
 ]
 
 { #category : 'visiting' }
@@ -173,8 +220,64 @@ ZagSmalltalk >> visitParameter: anASParameter [
 ]
 
 { #category : 'visiting' }
+ZagSmalltalk >> visitRef: aRef [
+	stream nextPutAll: aRef variable
+]
+
+{ #category : 'visiting' }
 ZagSmalltalk >> visitReturn: anASReturn [
 
 	stream nextPutAll: '^ '.
 	anASReturn expression accept: self
+]
+
+{ #category : 'visiting' }
+ZagSmalltalk >> visitSend: aSend [
+	self visitSendTarget: aSend; visitSendArguments: aSend.
+]
+
+{ #category : 'visiting' }
+ZagSmalltalk >> visitSendArguments: aSend [
+	"Accepts an ASSend and adds its selector/arguments to my stream.  Does NOT print its target."
+	aSend 
+		ifUnary: [ self visitSendArgumentsUnary: aSend ]
+		ifBinary: [ self visitSendArgumentsBinary: aSend ]
+		ifKeyword: [ self visitSendArgumentsKeyword: aSend ].
+]
+
+{ #category : 'visiting' }
+ZagSmalltalk >> visitSendArgumentsBinary: aSend [
+	"visitSendArguments:, where the ASSend is unary."
+	stream nextPut: Character space; nextPutAll: aSend selector; nextPut: Character space.
+	(aSend argNeedsBrackets: aSend args first) ifTrue: [ stream nextPut: $( ].
+	aSend args first accept: self.
+	(aSend argNeedsBrackets: aSend args first) ifTrue: [ stream nextPut: $) ].
+]
+
+{ #category : 'visiting' }
+ZagSmalltalk >> visitSendArgumentsKeyword: aSend [
+	"Accepts an ASSend and adds its selector/arguments to my stream.  Does NOT print its target."
+	| sendParts |
+	sendParts := (aSend selector asString splitOn: ':') allButLast.
+	sendParts size = aSend args size ifFalse: [ self error: 'ASSend has wrong number of arguments.' ].
+	1 to: sendParts size do: [ :i |
+		stream nextPut: Character space; nextPutAll: (sendParts at: i); nextPutAll: ': '.
+		(aSend argNeedsBrackets: (aSend args at: i)) ifTrue: [ stream nextPut: $( ].
+		(aSend args at: i) accept: self.
+		(aSend argNeedsBrackets: (aSend args at: i)) ifTrue: [ stream nextPut: $) ].
+	]
+]
+
+{ #category : 'visiting' }
+ZagSmalltalk >> visitSendArgumentsUnary: aSend [
+	"visitSendArguments:, where the ASSend is unary."
+	stream nextPut: Character space; nextPutAll: aSend selector.
+]
+
+{ #category : 'visiting' }
+ZagSmalltalk >> visitSendTarget: aSend [
+	"Prints the target of an ASSend or ASCascade."
+	aSend targetNeedsBrackets ifTrue: [ stream nextPut: $( ].
+	aSend target accept: self.
+	aSend targetNeedsBrackets ifTrue: [ stream nextPut: $) ].
 ]

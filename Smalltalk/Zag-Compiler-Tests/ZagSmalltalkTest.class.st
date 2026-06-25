@@ -153,10 +153,39 @@ ZagSmalltalkTest >> testPlusStar [
 	^ n1'
 ]
 
-{ #category : 'tests' }
+{ #category : 'tests - printing' }
 ZagSmalltalkTest >> testPrint [
 
-	self assert: 42 asZagLiteral printString equals: '42'
+	self assert: (ASLiteral literal: 42) printString equals: '42'
+]
+
+{ #category : 'tests - printing' }
+ZagSmalltalkTest >> testPrintFToC [
+	"Tests printing a basic F-to-C program."
+	"This is the same F-to-C program used to test ZagPythonConverter."
+	| ast expected |
+	ast := ASMethodNode selector: #main
+			locals: {(ASRef variable: #tempF) . (ASRef variable: #tempC)} body: {
+		ASAssign variable: (ASRef variable: #tempF) expression: (
+			ASSend target: (
+				ASSend target: (ASSend target: (ASRef variable: #UIManager) selector: #default args: #())
+					selector: #request: args: { ASLiteral literal: 'Input temp in F: ' }) selector: #asNumber).
+		ASAssign variable: (ASRef variable: #tempC) expression: (
+			ASSend target: (
+				ASSend target: (ASRef variable: #tempF) selector: #- args: { ASLiteral literal: 32 }
+			) selector: #/ args: { ASLiteral literal: 1.8 }).
+		ASCascade target: (ASRef variable: #Transcript) sends: { 
+			ASSend selector: #show: args: { ASRef variable: #tempC }.
+			ASSend selector: #cr args: #()
+		}
+	}.
+	expected := 'main
+
+	| tempF tempC |
+	tempF := (UIManager default request: ''Input temp in F: '') asNumber.
+	tempC := tempF - 32 / 1.8.
+	Transcript show: tempC; cr'.
+	self assert: ast asString equals: expected.
 ]
 
 { #category : 'tests' }
