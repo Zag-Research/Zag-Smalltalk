@@ -139,6 +139,11 @@ ZagSmalltalk >> visitBlock: aBlock [
 ]
 
 { #category : 'visiting' }
+ZagSmalltalk >> visitByteSymbol: byteSymbol [
+	stream nextPutAll: byteSymbol
+]
+
+{ #category : 'visiting' }
 ZagSmalltalk >> visitCascade: aCascade [
 	| isFirst |
 	self visitSendTarget: aCascade.

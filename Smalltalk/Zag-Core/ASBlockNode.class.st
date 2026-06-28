@@ -53,6 +53,11 @@ ASBlockNode >> newInlineMethodBlock: anInlineMethodBlock [
   ^ body last newInlineMethodBlock: anInlineMethodBlock 
 ]
 
+{ #category : 'visiting' }
+ASBlockNode >> postComment [
+ ^ ''
+]
+
 { #category : 'accessing' }
 ASBlockNode >> pragmas [
 
