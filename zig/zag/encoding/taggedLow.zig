@@ -365,9 +365,6 @@ pub const Object = packed struct(u64) {
         }
         return null;
     }
-    pub inline fn asUntaggedI(i: IntType) i64 {
-        return @as(i64, i) << intShift;
-    }
 
     pub const Scanner = struct {
         ptr: *anyopaque,

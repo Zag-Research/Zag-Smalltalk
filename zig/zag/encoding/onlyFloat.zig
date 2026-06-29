@@ -95,9 +95,6 @@ pub const Object = packed struct(u64) {
     pub fn fromNativeI(_: IntType, _: anytype, _: anytype) Object {
         @panic("not implemented");
     }
-    pub inline fn asUntaggedI(_: IntType) i64 {
-        @panic("not implemented");
-    }
 
     pub inline fn nativeF(self: Object) ?f64 {
         return @bitCast(self);

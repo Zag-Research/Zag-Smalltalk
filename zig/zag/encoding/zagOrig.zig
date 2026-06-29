@@ -516,10 +516,6 @@ pub const Object = packed struct(u64) {
         return self.rawU() & 7 != 0;
     }
 
-    pub inline fn asUntaggedI(i: i56) i64 {
-        return @as(i64, i) << tagAndClassBits;
-    }
-
     pub fn returnObjectClosure(self: Object, context: *Context) ?Object {
         if (self.nativeI()) |i| {
             switch (i) {

@@ -187,7 +187,7 @@ pub const @"*" = struct {
         process.init();
         const sp = process.getSp();
         const context = process.getContext();
-        try expectEqual(Object.from(12, sp, context), with(Object.asUntaggedI(3), Object.from(4, sp, context), sp, context));
+        try expectEqual(Object.from(12, sp, context), with(Object.fromNativeI(3, sp, context).untaggedI(), Object.from(4, sp, context), sp, context));
         try expectEqual(error.primitiveError, with(std.math.maxInt(i64), Object.from(2, sp, context), sp, context));
         try expectEqual(error.primitiveError, with(std.math.minInt(i64), Object.from(-1, sp, context), sp, context));
     }
@@ -209,7 +209,7 @@ pub const threadedFns = struct {
         pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
             var result = True();
             if (sp.top.untaggedI()) |value| {
-                const sum, const overflow = @addWithOverflow(Object.asUntaggedI(-1), value);
+                const sum, const overflow = @addWithOverflow(Object.fromNativeI(-1, sp, context).untaggedI().?, value);
                 if (overflow == 0) {
                     sp.top = Object.fromUntaggedI(sum, sp, context);
                     if (sum > 0) result = False();

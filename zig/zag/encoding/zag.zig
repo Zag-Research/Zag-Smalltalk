@@ -22,7 +22,7 @@ const floatEncoding = @import("floatEncoding.zig").Fst2(4);
 const encode = floatEncoding.encode;
 const decode = floatEncoding.decode;
 
-pub const Tag = enum(u3) {
+const Tag = enum(u3) {
     heap = 0,
     smallinteger = 2,
     floatA = 4,
@@ -137,7 +137,7 @@ pub const Object = packed struct(u64) {
     pub inline fn fromNativeI(i: IntType, _: anytype, _: anytype) Object {
         return fromUntaggedI(asUntaggedI(i), null, null);
     }
-    pub inline fn asUntaggedI(i: IntType) i64 {
+    inline fn asUntaggedI(i: IntType) i64 {
         return @as(i64, i) << intShift;
     }
     inline fn isInt(self: object.Object) bool {
@@ -311,8 +311,7 @@ pub const Object = packed struct(u64) {
         }
         @panic("Trying to convert Object to " ++ @typeName(T));
     }
-    pub inline //
-    fn which_class(self: object.Object) ClassIndex {
+    pub inline fn which_class(self: object.Object) ClassIndex {
         const u: u64 = @bitCast(self);
         if (true) {
             if (u & 2 != 0) {

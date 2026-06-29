@@ -100,8 +100,7 @@ pub const Object = packed struct(u64) {
         return InMemory.int(i, sp, context);
     }
     pub const fromUntaggedI = fromTaggedI;
-    pub inline //
-    fn nativeI(self: object.Object) ?i64 {
+    pub inline fn nativeI(self: object.Object) ?i64 {
         if (self.isInt()) return self.rawI();
         return null;
     }
@@ -151,9 +150,6 @@ pub const Object = packed struct(u64) {
         if (value == 0) return value;
         if (value & 7 != 0) return value;
         return null;
-    }
-    pub inline fn asUntaggedI(i: IntType) i64 {
-        return i;
     }
     pub fn returnObjectClosure(_: Object, _: anytype) ?Object {
         return null;
@@ -221,8 +217,7 @@ pub const Object = packed struct(u64) {
     pub inline fn hash32(self: Object) u32 {
         return @truncate(self.ref.data.unsigned);
     }
-    pub inline //
-    fn fromAddress(value: anytype) Object {
+    pub inline fn fromAddress(value: anytype) Object {
         return @bitCast(@intFromPtr(value));
     }
     pub const StaticObject = struct {
@@ -292,8 +287,7 @@ pub const Object = packed struct(u64) {
         }
         @panic("Trying to convert Object to " ++ @typeName(T));
     }
-    pub inline //
-    fn which_class(self: Object) ClassIndex {
+    pub inline fn which_class(self: Object) ClassIndex {
         return self.ref.header.classIndex;
     }
     pub inline fn hasHeapReference(self: Object) bool {

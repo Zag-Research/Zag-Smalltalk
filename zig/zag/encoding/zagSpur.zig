@@ -148,9 +148,6 @@ pub const Object = packed union {
     pub inline fn fromNativeI(i: IntType, _: anytype, _: anytype) Object {
         return @bitCast((@as(i64, i) << intShift) + @intFromEnum(Tag.smallInteger));
     }
-    pub inline fn asUntaggedI(i: IntType) i64 {
-        return @as(i64, i) << intShift;
-    }
     inline fn isInt(self: Object) bool {
         return self.isTag(.smallInteger);
     }

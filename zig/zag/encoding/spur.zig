@@ -368,9 +368,6 @@ pub const Object = packed union {
     pub fn extraU(_: Object) u0 {
         @panic("not implemented");
     }
-    pub inline fn asUntaggedI(i: IntType) i64 {
-        return @as(i64, i) << 3;
-    }
 
     pub fn returnObjectClosure(_: Object, _: anytype) ?Object {
         return null;
