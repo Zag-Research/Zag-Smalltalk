@@ -9,6 +9,11 @@ Class {
 	#tag : 'AST'
 }
 
+{ #category : 'visiting' }
+ASThisContext >> accept: aVisitor [
+	^aVisitor visitThisContext: self
+]
+
 { #category : 'converting' }
 ASThisContext >> asPharoAST [
 	^OCVariableNode thisContextNode.

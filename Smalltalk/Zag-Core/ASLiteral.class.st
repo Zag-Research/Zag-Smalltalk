@@ -25,13 +25,17 @@ ASLiteral >> = other [
 
 { #category : 'visiting' }
 ASLiteral >> accept: aVisitor [
-
-	^ aVisitor visitLiteral: literal
+	^ aVisitor visitLiteral: self
 ]
 
 { #category : 'converting' }
 ASLiteral >> asPharoAST [
 	^OCLiteralNode value: literal.
+]
+
+{ #category : 'comparing' }
+ASLiteral >> hash [
+	^{ self class . self literal } hash
 ]
 
 { #category : 'accessing' }

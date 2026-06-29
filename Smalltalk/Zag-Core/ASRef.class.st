@@ -23,6 +23,11 @@ ASRef >> = other [
 	^ self class = other class and: [ self variable = other variable ]
 ]
 
+{ #category : 'visiting' }
+ASRef >> accept: aVisitor [
+	^aVisitor visitRef: self
+]
+
 { #category : 'converting' }
 ASRef >> asPharoAST [
 	^OCVariableNode named: variable.

@@ -9,6 +9,11 @@ Class {
 	#tag : 'AST'
 }
 
+{ #category : 'visiting' }
+ASThisProcess >> accept: aVisitor [
+	^aVisitor visitThisProcess: self
+]
+
 { #category : 'converting' }
 ASThisProcess >> asPharoAST [
 	^OCVariableNode thisProcessNode.

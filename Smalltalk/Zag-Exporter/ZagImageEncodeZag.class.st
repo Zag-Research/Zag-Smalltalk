@@ -18,17 +18,17 @@ ZagImageEncodeZag class >> boolean: value [
 { #category : 'converting' }
 ZagImageEncodeZag class >> double: aFloat for: anImage [
 
-	| fullFloat tag |
+	| fullFloat tagged |
 	fullFloat := ((aFloat at: 1) bitShift: 32) + (aFloat at: 2).
-	tag := fullFloat >> 60 + 2.
-	tag & 6 = 0 ifTrue: [ ^ anImage objectHeapFloat: fullFloat ].
-	^ fullFloat & 16rfffffffffffffff << 4 + tag
+	tagged := (fullFloat bitSize: 64 rotate: 5) + 5.
+	tagged & 6 = 4 ifTrue: [ ^ tagged ].
+	^ anImage objectHeapFloat: fullFloat
 ]
 
 { #category : 'converting' }
 ZagImageEncodeZag class >> literal: l class: c [
 
-	^ (l bitShift: 8) + (c bitShift: 3) + 1
+	^ (l bitShift: 3) + (c bitShift: 59)
 ]
 
 { #category : 'magic' }
@@ -46,14 +46,12 @@ ZagImageEncodeZag class >> pointer: p [
 { #category : 'converting' }
 ZagImageEncodeZag class >> smallInteger: anInteger [
 
-	^ self
-		  literal: (anInteger bitAnd: 16r00ffffffffffffff)
-		  class: ClassSmallInteger
+	^ ((anInteger bitAnd: 16r3fffffffffffffff) bitShift: 2) + 2
 ]
 
-{ #category : 'converting' }
+{ #category : 'convertin' }
 ZagImageEncodeZag class >> symbolArity: arity hash: hash [ 
-	^ self literal: (arity bitShift: 24) + hash class: ClassSymbol
+	^ self literal: (hash bitShift: 5) + arity + arity class: ClassSymbol
 ]
 
 { #category : 'converting' }

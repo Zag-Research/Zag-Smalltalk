@@ -17,6 +17,11 @@ ASBlockNode class >> arguments: args locals: locals body: body [
 	^ (self locals: locals body: body) arguments: args
 ]
 
+{ #category : 'visiting' }
+ASBlockNode >> accept: aVisitor [
+	^aVisitor visitBlock: self
+]
+
 { #category : 'converting' }
 ASBlockNode >> asPharoAST [
 	| pharoBody |
@@ -46,6 +51,11 @@ ASBlockNode >> maxDepth [
 { #category : 'compiling' }
 ASBlockNode >> newInlineMethodBlock: anInlineMethodBlock [
   ^ body last newInlineMethodBlock: anInlineMethodBlock 
+]
+
+{ #category : 'visiting' }
+ASBlockNode >> postComment [
+ ^ ''
 ]
 
 { #category : 'accessing' }

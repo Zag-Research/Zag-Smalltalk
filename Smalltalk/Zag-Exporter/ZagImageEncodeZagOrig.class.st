@@ -1,0 +1,63 @@
+"
+I encode values the Zag way, which is an extension of SPUR
+"
+Class {
+	#name : 'ZagImageEncodeZagOrig',
+	#superclass : 'ZagImageEncoder',
+	#category : 'Zag-Exporter-Encoding',
+	#package : 'Zag-Exporter',
+	#tag : 'Encoding'
+}
+
+{ #category : 'converting' }
+ZagImageEncodeZagOrig class >> boolean: value [
+
+	^ self literal: 0 class: ClassFalse + value asBit
+]
+
+{ #category : 'converting' }
+ZagImageEncodeZagOrig class >> double: aFloat for: anImage [
+
+	| fullFloat tag |
+	fullFloat := ((aFloat at: 1) bitShift: 32) + (aFloat at: 2).
+	tag := fullFloat >> 60 + 2.
+	tag & 6 = 0 ifTrue: [ ^ anImage objectHeapFloat: fullFloat ].
+	^ fullFloat & 16rfffffffffffffff << 4 + tag
+]
+
+{ #category : 'converting' }
+ZagImageEncodeZagOrig class >> literal: l class: c [
+
+	^ (l bitShift: 8) + (c bitShift: 3) + 1
+]
+
+{ #category : 'magic' }
+ZagImageEncodeZagOrig class >> magic [
+
+	^ 16r4F5A616D4967615A " ZagImaOr"
+]
+
+{ #category : 'converting' }
+ZagImageEncodeZagOrig class >> pointer: p [
+
+	^ p
+]
+
+{ #category : 'converting' }
+ZagImageEncodeZagOrig class >> smallInteger: anInteger [
+
+	^ self
+		  literal: (anInteger bitAnd: 16r00ffffffffffffff)
+		  class: ClassSmallInteger
+]
+
+{ #category : 'converting' }
+ZagImageEncodeZagOrig class >> symbolArity: arity hash: hash [ 
+	^ self literal: (arity bitShift: 24) + hash class: ClassSymbol
+]
+
+{ #category : 'converting' }
+ZagImageEncodeZagOrig class >> undefinedObject [
+
+	^ 0
+]

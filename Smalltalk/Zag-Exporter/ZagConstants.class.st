@@ -7,13 +7,31 @@ Class {
 	#classVars : [
 		'AgeStatic',
 		'BaseAddress',
+		'ClassArray',
+		'ClassAssociation',
 		'ClassBlockAssignInstance',
 		'ClassBlockAssignLocal',
+		'ClassBlockClosure',
+		'ClassBlockClosureValue',
 		'ClassCharacter',
+		'ClassClass',
+		'ClassCompiledMethod',
+		'ClassContext',
+		'ClassContextData',
+		'ClassDispatch',
 		'ClassDoubleWordArray',
+		'ClassError',
+		'ClassException',
 		'ClassFalse',
 		'ClassFloat',
 		'ClassLLVM',
+		'ClassLLVMGenerator',
+		'ClassLLVMPrimitives',
+		'ClassObject',
+		'ClassPrimitiveFailed',
+		'ClassProcess',
+		'ClassProtoObject',
+		'ClassSelectorException',
 		'ClassSignature',
 		'ClassSmallInteger',
 		'ClassString',
@@ -31,6 +49,7 @@ Class {
 		'ClassThunkReturnObject',
 		'ClassTrue',
 		'ClassUndefinedObject',
+		'ClassUtf8String',
 		'FormatDirectIndexed',
 		'FormatExternal',
 		'FormatExternalNonObject',
@@ -40,198 +59,68 @@ Class {
 		'FormatIndexedWeakWithPointers',
 		'FormatNotIndexable',
 		'MaxHeaderLength',
-		'T_Branch',
-		'T_Call',
-		'T_ClassCase',
-		'T_ClassCase24',
-		'T_CullColon',
-		'T_Drop',
-		'T_DropNext',
-		'T_Dup',
-		'T_Label',
-		'T_MakeImmediateClosure',
-		'T_Over',
-		'T_PopAssociationValue',
-		'T_PopIndirect',
-		'T_PopIndirectLocal',
-		'T_PopInstVar',
-		'T_PopLocal',
-		'T_PopLocalData',
-		'T_PopLocalField',
-		'T_Primitive',
-		'T_PrimitiveError',
-		'T_PrimitiveModule',
-		'T_PrimitiveModuleError',
-		'T_PushAssociationValue',
-		'T_PushContext',
-		'T_PushIndirect',
-		'T_PushIndirectLocal',
-		'T_PushInstVar',
-		'T_PushLiteral',
-		'T_PushLocal',
-		'T_PushLocalData',
-		'T_PushLocalField',
-		'T_PushStack',
-		'T_PushThisContext',
-		'T_PushThisProcess',
-		'T_ReturnSelf',
-		'T_ReturnSelfNoContext',
-		'T_ReturnTop',
-		'T_ReturnTopNoContext',
-		'T_ReturnTopNonLocal',
-		'T_ReturnTopNonLocalNoContext',
-		'T_Send',
-		'T_StoreLocal',
-		'T_Swap',
-		'T_TailCallMethod',
-		'T_TailSend',
-		'T_TailSendNoContext',
-		'T_Value',
-		'T_ValueColon'
+		'T_Float_add',
+		'T_Float_leq',
+		'T_Float_mul',
+		'T_Float_sub',
+		'T_SmallInteger_add',
+		'T_SmallInteger_leq',
+		'T_SmallInteger_mul',
+		'T_SmallInteger_sub',
+		'T_array',
+		'T_branch',
+		'T_branchFalse',
+		'T_branchTrue',
+		'T_classCase',
+		'T_countDown',
+		'T_createClosure',
+		'T_cullColon',
+		'T_debug',
+		'T_drop',
+		'T_dup',
+		'T_enddebug',
+		'T_fail',
+		'T_over',
+		'T_pop',
+		'T_popAssociationValue',
+		'T_primitive',
+		'T_primitiveError',
+		'T_primitiveModule',
+		'T_primitiveModuleError',
+		'T_push',
+		'T_pushAssociationValue',
+		'T_pushClosure',
+		'T_pushContext',
+		'T_pushLiteral',
+		'T_pushThisContext',
+		'T_pushThisProcess',
+		'T_returnLiteralClosure',
+		'T_returnLocalClosure',
+		'T_returnSelf',
+		'T_returnTop',
+		'T_returnTopNonLocal',
+		'T_send',
+		'T_send0',
+		'T_store',
+		'T_tailSend',
+		'T_value',
+		'T_valueColon'
 	],
 	#category : 'Zag-Exporter-Encoding',
 	#package : 'Zag-Exporter',
 	#tag : 'Encoding'
 }
 
-{ #category : 'class initialization' }
-ZagConstants class >> api [
-
-	^ ZagImageOutputAPI
-]
-
 { #category : 'converting' }
 ZagConstants class >> asArray [
-" - do not edit - instead `do` the following comment "
-" self generateInitializeThreadedConstants "
-	^ {
-		T_Branch.
-		T_Call.
-		T_ClassCase.
-		T_ClassCase24.
-		T_CullColon.
-		T_Drop.
-		T_DropNext.
-		T_Dup.
-		T_Label.
-		T_MakeImmediateClosure.
-		T_Over.
-		T_PopAssociationValue.
-		T_PopIndirect.
-		T_PopIndirectLocal.
-		T_PopInstVar.
-		T_PopLocal.
-		T_PopLocalData.
-		T_PopLocalField.
-		T_Primitive.
-		T_PrimitiveError.
-		T_PrimitiveModule.
-		T_PrimitiveModuleError.
-		T_PushAssociationValue.
-		T_PushContext.
-		T_PushIndirect.
-		T_PushIndirectLocal.
-		T_PushInstVar.
-		T_PushLiteral.
-		T_PushLocal.
-		T_PushLocalData.
-		T_PushLocalField.
-		T_PushStack.
-		T_PushThisContext.
-		T_PushThisProcess.
-		T_ReturnSelf.
-		T_ReturnSelfNoContext.
-		T_ReturnTop.
-		T_ReturnTopNoContext.
-		T_ReturnTopNonLocal.
-		T_ReturnTopNonLocalNoContext.
-		T_Send.
-		T_StoreLocal.
-		T_Swap.
-		T_TailCallMethod.
-		T_TailSend.
-		T_TailSendNoContext.
-		T_Value.
-		T_ValueColon.
-	}
 
+	^ self zagThreadesFns collectWithIndex: [ : ignored : index | index * 8 ]
 ]
 
 { #category : 'converting' }
 ZagConstants class >> asDoubleWordArray [
 
 	^ DoubleWordArray withAll: self asArray
-]
-
-{ #category : 'class initialization' }
-ZagConstants class >> generateInitializeThreadedConstants [
-
-	<script>
-	| itc adwa ltc |
-	self class compile: 'asArray'.
-	self class compile: 'initializeThreadedConstants'.
-	self class compile: 'loadThreadedConstants: array'.
-	self classVariables do: [ :variable |
-		variable isReferenced ifFalse: [ self removeClassVariable: variable ] ].
-	itc := WriteStream on: ''.
-	itc
-		<< 'initializeThreadedConstants'.
-	adwa := WriteStream on: ''.
-	adwa
-		<< 'asArray'.
-	ltc := WriteStream on: ''.
-	ltc
-		<< 'loadThreadedConstants: array'.
-	{ itc. adwa. ltc } do: [ : stream |
-		stream
-			cr;
-			<< $";
-			<< ' - do not edit - instead `do` the following comment ';
-			<< $";
-			cr;
-			<< $";
-			<< ' self generateInitializeThreadedConstants ';
-			<< $";
-			cr ].
-	adwa
-		tab;
-		<< '^ {';
-		cr.
-	self api methodDictionary keys sorted withIndexDo: [
-		:key
-		:index |
-		| variableName |
-		variableName := ('T_' , key first asUppercase asString
-		                 , key allButFirst) asSymbol.
-		self
-			classVariableNamed: variableName
-			ifAbsent: [ self addClassVarNamed: variableName ].
-		itc tab.
-		(itc << variableName)
-			<< ' := ';
-			<< (index * 8) asString;
-			<< $.;
-			cr.
-		adwa
-			tab;
-			tab;
-			<< variableName;
-			<< $.;
-			cr.
-		ltc tab.
-		(ltc << variableName)
-			<< ' := array at: ';
-			<< index asString;
-			<< $.;
-			cr ].
-	adwa
-		tab;
-		<< '}';
-		cr.
-	self class compile: itc contents.
-	self class compile: adwa contents.
-	self class compile: ltc contents.
-	self initializeThreadedConstants
 ]
 
 { #category : 'class initialization' }
@@ -245,30 +134,7 @@ ZagConstants class >> initialize [
 { #category : 'class initialization' }
 ZagConstants class >> initializeClassConstants [
 
-	ClassThunkReturnLocal := 1.
-	ClassThunkReturnInstance :=  2.
-	ClassThunkReturnObject :=  3.
-	ClassThunkReturnImmediate :=  4.
-	ClassThunkLocal :=  5.
-	ClassBlockAssignLocal :=  6.
-	ClassThunkInstance :=  7.
-	ClassBlockAssignInstance :=  8.
-	ClassThunkHeap :=  9.
-	ClassThunkImmediate :=  10.
-	ClassSymbol :=  11.
-	ClassFalse :=  12.
-	ClassTrue :=  13.
-	ClassCharacter :=  14.
-	ClassSignature :=  15.
-	ClassThunkReturnCharacter :=  16.
-	ClassThunkReturnFloat :=  17.
-	ClassThunkFloat :=  18.
-	ClassLLVM :=  19.
-	ClassUndefinedObject :=  20.
-	ClassSmallInteger := 21.
-	ClassFloat := 33.
-	ClassString := 37.
-	ClassDoubleWordArray := 39
+	self updateClassVariables: (Dictionary newFromPairs: self zagClasses) withCriteria: [ :each | each beginsWith: 'Class' ]
 ]
 
 { #category : 'class initialization' }
@@ -289,57 +155,14 @@ ZagConstants class >> initializeHeapConstants [
 
 { #category : 'class initialization' }
 ZagConstants class >> initializeThreadedConstants [
-" - do not edit - instead `do` the following comment "
-" self generateInitializeThreadedConstants "
-	T_Branch := 8.
-	T_Call := 16.
-	T_ClassCase := 24.
-	T_ClassCase24 := 32.
-	T_CullColon := 40.
-	T_Drop := 48.
-	T_DropNext := 56.
-	T_Dup := 64.
-	T_Label := 72.
-	T_MakeImmediateClosure := 80.
-	T_Over := 88.
-	T_PopAssociationValue := 96.
-	T_PopIndirect := 104.
-	T_PopIndirectLocal := 112.
-	T_PopInstVar := 120.
-	T_PopLocal := 128.
-	T_PopLocalData := 136.
-	T_PopLocalField := 144.
-	T_Primitive := 152.
-	T_PrimitiveError := 160.
-	T_PrimitiveModule := 168.
-	T_PrimitiveModuleError := 176.
-	T_PushAssociationValue := 184.
-	T_PushContext := 192.
-	T_PushIndirect := 200.
-	T_PushIndirectLocal := 208.
-	T_PushInstVar := 216.
-	T_PushLiteral := 224.
-	T_PushLocal := 232.
-	T_PushLocalData := 240.
-	T_PushLocalField := 248.
-	T_PushStack := 256.
-	T_PushThisContext := 264.
-	T_PushThisProcess := 272.
-	T_ReturnSelf := 280.
-	T_ReturnSelfNoContext := 288.
-	T_ReturnTop := 296.
-	T_ReturnTopNoContext := 304.
-	T_ReturnTopNonLocal := 312.
-	T_ReturnTopNonLocalNoContext := 320.
-	T_Send := 328.
-	T_StoreLocal := 336.
-	T_Swap := 344.
-	T_TailCallMethod := 352.
-	T_TailSend := 360.
-	T_TailSendNoContext := 368.
-	T_Value := 376.
-	T_ValueColon := 384.
 
+	| dict |
+	dict := Dictionary new.
+	self zagThreadesFns doWithIndex: [ :symbol :index |
+		dict at: symbol put: index * 8 ].
+	self
+		updateClassVariables: dict
+		withCriteria: [ :each | each beginsWith: 'T_' ]
 ]
 
 { #category : 'class initialization' }
@@ -398,27 +221,123 @@ ZagConstants class >> loadThreadedConstants: array [
 ]
 
 { #category : 'class initialization' }
-ZagConstants class >> showThreadedConstants [
+ZagConstants class >> updateClassVariables: mapping withCriteria: criteria [
+	" remove current class variables that are no longer used "
 
-	<script>
-	{ self threadedAPI . self threadedOperations } inspect
+	(self classVarNames select: [ :each |
+		 (criteria value: each) and: [ (mapping includesKey: each) not ] ])
+		do: [ :each | self removeClassVarNamed: each ].
+	mapping keysDo: [ :each |
+			| binding |
+			"Check if the class variable already exists to avoid duplicates"
+			(self hasClassVarNamed: each) ifFalse: [
+				self addClassVarNamed: each ].
+			binding := self classPool
+				           associationAt: each
+				           ifAbsent: [
+				           self error:
+					           'Class variable not found: ' , each asString ].
+			binding value: (mapping at: each) ]
 ]
 
 { #category : 'class initialization' }
-ZagConstants class >> threadedAPI [
+ZagConstants class >> zagClasses [
 
-	^ self api methodDictionary keys sorted
+	^ #(
+	#ClassThunkReturnLocal 1
+	#ClassThunkReturnInstance 2
+	#ClassThunkReturnObject 3
+	#ClassThunkReturnImmediate 4
+	#ClassThunkLocal 5
+	#ClassBlockAssignLocal 6
+	#ClassThunkInstance 7
+	#ClassBlockAssignInstance 8
+	#ClassThunkHeap 9
+	#ClassThunkImmediate 10
+	#ClassSmallInteger 11
+	#ClassSymbol 12
+	#ClassFalse 13
+	#ClassTrue 14
+	#ClassCharacter 15
+	#ClassSignature 16
+	#ClassThunkReturnCharacter 17
+	#ClassThunkReturnFloat 18
+	#ClassThunkFloat 19
+	#ClassLLVM 20
+	#ClassUndefinedObject 21
+	#ClassFloat 22
+	#ClassContext 32
+	#ClassProtoObject 33
+	#ClassObject 34
+	#ClassArray 35
+	#ClassString 36
+	#ClassUtf8String 37
+	#ClassDoubleWordArray 38
+	#ClassBlockClosure 39
+	#ClassProcess 40
+	#ClassClass 41
+	#ClassCompiledMethod 42
+	#ClassDispatch 43
+	#ClassAssociation 44
+	#ClassException 45
+	#ClassError 46
+	#ClassContextData 47
+	#ClassSelectorException 48
+	#ClassPrimitiveFailed 49
+	#ClassBlockClosureValue 50
+	#ClassLLVMPrimitives 51
+	#ClassLLVMGenerator 52
+	)
 ]
 
-{ #category : 'class initialization' }
-ZagConstants class >> threadedOperations [
-
-	^ (ZagOperations allSubclasses select: [ : class |
-		(class methodDict includesKey: #interpretFor:) and: [ (class >> #interpretFor:) isAbstract not ] ]
-	thenCollect: [ : class |
-		| n |
-		n := class name.
-		(n beginsWith: 'ASC') ifTrue: [ n := n allButFirst: 3 ].
-		(n beginsWith: 'Zag') ifTrue: [ n := n allButFirst: 3 ].
-		n first lowercase asString, (n allButFirst: 1) ]) sorted asArray
+{ #category : 'as yet unclassified' }
+ZagConstants class >> zagThreadesFns [
+	^ #(
+	#T_array
+	#T_branch
+	#T_branchFalse
+	#T_branchTrue
+	#T_classCase
+	#T_countDown
+	#T_createClosure
+	#T_cullColon
+	#T_debug
+	#T_drop
+	#T_dup
+	#T_enddebug
+	#T_fail
+	#T_over
+	#T_pop
+	#T_popAssociationValue
+	#T_primitive
+	#T_primitiveError
+	#T_primitiveModule
+	#T_primitiveModuleError
+	#T_push
+	#T_pushAssociationValue
+	#T_pushClosure
+	#T_pushContext
+	#T_pushLiteral
+	#T_pushThisContext
+	#T_pushThisProcess
+	#T_returnLiteralClosure
+	#T_returnLocalClosure
+	#T_returnSelf
+	#T_returnTop
+	#T_returnTopNonLocal
+	#T_send
+	#T_send0
+	#T_store
+	#T_tailSend
+	#T_value
+	#T_valueColon
+	#T_Float_add
+	#T_Float_leq
+	#T_Float_mul
+	#T_Float_sub
+	#T_SmallInteger_add
+	#T_SmallInteger_leq
+	#T_SmallInteger_mul
+	#T_SmallInteger_sub
+)
 ]
