@@ -225,7 +225,7 @@ pub const Object = packed struct(u64) {
     pub inline fn fromNativeI(i: IntType, _: anytype, _: anytype) Object {
         return fromUntaggedI(asUntaggedI(i), null, null);
     }
-    pub inline fn asUntaggedI(i: IntType) i64 {
+    inline fn asUntaggedI(i: IntType) i64 {
         return @as(i64, i) << intShift;
     }
     inline fn isInt(self: object.Object) bool {
@@ -429,8 +429,7 @@ pub const Object = packed struct(u64) {
         }
         @panic("Trying to convert Object to " ++ @typeName(T));
     }
-    pub inline //
-    fn which_class(self: object.Object) ClassIndex {
+    pub inline fn which_class(self: object.Object) ClassIndex {
         switch (encoding) {
             .compactI4 => {
                 if (true) {

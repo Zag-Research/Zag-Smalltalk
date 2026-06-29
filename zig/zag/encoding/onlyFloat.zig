@@ -36,6 +36,10 @@ pub const Object = packed struct(u64) {
         UndefinedObject,
         Float,
         _,
+        const heapBits = object.heapBits();
+        inline fn isHeap(self: Compact) bool {
+            return (heapBits >> @intFromEnum(self)) & 1 != 0;
+        }
         pub inline fn classIndex(cp: Compact) ClassIndex {
             return @enumFromInt(@intFromEnum(cp));
         }
@@ -89,9 +93,6 @@ pub const Object = packed struct(u64) {
         @panic("not implemented");
     }
     pub fn fromNativeI(_: IntType, _: anytype, _: anytype) Object {
-        @panic("not implemented");
-    }
-    pub inline fn asUntaggedI(_: IntType) i64 {
         @panic("not implemented");
     }
 

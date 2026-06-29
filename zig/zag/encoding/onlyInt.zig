@@ -36,6 +36,10 @@ pub const Object = packed struct(u64) {
         UndefinedObject,
         Float,
         _,
+        const heapBits = object.heapBits();
+        inline fn isHeap(self: Compact) bool {
+            return (heapBits >> @intFromEnum(self)) & 1 != 0;
+        }
         pub inline fn classIndex(cp: Compact) ClassIndex {
             return @enumFromInt(@intFromEnum(cp));
         }
@@ -76,9 +80,6 @@ pub const Object = packed struct(u64) {
     }
     pub const taggedI = untaggedI;
     pub const fromTaggedI = fromUntaggedI;
-    pub inline fn asUntaggedI(i: IntType) i64 {
-        return i;
-    }
     pub inline fn nativeI(self: object.Object) ?i64 {
         return @bitCast(self);
     }
@@ -161,8 +162,7 @@ pub const Object = packed struct(u64) {
         return @truncate(self.rawU());
     }
 
-    pub inline //
-    fn fromAddress(value: anytype) Object {
+    pub inline fn fromAddress(value: anytype) Object {
         return @bitCast(@intFromPtr(value));
     }
     pub const StaticObject = struct {
@@ -196,8 +196,7 @@ pub const Object = packed struct(u64) {
         }
         @panic("Trying to convert Object to " ++ @typeName(T));
     }
-    pub inline //
-    fn which_class(_: Object) ClassIndex {
+    pub inline fn which_class(_: Object) ClassIndex {
         return .SmallInteger;
     }
     pub inline fn hasHeapReference(_: Object) bool {

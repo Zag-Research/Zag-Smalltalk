@@ -62,6 +62,10 @@ pub const Object = packed union {
         UndefinedObject,
         Float,
         _,
+        const heapBits = object.heapBits();
+        inline fn isHeap(self: Compact) bool {
+            return (heapBits >> @intFromEnum(self)) & 1 != 0;
+        }
         pub inline fn classIndex(cp: Compact) ClassIndex {
             return @enumFromInt(@intFromEnum(cp));
         }
@@ -356,10 +360,6 @@ pub const Object = packed union {
     }
     pub fn extraU(_: Object) u0 {
         @panic("not implemented");
-    }
-
-    pub inline fn asUntaggedI(i: i64) i64 {
-        return i << 1;
     }
     pub fn returnObjectClosure(_: Object, _: anytype) ?Object {
         return null;

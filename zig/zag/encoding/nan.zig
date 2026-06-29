@@ -44,6 +44,10 @@ pub const Object = packed struct(u64) {
         True,
         Character,
         Signature,
+        const heapBits = object.heapBits();
+        inline fn isHeap(self: Compact) bool {
+            return (heapBits >> @intFromEnum(self)) & 1 != 0;
+        }
         pub inline fn classIndex(cp: Compact) ClassIndex {
             return @enumFromInt(@intFromEnum(cp));
         }
@@ -118,12 +122,10 @@ pub const Object = packed struct(u64) {
         // there are no invalid objects in this implementation
         return null;
     }
-    pub inline //
-    fn isImmediateClass(self: Object, comptime class: ClassIndex) bool {
+    pub inline fn isImmediateClass(self: Object, comptime class: ClassIndex) bool {
         return self.tag == tagFromClassIndex(class);
     }
-    inline //
-    fn oImm(c: ClassIndex, h: u48) Object {
+    inline fn oImm(c: ClassIndex, h: u48) Object {
         if (c == .UndefinedObject)
             return .{ .tag = .heap, .data = 0 };
         return .{ .tag = tagFromClassIndex(c), .data = h };
@@ -189,7 +191,7 @@ pub const Object = packed struct(u64) {
         if (self.untaggedI()) |int| return int >> intShift;
         return null;
     }
-    pub inline fn asUntaggedI(int: IntType) i64 {
+    inline fn asUntaggedI(int: IntType) i64 {
         return @as(i64, int) << intShift;
     }
     pub inline fn fromNativeI(int: IntType, _: anytype, _: anytype) Object {
@@ -288,8 +290,7 @@ pub const Object = packed struct(u64) {
             }
         }
     };
-    pub inline //
-    fn from(value: anytype, _: anytype, _: anytype) Object {
+    pub inline fn from(value: anytype, _: anytype, _: anytype) Object {
         //     return fromWithError(value) catch @panic("unreachable");
         // }
         // pub inline fn fromWithError(value: anytype) !Object {
