@@ -17,8 +17,14 @@ pub const objectEncoding = options.objectEncoding;
 pub const max_classes = options.maxClasses;
 pub const singleSteppable = false; //options.singleSteppable;
 // must be more than HeapObject.maxLength*8 so externally allocated
-pub const process_total_size: usize = if (is_test or testRun) 2048 * 4 else 64 * 1024;
+pub const process_total_size: usize = if (is_test or testRun) 2048 * 4 else pageAlignedSize(64 * 1024);
 
+pub fn pageAlignedSize(comptime minimum_bytes: usize) usize {
+    const page_size = std.heap.page_size_max;
+
+    // Perform rounding math entirely at comptime
+    return ((minimum_bytes + page_size - 1) / page_size) * page_size;
+}
 pub const debugging = false;
 pub const logThreadExecution: ?fn (comptime []const u8, anytype) void = if (options.trace) std.log.debug else null;
 const show_error_stack = debugging;

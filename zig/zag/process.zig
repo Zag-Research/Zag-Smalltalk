@@ -46,6 +46,18 @@ pub const stack_mask = stack_mask_overflow - @sizeOf(Object);
 pub const stack_mask_shift = @ctz(stack_mask_overflow);
 pub const process_stack_size = Process.stack_size;
 pub const process_nursery_size = Process.nursery_size;
+const ProcessStatus = enum {
+    running, // thread is actually executing
+    blocked, // waiting on I/O or calling some FFI
+    paused, // waiting for return to .normal
+    exited, // thread has finished
+};
+const ProcessRequest = enum {
+    normal, // thread is alternating between running and blocking
+    quit, // thread is asked to quit - if blocked, sent signal to thread`
+    save, // thread is asked to save the process object yo yjr image
+    gcPause, //
+};
 const Process = struct {
     stack: [stack_size]Object align(alignment),
     h: Fields,
@@ -58,6 +70,8 @@ const Process = struct {
         id: u64,
         context: *Context,
         trapContextNumber: u64,
+        status: ProcessStatus = .running,
+        request: ProcessRequest = .normal,
         debugFn: ?*const fn (programCounter: PC, stackPointer: SP, process: *Self, context: *Context, signature: Extra) Result,
         sp: SP,
         currHeap: HeapObjectArray,
@@ -195,6 +209,7 @@ comptime {
     assert(@offsetOf(Process, "stack") == 0);
 }
 var allProcesses: ?*Self = null;
+threadlocal var tls_process: @This() = undefined;
 inline fn ptr(self: *align(1) const Self) *Process {
     return @ptrFromInt(@intFromPtr(self) & alignment_mask);
 }
@@ -206,6 +221,7 @@ pub fn new() align(alignment) Self {
 }
 pub fn init(origin: *align(alignment) Self) void {
     const self = origin.ptr();
+    // std.debug.print("threadLocal address = {*}\n", .{&tls_process});
     self.h.sp = origin.endOfStack();
     self.h.currHeap = HeapObject.fromObjectPtr(@ptrCast(&self.nursery0));
     self.h.currEnd = self.h.currHeap + Process.nursery_size;
@@ -215,6 +231,8 @@ pub fn init(origin: *align(alignment) Self) void {
     self.staticContext.initStatic();
     self.h.trapContextNumber = 0;
     self.h.singleStepping = false;
+    self.h.status = .running;
+    self.h.request = .normal;
     while (true) {
         self.h.next = allProcesses;
         self.h.id = if (allProcesses) |p| p.header().id + 1 else 1;
