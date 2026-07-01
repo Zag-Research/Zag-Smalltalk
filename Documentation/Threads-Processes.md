@@ -22,19 +22,12 @@ const ProcessStatus = enum {
 };
 
 const ProcessRequest = enum {
-
-normal, // thread is alternating between running and blocking
-
-quit, // thread is asked to quit - if blocked, sent signal to thread`
-
-save, // thread is asked to save the process object yo yjr image
-
-gcPause, //
+	normal, // thread is alternating between running and blocking
+	quit, // thread is asked to quit - if blocked, interrupted
+	save, // thread is asked to save the process object to the image
+	gcPause, //
 
 };
 ```
-
-### Input/Output Threads
-In order for execution threads to be able to cooperate with the global collector thread they cannot block for I/O. Therefore every blockable operation serializes through an I/O thread.
-
+On entry to a method, a `loop` threaded word (from inlining), or completion (failure or otherwise) of an I/O or FFI, `process.request == .normal` is checked. If it's not `.normal` then special handling is required
 ### Global Arena Collector thread
