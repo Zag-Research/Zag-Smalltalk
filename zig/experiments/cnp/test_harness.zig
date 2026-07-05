@@ -32,8 +32,8 @@ pub fn runCompiled(
     op_positions: []const usize,
     sp_opt: ?SP,
 ) i64 {
-    const context = process.getContext();
-    const sp = sp_opt orelse process.endOfStack();
+    const context = Process.thisProcess.getContext();
+    const sp = sp_opt orelse Process.thisProcess.endOfStack();
     const code = compiled.code[0..];
     for (op_positions, 0..) |pos, i| {
         method.patchOp(code, i, pos);

@@ -269,7 +269,7 @@ pub const threadedFunctions = struct {
             const newSp, const callerContext = context.pop(sp);
             const newExtra = Extra.fromContextData(callerContext.contextDataPtr(sp));
             newSp.traceStack("returnSelf after pop", context, newExtra);
-            return @call(tailCall, process.branchCheck(callerContext.getNPc()), .{ callerContext.getTPc(), newSp, process, callerContext, newExtra });
+            return @call(tailCall, process.check(callerContext.getNPc()), .{ callerContext.getTPc(), newSp, process, callerContext, newExtra });
         }
         test {
             if (true) return config.skipForDebugging();
@@ -302,7 +302,7 @@ pub const threadedFunctions = struct {
             const newSp, const callerContext = context.pop(sp);
             newSp.top = top;
             newSp.traceStack("returnTop after pop", context, extra);
-            return @call(tailCall, process.branchCheck(callerContext.npc), .{ callerContext.tpc, newSp, process, callerContext, Extra.fromContextData(callerContext.contextDataPtr(sp)) });
+            return @call(tailCall, process.check(callerContext.npc), .{ callerContext.tpc, newSp, process, callerContext, Extra.fromContextData(callerContext.contextDataPtr(sp)) });
         }
         test {
             if (true) return config.skipForDebugging();

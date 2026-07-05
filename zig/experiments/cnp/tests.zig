@@ -43,9 +43,9 @@ pub const PushTest = struct {
     }
 
     pub fn run() !void {
-        process.init();
-        const context = process.getContext();
-        var sp = process.endOfStack().safeReserve(1);
+        Process.thisProcess.init();
+        const context = Process.thisProcess.getContext();
+        var sp = Process.thisProcess.endOfStack().safeReserve(1);
         sp.top = Object.from(123, sp, context);
         process.setSp(sp);
         const result = runCompiled(&method, &compiled, &process, info.positions[0..], sp);
@@ -131,9 +131,9 @@ pub const ReturnSelfTest = struct {
     }
 
     pub fn run() !void {
-        process.init();
-        const context = process.getContext();
-        var sp = process.endOfStack().safeReserve(1);
+        Process.thisProcess.initProcess();
+        const context = Process.thisProcess.getContext();
+        var sp = Process.thisProcess.endOfStack().safeReserve(1);
         sp.top = Object.from(55, sp, context);
         process.setSp(sp);
         const result = runCompiled(&method, &compiled, &process, info.positions[0..], sp);
