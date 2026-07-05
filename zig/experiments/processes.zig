@@ -1,18 +1,120 @@
 const std = @import("std");
 const builtin = @import("builtin");
+const assert = std.debug.assert;
+//const largerPowerOf2 = zag.utilities.largerPowerOf2;
+inline fn bitsToRepresent(value: anytype) u7 {
+    const T = @TypeOf(value);
+    switch (@typeInfo(T)) {
+        .comptime_int => {
+            comptime var n = value;
+            n |= n >> 32;
+            n |= n >> 16;
+            n |= n >> 8;
+            n |= n >> 4;
+            n |= n >> 2;
+            n |= n >> 1;
+            return comptime @ctz(~@as(u64, n));
+        },
+        .int => |int_info| switch (int_info.signedness) {
+            .unsigned => return @intCast(int_info.bits - @clz(value)),
+            else => {},
+        },
+        else => {},
+    }
+    @compileError("bitsToRepresent not implemented for " ++ @typeName(T));
+}
+inline fn largerPowerOf2(value: anytype) u64 {
+    if (value <= 1) return 1;
+    const bits = bitsToRepresent(value - 1);
+    return @as(u64, 1) << @as(u6, @intCast(bits));
+}
+const Context = struct {
+    fn initStatic(_: *Context) void {}
+};
+const Object = u64;
+const HeapObject = struct {
+    header: u64,
+    inline fn fromObjectPtr(op: [*]const Object) HeapObjectArray {
+        return @ptrFromInt(@intFromPtr(op));
+    }
+};
+const HeapObjectArray = [*]HeapObject;
+const SP = [*]Object;
 
 pub const OsHandle = if (builtin.os.tag == .windows)
     std.os.windows.HANDLE
 else
     std.c.pthread_t;
+const process_total_size = 64 * 1024;
 
-pub const Process = struct {
-    next: ?*Process = null,
-    os_target: ?OsHandle = null,
-    threadId: std.Thread = undefined,
-    id: u64 = undefined,
+const Process = @This();
+next: ?*Process = null,
+os_target: ?OsHandle = null,
+threadId: std.Thread = undefined,
+id: u64 = undefined,
+trapContextNumber: u64 = 0,
+status: ProcessStatus = .running,
+request: ProcessRequest = .normal,
+context: *Context = undefined,
+currHeap: HeapObjectArray = undefined,
+currHp: HeapObjectArray = undefined,
+currEnd: HeapObjectArray = undefined,
+otherHeap: HeapObjectArray = undefined,
+sp: [*]Object = undefined,
+staticContext: Context = undefined,
+// ignored: u64 = 0,
+nursery0: [process_nursery_size]HeapObject = undefined,
+nursery1: [process_nursery_size]HeapObject = undefined,
+_fill: [fill_size]u64 = undefined,
+stack: [process_stack_size]Object = undefined,
+comptime {
+    assert(process_stack_size < process_nursery_size);
+    // @compileLog(@sizeOf(Process));
+    // @compileLog(process_total_size);
+    assert(@sizeOf(Process) == process_total_size - 8);
+}
+const threadlocalOffset = 8;
+const fields_size = 12 * 8 + @sizeOf(Context) + threadlocalOffset;
+const processAvail = (process_total_size - fields_size) / @sizeOf(Object);
+const approx_nursery_size = (processAvail - processAvail / 16) / 2;
+const approx_stack_size = processAvail - approx_nursery_size * 2;
+const process_stack_size: usize = largerPowerOf2(approx_stack_size) - 1;
+const process_nursery_size = (processAvail - process_stack_size) / 2;
+const fill_size = processAvail - process_stack_size - process_nursery_size * 2;
+const stack_mask_overflow: usize = largerPowerOf2(process_stack_size * @sizeOf(Object));
+pub const stack_mask = stack_mask_overflow - @sizeOf(Object);
+pub const stack_mask_shift = @ctz(stack_mask_overflow);
+pub const StackMask = @import("std").meta.Int(.unsigned, stack_mask_shift);
+fn init(self: *Process, threadId: std.Thread, id: u64) void {
+    self.threadId = threadId;
+    self.id = id;
+    self.currHeap = HeapObject.fromObjectPtr(@ptrCast(&self.nursery0));
+    self.currEnd = self.currHeap + process_nursery_size;
+    self.currHp = self.currHeap;
+    self.otherHeap = HeapObject.fromObjectPtr(@ptrCast(&self.nursery1));
+    self.context = &self.staticContext;
+    self.staticContext.initStatic();
+    self.sp = self.endOfStack();
+    if (@intFromPtr(&self.stack[0]) & stack_mask != 0) @panic("stack not properly aligned");
+}
+pub inline fn endOfStack(self: *Process) SP {
+    return @ptrCast(@as([*]Object, @ptrCast(&self.stack[0])) + process_stack_size);
+}
+const ProcessStatus = enum {
+    running, // thread is actually executing
+    blocked, // waiting on I/O or calling some FFI
+    gcMarking, // the process is marking reachable objects
+    waiting, // waiting for return to .normal
+    exited, // thread has finished
 };
 
+const ProcessRequest = enum {
+    normal, // thread is alternating between running and blocking
+    quit, // thread is asked to quit - if blocked, interrupted
+    save, // thread is asked to save the process object to the image
+    gcMark, // the GC thread is asking the process to mark reachable globals
+
+};
 pub const GlobalRegistry = struct {
     // Struct-local static variables (Singletons)
     var head: ?*Process = null;
@@ -45,9 +147,8 @@ pub const GlobalRegistry = struct {
         // this is a performance trade-off deep inside OS logic
         while (true) {
             if (child_process) |process| {
-                process.threadId = thread;
                 processId += 1;
-                process.id = processId;
+                process.init(thread, processId);
                 return process;
             }
             cond.wait(&mutex);
@@ -118,21 +219,21 @@ pub const GlobalRegistry = struct {
 };
 
 // Every thread that runs will get its own separate instantiation of this memory slot.
-threadlocal var tls_process: Process align(1024) = undefined;
+threadlocal var thisProcess: Process = undefined;
 
 // The routine worker threads will run
 fn workerRoutine() void {
-    tls_process = Process{};
+    thisProcess = Process{};
     const my_os_handle = if (builtin.os.tag == .windows)
         undefined // this is only set when we're doing I/O
     else
         std.c.pthread_self();
 
     // Perform the interlocking registration step
-    GlobalRegistry.registerChild(&tls_process, my_os_handle);
+    GlobalRegistry.registerChild(&thisProcess, my_os_handle);
 
     // Always clean up the pointer before thread destruction!
-    defer GlobalRegistry.unregister(&tls_process);
+    defer GlobalRegistry.unregister(&thisProcess);
 
     // Simulate the thread doing work
     std.Thread.sleep(50 * std.time.ns_per_ms);
@@ -142,7 +243,7 @@ fn printProc(proc: *Process) void {
     std.debug.print("Thread-Local Process Found -> ID: {}\n", .{proc.id});
 }
 pub fn main() !void {
-    // Spawn 3 worker threads, each initializing their own copy of `tls_process`
+    // Spawn 3 worker threads, each initializing their own copy of `thisProcess`
     const t1 = try GlobalRegistry.spawnWithInterlock(workerRoutine);
     if (false) GlobalRegistry.interruptProcess(t1);
     _ = try GlobalRegistry.spawnWithInterlock(workerRoutine);
