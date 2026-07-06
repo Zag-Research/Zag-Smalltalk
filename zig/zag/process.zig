@@ -52,27 +52,25 @@ currHp: HeapObjectArray = undefined,
 currEnd: HeapObjectArray = undefined,
 otherHeap: HeapObjectArray = undefined,
 sp: SP = undefined,
+stack: [*]Object = undefined,
 staticContext: Context = undefined,
-nursery0: [process_nursery_size]HeapObject = undefined,
-nursery1: [process_nursery_size]HeapObject = undefined,
-_fill: [fill_size]u64 = undefined,
-stack: [process_stack_size]Object = undefined,
-comptime {
-    assert(process_stack_size < process_nursery_size);
-    // @compileLog(@sizeOf(Process));
-    // @compileLog(process_total_size);
-    assert(@sizeOf(Process) == process_total_size - 8);
-}
+data: [data_size]Object = undefined, // some wastage as stack must be aligned
 
-const threadlocalOffset = 8;
-const fields_size = 12 * 8 + @sizeOf(Context) + threadlocalOffset;
-const processAvail = (process_total_size - fields_size) / @sizeOf(Object);
-const approx_nursery_size = (processAvail - processAvail / 16) / 2;
-const approx_stack_size = processAvail - approx_nursery_size * 2;
-pub const process_stack_size: usize = largerPowerOf2(approx_stack_size) - 1;
-pub const process_nursery_size = (processAvail - process_stack_size) / 2;
-const fill_size = processAvail - process_stack_size - process_nursery_size * 2;
-const stack_mask_overflow: usize = largerPowerOf2(process_stack_size * @sizeOf(Object));
+const fields_size = 14 * 8 + @sizeOf(Context);
+const data_size = (process_total_size - fields_size) / @sizeOf(Object);
+const percentage_stack = 10; // must be < 25 to maintian invariant that stack can be copied to nursery
+const stack_size: usize = largerPowerOf2(data_size * percentage_stack / 100) - 1;
+pub fn process_stack_size() usize {
+    return stack_size;
+}
+pub fn process_nursery_size() usize {
+    return stackOffset() / 2;
+}
+fn stackOffset() usize {
+    const address = @intFromPtr(&thisProcess.data[data_size - stack_size]) >> stack_mask_shift << stack_mask_shift;
+    return (address - @intFromPtr(&thisProcess.data[0])) >> 3;
+}
+const stack_mask_overflow: usize = largerPowerOf2(stack_size * @sizeOf(Object));
 pub const stack_mask = stack_mask_overflow - @sizeOf(Object);
 pub const stack_mask_shift = @ctz(stack_mask_overflow);
 pub const StackMask = @import("std").meta.Int(.unsigned, stack_mask_shift);
@@ -82,18 +80,20 @@ fn init(aProcess: *Process, threadId: std.Thread, id: u64) void {
     initProcess();
 }
 pub fn initProcess(_: *Process) void {
-    thisProcess.currHeap = HeapObject.fromObjectPtr(@ptrCast(&thisProcess.nursery0));
-    thisProcess.currEnd = thisProcess.currHeap + process_nursery_size;
+    thisProcess.currHeap = HeapObject.fromObjectPtr(@ptrCast(&thisProcess.data));
+    thisProcess.currEnd = thisProcess.currHeap + process_nursery_size();
     thisProcess.currHp = thisProcess.currHeap;
-    thisProcess.otherHeap = HeapObject.fromObjectPtr(@ptrCast(&thisProcess.nursery1));
+    thisProcess.otherHeap = HeapObject.fromObjectPtr(@ptrCast(&thisProcess.data[process_nursery_size()]));
     thisProcess.context = &thisProcess.staticContext;
     thisProcess.staticContext.initStatic();
+    thisProcess.stack = @as([*]Object, &thisProcess.data) + stackOffset();
     thisProcess.sp = thisProcess.endOfStack();
-    std.debug.print("thisProcess = {x} stack = {x}\n", .{ @intFromPtr(&thisProcess), @intFromPtr(&thisProcess.stack[0]) });
-    if (@intFromPtr(&thisProcess.stack[0]) & stack_mask != 0) @panic("stack not properly aligned");
+    if (@intFromPtr(thisProcess.stack) & stack_mask != 0) {
+        @panic("stack not properly aligned");
+    }
 }
 pub inline fn endOfStack(_: *Process) SP {
-    return @ptrCast(@as([*]Object, @ptrCast(&thisProcess.stack[0])) + process_stack_size);
+    return @ptrCast(@as([*]Object, @ptrCast(thisProcess.stack)) + stack_size);
 }
 pub const OsHandle = if (builtin.os.tag == .windows)
     std.os.windows.HANDLE
@@ -114,10 +114,9 @@ const ProcessRequest = enum {
     gcMark, // the GC thread is asking the process to mark reachable globals
 
 };
-const maxNurseryObjectSize = @min(HeapHeader.maxLength, process_nursery_size / 4);
 
 fn collectNursery(_: *Process, sp: SP, context: *Context, need: usize) void {
-    assert(need <= process_nursery_size);
+    assert(need <= process_nursery_size());
     var ageSizes = [_]usize{0} ** Age.lastNurseryAge;
     thisProcess.collectNurseryPass(sp, context, &ageSizes, Age.lastNurseryAge + 1);
     if (thisProcess.freeNursery() >= need) return;
@@ -190,8 +189,8 @@ fn finishCollection(_: *Process, startingHp: HeapObjectArray, startingScan: Heap
     head.otherHeap = head.currHeap;
     head.currHeap = tempHeap;
     head.currHp = hp;
-    head.currEnd = tempHeap + process_nursery_size;
-    for (head.otherHeap[0..process_nursery_size]) |*obj| {
+    head.currEnd = tempHeap + process_nursery_size();
+    for (head.otherHeap[0..process_nursery_size()]) |*obj| {
         obj.* = undefined;
     }
 }
@@ -308,7 +307,7 @@ test "stack operations" {
     const ee = std.testing.expectEqual;
     thisProcess.initProcess();
     const endSp = thisProcess.endOfStack();
-    try ee(504, @intFromPtr(endSp) & stack_mask);
+    try ee(1016, @intFromPtr(endSp) & stack_mask);
     try ee(endSp.endOfStack(), thisProcess.endOfStack());
     try ee(endSp.reserve(1).?.endOfStack(), thisProcess.endOfStack());
     try ee(endSp.reserve(10).?.endOfStack(), thisProcess.endOfStack());
@@ -316,8 +315,8 @@ test "stack operations" {
 test "nursery allocation" {
     const ee = std.testing.expectEqual;
     thisProcess.initProcess();
-    const emptySize = process_nursery_size;
-    try ee(63, process_stack_size);
+    const emptySize = process_nursery_size();
+    try ee(127, process_stack_size());
     try ee(emptySize, thisProcess.freeNursery());
     var sp = thisProcess.endOfStack();
     const initialContext = thisProcess.getContext();
@@ -397,7 +396,7 @@ const Stack = struct {
             return @ptrFromInt(newP);
         } else {
             const newP = @intFromPtr(self) - @sizeOf(Object) * n;
-            if (newP < @intFromPtr(&self.theProcess().stack)) {
+            if (newP < @intFromPtr(thisProcess.stack)) {
                 @branchHint(.unlikely);
                 return null;
             }
@@ -476,7 +475,7 @@ const Stack = struct {
     }
     pub fn alloc(self: SP, context: *Context, classIndex: ClassIndex, iVars: u11, indexed: ?usize, comptime element: type, makeWeak: bool) AllocResult {
         const aI = allocationInfo(iVars, indexed, element, makeWeak);
-        if (aI.objectSize(Process.maxNurseryObjectSize)) |size| {
+        if (aI.objectSize(@min(HeapHeader.maxLength, process_nursery_size() / 4))) |size| {
             for (0..2) |_| {
                 //                if (true) @panic("here 490");
                 const result = HeapObject.alignProperBoundary(thisProcess.currHp);
@@ -547,7 +546,6 @@ test "Stack" {
     try ee(True(), sp1.next);
     try ee(False(), sp1.top);
     _ = sp1.drop().push(Object.from(42, sp1, context));
-    std.debug.print("sp1.top = {x} {x}\n", .{ sp1.top.testU(), Object.from(42, sp1, context).testU() });
     try config.skipForDebugging();
     try ee(sp1.top.to(i64), 42);
 }

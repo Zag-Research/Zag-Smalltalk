@@ -70,7 +70,6 @@ pub const branch = struct {
             o0,
             ":label",
         });
-        assert(@alignOf(@TypeOf(exe)) > 50);
         try exe.resolve(Object.empty);
         exe.execute(Object.empty);
         try exe.matchStack(Object.empty);

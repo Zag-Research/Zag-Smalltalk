@@ -54,7 +54,7 @@ pub fn printConfig() void {
         \\  cpu            = {s} ({}){s}
         \\  objectEncoding = {}
         \\  max_classes    = {}
-        \\  process        = {d}w{s}{s}{s}{s}
+        \\  stack/nursery  = {d}w/{d}w ({d}w){s}{s}{s}{s}
         \\
     , .{
         compile_date,
@@ -64,8 +64,8 @@ pub fn printConfig() void {
         if (native_endian == .big) " big endian" else "",
         objectEncoding,
         max_classes,
-        // Process.process_stack_size,
-        // Process.process_nursery_size,
+        Process.process_stack_size(),
+        Process.process_nursery_size(),
         process_total_size / 8,
         if (is_test) "\n  is test" else "",
         if (debugMode) "\n  is debugMode" else "",
