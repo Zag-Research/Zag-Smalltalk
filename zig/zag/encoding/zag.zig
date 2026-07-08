@@ -18,7 +18,10 @@ const HeapObjectConstPtr = zag.heap.HeapObjectConstPtr;
 const InMemory = zag.InMemory;
 const execute = zag.execute;
 const Signature = execute.Signature;
-const floatEncoding = @import("floatEncoding.zig").Fst2(4);
+const floatEncoding = switch (zag.config.objectEncoding) {
+    .zag => @import("floatEncoding.zig").Fst2(4),
+    else => @import("floatEncoding.zig").Zag6,
+};
 const encode = floatEncoding.encode;
 const decode = floatEncoding.decode;
 
@@ -38,7 +41,7 @@ pub const Object = packed struct(u64) {
     extra: u11 = 0,
     class: Compact = @enumFromInt(0),
     pub const Compact = enum(u5) {
-        heap,
+        c,
         ThunkReturnLocal,
         ThunkReturnInstance,
         ThunkReturnObject,
@@ -61,6 +64,7 @@ pub const Object = packed struct(u64) {
         LLVM,
         UndefinedObject,
         Float,
+        heap,
         _,
         const heapBits = object.heapBits();
         inline fn isHeap(self: Compact) bool {
@@ -313,35 +317,23 @@ pub const Object = packed struct(u64) {
     }
     pub inline fn which_class(self: object.Object) ClassIndex {
         const u: u64 = @bitCast(self);
-        if (true) {
-            if (u & 2 != 0) {
-                @branchHint(.likely);
-                return .SmallInteger;
-            } else if (u & 4 != 0) {
-                @branchHint(.likely);
-                return .Float;
-            }
-        } else {
-            const shift: u4 = @intCast((u & 6) << 1); // depends on SmallInteger only using 2 (i.e. 3,6,7 unused)
-            const offset = @min(ClassIndex.u(.Float), ClassIndex.u(.SmallInteger)) - 1;
-            assert(@max(ClassIndex.u(.Float), ClassIndex.u(.SmallInteger)) - 15 <= offset);
-            const key = ((ClassIndex.u(.SmallInteger) - offset) << 12) + ((ClassIndex.u(.Float) - offset) << 8) + ((ClassIndex.u(.SmallInteger) - offset) << 4);
-            switch ((key >> shift) & 15) {
-                else => |tag| {
-                    @branchHint(.likely);
-                    return @enumFromInt(tag + offset);
-                },
-                0 => {},
-            }
+        if (decode(u)) |_| {
+            @branchHint(.likely);
+            return .Float;
+        } else if (u & 7 != 0) {
+            @branchHint(.likely);
+            return .SmallInteger;
         }
         const class = self.class;
         if (class == .heap) {
+            return self.toUnchecked(*HeapObject).*.getClass();
+        } else {
             if (u == 0) {
                 @branchHint(.unlikely);
                 return .UndefinedObject;
             }
-            return self.toUnchecked(*HeapObject).*.getClass();
-        } else return self.class.classIndex();
+            return self.class.classIndex();
+        }
     }
 
     pub inline fn isImmediate(self: Object) bool {
