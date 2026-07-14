@@ -31,6 +31,32 @@ pub fn PatchTable(SourceAddressType: anytype, TargetAddressType: anytype, InfoTy
 
         const Self = @This();
 
+        const PatchIterator = struct {
+            next_element: ?*PatchElement,
+            current: ?*PatchElement,
+            free_list: *?*PatchElement,
+
+            pub fn next(self: *PatchIterator) ?*PatchElement {
+                if (self.current) |pe| {
+                    pe.next = self.free_list.*;
+                    self.free_list.* = pe;
+                    const nxt = self.next_element;
+                    self.current = nxt;
+                    if (nxt) |then|
+                        self.next_element = then.next;
+                    return pe;
+                } else return null;
+            }
+
+            fn new(pe: ?*PatchElement, freeList: *?*PatchElement) PatchIterator {
+                return .{
+                    .next_element = if (pe) |tpe| tpe.next else null,
+                    .current = pe,
+                    .free_list = freeList,
+                };
+            }
+        };
+
         pub fn init(self: *Self) void {
             var last: ?*PatchElement = null;
             for (&self.patch) |*pe| {
@@ -81,32 +107,6 @@ pub fn PatchTable(SourceAddressType: anytype, TargetAddressType: anytype, InfoTy
             }
             @panic("map too small");
         }
-
-        const PatchIterator = struct {
-            next_element: ?*PatchElement,
-            current: ?*PatchElement,
-            free_list: *?*PatchElement,
-
-            pub fn next(self: *PatchIterator) ?*PatchElement {
-                if (self.current) |pe| {
-                    pe.next = self.free_list.*;
-                    self.free_list.* = pe;
-                    const nxt = self.next_element;
-                    self.current = nxt;
-                    if (nxt) |then|
-                        self.next_element = then.next;
-                    return pe;
-                } else return null;
-            }
-
-            fn new(pe: ?*PatchElement, freeList: *?*PatchElement) PatchIterator {
-                return .{
-                    .next_element = if (pe) |tpe| tpe.next else null,
-                    .current = pe,
-                    .free_list = freeList,
-                };
-            }
-        };
 
         pub fn definition(self: *Self, define: SourceAddressType, as: TargetAddressType) PatchIterator {
             const entry = self.atOrDefine(define);

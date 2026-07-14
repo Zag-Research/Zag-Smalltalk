@@ -1,3 +1,5 @@
+/// `Code` is the threaded method code type, `Arch` decodes/emits native
+/// instructions, and `JitBuffer` owns executable memory for copied code.
 pub fn CopyAndPatch(Code: anytype, Arch: anytype, JitBuffer: anytype) type {
     const Address = Arch.Address;
     const NativePatchType = PatchTable(Address, Address, Operation, mapSize, patchSize);
@@ -21,10 +23,12 @@ pub fn CopyAndPatch(Code: anytype, Arch: anytype, JitBuffer: anytype) type {
             self.buffer.deinit();
         }
 
+        /// JIT a compiled method's threaded code into the backing buffer.
         pub fn jitMethod(self: *Self, method: *const CompiledMethod) !void {
             return self.jitCode(method.codeSlice());
         }
 
+        /// Drive copy-and-patch for all threaded continuations discovered from `code`.
         fn jitCode(self: *Self, code: []const Code) !void {
             self.buffer.makeWritable();
             self.threaded_patch.externalReference(code.ptr);
@@ -34,6 +38,7 @@ pub fn CopyAndPatch(Code: anytype, Arch: anytype, JitBuffer: anytype) type {
             self.buffer.makeExecutable();
         }
 
+        /// Interpret one threaded-function native template and copy/patch its reachable paths. This is semantic part
         fn abstractInterpret(self: *Self, initial_cp: [*]const Code) !void {
             const entry_pc = @intFromPtr(initial_cp + 1);
             self.resetAbstractState(entry_pc);
@@ -46,7 +51,7 @@ pub fn CopyAndPatch(Code: anytype, Arch: anytype, JitBuffer: anytype) type {
                 const instruction = decoder.nextInstruction();
                 var inst: Operation = instruction.operation;
                 self.define(&self.native_patch, instruction.address);
-                instSw: switch (inst) {
+                switch (inst) {
                     .ret => {
                         Arch.emitInstruction(instruction, &self.buffer);
                         break;
@@ -60,6 +65,11 @@ pub fn CopyAndPatch(Code: anytype, Arch: anytype, JitBuffer: anytype) type {
                             .pc => if (ldst.register == Arch.dispatchRegister) {
                                 self.reg_type[ldst.register] = .codeAddress;
                                 self.reg_value[ldst.register] = self.reg_value[ldst.base] + ldst.offset;
+                                continue;
+                            } else if (ldst.register == Arch.pcRegister) {
+                                const code: *const Code = @ptrFromInt(self.reg_value[ldst.base] + ldst.offset);
+                                self.reg_type[ldst.register] = .codeAddress;
+                                self.reg_value[ldst.register] = @intFromPtr(code.codePtr);
                                 continue;
                             },
                             .context => {
@@ -78,6 +88,7 @@ pub fn CopyAndPatch(Code: anytype, Arch: anytype, JitBuffer: anytype) type {
                             .pc, .codeAddress => {
                                 self.reg_type[ldst.register] = .codeAddress;
                                 self.reg_value[ldst.register] = self.reg_value[ldst.base];
+                                self.reg_type[ldst.base] = .pc;
                                 self.reg_value[ldst.base] += ldst.offset;
                                 continue :nextInstruction;
                             },
@@ -98,6 +109,22 @@ pub fn CopyAndPatch(Code: anytype, Arch: anytype, JitBuffer: anytype) type {
                         if (self.reg_type[arith.source] == self.reg_type[arith.addend]) {
                             self.reg_type[arith.target] = self.reg_type[arith.source];
                             self.reg_value[arith.target] = self.reg_value[arith.source] + self.reg_value[arith.addend];
+                            continue :nextInstruction;
+                        }
+                    },
+                    .conditionalSelect => |select| {
+                        if (self.reg_type[select.source] == self.reg_type[select.alternative]) {
+                            self.reg_type[select.target] = self.reg_type[select.source];
+                            self.reg_value[select.target] = self.reg_value[select.source];
+                            continue :nextInstruction;
+                        } else if (self.reg_type[select.source] == .codeAddress or self.reg_type[select.alternative] == .codeAddress) {
+                            const selected = if (self.reg_type[select.source] == .codeAddress) select.source else select.alternative;
+                            self.reg_type[select.target] = .codeAddress;
+                            self.reg_value[select.target] = self.reg_value[selected];
+                            continue :nextInstruction;
+                        } else if (self.reg_type[select.source] == .executableAddress or self.reg_type[select.alternative] == .executableAddress) {
+                            self.reg_type[select.target] = .executableAddress;
+                            self.reg_value[select.target] = 0;
                             continue :nextInstruction;
                         }
                     },
@@ -129,21 +156,18 @@ pub fn CopyAndPatch(Code: anytype, Arch: anytype, JitBuffer: anytype) type {
                                 assert(self.reg_type[Arch.processRegister] == .process);
                                 assert(self.reg_type[Arch.contextRegister] == .context);
                                 assert(self.reg_type[Arch.extraRegister] == .extra);
-                                continue :instSw .endBranch;
+                                Arch.emitInstruction(instruction, &self.buffer);
+
+                                if (self.native_patch.popPending()) |addr| {
+                                    decoder.goto(addr);
+                                    continue :nextInstruction;
+                                } else break;
                             },
                             else => @panic("branchRegister to non-executable"),
                         }
                     },
                     .branch => |branch| {
                         self.emitNativeBranchReference(self.nativeAddress(branch.address), inst);
-
-                        if (self.native_patch.popPending()) |addr| {
-                            decoder.goto(addr);
-                            continue :nextInstruction;
-                        } else break;
-                    },
-                    .endBranch => {
-                        self.emitOperation(inst);
 
                         if (self.native_patch.popPending()) |addr| {
                             decoder.goto(addr);
@@ -157,6 +181,7 @@ pub fn CopyAndPatch(Code: anytype, Arch: anytype, JitBuffer: anytype) type {
             }
         }
 
+        /// Emit a operation generated by the abstract interpreter.
         fn emitOperation(self: *Self, operation: Operation) void {
             Arch.emitInstruction(.{
                 .address = self.bufferAddress(),
@@ -165,6 +190,7 @@ pub fn CopyAndPatch(Code: anytype, Arch: anytype, JitBuffer: anytype) type {
             }, &self.buffer);
         }
 
+        /// Emit a native branch placeholder and patch it immediately if the target is known.
         fn emitNativeBranchReference(self: *Self, target: Address, operation: Operation) void {
             const branch_site = self.bufferAddress();
             const resolved = self.native_patch.reference(target, branch_site, operation);
@@ -182,6 +208,7 @@ pub fn CopyAndPatch(Code: anytype, Arch: anytype, JitBuffer: anytype) type {
             return @ptrCast(@alignCast(@constCast(address)));
         }
 
+        /// Define a source address at the current buffer address and patch queued references.
         fn define(self: *Self, patch_table: anytype, source_address: anytype) void {
             const emitted_address = self.bufferAddress();
 
@@ -251,23 +278,24 @@ cnp: CopyAndPatch(zag.execute.Code, CnPArch, CnPBuffer) = undefined,
 /// var jit: CopyAndPatch(currentArch) = undefined;
 /// try jit.init();
 /// defer jit.deinit();
-/// const code = try jit.jitMethod(method);
-/// method.jitted = @ptrCast(@alignCast(code.ptr));
+/// try jit.jitMethod(method);
+/// method.jitted = @ptrCast(@alignCast(jit.buffer.memory.ptr));
+/// Create the platform-specific CnP executor used by runtime tests.
 pub fn init() !CnPExecutor {
     var self: CnPExecutor = .{};
     try self.cnp.init();
     return self;
 }
 
+/// Release the platform-specific CnP executor resources.
 pub fn deinit(self: *CnPExecutor) void {
     self.cnp.deinit();
 }
 
+/// JIT a compile-time test method and install its native entry point.
 pub fn install(self: *CnPExecutor, method: anytype) !void {
     try self.cnp.jitCode(method.code[0..]);
-    // if (std.posix.getenv("ZAG_DUMP_CNP_RUNTIME_TEST") != null) {
-    //     self.cnp.dump(std.debug);
-    // }
+    if (std.posix.getenv("ZAG_DUMP_CNP_RUNTIME_TEST") != null) self.cnp.dump(std.debug);
     method.asCompiledMethodPtr().executeFn = @ptrCast(@alignCast(self.cnp.buffer.memory.ptr));
 }
 
@@ -530,8 +558,6 @@ test "cnp: conditional native branch paths dispatch to same continuation" {
 }
 
 test "runtime: cnp pushLiteral matches threaded execution" {
-    if (builtin.mode == .Debug) return error.SkipZigTest;
-
     var exe = Execution.initTest("cnp pushLiteral", .{
         tf.pushLiteral,
         o1,
@@ -543,6 +569,41 @@ test "runtime: cnp pushLiteral matches threaded execution" {
         CnPExecutor,
         &[_]Object{},
         &[_]Object{ o0, o1 },
+    );
+}
+
+test "runtime: cnp pushLiteral pushLiteral dup drop matches threaded execution" {
+    var exe = Execution.initTest("cnp pushLiteral pushLiteral dup drop", .{
+        tf.pushLiteral,
+        o1,
+        tf.pushLiteral,
+        o0,
+        tf.dup,
+        tf.drop,
+    });
+
+    try exe.runJittedTest(
+        CnPExecutor,
+        &[_]Object{},
+        &[_]Object{ o0, o1 },
+    );
+}
+
+test "runtime: cnp branch skips pushLiteral" {
+    var exe = Execution.initTest("cnp branch skips pushLiteral", .{
+        tf.branch,
+        "target",
+        tf.pushLiteral,
+        o1,
+        ":target",
+        tf.pushLiteral,
+        o0,
+    });
+
+    try exe.runJittedTest(
+        CnPExecutor,
+        &[_]Object{},
+        &[_]Object{o0},
     );
 }
 

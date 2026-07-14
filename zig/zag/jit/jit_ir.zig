@@ -38,6 +38,7 @@ pub const Operation = union(enum) {
     branchLink: Branch,
     branchRegister: Register,
     branchConditional: BranchConditional,
+    conditionalSelect: ConditionalSelect,
     add: Arithmetic,
     addConstant: ArithmeticConstant,
 
@@ -68,6 +69,13 @@ pub const Operation = union(enum) {
 
     pub const Branch = struct {
         address: Address,
+    };
+
+    pub const ConditionalSelect = struct {
+        target: Register,
+        source: Register,
+        alternative: Register,
+        condition: Condition,
     };
 
     pub const LoadStore = struct {

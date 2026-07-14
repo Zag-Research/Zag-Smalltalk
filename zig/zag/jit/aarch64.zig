@@ -1,17 +1,24 @@
+// Required Arch interface for CopyAndPatch:
 const intRegisters = 31;
 const floatRegisters = 32;
-const floatOffset = intRegisters + 1; // offset from "float" register start; 1 sp reserverd register
+const floatOffset = intRegisters + 1; // offset from "float" register start; 1 sp reserved register
 pub const nRegisters = floatOffset + floatRegisters;
+
+// Logical VM argument registers. These are AArch64 x-register indexes, but are named by their
+// CnP role so the abstract interpreter can stay architecture-neutral.
 pub const pcRegister = 0;
 pub const spRegister = 1;
 pub const processRegister = 2;
 pub const contextRegister = 3;
 pub const extraRegister = 4;
+
 pub const dispatchRegister = 5;
+
 pub const maxInstructionsPerTemplate = 4096;
+
 pub const Address = jit_ir.Address;
 
-// Note: adrp instruction probably will  have to be modified because the Buffer won't be at the same 4K page as the original threadedFn
+// Note: adrp instruction probably will have to be modified because the Buffer won't be at the same 4K page as the original threadedFn
 // Note: probably should treat the adrp and following add instruction to be a single load-address Operation and emit properly
 // Note: also, need to make sure that the buffer allocated for jitting is within 4Gb of the zag code, so that adrp can reference things
 // Note: look at e.g. branchFalse - need to handle csel instruction correctly, too
@@ -28,6 +35,7 @@ const instruction_patterns = [_]InstructionPattern{
     .{ .mask = 0x1f000000, .bits = 0x11000000, .decode = decodeAddSubImmediate }, // `add x0, x0, #0x20`
     .{ .mask = 0x1f800000, .bits = 0x12000000, .decode = decodeLogicalImmediate }, // `tst x8, #0xff8`
     .{ .mask = 0x1f000000, .bits = 0x0a000000, .decode = decodeLogicalShiftedRegister }, // `mov x1, x8`
+    .{ .mask = 0x1f000000, .bits = 0x1a000000, .decode = decodeConditionalSelect }, // `csel x5, x8, x9, eq`
     .{ .mask = 0x3b000000, .bits = 0x39000000, .decode = decodeLoadStoreUnsignedImmediate }, // `ldr x5, [x0, #0x10]`
     .{ .mask = 0x3b200c00, .bits = 0x38000400, .decode = decodeLoadStorePostIndex }, // `ldr x5, [x0], #0x10`
     .{ .mask = 0x3b200c00, .bits = 0x38000000, .decode = decodeLoadStoreUnscaledImmediate }, // `stur x20, [x8, #-0x8]`
@@ -72,6 +80,8 @@ fn decodeOperation(address: Address, inst: u32) Operation {
     return .{ .raw = inst };
 }
 
+/// Emit one decoded or generated instruction into `buffer`.
+/// Raw decoded instructions are copied exactly; generated operations are encoded here.
 pub fn emitInstruction(instruction: Instruction, buffer: anytype) void {
     const from: Address = @ptrCast(buffer.getAddress());
     switch (instruction.operation) {
@@ -85,6 +95,7 @@ pub fn emitInstruction(instruction: Instruction, buffer: anytype) void {
     }
 }
 
+// Patch an emitted branch instruction once its copied target address is known.
 pub fn patch(from: Address, to: Address, info: Operation) void {
     switch (info) {
         .branch => writeInstructionAt(from, encodeBranchImmediate(from, to)),
@@ -111,6 +122,7 @@ pub fn skip(_: Operation, address: Address) Address {
     return @ptrFromInt(@intFromPtr(address) + 4);
 }
 
+/// Initial abstract register state at entry to a threadedFn.
 pub fn registerTypes() [nRegisters]RegisterContents {
     return [_]RegisterContents{ .pc, .sp, .process, .context, .extra } ++ [_]RegisterContents{.unknown} ** (floatOffset - 5) ++ [_]RegisterContents{.randFloat} ** floatRegisters;
 }
@@ -214,6 +226,15 @@ fn decodeLogicalShiftedRegister(_: Address, inst: u32) Operation {
     }
 
     return .{ .raw = inst };
+}
+
+fn decodeConditionalSelect(_: Address, inst: u32) Operation {
+    return .{ .conditionalSelect = .{
+        .target = decodeRd(inst),
+        .source = decodeRn(inst),
+        .alternative = decodeRm(inst),
+        .condition = @intCast((inst >> 12) & 0xf),
+    } };
 }
 
 fn decodeLoadStoreUnsignedImmediate(_: Address, inst: u32) Operation {
@@ -359,6 +380,7 @@ test "decode basic instruction subset" {
     try std.testing.expectEqual(Operation{ .move = .{ .source = 8, .destination = 1 } }, decodeOperation(base, 0xaa0803e1));
     try std.testing.expectEqual(Operation{ .branchRegister = 5 }, decodeOperation(base, 0xd61f00a0));
     try std.testing.expectEqual(Operation{ .branchLink = .{ .address = @ptrFromInt(0x1100) } }, decodeOperation(base, 0x94000040));
+    try std.testing.expectEqual(Operation{ .conditionalSelect = .{ .target = 5, .source = 8, .alternative = 9, .condition = 0 } }, decodeOperation(base, 0x9a890105));
     try std.testing.expectEqual(Operation.ret, decodeOperation(base, 0xd65f03c0));
 }
 
