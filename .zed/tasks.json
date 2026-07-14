@@ -48,6 +48,12 @@
     //"hide": "on_success",
   },
   {
+    "label": "test nun encoding",
+    "command": "zig build test -Dencoding=nun --summary all -freference-trace=5",
+    "cwd": "$ZED_WORKTREE_ROOT/zig/zag",
+    //"hide": "on_success",
+  },
+  {
     "label": "test ptr encoding",
     "command": "zig build test -Dencoding=ptr -Dtrace --summary all -freference-trace=5",
     "cwd": "$ZED_WORKTREE_ROOT/zig/zag",
@@ -104,6 +110,11 @@
   {
     "label": "trace fib NaN",
     "command": "zig build -Dtrace -Dencoding=nan -Doptimize=Debug -freference-trace=5 && ./zig-out/bin/fib",
+    "cwd": "$ZED_WORKTREE_ROOT/zig",
+  },
+  {
+    "label": "trace fib NuN",
+    "command": "zig build -Dtrace -Dencoding=nun -Doptimize=Debug -freference-trace=5 && ./zig-out/bin/fib",
     "cwd": "$ZED_WORKTREE_ROOT/zig",
   },
   {
@@ -182,6 +193,16 @@
     "cwd": "$ZED_WORKTREE_ROOT/zig",
   },
   {
+    "label": "time fib compactY",
+    "command": "zig build -Dencoding=compactY -Doptimize=ReleaseFast -freference-trace=10 && ./zig-out/bin/fib",
+    "cwd": "$ZED_WORKTREE_ROOT/zig",
+  },
+  {
+    "label": "trace fib compactY",
+    "command": "zig build -Dtrace -Dencoding=compactY -Doptimize=Debug -freference-trace=5 && ./zig-out/bin/fib",
+    "cwd": "$ZED_WORKTREE_ROOT/zig",
+  },
+  {
     "label": "time fib compactZ",
     "command": "zig build -Dencoding=compactZ -Doptimize=ReleaseFast -freference-trace=10 && ./zig-out/bin/fib",
     "cwd": "$ZED_WORKTREE_ROOT/zig",
@@ -209,6 +230,11 @@
   {
     "label": "time fib NaN",
     "command": "zig build -Dencoding=nan -Doptimize=ReleaseFast && ./zig-out/bin/fib",
+    "cwd": "$ZED_WORKTREE_ROOT/zig",
+  },
+  {
+    "label": "time fib NuN",
+    "command": "zig build -Dencoding=nun -Doptimize=ReleaseFast && ./zig-out/bin/fib",
     "cwd": "$ZED_WORKTREE_ROOT/zig",
   },
   {

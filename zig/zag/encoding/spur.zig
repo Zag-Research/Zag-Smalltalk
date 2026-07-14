@@ -17,12 +17,12 @@ const HeapObjectConstPtr = zag.heap.HeapObjectConstPtr;
 const InMemory = zag.InMemory;
 const encode = switch (zag.config.objectEncoding) {
     .spur => @import("floatEncoding.zig").Spur.encode,
-    .spurNZ => @import("floatEncoding.zig").SpurNZ.encode,
+    .spurNZ => @import("floatEncoding.zig").SpurFast.encode,
     .spurFST => @import("floatEncoding.zig").Fst1(4).encode,
     else => @import("floatEncoding.zig").FastSpur.encode,
 };
 const decode = switch (zag.config.objectEncoding) {
-    .spurNZ => @import("floatEncoding.zig").SpurNZ.decode,
+    .spurNZ => @import("floatEncoding.zig").SpurFast.decode,
     .spurFST => @import("floatEncoding.zig").Fst1(4).decode,
     else => @import("floatEncoding.zig").Spur.decode,
 };
@@ -70,7 +70,44 @@ pub const Object = packed union {
         tag: Tag,
         hash: u61,
     },
-
+    pub const Compact = enum(u5) {
+        heap,
+        ThunkReturnLocal,
+        ThunkReturnInstance,
+        ThunkReturnObject,
+        ThunkReturnImmediate,
+        ThunkLocal,
+        BlockAssignLocal,
+        ThunkInstance,
+        BlockAssignInstance,
+        ThunkHeap,
+        ThunkImmediate,
+        SmallInteger,
+        Symbol,
+        False,
+        True,
+        Character,
+        Signature,
+        ThunkReturnCharacter,
+        ThunkReturnFloat,
+        ThunkFloat,
+        LLVM,
+        UndefinedObject,
+        Float,
+        _,
+        const heapBits = object.heapBits();
+        inline fn isHeap(self: Compact) bool {
+            return (heapBits >> @intFromEnum(self)) & 1 != 0;
+        }
+        pub inline fn classIndex(cp: Compact) ClassIndex {
+            return @enumFromInt(@intFromEnum(cp));
+        }
+        pub inline fn from(ci: ClassIndex) Compact {
+            return @enumFromInt(@intFromEnum(ci));
+        }
+        pub const immutableClasses = 0;
+        pub const mutableClasses = 32;
+    };
     const Self = @This();
     const intShift = 64 - @bitSizeOf(IntType);
     const IntType = i61;
@@ -91,7 +128,7 @@ pub const Object = packed union {
     pub const highTagSmallInteger = 0;
     pub const PackedTagType = Tag;
     pub const packedTagSmallInteger = Tag.smallInteger;
-    pub const signatureTag = @as(u8, @intFromEnum(ClassIndex.Compact.Signature)) << 3 | Tag.u(.smallInteger);
+    pub const signatureTag = @as(u8, @intFromEnum(Compact.Signature)) << 3 | Tag.u(.smallInteger);
     pub const LowTag = u8;
     pub const HighTag = u8;
     const TagAndClassType = u3;
@@ -330,9 +367,6 @@ pub const Object = packed union {
     }
     pub fn extraU(_: Object) u0 {
         @panic("not implemented");
-    }
-    pub inline fn asUntaggedI(i: IntType) i64 {
-        return @as(i64, i) << 3;
     }
 
     pub fn returnObjectClosure(_: Object, _: anytype) ?Object {

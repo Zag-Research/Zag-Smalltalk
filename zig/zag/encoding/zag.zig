@@ -9,7 +9,6 @@ const zag = @import("../zag.zig");
 const trace = zag.config.trace;
 const object = zag.object;
 const ClassIndex = object.ClassIndex;
-const Compact = ClassIndex.Compact;
 const Process = zag.Process;
 const SP = Process.SP;
 const Context = zag.Context;
@@ -23,15 +22,12 @@ const floatEncoding = @import("floatEncoding.zig").Fst2(4);
 const encode = floatEncoding.encode;
 const decode = floatEncoding.decode;
 
-pub const Tag = enum(u3) {
+const Tag = enum(u3) {
     heap = 0,
-    immediates,
-    smallinteger,
-    unused3,
-    floatA,
+    smallinteger = 2,
+    floatA = 4,
     floatB,
-    unused6,
-    unused7,
+    _,
     inline fn u(cg: Tag) u3 {
         return @intFromEnum(cg);
     }
@@ -41,6 +37,44 @@ pub const Object = packed struct(u64) {
     hash: u45 = 0,
     extra: u11 = 0,
     class: Compact = @enumFromInt(0),
+    pub const Compact = enum(u5) {
+        heap,
+        ThunkReturnLocal,
+        ThunkReturnInstance,
+        ThunkReturnObject,
+        ThunkReturnImmediate,
+        ThunkLocal,
+        BlockAssignLocal,
+        ThunkInstance,
+        BlockAssignInstance,
+        ThunkHeap,
+        ThunkImmediate,
+        SmallInteger,
+        Symbol,
+        False,
+        True,
+        Character,
+        Signature,
+        ThunkReturnCharacter,
+        ThunkReturnFloat,
+        ThunkFloat,
+        LLVM,
+        UndefinedObject,
+        Float,
+        _,
+        const heapBits = object.heapBits();
+        inline fn isHeap(self: Compact) bool {
+            return (heapBits >> @intFromEnum(self)) & 1 != 0;
+        }
+        pub inline fn classIndex(cp: Compact) ClassIndex {
+            return @enumFromInt(@intFromEnum(cp));
+        }
+        pub inline fn from(ci: ClassIndex) Compact {
+            return @enumFromInt(@intFromEnum(ci));
+        }
+        pub const immutableClasses = 0;
+        pub const mutableClasses = 32;
+    };
     const Self = @This();
     const intShift = 64 - @bitSizeOf(IntType);
     pub const IntType = i62;
@@ -103,7 +137,7 @@ pub const Object = packed struct(u64) {
     pub inline fn fromNativeI(i: IntType, _: anytype, _: anytype) Object {
         return fromUntaggedI(asUntaggedI(i), null, null);
     }
-    pub inline fn asUntaggedI(i: IntType) i64 {
+    inline fn asUntaggedI(i: IntType) i64 {
         return @as(i64, i) << intShift;
     }
     inline fn isInt(self: object.Object) bool {
@@ -186,10 +220,10 @@ pub const Object = packed struct(u64) {
         return self.tagMatch(comptime oImm(class, 0));
     }
     inline fn oImm(c: Compact, h: u45) Self {
-        return Self{ .tag = .immediates, .class = c, .hash = h };
+        return Self{ .tag = .heap, .class = c, .hash = h };
     }
     inline fn oImmAddr(c: Compact, ptr: anytype, e: u11) Self {
-        return Self{ .tag = .immediates, .class = c, .hash = @truncate(@intFromPtr(ptr) >> 3), .extra = e };
+        return Self{ .tag = .heap, .class = c, .hash = @truncate(@intFromPtr(ptr) >> 3), .extra = e };
     }
     pub inline fn makeImmediate(cls: Compact, hash: u45) object.Object {
         return oImm(cls, hash);
@@ -277,8 +311,7 @@ pub const Object = packed struct(u64) {
         }
         @panic("Trying to convert Object to " ++ @typeName(T));
     }
-    pub inline //
-    fn which_class(self: object.Object) ClassIndex {
+    pub inline fn which_class(self: object.Object) ClassIndex {
         const u: u64 = @bitCast(self);
         if (true) {
             if (u & 2 != 0) {
@@ -302,7 +335,7 @@ pub const Object = packed struct(u64) {
             }
         }
         const class = self.class;
-        if (class == .none) {
+        if (class == .heap) {
             if (u == 0) {
                 @branchHint(.unlikely);
                 return .UndefinedObject;
@@ -312,12 +345,11 @@ pub const Object = packed struct(u64) {
     }
 
     pub inline fn isImmediate(self: Object) bool {
-        if (self.rawU() & 7 != 0) return true;
-        return self.tag != .heap;
+        return self.tag != .heap or self.class != .heap;
     }
 
     pub inline fn hasHeapReference(self: Object) bool {
-        return self.tag == .heap and self != Nil();
+        return self.tag == .heap and self.class.isHeap() and self != Nil();
     }
     pub inline fn ifHeapObject(self: object.Object) ?*HeapObject {
         if (self.hasHeapReference()) return self.encodedPointer(*HeapObject);
@@ -352,7 +384,7 @@ pub const Object = packed struct(u64) {
         _ = sp;
         switch (class) {
             .ThunkReturnObject, .ThunkReturnLocal, .ThunkReturnInstance, .ThunkReturnImmediate, .ThunkReturnCharacter, .ThunkReturnFloat => {
-                return oImmAddr(class.compact(), context, sig.primitive());
+                return oImmAddr(Compact.from(class), context, sig.primitive());
             },
             else => return null,
         }

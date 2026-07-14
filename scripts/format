@@ -1,0 +1,10 @@
+#! /bin/sh
+m1=`ls bench-m1-*[0-9]|tail -1`
+x86=`ls bench-x86-*[0-9]|tail -1`
+version=`expr "$m1" : '*-\([0-9]*\)'`
+../../../scripts/latex-table.py $m1 >aarch64.tex &&
+../../../scripts/latex-table.py $x86 >x86.tex &&
+../../../scripts/latex-table.py $m1 $x86 >pareto.tex &&
+pdflatex test.tex &&
+mv test.pdf test$version.pdf &&
+open test$version.pdf

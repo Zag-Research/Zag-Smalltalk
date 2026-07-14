@@ -649,7 +649,7 @@ pub const AllocResult = struct {
 };
 pub const AllocReturn = AllocErrors!AllocResult;
 pub const HeapHeader = packed struct(u64) {
-    classIndex: ClassIndex = .none,
+    classIndex: ClassIndex,
     hash: u24 = 0,
     objectFormat: Format = .free,
     immutable: bool = false,
@@ -715,7 +715,7 @@ pub const HeapHeader = packed struct(u64) {
         return .{ .classIndex = class, .hash = hash, .objectFormat = .special, .age = .static, .length = length };
     }
     pub fn freeHeader(length: u11) HeapHeader {
-        return .{ .classIndex = .none, .hash = 0, .objectFormat = .free, .age = .free, .length = length };
+        return .{ .classIndex = @enumFromInt(0), .hash = 0, .objectFormat = .free, .age = .free, .length = length };
     }
     pub inline fn storeFreeHeader(self: *HeapHeader) void {
         self.* = freeHeader(0);

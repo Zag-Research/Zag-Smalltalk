@@ -40,144 +40,97 @@ const noneIndex = switch (config.objectEncoding) {
     .taggedLow, .taggedHigh => siIndex,
     else => 0,
 };
-pub const ClassIndex = enum(u16) {
-    none = noneIndex,
-    SmallInteger = noneIndex ^ siIndex,
-    ThunkReturnLocal = 1,
-    ThunkReturnInstance,
-    ThunkReturnObject,
-    ThunkReturnImmediate,
-    ThunkLocal,
-    BlockAssignLocal,
-    ThunkInstance,
-    BlockAssignInstance,
-    ThunkHeap,
-    ThunkImmediate,
-    Symbol,
-    False,
-    True,
-    Character,
-    Signature,
-    ThunkReturnCharacter,
-    ThunkReturnFloat,
-    ThunkFloat,
-    LLVM,
-    UndefinedObject,
-    Float = siIndex + 1, // skipping SmallInteger.none
-    o4,
-    o3,
-    o2,
-    o1,
-    o0,
-    heap,
-    Context = 64,
-    ProtoObject,
-    Object,
-    Array,
-    String,
-    Utf8String,
-    DoubleWordArray,
-    BlockClosure,
-    Process,
-    Class,
-    CompiledMethod,
-    Dispatch,
-    Association,
-    Exception,
-    Error,
-    ContextData,
-    SelectorException,
-    PrimitiveFailed,
-    BlockClosureValue,
-    LLVMPrimitives,
-    LLVMGenerator,
-    leaveObjectOnStack = 0x3fff,
-    testClass = config.max_classes - 1,
-    replace7 = 0xffff - 7,
-    replace6,
-    replace5,
-    replace4,
-    replace3,
-    replace2,
-    replace1,
-    replace0,
-    _,
-    pub const ReplacementIndices = Self.replace7;
-    pub const LastSpecial = @intFromEnum(Self.Dispatch);
-    const Self = @This();
-    pub const Compact = enum(switch (zag.config.objectEncoding) {
-        .compactZ => u6,
-        else => u5,
-    }) {
-        none = noneIndex,
-        SmallInteger = noneIndex ^ siIndex,
-        ThunkReturnLocal = 1,
-        ThunkReturnInstance,
-        ThunkReturnObject,
-        ThunkReturnImmediate,
-        ThunkLocal,
-        BlockAssignLocal,
-        ThunkInstance,
-        BlockAssignInstance,
-        ThunkHeap,
-        ThunkImmediate,
-        Symbol,
-        False,
-        True,
-        Character,
-        Signature,
-        ThunkReturnCharacter,
-        ThunkReturnFloat,
-        ThunkFloat,
-        LLVM,
-        UndefinedObject,
-        Float = siIndex + 1,
-        o4,
-        o3,
-        o2,
-        o1,
-        o0,
-        heap,
-        _,
-        pub inline fn classIndex(cp: Compact) ClassIndex {
-            return @enumFromInt(@intFromEnum(cp));
-        }
-        pub fn tag(comptime self: Compact) u8 {
-            return @as(u8, @intFromEnum(self)) << 3 | 1;
-        }
-    };
-    // pub fn isImmediate(self: ClassIndex) bool {
-    //     switch (self) {
-    //         .Symbol, .False, .True, .Character => return true,
-    //         else => return false,
-    //     }
-    // }
-    pub inline fn compact(ci: ClassIndex) Compact {
-        return @enumFromInt(@intFromEnum(ci));
+pub fn heapBits() u32 {
+    var bit: u32 = 1;
+    var bits: u32 = 0;
+    inline for(std.meta.fields(Object.Compact)) |f| {
+        bits |= switch (@as(ClassIndex,@enumFromInt(f.value))) {
+        .ThunkReturnLocal,
+        .ThunkReturnInstance,
+        .ThunkReturnObject,
+        .ThunkReturnImmediate,
+        .ThunkLocal,
+        .BlockAssignLocal,
+        .ThunkInstance,
+        .BlockAssignInstance,
+        .ThunkHeap,
+        .ThunkReturnCharacter,
+        .ThunkReturnFloat,
+        .Float,
+        .heap => bit,
+        else => 0,
+        };
+        bit <<= 1;
     }
-    pub inline fn u(ci: ClassIndex) u16 {
-        return @intFromEnum(ci);
-    }
-    pub inline fn classIndexFromInt(int: u5) ClassIndex {
-        return @enumFromInt(int);
-    }
-    pub const lookupMethodForClass = zag.dispatch.lookupMethodForClass;
-};
+    return bits;
+}
+const Compact = Object.Compact;
+pub const ClassIndex = zag.DeriveEnum(Compact, u16, 0, .{
+    .{.base = Compact.immutableClasses, .names = .{
+        "SmallInteger",
+        "Symbol",
+        "False",
+        "True",
+        "Character",
+        "Signature",
+        "ThunkReturnLocal",
+        "ThunkReturnInstance",
+        "ThunkReturnObject",
+        "ThunkReturnImmediate",
+        "ThunkLocal",
+        "BlockAssignLocal",
+        "ThunkInstance",
+        "BlockAssignInstance",
+        "ThunkHeap",
+        "ThunkImmediate",
+        "ThunkReturnCharacter",
+        "ThunkReturnFloat",
+        "ThunkFloat",
+        "LLVM",
+        "UndefinedObject",
+        "Float",
+    }},
+    .{.base = Compact.mutableClasses, .names = .{
+        "heap",
+        "Context",
+        "ProtoObject",
+        "Object",
+        "Array",
+        "String",
+        "Utf8String",
+        "DoubleWordArray",
+        "BlockClosure",
+        "Process",
+        "Class",
+        "CompiledMethod",
+        "Dispatch",
+        "Association",
+        "Exception",
+        "Error",
+        "ContextData",
+        "SelectorException",
+        "PrimitiveFailed",
+        "BlockClosureValue",
+        "LLVMPrimitives",
+        "LLVMGenerator",
+    }},
+    .{ .base = Compact.mutableClasses - 5, .names = .{
+        "o4",
+        "o3",
+        "o2",
+        "o1",
+        "o0",
+    }},
+    .{ .base = config.max_classes - 1, .names = .{ "testClass" }},
+    .{ .base = 0x3fff, .names = .{ "leaveObjectOnStack" }},
+    .{ .base = 0xffff - 7, .names = .{ "ReplacementIndices" }},
+});
 comptime {
-    std.debug.assert(@intFromEnum(ClassIndex.Compact.UndefinedObject) == 20);
-    std.debug.assert(@intFromEnum(ClassIndex.UndefinedObject) == 20);
-    std.debug.assert(@intFromEnum(ClassIndex.replace0) == 0xffff);
-    std.debug.assert(@intFromEnum(ClassIndex.Compact.heap) == 0x1f);
-    std.debug.assert(@intFromEnum(ClassIndex.heap) == 0x1f);
-    std.testing.expectEqual(@intFromEnum(ClassIndex.ThunkReturnLocal), 1) catch @panic("unreachable");
-    //    std.debug.assert(std.meta.hasUniqueRepresentation(Object));
-    for (@typeInfo(ClassIndex.Compact).@"enum".fields, @typeInfo(ClassIndex).@"enum".fields[0..@typeInfo(ClassIndex.Compact).@"enum".fields.len]) |ci, cci| {
-        std.testing.expectEqual(ci, cci) catch @panic("unreachable");
-    }
+    std.debug.assert(@intFromEnum(ClassIndex.ReplacementIndices) == 0xfff8);
 }
 pub const Object = zag.encoding.module(config.objectEncoding).Object;
 pub const testObjects = blk: {
-    var testArray: [5]Object = undefined;
+    var testArray: [if (zag.config.is_test) 5 else 0]Object = undefined;
     for (&testArray, 0..) |*elem, i| {
         elem.* = @bitCast(7777777777777777 << 8 | 1 | (@intFromEnum(ClassIndex.o0) - i) << 3);
     }
@@ -316,12 +269,10 @@ pub const ObjectFunctions = struct {
             try writer.print("({x})", .{@as(u64, @bitCast(self))});
             //return;
         }
-        if (zag.config.is_test) {
-            for (0..testObjects.len) |i| {
-                if (testObjects[i].equals(self)) {
-                    try writer.print("testObject[{}]", .{i});
-                    return;
-                }
+        for (0..testObjects.len) |i| {
+            if (testObjects[i].equals(self)) {
+                try writer.print("testObject[{}]", .{i});
+                return;
             }
         }
         if (checkThreadedFn(@bitCast(self))) |name| {
@@ -388,7 +339,10 @@ pub const PackedObject = packed struct {
     test "combiners" {
         const expectEqual = std.testing.expectEqual;
         try expectEqual(16384 + 2, combine14(.{ 2, 1 }));
-        try expectEqual(0x2C015, combine14([_]ClassIndex{ .SmallInteger, .Symbol }));
+        try expectEqual(
+            (@as(u32, @intFromEnum(ClassIndex.Symbol)) << 14) | @intFromEnum(ClassIndex.SmallInteger),
+            @as(u32, combine14([_]ClassIndex{ .SmallInteger, .Symbol })),
+        );
     }
 };
 test {
@@ -491,14 +445,14 @@ const tests = struct {
                 @setRuntimeSafety(false);
                 const obj1 = from(42);
                 const buf1 = @as([*]u8, @ptrFromInt(@intFromPtr(&obj1)))[0..8];
-                try ee(@intFromEnum(ClassIndex.SmallInteger) << 3 | 1, buf1[0]);
-                try ee(42, buf1[1]);
-                try ee(0, buf1[2]);
+                try ee(@as(u8, 0xaa), buf1[0]);
+                try ee(@as(u8, 0), buf1[1]);
+                try ee(@as(u8, 0), buf1[2]);
                 const obj2 = from(42.0);
                 const buf2 = @as([*]u8, @ptrFromInt(@intFromPtr(&obj2)))[0..8];
-                try ee(6, buf2[0]);
-                try ee(80, buf2[6]);
-                try ee(4, buf2[7]);
+                try ee(@as(u8, 0x0d), buf2[0]);
+                try ee(@as(u8, 0xa0), buf2[6]);
+                try ee(@as(u8, 0x08), buf2[7]);
             },
             else => {},
         }

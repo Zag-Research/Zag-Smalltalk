@@ -14,6 +14,9 @@
 
 ## CanIUse.ai
 [CanIUse.ai](https://www.canirun.ai/) uses browser-based information to estimate which LLMs can run effectively on your machine. You can also choose a machine/memory config to see how well it would work.
+
+## Model VRAM Calculation
+[LLM Inference: VRAM & Performance Calculator](https://apxml.com/tools/vram-calculator) shows for a given GPU (or Apple integrated GPU) how much memory is required to run a given model for inference or fine-tuning.
 ## Best Local LLMs for Coding
 The best local LLMs for coding are ==**Qwen3.6-27B** (or **Qwen3-Coder-Next**) for mid-range hardware and **Qwen3.5-32B** or **Mistral Codestral 25.12** for ultra-fast, single-GPU autocompletion==. These open-weight models deliver near-GPT-4-class generation speeds and local privacy when hosted. [1](https://www.reddit.com/r/LocalLLaMA/comments/1mz0640/best_small_local_llm_for_coding/), [2](https://medium.com/data-science-collective/what-is-the-best-local-llm-for-coding-in-2026-8dab3619ff89), [3](https://www.youtube.com/watch?v=3zSANOIBHYw), [4](https://localaimaster.com/models/best-local-ai-coding-models)
 
@@ -131,3 +134,17 @@ Zed has excellent native support for local LLMs via **Ollama**.
 ---
 
 💡 **Pro Tip:** Since you have 48GB, avoid "4-bit" (Q4) quantizations. Use **Q6_K** or **Q8_0**. You will notice significantly fewer "hallucinated" syntax errors in your code during debugging.
+
+## RAG Design
+[Designing a Production-Grade RAG Architecture](https://levelup.gitconnected.com/designing-a-production-grade-rag-architecture-bee5a4e4d9aa)
+
+## NotebookLM
+[The NotebookLM Workflow That Changed How I Learn Any Technology](https://pub.towardsai.net/the-notebooklm-workflow-that-changed-how-i-learn-any-technology-373f430a17e5)
+### Open NotebookLM
+An open source, privacy-focused alternative to Google's Notebook LM.
+[git](https://github.com/lfnovo/open-notebook)
+[Open NotebookLM is INSANE! Fully Free Local NotebookLM Alternative with Gemini Integration](https://www.youtube.com/watch?v=-0VsUmqsyiI)
+
+### HyperbookLM
+A powerful research assistant built with Next.js 15, React 19, and Hyperbrowser. It allows users to aggregate diverse sources (Web URLs, PDFs) and gain deep insights through interactive AI tools.
+[git](https://github.com/hyperbrowserai/hyperbooklm)

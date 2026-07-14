@@ -32,6 +32,7 @@ const expectEqual = std.testing.expectEqual;
 pub const @"+" = struct {
     pub const number = 1;
     pub const inlined = signature(.@"+", number);
+    pub const name = moduleName ++ "_add";
     inline fn with(self: i64, other: Object, sp: SP, context: *Context) !Object { // INLINED - Add
         if (other.untaggedI()) |untagged| {
             const result, const overflow = @addWithOverflow(self, untagged);
@@ -80,7 +81,7 @@ pub const @"+" = struct {
                 return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, extra }));
             return @call(tailCall, process.check(pc.prim3()), .{ pc.next3(), newSp, process, context, extra });
         }
-        trace("Float>>#inlinePrimitive: + {f}", .{sp.next});
+        trace("SmallInteger>>#inlinePrimitive: + {f}", .{sp.next});
         return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, extra });
     }
 };
@@ -186,31 +187,29 @@ pub const @"*" = struct {
         process.init();
         const sp = process.getSp();
         const context = process.getContext();
-        std.debug.print("* {f} {f}\n", .{ Object.from(12, sp, context), try with(3, Object.from(4, sp, context), sp, context) });
-        std.debug.print("* {x} {}\n", .{ Object.from(12, sp, context).testU(), (try with(3, Object.from(4, sp, context), sp, context)).testU() });
-        try expectEqual(Object.from(12, sp, context), with(3, Object.from(4, sp, context), sp, context));
-        try expectEqual(error.primitiveError, with(0x1_0000_0000, Object.from(0x100_0000, sp, context), sp, context));
-        try expectEqual(error.primitiveError, with(0x1_0000_0000, Object.from(0x80_0000, sp, context), sp, context));
+        try expectEqual(Object.from(12, sp, context), with(Object.fromNativeI(3, sp, context).untaggedI(), Object.from(4, sp, context), sp, context));
+        try expectEqual(error.primitiveError, with(std.math.maxInt(i64), Object.from(2, sp, context), sp, context));
+        try expectEqual(error.primitiveError, with(std.math.minInt(i64), Object.from(-1, sp, context), sp, context));
     }
 };
 pub const threadedFns = struct {
-    pub const @"inline+I" = struct {
+    pub const SmallInteger_add = struct {
         pub const threadedFn = @"+".inlinePrimitive;
     };
-    pub const @"inline-I" = struct {
+    pub const SmallInteger_sub = struct {
         pub const threadedFn = @"-".inlinePrimitive;
     };
-    pub const @"inline*I" = struct {
+    pub const SmallInteger_mul = struct {
         pub const threadedFn = @"*".inlinePrimitive;
     };
-    pub const @"inline<=I" = struct {
+    pub const SmallInteger_leq = struct {
         pub const threadedFn = @"<=".inlinePrimitive;
     };
     pub const countDown = struct {
         pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
             var result = True();
             if (sp.top.untaggedI()) |value| {
-                const sum, const overflow = @addWithOverflow(Object.asUntaggedI(-1), value);
+                const sum, const overflow = @addWithOverflow(Object.fromNativeI(-1, sp, context).untaggedI().?, value);
                 if (overflow == 0) {
                     sp.top = Object.fromUntaggedI(sum, sp, context);
                     if (sum > 0) result = False();

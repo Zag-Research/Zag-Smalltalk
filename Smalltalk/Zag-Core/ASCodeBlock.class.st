@@ -94,7 +94,7 @@ ASCodeBlock >> inspectZagASTOn: aStream [
 		aStream << #|.
 		aStream space.
 		locals do: [ :local |
-			aStream << local.
+			aStream << local asString.
 			aStream space ].
 		aStream << #| ].
 

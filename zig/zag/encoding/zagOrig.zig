@@ -9,7 +9,6 @@ const zag = @import("../zag.zig");
 const trace = zag.config.trace;
 const object = zag.object;
 const ClassIndex = object.ClassIndex;
-const Compact = ClassIndex.Compact;
 const Process = zag.Process;
 const SP = Process.SP;
 const Context = zag.Context;
@@ -40,6 +39,44 @@ pub const Object = packed struct(u64) {
     tag: Tag,
     class: Compact,
     hash: u56,
+    pub const Compact = enum(u5) {
+        heap,
+        ThunkReturnLocal,
+        ThunkReturnInstance,
+        ThunkReturnObject,
+        ThunkReturnImmediate,
+        ThunkLocal,
+        BlockAssignLocal,
+        ThunkInstance,
+        BlockAssignInstance,
+        ThunkHeap,
+        ThunkImmediate,
+        SmallInteger,
+        Symbol,
+        False,
+        True,
+        Character,
+        Signature,
+        ThunkReturnCharacter,
+        ThunkReturnFloat,
+        ThunkFloat,
+        LLVM,
+        UndefinedObject,
+        Float,
+        _,
+        const heapBits = object.heapBits();
+        inline fn isHeap(self: Compact) bool {
+            return (heapBits >> @intFromEnum(self)) & 1 != 0;
+        }
+        pub inline fn classIndex(cp: Compact) ClassIndex {
+            return @enumFromInt(@intFromEnum(cp));
+        }
+        pub inline fn from(ci: ClassIndex) Compact {
+            return @enumFromInt(@intFromEnum(ci));
+        }
+        pub const immutableClasses = 0;
+        pub const mutableClasses = 32;
+    };
     const Self = @This();
     const intShift = 64 - @bitSizeOf(IntType);
     pub const IntType = i56;
@@ -60,7 +97,7 @@ pub const Object = packed struct(u64) {
     pub const highTagSmallInteger = 0;
     pub const PackedTagType = u8;
     pub const packedTagSmallInteger = oImm(.SmallInteger, 0).tagbits();
-    pub const signatureTag = @as(u8, @intFromEnum(ClassIndex.Compact.Signature)) << 3 | Tag.u(.immediates);
+    pub const signatureTag = @as(u8, @intFromEnum(Compact.Signature)) << 3 | Tag.u(.immediates);
     pub const LowTag = u8;
     pub const HighTag = u8;
     const TagAndClassType = u8;
@@ -479,10 +516,6 @@ pub const Object = packed struct(u64) {
         return self.rawU() & 7 != 0;
     }
 
-    pub inline fn asUntaggedI(i: i56) i64 {
-        return @as(i64, i) << tagAndClassBits;
-    }
-
     pub fn returnObjectClosure(self: Object, context: *Context) ?Object {
         if (self.nativeI()) |i| {
             switch (i) {
@@ -511,7 +544,7 @@ pub const Object = packed struct(u64) {
         const class = sig.getClass();
         _ = sp;
         return switch (class) {
-            .ThunkReturnObject, .ThunkReturnLocal, .ThunkReturnInstance, .ThunkReturnImmediate, .ThunkReturnCharacter, .ThunkReturnFloat => oImm(class.compact(), @intCast(@intFromPtr(context) << 8 | sig.primitive())),
+            .ThunkReturnObject, .ThunkReturnLocal, .ThunkReturnInstance, .ThunkReturnImmediate, .ThunkReturnCharacter, .ThunkReturnFloat => oImm(Compact.from(class), @intCast(@intFromPtr(context) << 8 | sig.primitive())),
             else => null,
         };
     }

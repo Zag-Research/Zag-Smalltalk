@@ -73,9 +73,9 @@ const fibInteger = struct {
     const exclude: []const Encoding = &[_]Encoding{.onlyFloat};
     var info = Info{ .name = "Integer" };
     const self = zag.Context.makeVariable(0, 1, .Parameter, &.{});
-    const leq = tf.@"inline<=I";
-    const plus = tf.@"inline+I";
-    const minus = tf.@"inline-I";
+    const leq = tf.SmallInteger_leq;
+    const plus = tf.SmallInteger_add;
+    const minus = tf.SmallInteger_sub;
     const classes = object.PackedObject.classes;
     const signature = zag.symbol.signature;
     const nullMethod = zag.dispatch.nullMethod;
@@ -131,9 +131,9 @@ const fibInteger0 = struct {
     const exclude: []const Encoding = &[_]Encoding{.onlyFloat};
     var info = Info{ .name = "Integer0" };
     const self = zag.Context.makeVariable(0, 1, .Parameter, &.{});
-    const leq = tf.@"inline<=I";
-    const plus = tf.@"inline+I";
-    const minus = tf.@"inline-I";
+    const leq = tf.SmallInteger_leq;
+    const plus = tf.SmallInteger_add;
+    const minus = tf.SmallInteger_sub;
     const classes = object.PackedObject.classes;
     const signature = zag.symbol.signature;
     const nullMethod = zag.dispatch.nullMethod;
@@ -189,9 +189,9 @@ const fibIntegerBr = struct {
     const exclude: []const Encoding = &[_]Encoding{.onlyFloat};
     var info = Info{ .name = "IntegerBr" };
     const self = zag.Context.makeVariable(0, 1, .Parameter, &.{});
-    const leq = tf.@"inline<=I";
-    const plus = tf.@"inline+I";
-    const minus = tf.@"inline-I";
+    const leq = tf.SmallInteger_leq;
+    const plus = tf.SmallInteger_add;
+    const minus = tf.SmallInteger_sub;
     const classes = object.PackedObject.classes;
     const signature = zag.symbol.signature;
     const nullMethod = zag.dispatch.nullMethod;
@@ -254,12 +254,9 @@ const fibIntegerBr = struct {
 };
 
 const fibIntegerClosure = struct {
-    const exclude: []const Encoding = &[_]Encoding{ .onlyInt, .onlyFloat};
+    const exclude: []const Encoding = &[_]Encoding{ .onlyInt, .onlyFloat };
     var info = Info{ .name = "IntegerClosure" };
     const self = zag.Context.makeVariable(0, 1, .Parameter, &.{});
-    const leq = tf.@"inline<=I";
-    const plus = tf.@"inline+I";
-    const minus = tf.@"inline-I";
     const classes = object.PackedObject.classes;
     const signature = zag.symbol.signature;
     const nullMethod = zag.dispatch.nullMethod;
@@ -357,9 +354,9 @@ const fibFloat = struct {
     const exclude: []const Encoding = &[_]Encoding{.onlyInt};
     var info = Info{ .name = "Float" };
     const self = zag.Context.makeVariable(0, 1, .Parameter, &.{});
-    const leq = tf.@"inline<=F";
-    const plus = tf.@"inline+F";
-    const minus = tf.@"inline-F";
+    const leq = tf.Float_leq;
+    const plus = tf.Float_add;
+    const minus = tf.Float_sub;
     const classes = object.PackedObject.classes;
     const signature = zag.symbol.signature;
     const nullMethod = zag.dispatch.nullMethod;
@@ -417,12 +414,9 @@ const fibFloat = struct {
     }
 };
 const fibFloatClosure = struct {
-    const exclude: []const Encoding = &[_]Encoding{ .onlyInt, .onlyFloat};
+    const exclude: []const Encoding = &[_]Encoding{ .onlyInt, .onlyFloat };
     var info = Info{ .name = "FloatClosure" };
     const self = zag.Context.makeVariable(0, 1, .Parameter, &.{});
-    const leq = tf.@"inline<=F";
-    const plus = tf.@"inline+F";
-    const minus = tf.@"inline-F";
     const classes = object.PackedObject.classes;
     const signature = zag.symbol.signature;
     const nullMethod = zag.dispatch.nullMethod;
@@ -566,13 +560,13 @@ pub fn timing(args: []const []const u8, nRuns: usize, fibN: u32, default: bool) 
             zag.config.printConfig();
         } else if (eql(u8, arg, "Header")) {
             print("for '{} fibonacci'\n", .{fibN});
-            print("               Median   Mean   StdDev  SD/Mean GeomMean({} run{s}, {} warmup{s})\n", .{ stat.runs, if (stat.runs != 1) "s" else "", stat.warmups, if (stat.warmups != 1) "s" else "" });
+            print("                Median   Mean   StdDev  SD/Mean GeomMean({} run{s}, {} warmup{s})\n", .{ stat.runs, if (stat.runs != 1) "s" else "", stat.warmups, if (stat.warmups != 1) "s" else "" });
         } else {
             var anyRun = false;
             inline for (&.{ fibNative, fibNativeFloat, fibInteger, fibInteger0, fibIntegerBr, fibFloat, fibIntegerClosure, fibFloatClosure }) |benchmark| {
                 if (includeFor(benchmark) and std.mem.eql(u8, name(arg), benchmark.info.name)) {
                     anyRun = true;
-                    print("{s:>14}", .{benchmark.info.name});
+                    print("{s:>14} ", .{benchmark.info.name});
                     benchmark.init(fibN);
                     stat.reset();
                     stat.time(benchmark.runIt, fibN);
@@ -595,12 +589,11 @@ pub fn main() !void {
         "Config",            "Header",
         //"Native",            "NativeF",
         //"Integer",
-        "FloatClosure",
-        "IntegerClosure",
         "IntegerBr?Integer",
         //"Integer0?Integer",
         //"IntegerCnP",
-        "Float",
+        "IntegerClosure",
+        "Float",             "FloatClosure",
     };
     // var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     // const allocator = gpa.allocator();
@@ -631,6 +624,6 @@ pub fn main() !void {
     try timing(if (default) @constCast(do_all[0..]) else args[start..], nRuns, fibN, default);
 }
 const testRun = zag.config.testRun;
-const defaultFib = if (testRun) 3 else 36;
+const defaultFib = if (testRun) 3 else 34;
 const defaultRuns = if (testRun) 1 else 10;
 const warmups = if (testRun) 0 else null;
