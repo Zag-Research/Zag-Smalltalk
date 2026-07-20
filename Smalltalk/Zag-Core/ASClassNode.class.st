@@ -21,10 +21,21 @@ ASClassNode >> = other [
 	^ name = other name
 ]
 
+{ #category : 'visiting' }
+ASClassNode >> accept: aVisitor [
+	^aVisitor visitClass: self
+]
+
 { #category : 'adding' }
 ASClassNode >> addMethod: anASMethodNode [ 
 
 	methods at: anASMethodNode selector put: anASMethodNode
+]
+
+{ #category : 'converting' }
+ASClassNode >> asPharoAST [
+	"Converts me to the associated Pharo AST."
+	self error: 'Pharo AST doesn''t have any form of class node.'
 ]
 
 { #category : 'initialization' }

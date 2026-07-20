@@ -18,9 +18,9 @@ const HeapObjectConstPtr = heap.HeapObjectConstPtr;
 const InMemory = zag.InMemory;
 
 const Tag = enum(Object.LowTagType) {
-    pointer = PointerTag,
-    smallInteger = PointerTag ^ 1,
-    const PointerTag = if (zag.config.objectEncoding == .taggedInt) 0 else 1;
+    pointer = pointerTag,
+    smallInteger = pointerTag ^ 1,
+    const pointerTag = if (zag.config.objectEncoding == .taggedInt) 0 else 1;
     inline fn u(cg: Tag) u1 {
         return @intFromEnum(cg);
     }
@@ -37,8 +37,46 @@ pub const Object = packed union {
         tag: Tag,
         hash: u63,
     },
+    pub const Compact = enum(u5) {
+        heap,
+        ThunkReturnLocal,
+        ThunkReturnInstance,
+        ThunkReturnObject,
+        ThunkReturnImmediate,
+        ThunkLocal,
+        BlockAssignLocal,
+        ThunkInstance,
+        BlockAssignInstance,
+        ThunkHeap,
+        ThunkImmediate,
+        SmallInteger,
+        Symbol,
+        False,
+        True,
+        Character,
+        Signature,
+        ThunkReturnCharacter,
+        ThunkReturnFloat,
+        ThunkFloat,
+        LLVM,
+        UndefinedObject,
+        Float,
+        _,
+        const heapBits = object.heapBits();
+        inline fn isHeap(self: Compact) bool {
+            return (heapBits >> @intFromEnum(self)) & 1 != 0;
+        }
+        pub inline fn classIndex(cp: Compact) ClassIndex {
+            return @enumFromInt(@intFromEnum(cp));
+        }
+        pub inline fn from(ci: ClassIndex) Compact {
+            return @enumFromInt(@intFromEnum(ci));
+        }
+        pub const immutableClasses = 0;
+        pub const mutableClasses = 32;
+    };
 
-    const PointerTag = Tag.u(.pointer);
+    const pointerTag = Tag.u(.pointer);
     const SmallIntegerTag = Tag.u(.smallInteger);
 
     const Self = @This();
@@ -59,7 +97,7 @@ pub const Object = packed union {
     }
 
     inline fn addr(self: Object) *InMemory.PointedObject {
-        const ptr = @as(u64, @bitCast(self)) - PointerTag;
+        const ptr = @as(u64, @bitCast(self)) - pointerTag;
         @setRuntimeSafety(false);
         return @ptrFromInt(ptr);
     }
@@ -107,9 +145,6 @@ pub const Object = packed union {
     inline fn isInt(self: Object) bool {
         return Tag.isSet(self, .smallInteger);
     }
-    pub inline fn isNat(self: Object) bool {
-        return self.isInt() and self.rawI() >= 0;
-    }
     pub inline fn nativeI(self: Object) ?i64 {
         if (self.isInt()) return self.nativeI_noCheck();
         return null;
@@ -124,14 +159,16 @@ pub const Object = packed union {
     inline fn isHeapObject(self: Object) bool {
         return Tag.isSet(self, .pointer);
     }
-    pub inline fn pointer(self: Object, T: type) ?T {
-        if (self.isHeapObject()) return @ptrFromInt(self.rawU() - PointerTag);
-        return null;
+    pub fn encodedPointer(_: Object, T: type) ?T {
+        @panic("Not implemented");
+    }
+    pub inline fn pointer(self: object.Object, T: type) ?T {
+        return @ptrFromInt(@as(usize, @bitCast(self)) - pointerTag);
     }
 
     pub inline fn isImmediateClass(self: object.Object, comptime class: ClassIndex) bool {
         if (self.isInt()) return class == .SmallInteger;
-        return self.addr().header.classIndex == class;
+        return false;
     }
 
     pub const MaxImmediateCharacter = 0x10FFFF;
@@ -157,7 +194,6 @@ pub const Object = packed union {
         // Map ClassIndex to appropriate Tag
         const group = switch (cls) {
             .SmallInteger => Tag.smallInteger,
-            .Character => Tag.character,
             .Float => Tag.float,
             else => Tag.pointer, // heap objects
         };
@@ -184,7 +220,7 @@ pub const Object = packed union {
     }
     pub inline fn isSymbol(self: Object) bool {
         // symbols are heap objects
-        return self.isImmediateClass(.Symbol);
+        return self.addr().header.classIndex == .Symbol;
     }
 
     // Hash helpers
@@ -221,7 +257,7 @@ pub const Object = packed union {
 
     pub fn fromAddress(value: anytype) Object {
         if (@inComptime()) return Object{ .ref = undefined };
-        return @bitCast(@intFromPtr(value) + PointerTag);
+        return @bitCast(@intFromPtr(value) + pointerTag);
     }
     pub const StaticObject = struct {
         obj: InMemory.PointedObject,
@@ -313,16 +349,17 @@ pub const Object = packed union {
     }
     pub const hasHeapReference = isHeapObject;
     pub inline fn ifHeapObject(self: Object) ?*HeapObject {
-        if (self.isHeapObject()) return @constCast(@ptrCast(self.addr()));
+        if (self.isHeapObject()) return @ptrCast(@constCast(self.addr()));
         return null;
     }
-    pub inline fn highPointer(self: Object, T: type) ?T {
-        if (self.isHeapObject()) return @ptrFromInt(self.rawU());
+    pub fn returnLiteralClosure(_: Object, _: *Context) ?Object {
         return null;
     }
-
-    pub inline fn asUntaggedI(i: i64) i64 {
-        return i << 1;
+    pub fn isImmediate(self: Object) bool {
+        return self.isInt();
+    }
+    pub fn extraU(_: Object) u0 {
+        @panic("not implemented");
     }
     pub fn returnObjectClosure(_: Object, _: anytype) ?Object {
         return null;

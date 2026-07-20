@@ -65,4 +65,3 @@ pub const ZObject = packed struct(u64) {
         };
     }
 };
-

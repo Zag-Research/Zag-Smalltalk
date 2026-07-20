@@ -76,7 +76,7 @@ ManifestZagExporter class >> ruleReCyclomaticComplexityRuleV1FalsePositive [
 ManifestZagExporter class >> ruleStringConcatenationRuleV1FalsePositive [
 
 	<ignoreForCoverage>
-	^ #(#(#(#RGMethodDefinition #(#'ZagConstants class' #generateInitializeThreadedConstants #true)) #'2025-01-10T12:32:07.826947-05:00') )
+	^ #(#(#(#RGMethodDefinition #(#'ZagConstants class' #generateInitializeThreadedConstants #true)) #'2025-01-10T12:32:07.826947-05:00') #(#(#RGMethodDefinition #(#'ZagConstants class' #initializeClassConstants #true)) #'2026-06-09T09:05:24.750834-04:00') )
 ]
 
 { #category : 'code-critics' }

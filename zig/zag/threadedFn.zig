@@ -61,14 +61,27 @@ fn declsCount() usize {
 fn enumLessThan(_: void, lhs: EnumSort, rhs: EnumSort) bool {
     if (lhs.production != rhs.production) return lhs.production;
     switch (std.math.order(lhs.order, rhs.order)) {
-        .eq => return std.mem.lessThan(u8, lhs.field.name, rhs.field.name),
+        .eq => {
+            switch (lhs.name[0]) {
+                'a'...'z' => switch (rhs.name[0]) {
+                    'A'...'Z' => return true,
+                    else => {},
+                },
+                'A'...'Z' => switch (rhs.name[0]) {
+                    'a'...'z' => return false,
+                    else => {},
+                },
+                else => {},
+            }
+            return std.mem.lessThan(u8, lhs.name, rhs.name);
+        },
         .lt => return true,
         else => return false,
     }
 }
 pub const Fn = *const fn (PC, SP, *Process, *Context, Extra) Result;
 const EnumSort = struct {
-    field: *const std.builtin.Type.Declaration,
+    name: [:0]const u8,
     order: usize,
     production: bool,
     threadedFn: Fn,
@@ -90,8 +103,8 @@ const enumAndFunctions =
                         if (@hasDecl(ds, "threadedFn")) {
                             const forProduction = !(@hasDecl(ds, "hidden") and @field(ds, "hidden"));
                             if (@hasDecl(ds, "order")) {
-                                array[n] = .{ .field = &decl, .order = @field(ds, "order"), .production = forProduction, .threadedFn = @field(ds, "threadedFn") };
-                            } else array[n] = .{ .field = &decl, .order = 0, .production = forProduction, .threadedFn = @field(ds, "threadedFn") };
+                                array[n] = .{ .name = decl.name, .order = @field(ds, "order"), .production = forProduction, .threadedFn = @field(ds, "threadedFn") };
+                            } else array[n] = .{ .name = decl.name, .order = 0, .production = forProduction, .threadedFn = @field(ds, "threadedFn") };
                             n += 1;
                             if (forProduction) nProd += 1;
                         }
@@ -104,7 +117,7 @@ const enumAndFunctions =
         var fields = @typeInfo(enum {}).@"enum".fields;
         for (enums, 0..) |d, i| {
             fields = fields ++ [_]std.builtin.Type.EnumField{.{
-                .name = d.field.name,
+                .name = d.name,
                 .value = i,
             }};
         }
@@ -141,7 +154,7 @@ const nProduction = enumAndFunctions[2];
 
 test "print threadedFns" {
     for (0..nProduction) |index| {
-        std.log.info("0x{x:0>16} {s}", .{ @intFromPtr(functions[index]), @tagName(@as(Enum, @enumFromInt(index)))});
+        std.log.info("0x{x:0>16} {s}", .{ @intFromPtr(functions[index]), @tagName(@as(Enum, @enumFromInt(index))) });
     }
 }
 

@@ -68,7 +68,8 @@ const SymbolsEnum = enum(u32) {
     @"value:value:value:value:" = 0x4000000 + 37,
     @"cull:cull:cull:cull:",
     @"perform:with:with:with:",
-    yourself = 40,
+    @"perform:with:with:with:with:" = 0x5000000 + 40,
+    yourself = 41,
     size,
     negated,
     new,
@@ -264,17 +265,8 @@ test "symbols match initialized symbol table" {
     try expectEqual(1, Symbols.@"<=".asObject().numArgs());
     try expectEqual(Symbols.lastPredefinedSymbol, symbolIndex(Symbols.Object.asObject()));
     try expectEqual(0, Symbols.Object.asObject().numArgs());
-    switch (config.objectEncoding) {
-        .zag => {
-            try expectEqual(0x5FB38659, Symbols.Object.asObject().testU());
-            try expectEqual(0x2736AD159, Symbols.@"value:value:".asObject().testU());
-        },
-        .nan => {
-            try expectEqual(0x0, Symbols.Object.asObject().testU());
-            try expectEqual(0x0, Symbols.@"value:value:".asObject().testU());
-        },
-        else => {},
-    }
+    try expectEqual(Symbols.Object.symbolHash().?, Symbols.Object.asObject().symbolHash().?);
+    try expectEqual(Symbols.@"value:value:".symbolHash().?, Symbols.@"value:value:".asObject().symbolHash().?);
     // test a few at random to verify arity
     try symbol.verify(Symbols.@"=".asObject());
     try symbol.verify(Symbols.@"cull:".asObject());
@@ -300,7 +292,7 @@ pub const QuickSelectorsMask = 0x19046000;
 pub const QuickSelectorsMatch = 0x18046000;
 pub fn findQuickSelector(obj: Object) ?u2 {
     if (config.immediateSymbols and (obj.testU() & QuickSelectorsMask) == QuickSelectorsMatch) {
-        for (QuickSelectors,0..) |qs,i| {
+        for (QuickSelectors, 0..) |qs, i| {
             if (obj.equals(qs)) return @truncate(i);
         }
     }
@@ -322,7 +314,7 @@ test "find key value for quick selectors" {
     try std.testing.expectEqual(mask, QuickSelectorsMask);
     try std.testing.expectEqual(match, QuickSelectorsMatch);
     for (QuickSelectors) |obj| {
-        try std.testing.expect(findQuickSelector(obj)!=null);
+        try std.testing.expect(findQuickSelector(obj) != null);
     }
 }
 test "force second allocation of symbol treap" {

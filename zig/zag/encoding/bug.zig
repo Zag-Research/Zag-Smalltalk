@@ -5,7 +5,8 @@ pub noinline fn decodez(self: u64) f64 {
     return @bitCast(math.rotr(u64, self - 2, 4));
 }
 pub noinline fn decodes(self: u64) f64 {
-    if (self <= 0xC) {@branchHint(.unlikely);
+    if (self <= 0xC) {
+        @branchHint(.unlikely);
         if (self == 4) {
             return 0.0;
         } else if (self == 0xC) {
@@ -55,10 +56,10 @@ pub fn main() void {
     _ = timer.lap();
     std.mem.doNotOptimizeAway(decode_valid(iterations, &decodez));
     const z_decode_time = timer.lap();
-    std.log.err("z time: {d:.3}ns\n", .{ @as(f64, @floatFromInt(z_decode_time))*ns });
+    std.log.err("z time: {d:.3}ns\n", .{@as(f64, @floatFromInt(z_decode_time)) * ns});
 
     _ = timer.lap();
     std.mem.doNotOptimizeAway(decode_valid(iterations, &decodes));
     const s_decode_time = timer.lap();
-    std.log.err("s time: {d:.3}ns\n", .{ @as(f64, @floatFromInt(s_decode_time))*ns });
+    std.log.err("s time: {d:.3}ns\n", .{@as(f64, @floatFromInt(s_decode_time)) * ns});
 }

@@ -3,6 +3,7 @@ memory: []align(PAGE_SIZE) u8,
 pos: usize,
 
 const Self = @This();
+pub const Address = [*]u8;
 
 const c = @cImport({
     @cInclude("pthread.h");
@@ -33,8 +34,8 @@ pub fn init(size: usize) !Self {
             if (ptr == c.MAP_FAILED) {
                 return err;
             }
-            const slice: []align(PAGE_SIZE) u8 = @alignCast(@as([*]u8, @ptrCast(ptr))[0..aligned_size]);
-            return Self{ .memory = slice, .pos = 0 };
+            const slice_t: []align(PAGE_SIZE) u8 = @alignCast(@as([*]u8, @ptrCast(ptr))[0..aligned_size]);
+            return Self{ .memory = slice_t, .pos = 0 };
         }
         return err;
     };
@@ -68,6 +69,10 @@ pub fn getAddress(self: *const Self) *u8 {
     return &self.memory[self.pos];
 }
 
+pub fn slice(self: *const Self) []std.meta.Child(Address) {
+    return self.memory[0..self.pos];
+}
+
 /// Copies template bytes to the JIT buffer. Relocation is handled by the
 /// architecture-specific CnP layer once that decoder/encoder is wired in.
 pub fn copyTemplate(self: *Self, info: anytype) usize {
@@ -79,8 +84,8 @@ pub fn copyTemplate(self: *Self, info: anytype) usize {
 }
 
 /// Copy a slice of any type into the buffer
-pub fn append(self: *Self, slice: anytype) usize {
-    const byteSlice = std.mem.sliceAsBytes(slice);
+pub fn append(self: *Self, slice_t: anytype) usize {
+    const byteSlice = std.mem.sliceAsBytes(slice_t);
     const startPos = self.pos;
     const dst = self.memory[self.pos..][0..byteSlice.len];
     @memcpy(dst, byteSlice);

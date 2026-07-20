@@ -11,7 +11,7 @@ pub fn main() !void {
     // ARM64: mov w0, #42; ret
     const code_arm64 = [_]u8{ 0x40, 0x05, 0x80, 0x52, 0xc0, 0x03, 0x5f, 0xd6 };
     // x86_64: mov rax, 42; ret
-    const code_x86   = [_]u8{ 0x48, 0xc7, 0xc0, 0x2a, 0x00, 0x00, 0x00, 0xc3 };
+    const code_x86 = [_]u8{ 0x48, 0xc7, 0xc0, 0x2a, 0x00, 0x00, 0x00, 0xc3 };
 
     const page_size = std.heap.page_size_min;
 
@@ -20,18 +20,11 @@ pub fn main() !void {
     const PROT_RWX = std.posix.PROT.READ | std.posix.PROT.WRITE | std.posix.PROT.EXEC;
 
     // MAP_JIT is 0x0800 on macOS. It might not be in the Zig enum yet, so we define it manually.
-    const MAP_FLAGS: std.posix.MAP = .{.TYPE=.PRIVATE, .ANONYMOUS = true, .JIT = true};
+    const MAP_FLAGS: std.posix.MAP = .{ .TYPE = .PRIVATE, .ANONYMOUS = true, .JIT = true };
 
     // 4. Allocate Memory
     // This returns a slice []align(page_size) u8
-    const mem = try std.posix.mmap(
-        null,
-        page_size,
-        PROT_RWX,
-        MAP_FLAGS,
-        -1,
-        0
-    );
+    const mem = try std.posix.mmap(null, page_size, PROT_RWX, MAP_FLAGS, -1, 0);
     // Ensure we unmap when done
     defer std.posix.munmap(mem);
 

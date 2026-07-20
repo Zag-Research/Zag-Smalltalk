@@ -9,17 +9,22 @@ pub fn MockArch(AddressType: anytype) type {
         pub const processRegister = 2;
         pub const contextRegister = 3;
         pub const extraRegister = 4;
+        pub const dispatchRegister = 5;
         pub const Address = AddressType;
         const Decoder = struct {
             address: [*]const Operation,
             const Self = @This();
             fn new(address: [*]const Operation) Self {
-                return .{.address = address};
+                return .{ .address = address };
             }
-            pub fn nextInstruction(self: *Self) Operation {
+            pub fn nextInstruction(self: *Self) Instruction {
                 const current = self.address;
                 self.address = self.address + 1;
-                return current[0];
+                return .{
+                    .address = current,
+                    .raw = current[0],
+                    .operation = current[0],
+                };
             }
             pub fn getAddress(self: *Self) [*]const Operation {
                 return self.address;
@@ -30,9 +35,25 @@ pub fn MockArch(AddressType: anytype) type {
         };
         pub const decoder = Decoder.new;
 
-        pub fn emit(operation: Operation, buffer: anytype) void {
-            const oBuff = [_]Operation{operation};
+        pub const Instruction = jit_ir.Instruction([*]const Operation, Operation);
+
+        pub fn emitInstruction(instruction: Instruction, buffer: anytype) void {
+            const oBuff = [_]Operation{instruction.operation};
             buffer.append(&oBuff);
+        }
+
+        pub fn patch(from: anytype, to: anytype, info: Operation) void {
+            // Note: This only works for [*]Operation AddressType. Maybe add different variants to this.
+            // or add a comptime assert to check for the type. There is same assumption for the decoder
+            const slot: [*]Operation = @ptrCast(@alignCast(@constCast(from)));
+            slot[0] = switch (info) {
+                .branch => .{ .branch = .{ .address = @ptrCast(to) } },
+                .branchConditional => |branch| .{ .branchConditional = .{
+                    .condition = branch.condition,
+                    .address = @ptrCast(to),
+                } },
+                else => @panic("unsupported patch operation"),
+            };
         }
 
         /// Advance from the current native instruction address to the next native instruction address.
@@ -41,9 +62,7 @@ pub fn MockArch(AddressType: anytype) type {
         }
 
         pub fn registerTypes() [nRegisters]RegisterContents {
-            return [_]RegisterContents{.pc, .sp, .process, .context, .extra}
-                ++ [_]RegisterContents{.unknown} ** (floatOffset-5)
-                ++ [_]RegisterContents{.randFloat} ** floatRegisters;
+            return [_]RegisterContents{ .pc, .sp, .process, .context, .extra } ++ [_]RegisterContents{.unknown} ** (floatOffset - 5) ++ [_]RegisterContents{.randFloat} ** floatRegisters;
         }
     };
 }

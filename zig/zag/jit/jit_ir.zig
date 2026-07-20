@@ -16,6 +16,14 @@ pub const RegisterContents = enum {
 
 pub const Address = [*]const u8;
 
+pub fn Instruction(AddressType: type, RawType: type) type {
+    return struct {
+        address: AddressType,
+        raw: RawType,
+        operation: Operation,
+    };
+}
+
 pub const Operation = union(enum) {
     raw: u32,
     ret,
@@ -23,10 +31,14 @@ pub const Operation = union(enum) {
     move: Move,
     tst: Test,
     load: LoadStore,
+    loadPostIndex: LoadStore,
     store: LoadStore,
+    storePostIndex: LoadStore,
     branch: Branch,
+    branchLink: Branch,
     branchRegister: Register,
     branchConditional: BranchConditional,
+    conditionalSelect: ConditionalSelect,
     add: Arithmetic,
     addConstant: ArithmeticConstant,
 
@@ -57,6 +69,13 @@ pub const Operation = union(enum) {
 
     pub const Branch = struct {
         address: Address,
+    };
+
+    pub const ConditionalSelect = struct {
+        target: Register,
+        source: Register,
+        alternative: Register,
+        condition: Condition,
     };
 
     pub const LoadStore = struct {

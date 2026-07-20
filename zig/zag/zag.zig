@@ -31,6 +31,7 @@ pub const symbol = @import("symbol.zig");
 pub const controlWords = @import("controlWords.zig");
 pub const primitives = @import("primitives.zig");
 pub const utilities = @import("utilities.zig");
+pub const DeriveEnum = @import("utilities/deriveEnum.zig").DeriveEnum;
 pub const llvm = if (config.includeLLVM) @import("llvm-build-module") else null;
 pub const threadedFn = @import("threadedFn.zig");
 pub const Stats = utilities.Stats;
@@ -42,3 +43,4 @@ pub fn untested() void {
 pub fn UInt(n: usize) type {
     return @import("std").meta.Int(.unsigned, n);
 }
+pub const Check = enum { check, ignore };

@@ -144,11 +144,11 @@ pub const ReturnSelfTest = struct {
 pub const BranchFalseTest = struct {
     const Boolean = zag.primitives.primitives.Boolean;
     const tup = .{
-        tf.pushLiteral,  "0const",    // push test value (True or False)
-        tf.branchFalse,  "taken",     // if False, jump to taken
-        tf.pushLiteral,  "1const",    // not-taken: push 111
-        tf.returnTop,    ":taken",    // label definition
-        tf.pushLiteral,  "2const",    // taken: push 222
+        tf.pushLiteral, "0const", // push test value (True or False)
+        tf.branchFalse, "taken", // if False, jump to taken
+        tf.pushLiteral, "1const", // not-taken: push 111
+        tf.returnTop, ":taken", // label definition
+        tf.pushLiteral, "2const", // taken: push 222
         tf.returnTop,
     };
     const info = opsInfo(tup);
@@ -190,15 +190,15 @@ pub const BranchFalseTest = struct {
 
 pub const BackedgeSingleTest = struct {
     const tup = .{
-        tf.pushLiteral,  "0const", // n = 1
-        ":loop",         tf.dup,
-        tf.pushLiteral,  "1const", // 0
+        tf.pushLiteral, "0const", // n = 1
+        ":loop",        tf.dup,
+        tf.pushLiteral, "1const", // 0
         tf.@"inline<=I", tf.fail, tf.fail, // n <= 0
-        tf.branchFalse,  "cont",
-        tf.returnTop,    ":cont",
-        tf.pushLiteral,  "2const", // step = 1
-        tf.@"inline-I",  tf.fail, tf.fail, // n = n - 1
-        tf.branch,       "loop",
+        tf.branchFalse,  "cont",  tf.returnTop,
+        ":cont",
+        tf.pushLiteral, "2const", // step = 1
+        tf.@"inline-I", tf.fail, tf.fail, // n = n - 1
+        tf.branch,      "loop",
     };
     const info = opsInfo(tup);
     const Method = JitMethod(&info.ops, &info.branch_targets);
@@ -232,8 +232,8 @@ pub const InlinePrimitiveAddTest = struct {
     const tup = .{
         tf.pushLiteral, "0const",
         tf.pushLiteral, "1const",
-        tf.@"inline+I", tf.fail, tf.fail,
-        tf.returnTop,
+        tf.@"inline+I", tf.fail,
+        tf.fail,        tf.returnTop,
     };
     const info = opsInfo(tup);
     const Method = JitMethod(&info.ops, &info.branch_targets);
@@ -269,7 +269,7 @@ pub const Send0Test = struct {
     const tup = .{
         tf.pushLiteral, "0const",
         tf.send0,       send_sig,
-        "1const",           tf.returnTop,
+        "1const",       tf.returnTop,
     };
     const info = opsInfo(tup);
     const Method = JitMethod(&info.ops, &info.branch_targets);
@@ -283,7 +283,7 @@ pub const Send0Test = struct {
         dispatch.addMethod(callee.asCompiledMethodPtr());
 
         try initJitTest(&method, &process, "Send0Test");
-        compiled.resolve(&[_]Object{literal_.init(10), Object.Nil()}) catch @panic("Failed to resolve");
+        compiled.resolve(&[_]Object{ literal_.init(10), Object.Nil() }) catch @panic("Failed to resolve");
     }
 
     pub fn deinit() void {
@@ -292,7 +292,7 @@ pub const Send0Test = struct {
 
     pub fn run() !void {
         process.init();
-       const result = runCompiled(&method, &compiled, &process, info.positions[0..], null);
+        const result = runCompiled(&method, &compiled, &process, info.positions[0..], null);
         try reportResult(result, 10);
     }
 };
@@ -305,7 +305,7 @@ pub const SendTest = struct {
         tf.pushLiteral, "0const",
         tf.pushLiteral, "1const",
         tf.send,        send_sig,
-        "2const",           tf.returnTop,
+        "2const",       tf.returnTop,
     };
     const info = opsInfo(tup);
     const Method = JitMethod(&info.ops, &info.branch_targets);
@@ -339,10 +339,10 @@ pub const SendTest = struct {
 
 pub const InlinePrimitiveChainedTest = struct {
     const tup = .{
-        tf.pushLiteral, "0const",         // push a
-        tf.pushLiteral, "1const",         // push b
+        tf.pushLiteral, "0const", // push a
+        tf.pushLiteral, "1const", // push b
         tf.@"inline+I", tf.fail, tf.fail, // a + b
-        tf.pushLiteral, "2const",         // push c
+        tf.pushLiteral, "2const", // push c
         tf.@"inline-I", tf.fail, tf.fail, // (a + b) - c
         tf.returnTop,
     };
@@ -369,6 +369,6 @@ pub const InlinePrimitiveChainedTest = struct {
 
     pub fn run() !void {
         const result = runCompiled(&method, &compiled, &process, info.positions[0..], null);
-        try reportResult(result, 42);  // 40 + 50 - 48 = 42
+        try reportResult(result, 42); // 40 + 50 - 48 = 42
     }
 };

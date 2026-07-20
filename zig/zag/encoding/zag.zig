@@ -1,5 +1,6 @@
 //! This module implements Object encoding for Zag encoding
 const std = @import("std");
+const builtin = @import("builtin");
 const expectEqual = std.testing.expectEqual;
 const expect = std.testing.expect;
 const assert = std.debug.assert;
@@ -8,7 +9,6 @@ const zag = @import("../zag.zig");
 const trace = zag.config.trace;
 const object = zag.object;
 const ClassIndex = object.ClassIndex;
-const Compact = ClassIndex.Compact;
 const Process = zag.Process;
 const SP = Process.SP;
 const Context = zag.Context;
@@ -22,15 +22,12 @@ const floatEncoding = @import("floatEncoding.zig").Fst2(4);
 const encode = floatEncoding.encode;
 const decode = floatEncoding.decode;
 
-pub const Tag = enum(u3) {
+const Tag = enum(u3) {
     heap = 0,
-    immediates,
-    smallinteger,
-    unused3,
-    floatA,
+    smallinteger = 2,
+    floatA = 4,
     floatB,
-    unused6,
-    unused7,
+    _,
     inline fn u(cg: Tag) u3 {
         return @intFromEnum(cg);
     }
@@ -40,6 +37,44 @@ pub const Object = packed struct(u64) {
     hash: u45 = 0,
     extra: u11 = 0,
     class: Compact = @enumFromInt(0),
+    pub const Compact = enum(u5) {
+        heap,
+        ThunkReturnLocal,
+        ThunkReturnInstance,
+        ThunkReturnObject,
+        ThunkReturnImmediate,
+        ThunkLocal,
+        BlockAssignLocal,
+        ThunkInstance,
+        BlockAssignInstance,
+        ThunkHeap,
+        ThunkImmediate,
+        SmallInteger,
+        Symbol,
+        False,
+        True,
+        Character,
+        Signature,
+        ThunkReturnCharacter,
+        ThunkReturnFloat,
+        ThunkFloat,
+        LLVM,
+        UndefinedObject,
+        Float,
+        _,
+        const heapBits = object.heapBits();
+        inline fn isHeap(self: Compact) bool {
+            return (heapBits >> @intFromEnum(self)) & 1 != 0;
+        }
+        pub inline fn classIndex(cp: Compact) ClassIndex {
+            return @enumFromInt(@intFromEnum(cp));
+        }
+        pub inline fn from(ci: ClassIndex) Compact {
+            return @enumFromInt(@intFromEnum(ci));
+        }
+        pub const immutableClasses = 0;
+        pub const mutableClasses = 32;
+    };
     const Self = @This();
     const intShift = 64 - @bitSizeOf(IntType);
     pub const IntType = i62;
@@ -95,21 +130,18 @@ pub const Object = packed struct(u64) {
     pub inline fn nativeI(self: object.Object) ?i64 {
         if (self.taggedI()) |int| {
             @branchHint(.likely);
-            return int >> 2;
+            return int >> intShift;
         }
         return null;
     }
     pub inline fn fromNativeI(i: IntType, _: anytype, _: anytype) Object {
         return fromUntaggedI(asUntaggedI(i), null, null);
     }
-    pub inline fn asUntaggedI(i: IntType) i64 {
+    inline fn asUntaggedI(i: IntType) i64 {
         return @as(i64, i) << intShift;
     }
     inline fn isInt(self: object.Object) bool {
         return @as(u64, @bitCast(self)) & Tag.u(.smallinteger) != 0;
-    }
-    pub inline fn isNat(self: object.Object) bool {
-        return self.isInt() and self.rawI() >= 0;
     }
 
     pub inline fn nativeF(self: object.Object) ?f64 {
@@ -152,8 +184,25 @@ pub const Object = packed struct(u64) {
     pub inline fn extraValue(self: object.Object) object.Object {
         return @bitCast(self.nativeI_noCheck() >> 8);
     }
-    pub inline fn highPointer(self: object.Object, T: type) ?T {
-        return @ptrFromInt(self.rawU() >> 16);
+    pub inline fn encodedPointer(self: Object, T: type) ?T {
+        switch (builtin.target.cpu.arch) {
+            .x86_64 => {
+                // Cast to a signed integer to trigger an Arithmetic Shift.
+                // Shifting left by 16 discards the tag/aux metadata.
+                // Shifting right copies bit 47 (the new sign bit) back into 63..48.
+                const signed: isize = @bitCast(self);
+                return @ptrFromInt(@as(usize, @bitCast(((signed >> 3) << 19) >> 16)));
+            },
+            else => {
+                // On ARM, we use a Logical Shift (zero-filling).
+                // The compiler will likely emit a single 'UBFX' instruction.
+                const unsigned: usize = @bitCast(self);
+                return @ptrFromInt(((unsigned >> 3) << 19) >> 16);
+            },
+        }
+    }
+    pub inline fn pointer(self: object.Object, T: type) ?T {
+        return @ptrFromInt(@as(usize, @bitCast(self)));
     }
     pub const testU = rawU;
     pub const testI = rawI;
@@ -171,27 +220,10 @@ pub const Object = packed struct(u64) {
         return self.tagMatch(comptime oImm(class, 0));
     }
     inline fn oImm(c: Compact, h: u45) Self {
-        return Self{ .tag = .immediates, .class = c, .hash = h };
+        return Self{ .tag = .heap, .class = c, .hash = h };
     }
     inline fn oImmAddr(c: Compact, ptr: anytype, e: u11) Self {
-        return Self{ .tag = .immediates, .class = c, .hash = @truncate(@intFromPtr(ptr) >> 8), .extra = e };
-    }
-    inline fn oImmContextI(c: Compact, context: *Context, e: i11) Self {
-        return oImmAddr(c, context, @bitCast(e));
-    }
-    inline fn oImmContextCE(c: Compact, context: *Context, c2: Compact, e: u6) Self {
-        return oImmAddr(c, context, (@as(u11, @intFromEnum(c2)) << 6) | e);
-    }
-    pub inline fn pointer(self: object.Object, T: type) ?T {
-        switch (self.tag) {
-            .heap => return @ptrFromInt(self.rawU()),
-            .immediates => switch (self.class) {
-                .ThunkReturnLocal, .ThunkReturnInstance, .ThunkReturnObject, .ThunkReturnImmediate, .ThunkReturnCharacter, .ThunkReturnFloat, .ThunkHeap, .ThunkLocal, .ThunkInstance, .BlockAssignLocal, .BlockAssignInstance => return self.highPointer(T),
-                else => {},
-            },
-            else => {},
-        }
-        return null;
+        return Self{ .tag = .heap, .class = c, .hash = @truncate(@intFromPtr(ptr) >> 3), .extra = e };
     }
     pub inline fn makeImmediate(cls: Compact, hash: u45) object.Object {
         return oImm(cls, hash);
@@ -259,12 +291,12 @@ pub const Object = packed struct(u64) {
             else => {
                 switch (@typeInfo(T)) {
                     .pointer => |ptrInfo| {
-                        switch (@typeInfo(ptrInfo.child)) {
-                            .@"fn" => {},
+                        const child = ptrInfo.child;
+                        switch (@typeInfo(child)) {
                             .@"struct" => {
-                                if (!check or (self.hasHeapReference() and (!@hasDecl(ptrInfo.child, "ClassIndex") or self.toUnchecked(HeapObjectConstPtr).classIndex == ptrInfo.child.ClassIndex))) {
-                                    if (@hasField(ptrInfo.child, "header") or (@hasDecl(ptrInfo.child, "includesHeader") and ptrInfo.child.includesHeader)) {
-                                        return @as(T, @ptrFromInt(@as(usize, @bitCast(self))));
+                                if (!check or (self.hasHeapReference() and (!@hasDecl(child, "ClassIndex") or self.toUnchecked(HeapObjectConstPtr).classIndex == child.ClassIndex))) {
+                                    if (@hasField(child, "header") or (@hasDecl(child, "includesHeader") and child.includesHeader)) {
+                                        return self.encodedPointer(T).?;
                                     } else {
                                         return @as(T, @ptrFromInt(@sizeOf(HeapHeader) + (@as(usize, @bitCast(self)))));
                                     }
@@ -279,8 +311,7 @@ pub const Object = packed struct(u64) {
         }
         @panic("Trying to convert Object to " ++ @typeName(T));
     }
-    pub inline //
-    fn which_class(self: object.Object) ClassIndex {
+    pub inline fn which_class(self: object.Object) ClassIndex {
         const u: u64 = @bitCast(self);
         if (true) {
             if (u & 2 != 0) {
@@ -304,7 +335,7 @@ pub const Object = packed struct(u64) {
             }
         }
         const class = self.class;
-        if (class == .none) {
+        if (class == .heap) {
             if (u == 0) {
                 @branchHint(.unlikely);
                 return .UndefinedObject;
@@ -313,31 +344,21 @@ pub const Object = packed struct(u64) {
         } else return self.class.classIndex();
     }
 
+    pub inline fn isImmediate(self: Object) bool {
+        return self.tag != .heap or self.class != .heap;
+    }
+
     pub inline fn hasHeapReference(self: Object) bool {
-        return self.tag == .heap and self != Nil();
+        return self.tag == .heap and self.class.isHeap() and self != Nil();
     }
     pub inline fn ifHeapObject(self: object.Object) ?*HeapObject {
-        if (self.tag == .heap and self != Nil()) return @ptrFromInt(@as(u64, @bitCast(self)));
+        if (self.hasHeapReference()) return self.encodedPointer(*HeapObject);
         return null;
     }
 
-    pub fn returnObjectClosure(self: Object, context: *Context) ?Object {
-        if (self.nativeI()) |i| {
-            switch (i) {
-                -1024...1023 => return oImmContextI(.ThunkReturnObject, context, @intCast(i)),
-                else => {},
-            }
-        } else {
-            switch (self.which_class()) {
-                .False, .True => |c| return oImmContextCE(.ThunkReturnImmediate, context, c.compact(), 0),
-                .UndefinedObject => return oImmContextCE(.ThunkReturnImmediate, context, .UndefinedObject, 0),
-                else => {},
-            }
-        }
-        return null;
-    }
     pub fn returnLocalClosure(self: Object, context: *Context) ?Object {
         if (self.nativeI()) |i| {
+            trace("about to return: {f} -> {f}", .{ self, oImmAddr(.ThunkReturnLocal, context, @intCast(i)) });
             switch (i) {
                 0...2047 => return oImmAddr(.ThunkReturnLocal, context, @intCast(i)),
                 else => {},
@@ -345,13 +366,28 @@ pub const Object = packed struct(u64) {
         }
         return null;
     }
+    pub fn returnLiteralClosure(self: Object, context: *Context) ?Object {
+        if (self.nativeI()) |i| {
+            trace("about to return: {f} -> {f}", .{ self, oImmAddr(.ThunkReturnObject, context, @intCast(i)) });
+            switch (i) {
+                -1024...1023 => return oImmAddr(.ThunkReturnObject, context, @intCast(i)),
+                else => {},
+            }
+        } else if (self.rawU() & 0x07ffffffffffffc0 == 0) {
+            trace("about to return: {f} -> {f}", .{ self, oImmAddr(.ThunkReturnImmediate, context, @intCast((self.rawU() >> 59 << 6) | self.rawU() & 0x3f)) });
+            return oImmAddr(.ThunkReturnImmediate, context, @intCast((self.rawU() >> 59 << 6) | self.rawU() & 0x3f));
+        }
+        return null;
+    }
     pub fn immediateClosure(sig: Signature, sp: SP, context: *Context) ?Object {
         const class = sig.getClass();
         _ = sp;
-        return switch (class) {
-            .ThunkReturnObject, .ThunkReturnLocal, .ThunkReturnInstance, .ThunkReturnImmediate, .ThunkReturnCharacter, .ThunkReturnFloat => oImm(class.compact(), @intCast(@intFromPtr(context) << 8 | sig.primitive())),
-            else => null,
-        };
+        switch (class) {
+            .ThunkReturnObject, .ThunkReturnLocal, .ThunkReturnInstance, .ThunkReturnImmediate, .ThunkReturnCharacter, .ThunkReturnFloat => {
+                return oImmAddr(Compact.from(class), context, sig.primitive());
+            },
+            else => return null,
+        }
     }
 
     pub fn extraImmediateU(obj: Object) ?u11 {

@@ -25,17 +25,16 @@ We extend this slightly, by using 5 of the 8 possible tag values:
 | `0100100000000000` | `aaaaaaaa...aaaa` | `aaaaa000` | `ThunkHeap`                   |
 | `01010cccccxxxxxx` | `xxxxxxxx...xxxx` | `xxttt001` | `ThunkImmediate`              |
 | `0101100000000000` | `00...hhhhh...hh` | `aaaaa001` | `Symbol`                      |
-| `0110000000000000` | `00000000...0000` | `10010001` | `False`                       |
-| `0110100000000000` | `00000000...0000` | `10011001` | `True`                        |
+| `0110000000000000` | `00000000...0000` | `00000001` | `False`                       |
+| `0110100000000000` | `00000000...0000` | `00001001` | `True`                        |
 | `0111000000000000` | `0...uuuuuu...uu` | `00000001` | `Character`                   |
 | `01111xxxxxxxxxxx` | `xx...xxxxxxxxxx` | `xxxxxx11` | `Signature` (special integer) |
-| `10000000cccccccc` | `aaaaaaaa...aaaa` | `aaaaa000` | `ThunkReturnCharacter`        |
+| `10000ccccccccccc` | `aaaaaaaa...aaaa` | `aaaaa000` | `ThunkReturnCharacter`        |
 | `10001000seeemmmm` | `aaaaaaaa...aaaa` | `aaaaa000` | `ThunkReturnFloat`            |
 | `1001100000000000` | `aaaaaaaa...aaaa` | `aaaaa000` | heap object pointer           |
 | `10100ttttttttttt` | `aaaaaaaa...aaaa` | `aaaaa000` | `LLVM`                        |
 | `10010seeeeeeeeee` | `emmmmmmm...mmmm` | `mmmmm001` | `ThunkFloat`                  |
 | `iiiiiiiiiiiiiiii` | `iiiiiiii...iiii` | `iiiii010` | `SmallInteger`                |
-| `ppppppppcccccccc` | `cc...hhhhh...hh` | `aaaaa011` | `Signature` (special integer) |
 | `ffffffffffffffff` | `ffffffff...ffff` | `fffff100` | `Float`                       |
 | `ffffffffffffffff` | `ffffffff...ffff` | `fffff101` | `Float`                       |
 | `xxxxxxxxxxxxxxxx` | `xxxxxxxx...xxxx` | `xxxxx110` | unused (special integer)      |
@@ -59,17 +58,17 @@ Immediates are interpreted similarly to a header word for heap objects. That is,
 #### Class numbers
 For Mixed immediate encoding any address (`Context` or `ContextData`) is encoded in the low 48 bits. The extra field is the 11 bits below the class, which limits the immediate form to 2048 possible extra values. For non-immediate versions, the bits of the object form the address of an in-heap object, of which the first word is the address and the second word is the extra value.
 0. `NativePointer`: This is an aligned native pointer. Unaligned native pointers will not have the low bits equal to `000` and so be disguised as other types. But regardless will be ignored by the garbage collectors. These are **unsafe** so are only useful for FFI calls and with the `NativePointer` methods.
-1. `ThunkReturnLocal`: This and the following 4 classes encode thunks that do non-local returns of a value. The address is the address of the `Context`. This class returns a value from the `Context` (a local, parameter, or the `self` object - 0 is unused, 1 is `self`, 2 is the first parameter or local, etc.). The local index is encoded in the extra field .
-2. `ThunkReturnInstance`: This encodes a non-local return of an instance variable. The variable index is encoded in the extra field. The `self` field of the `Context` is the referenced object.
+1. `ThunkReturnLocal`: This and the following 4 classes encode thunks that do non-local returns of a value. The address is the address of the `Context`. This class returns a value from the `Context` (a local, parameter, or the `self` object - 0 is unused, 1 is `self`, 2 is the first parameter or local, etc.). The local index is encoded in the extra field. This is never used for in-memory closures.
+2. `ThunkReturnInstance`: This encodes a non-local return of an instance variable. The variable index is encoded in the extra field. The `self` field of the `Context` is the referenced object. This is never used for in-memory closures.
 3. `ThunkReturnObject`: This encodes a non-local return of an object. In the immediate version, this is an 11-bit signed integer, encoded in the extra field.
-4. `ThunkReturnImmediate`: This encodes a non-local return of an immediate value. Simply returns the high 5 bits of the extra field, 53 0-bits, and the low 6 bits of the extra field, so 0 is `nil`, `01101000001` is `true`, etc.  This is never used for in-memory closures as it is subsumed by `ThunkReturnObject`.
-5. `ThunkLocal`: This evaluates to the value of a local variable in the `ContextData` referred to in the low 48 bits. The variable index is encoded in the extra field - see `ThunkReturnLocal`.
-6. `BlockAssignLocal`: This takes 1 parameter and assigns the value to a local variable in the `ContextData`. That value is also the result. The local index is encoded in the extra field. If the local variable number is 0, no assignment is done, and it simply does a non-local return of the parameter - i.e. the pointer is treated as a `Context` and this is a continuation.
-7. `ThunkInstance`: This evaluates to the value of an instance variable of the object referred to in the low 48 bits. The variable index is encoded in the extra field.
-8. `BlockAssignInstance`: This takes 1 parameter and assigns the value to an instance variable of the object referred to in the low 48 bits. That value is also the result. The variable index is encoded in the extra field.
-9. `ThunkHeap`: This encodes a thunk (a `BlockClosure` that takes no parameters) that evaluates to a heap object. The address of the heap object is in the low 48 bits. The extra field is ignored.
+4. `ThunkReturnImmediate`: This encodes a non-local return of an immediate value. Simply returns the high 5 bits of the extra field, 53 0-bits, and the low 6 bits of the extra field, so 0 is `nil`, `01101001001` is `true`, etc.  Incidentally catches +/-0.0 and +/-2.0. This is never used for in-memory closures as it is subsumed by `ThunkReturnObject`.
+5. `ThunkLocal`: This evaluates to the value of a local variable in the `ContextData` referred to in the low 48 bits. The variable index is encoded in the extra field - see `ThunkReturnLocal`. This is never used for in-memory closures.
+6. `BlockAssignLocal`: This takes 1 parameter and assigns the value to a local variable in the `ContextData`. That value is also the result. The local index is encoded in the extra field. If the local variable number is 0, no assignment is done, and it simply does a non-local return of the parameter - i.e. the pointer is treated as a `Context` and this is a continuation. This is never used for in-memory closures.
+7. `ThunkInstance`: This evaluates to the value of an instance variable of the object referred to in the low 48 bits. The variable index is encoded in the extra field. This is never used for in-memory closures.
+8. `BlockAssignInstance`: This takes 1 parameter and assigns the value to an instance variable of the object referred to in the low 48 bits. That value is also the result. The variable index is encoded in the extra field. This is never used for in-memory closures.
+9. `ThunkHeap`: This encodes a thunk (a `BlockClosure` that takes no parameters) that evaluates to a heap object. The address of the heap object is in the low 48 bits. The extra field is ignored. This is never used for in-memory closures.
 10. `ThunkImmediate`: This encodes  a thunk that evaluates to an immediate value. This is never used for in-memory closures as it is subsumed by `ThunkInstance`. The 56 bit extra field is interpreted as:
-	- 0 & 1: The high 5 bits of the field, 8 zero bits, and the low 51 bits are returned. This encodes `nil` and all the immediate values (symbols, characters, booleans). Although this could, in theory encode an address, it must not
+	- 0 & 1: The high 5 bits of the field, 8 zero bits, and the low 51 bits are returned. This encodes `nil` and all the immediate values (symbols, characters, booleans). Although this could, in theory encode an address, it must not.
 	- 2 (& 3): A sign-extended copy of the field is returned. This encodes 54-bit `SmallInteger`s
 11. `Symbol`: See [Symbol](Symbol.md) for detailed information on the format.
 12. `False`: This encodes the singleton value `false`. The `False` and `True` classes only differ by 1 bit so they can be tested easily if that is appropriate (in code generation).
@@ -82,30 +81,30 @@ For Mixed immediate encoding any address (`Context` or `ContextData`) is encoded
 19. `LLVM`: Interface object to LLVM library. The 11 bit tag differentiates different kinds of LLVM JIT pointers. Although these include addresses, they are not object references and not looked at by the garbage collector.
 20. `ThunkFloat`: This encodes  a thunk that evaluates to an immediate `Float` value.... This is never used for in-memory closures as it is subsumed by `ThunkInstance`.
 21. `SmallInteger`: this encodes small integers. In this encoding, the high 62 bits of the word make up the value, so this provides 62-bit integers (-2,305,843,009,213,693,952 to 2,305,843,009,213,693,951). This allows numerous optimizations of `SmallInteger` operations (see [[Optimizations]]). **placeholder**
-22. to 31 unused
+22. `Float`: the bit patterns that encode double-precision IEEE floating point. **placeholder** for immediate `Float` values, but also used for in-memory `Float` values - that can't be encoded in the immediate form.
+23. to 31 unused
 
 The additional classes that are hard-coded (because they are referenced by Zig code) are:
 32. `UndefinedObject`: the singleton value `nil` which is represented as all zero bits. **placeholder**
 33. `Context`: method context. Note this must be #33 so that it relates to the reserved class #4
-34. `Float`: the bit patterns that encode double-precision IEEE floating point. **placeholder**
-35. `ProtoObject`: the master superclass. This is an address of an in-memory object.
-36. `Object`: the superclass of all normal objects
-37. `Array`: the fundamental `Array` class.
-38. `String`: ASCII strings (which are mutable)
-39. `Utf8String`: immutable [UTF-8](https://datatracker.ietf.org/doc/html/rfc3629) strings; a subclass of `String`.
-40. `DoubleWordArray`: array of 64-bit integers.
-41. `BlockClosure`: this is reserved for block closures. All the Thunk... and Block... in the first 31 classes are subclasses of this. Note this must be #41 so that it relates to the reserved class #5
-42. `Process`: an object that contains all the information of a process, including the stack and nursery heap areas.
-43. `Class`:
-44. `CompiledMethod`:
-45. `Dispatch`:
-46. `Association`:
-47. `Exception`:
-48. `Error`:
-49. `ContextData`: 
-50. `SelectorException`:
-51. `PrimitiveFailed`:
-52. `NativePointer`:
+34. `ProtoObject`: the master superclass.
+35. `Object`: the superclass of all normal objects
+36. `Array`: the fundamental `Array` class.
+37. `String`: ASCII strings (which are mutable)
+38. `Utf8String`: immutable [UTF-8](https://datatracker.ietf.org/doc/html/rfc3629) strings; a subclass of `String`.
+39. `DoubleWordArray`: array of 64-bit integers.
+40. `BlockClosure`: this is reserved for block closures. All the Thunk... and Block... in the first 31 classes are subclasses of this. Note this must be #41 so that it relates to the reserved class #5
+41. `Process`: an object that contains all the information of a process, including the stack and nursery heap areas.
+42. `Class`:
+43. `CompiledMethod`:
+44. `Dispatch`:
+45. `Association`:
+46. `Exception`:
+47. `Error`:
+48. `ContextData`: 
+49. `SelectorException`:
+50. `PrimitiveFailed`:
+51. `NativePointer`:
 
 ### Thunks and Closures
 Full block closures are relatively expensive. Even though many will typically be discarded quickly, they take dozens of instructions to create. They are allocated on the stack (because most have LIFO behaviour) which puts pressure on the stack which may force the stack to overflow more quickly and need to be spilled to the heap, and some will put pressure on the heap directly - both causing garbage collections to be more frequent. There are many common blocks that don't actually need access to method local variables, `self` or parameters. These can be encoded as immediate values with special subclasses of BlockClosure and obviate the need for heap allocation. 

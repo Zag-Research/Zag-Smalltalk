@@ -1,5 +1,6 @@
 //! This module implements Object encoding for ZagOrig encoding
 const std = @import("std");
+const builtin = @import("builtin");
 const expectEqual = std.testing.expectEqual;
 const expect = std.testing.expect;
 const assert = std.debug.assert;
@@ -8,7 +9,6 @@ const zag = @import("../zag.zig");
 const trace = zag.config.trace;
 const object = zag.object;
 const ClassIndex = object.ClassIndex;
-const Compact = ClassIndex.Compact;
 const Process = zag.Process;
 const SP = Process.SP;
 const Context = zag.Context;
@@ -39,6 +39,44 @@ pub const Object = packed struct(u64) {
     tag: Tag,
     class: Compact,
     hash: u56,
+    pub const Compact = enum(u5) {
+        heap,
+        ThunkReturnLocal,
+        ThunkReturnInstance,
+        ThunkReturnObject,
+        ThunkReturnImmediate,
+        ThunkLocal,
+        BlockAssignLocal,
+        ThunkInstance,
+        BlockAssignInstance,
+        ThunkHeap,
+        ThunkImmediate,
+        SmallInteger,
+        Symbol,
+        False,
+        True,
+        Character,
+        Signature,
+        ThunkReturnCharacter,
+        ThunkReturnFloat,
+        ThunkFloat,
+        LLVM,
+        UndefinedObject,
+        Float,
+        _,
+        const heapBits = object.heapBits();
+        inline fn isHeap(self: Compact) bool {
+            return (heapBits >> @intFromEnum(self)) & 1 != 0;
+        }
+        pub inline fn classIndex(cp: Compact) ClassIndex {
+            return @enumFromInt(@intFromEnum(cp));
+        }
+        pub inline fn from(ci: ClassIndex) Compact {
+            return @enumFromInt(@intFromEnum(ci));
+        }
+        pub const immutableClasses = 0;
+        pub const mutableClasses = 32;
+    };
     const Self = @This();
     const intShift = 64 - @bitSizeOf(IntType);
     pub const IntType = i56;
@@ -59,7 +97,7 @@ pub const Object = packed struct(u64) {
     pub const highTagSmallInteger = 0;
     pub const PackedTagType = u8;
     pub const packedTagSmallInteger = oImm(.SmallInteger, 0).tagbits();
-    pub const signatureTag = @as(u8, @intFromEnum(ClassIndex.Compact.Signature)) << 3 | Tag.u(.immediates);
+    pub const signatureTag = @as(u8, @intFromEnum(Compact.Signature)) << 3 | Tag.u(.immediates);
     pub const LowTag = u8;
     pub const HighTag = u8;
     const TagAndClassType = u8;
@@ -108,9 +146,6 @@ pub const Object = packed struct(u64) {
     inline fn isInt(self: object.Object) bool {
         return self.isImmediateClass(.SmallInteger);
     }
-    pub inline fn isNat(self: object.Object) bool {
-        return self.isInt() and self.rawI() >= 0;
-    }
     pub inline fn nativeI(self: object.Object) ?i64 {
         if (self.isInt()) {
             @branchHint(.likely);
@@ -148,8 +183,22 @@ pub const Object = packed struct(u64) {
     pub inline fn extraValue(self: object.Object) object.Object {
         return @bitCast(@as(i64, @bitCast(self)) >> @bitSizeOf(TagAndClassType) >> 8);
     }
-    pub inline fn highPointer(self: object.Object, T: type) ?T {
-        return @ptrFromInt(self.rawU() >> 16);
+    pub inline fn encodedPointer(self: object.Object, T: type) ?T {
+        switch (builtin.target.cpu.arch) {
+            .x86_64 => {
+                // Cast to a signed integer to trigger an Arithmetic Shift.
+                const signed: isize = @bitCast(self);
+                return @ptrFromInt(@as(usize, @bitCast(signed >> 16)));
+            },
+            else => {
+                // On ARM, we use a Logical Shift (zero-filling).
+                const unsigned: usize = @bitCast(self);
+                return @ptrFromInt(unsigned >> 16);
+            },
+        }
+    }
+    pub inline fn pointer(self: object.Object, T: type) ?T {
+        return @ptrFromInt(@as(usize, @bitCast(self)));
     }
     pub const testU = rawU;
     pub const testI = rawI;
@@ -184,17 +233,6 @@ pub const Object = packed struct(u64) {
     inline fn hasPointer(self: object.Object) bool {
         const bits = math.rotr(TagAndClassType, self.tagbits(), 3);
         return bits <= math.rotr(TagAndClassType, oImm(.ThunkHeap, 0).tagbits(), 3) and bits != 0;
-    }
-    pub inline fn pointer(self: object.Object, T: type) ?T {
-        switch (self.tag) {
-            .heap => return @ptrFromInt(self.rawU()),
-            .immediates => switch (self.class) {
-                .ThunkReturnLocal, .ThunkReturnInstance, .ThunkReturnObject, .ThunkReturnImmediate, .ThunkReturnCharacter, .ThunkReturnFloat, .ThunkHeap, .ThunkLocal, .ThunkInstance, .BlockAssignLocal, .BlockAssignInstance => return self.highPointer(T),
-                else => {},
-            },
-            else => {},
-        }
-        return null;
     }
     pub inline fn makeImmediate(cls: Compact, hash: u56) object.Object {
         return oImm(cls, hash);
@@ -471,9 +509,11 @@ pub const Object = packed struct(u64) {
         if (self.tag == .heap and self != Nil()) return @ptrFromInt(@as(u64, @bitCast(self)));
         return null;
     }
-
-    pub inline fn asUntaggedI(i: i56) i64 {
-        return @as(i64, i) << tagAndClassBits;
+    pub fn returnLiteralClosure(_: Object, _: *Context) ?Object {
+        return null;
+    }
+    pub fn isImmediate(self: Object) bool {
+        return self.rawU() & 7 != 0;
     }
 
     pub fn returnObjectClosure(self: Object, context: *Context) ?Object {
@@ -504,7 +544,7 @@ pub const Object = packed struct(u64) {
         const class = sig.getClass();
         _ = sp;
         return switch (class) {
-            .ThunkReturnObject, .ThunkReturnLocal, .ThunkReturnInstance, .ThunkReturnImmediate, .ThunkReturnCharacter, .ThunkReturnFloat => oImm(class.compact(), @intCast(@intFromPtr(context) << 8 | sig.primitive())),
+            .ThunkReturnObject, .ThunkReturnLocal, .ThunkReturnInstance, .ThunkReturnImmediate, .ThunkReturnCharacter, .ThunkReturnFloat => oImm(Compact.from(class), @intCast(@intFromPtr(context) << 8 | sig.primitive())),
             else => null,
         };
     }

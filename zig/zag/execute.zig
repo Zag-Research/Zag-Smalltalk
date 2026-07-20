@@ -42,11 +42,11 @@ pub const Signature = packed struct {
     _filler1: zag.UInt(8 - @bitSizeOf(Object.LowTag)) = 0,
     hash: zag.UInt(32 - @max(8, @bitSizeOf(Object.LowTag))) = 0,
     high: Object.HighTag = 0,
-    class: ClassIndex = .none,
+    class: ClassIndex = @enumFromInt(0),
     _filler2: zag.UInt(16 - @bitSizeOf(Object.HighTag)) = 0,
     fn isTagged(self: Signature) bool {
         switch (Object.signatureTag) {
-            0 => return @as(Object,@bitCast(self)).isImmediateClass(.Signature),
+            0 => return @as(Object, @bitCast(self)).isImmediateClass(.Signature),
             else => |tag| return self.low == tag,
         }
     }
@@ -114,7 +114,7 @@ pub const Signature = packed struct {
         return @bitCast(self);
     }
     pub inline fn primitive(self: Signature) u8 {
-        return @intCast(self.hash);
+        return @intCast(self.hash & 0xff);
     }
     pub inline fn getClassIndex(self: Signature) u16 {
         return @intFromEnum(self.getClass());
@@ -129,17 +129,12 @@ pub const Signature = packed struct {
         self: Signature,
         writer: anytype,
     ) !void {
-        if (self.isEmpty()) {
+        if (self.isEmpty() or true) {
             try writer.print("Signature{{empty}}", .{});
         } else {
-            switch (self.getClass()) {
-                .none => switch (0) { // FIXME self.primitive()) {
-                    0 => try writer.print("?", .{}),
-                    else => |prim| try writer.print("{}", .{prim}),
-                },
-                else => |class| try writer.print("{}", .{class}),
-            }
-            try writer.print(" #{s}", .{symbol.asStringFromHash(@intCast((self.asInt() & 0xffffff00) >> 8)).arrayAsSlice(u8) catch "???"});
+            if (self.getClass() == .none and self.primitive() < 256) {
+                try writer.print(" prim: {}", .{self.primitive()});
+            } else try writer.print("{} >> #{s}", .{ self.getClass(), symbol.asString(self.asSymbol()).arrayAsSlice(u8) catch "???" });
         }
     }
 };
@@ -423,7 +418,7 @@ pub const StackStructure = packed struct {
     _fillerHigh: zag.UInt(64 - 48 - @bitSizeOf(Object.HighTagType)) = 0,
     highTag: Object.HighTagType = Object.highTagSmallInteger,
 };
-pub const endMethod = CompiledMethod.init(Sym.value, Code.end);
+pub const endMethod = CompiledMethod.init(Sym.value, Code.end, 1);
 pub const CompiledMethod = struct {
     header: HeapHeader,
     signature: Signature,
@@ -563,6 +558,7 @@ fn CompileTimeMethod(comptime counts: usize) type {
         stackStructure: StackStructure, // f1 - locals, f3 - selfOffset
         executeFn: *const fn (PC, SP, *Process, *Context, Extra) Result,
         jitted: ?*const fn (PC, SP, *Process, *Context, Extra) Result,
+        size: usize,
         code: [codes]Code,
         offsets: [codes]OffsetType align(8),
         const OffsetType = enum(u2) {
@@ -596,6 +592,7 @@ fn CompileTimeMethod(comptime counts: usize) type {
                 .stackStructure = StackStructure{ .locals = locals, .selfOffset = locals + name.numArgs() + 1 },
                 .executeFn = &Code.panic,
                 .jitted = function,
+                .size = codes,
                 .code = undefined,
                 .offsets = [_]OffsetType{.none} ** codes,
             };
@@ -864,7 +861,7 @@ fn CompileTimeObject(comptime counts: usize) type {
                         header.age == .static)
                     {
                         if (@intFromEnum(header.classIndex) >= @intFromEnum(ClassIndex.ReplacementIndices)) {
-                            header.classIndex = classes[@intFromEnum(ClassIndex.replace0) - @intFromEnum(header.classIndex)];
+                            header.classIndex = classes[@intFromEnum(header.classIndex) - @intFromEnum(ClassIndex.ReplacementIndices)];
                         }
                         header.hash ^= zag.utilities.ProspectorHash.hash24(@truncate(@intFromPtr(o) >> 3));
                         lastHeader = header;
@@ -1055,6 +1052,19 @@ pub const Execution = struct {
                 try self.resolve(objects);
                 try self.runWithValidator(&validate, source, expected);
             }
+            pub fn runJittedTest(self: *Self, comptime JitTechnique: type, source: []const Object, expected: []const Object) !void {
+                return self.runJittedTestWithObjects(JitTechnique, Object.empty, source, expected);
+            }
+            pub fn runJittedTestWithObjects(self: *Self, comptime JitTechnique: type, objects: []const Object, source: []const Object, expected: []const Object) !void {
+                try self.resolve(objects);
+
+                var jit = try JitTechnique.init();
+                defer jit.deinit();
+                try jit.install(&self.method);
+
+                self.execute(source);
+                try self.matchStack(expected);
+            }
             pub const ValidateErrors = error{
                 TestAborted,
                 TestExpectedEqual,
@@ -1094,13 +1104,14 @@ pub const Execution = struct {
         }
         pub fn sendTo(self: *MainExecutor, selector: Object, receiver: Object) !Object {
             var exe = &self.exe;
-            trace("Sending: {f} to {f}", .{ selector, receiver });
+            trace("Sending: {f} ({x}) to {f}", .{ selector, selector.testU(), receiver });
             exe.init(Object.empty);
             exe.getContext().setReturn(PC.exit());
             trace("SendTo: context {*} {*} {f}", .{ exe.getContext(), exe.getContext().npc, exe.getContext().tpc });
             const class = receiver.which_class();
+            trace("selector: 0x{x:0>16}",.{@as(u64,@bitCast(selector))});
             const signature = if (selector.symbolHash()) |hsh| Signature.from(hsh, selector.numArgs(), class) else unreachable;
-            exe.method = class.lookupMethodForClass(signature);
+            exe.method = zag.dispatch.lookupMethodForClass(class, signature);
             exe.execute(&[_]Object{receiver});
             return exe.fullStack()[0];
         }

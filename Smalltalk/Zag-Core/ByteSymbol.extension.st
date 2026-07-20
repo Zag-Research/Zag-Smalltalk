@@ -1,6 +1,11 @@
 Extension { #name : 'ByteSymbol' }
 
 { #category : '*Zag-Core' }
+ByteSymbol >> accept: aVisitor [
+	^ aVisitor visitByteSymbol: self
+]
+
+{ #category : '*Zag-Core' }
 ByteSymbol >> asZigString [
 
 	(self anySatisfy: [ :each |

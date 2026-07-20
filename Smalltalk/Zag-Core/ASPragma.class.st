@@ -17,6 +17,11 @@ ASPragma class >> args: pramaArgs [
 	^ASPragma new args: pramaArgs 
 ]
 
+{ #category : 'visiting' }
+ASPragma >> accept: aVisitor [
+	^aVisitor visitPragma: self
+]
+
 { #category : 'accessing' }
 ASPragma >> args: paramaArgs [
 	args := paramaArgs 
@@ -25,6 +30,12 @@ ASPragma >> args: paramaArgs [
 { #category : 'accessing' }
 ASPragma >> arguments [
 	^ args
+]
+
+{ #category : 'converting' }
+ASPragma >> asPharoAST [
+	"Warning: ASPragma seems to be missing the selector that OCPragmaNode wants."
+	^OCPragmaNode selector: nil arguments: (args collect: #asPharoAST).
 ]
 
 { #category : 'printing' }

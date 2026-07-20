@@ -11,10 +11,48 @@ const ClassIndex = object.ClassIndex;
 
 pub const Object = packed struct(u64) {
     float: u64,
+    pub const Compact = enum(u5) {
+        heap,
+        ThunkReturnLocal,
+        ThunkReturnInstance,
+        ThunkReturnObject,
+        ThunkReturnImmediate,
+        ThunkLocal,
+        BlockAssignLocal,
+        ThunkInstance,
+        BlockAssignInstance,
+        ThunkHeap,
+        ThunkImmediate,
+        SmallInteger,
+        Symbol,
+        False,
+        True,
+        Character,
+        Signature,
+        ThunkReturnCharacter,
+        ThunkReturnFloat,
+        ThunkFloat,
+        LLVM,
+        UndefinedObject,
+        Float,
+        _,
+        const heapBits = object.heapBits();
+        inline fn isHeap(self: Compact) bool {
+            return (heapBits >> @intFromEnum(self)) & 1 != 0;
+        }
+        pub inline fn classIndex(cp: Compact) ClassIndex {
+            return @enumFromInt(@intFromEnum(cp));
+        }
+        pub inline fn from(ci: ClassIndex) Compact {
+            return @enumFromInt(@intFromEnum(ci));
+        }
+        pub const immutableClasses = 0;
+        pub const mutableClasses = 32;
+    };
 
     const Self = @This();
     const intShift = 64 - @bitSizeOf(IntType);
-    pub const IntType = u64;
+    pub const IntType = i64;
     pub const ZERO: Object = @bitCast(@as(f64, 0));
     pub inline fn False() Object {
         return @bitCast(@as(u64, 0));
@@ -39,31 +77,27 @@ pub const Object = packed struct(u64) {
     pub const LowTag = u0;
     pub const HighTag = u8;
 
-    pub inline fn untaggedI(_: Object) ?i64 {
+    pub fn untaggedI(_: Object) ?i64 {
         @panic("not implemented");
     }
 
     pub const taggedI = untaggedI;
 
-    pub inline fn fromTaggedI(_: IntType, _: anytype, _: anytype) Object {
+    pub fn fromTaggedI(_: IntType, _: anytype, _: anytype) Object {
         @panic("not implemented");
     }
 
     pub const fromUntaggedI = fromTaggedI;
 
-    pub inline fn nativeI(_: Object) ?i64 {
+    pub fn nativeI(_: Object) ?i64 {
         @panic("not implemented");
     }
-    pub inline fn fromNativeI(_: IntType, _: anytype, _: anytype) Object {
+    pub fn fromNativeI(_: IntType, _: anytype, _: anytype) Object {
         @panic("not implemented");
     }
 
     pub inline fn nativeF(self: Object) ?f64 {
         return @bitCast(self);
-    }
-
-    pub inline fn isFloat(_: Object) bool {
-        return true;
     }
 
     pub inline fn fromNativeF(f: f64, _: anytype, _: anytype) Object {
@@ -76,7 +110,7 @@ pub const Object = packed struct(u64) {
     pub inline fn numArgs(self: object.Object) u4 {
         return @truncate(self.hash32());
     }
-    pub fn makeSymbol(class: ClassIndex.Compact, hash: u24, arity: u4) Object {
+    pub fn makeSymbol(class: Compact, hash: u24, arity: u4) Object {
         return makeImmediate(class, (@as(u32, hash) << 8) | @as(u32, arity));
     }
     pub inline fn isSymbol(_: object.Object) bool {
@@ -115,27 +149,22 @@ pub const Object = packed struct(u64) {
         return false;
     }
 
-    pub inline fn isNat(_: Object) bool {
-        return false;
+    pub fn encodedPointer(_: Object, T: type) ?T {
+        @panic("Not implemented");
     }
-
-    pub inline fn highPointer(_: Object, T: type) ?T {
+    pub fn pointer(_: object.Object, T: type) ?T {
         @panic("Not implemented");
     }
 
-    pub inline fn pointer(_: Object, T: type) ?T {
-        @panic("Not implemented");
-    }
-
-    pub inline fn toIntNoCheck(_: Object) i64 {
+    pub fn toIntNoCheck(_: Object) i64 {
         @panic("not implemented");
     }
 
-    pub inline fn toNatNoCheck(_: Object) u64 {
+    pub fn toNatNoCheck(_: Object) u64 {
         @panic("not implemented");
     }
 
-    inline fn toDoubleFromMemory(_: Object) f64 {
+    fn toDoubleFromMemory(_: Object) f64 {
         @panic("Not implemented");
     }
     pub fn returnObjectClosure(_: Object, _: anytype) ?Object {
@@ -148,11 +177,11 @@ pub const Object = packed struct(u64) {
         @panic("Not implemented");
     }
 
-    pub inline fn makeImmediate(_: ClassIndex.Compact, hash: u64) Object {
+    pub inline fn makeImmediate(_: Compact, hash: u64) Object {
         return @bitCast(hash);
     }
 
-    pub inline fn makeThunk(cls: ClassIndex.Compact, ptr: anytype, extra: u8) Object {
+    pub inline fn makeThunk(cls: Compact, ptr: anytype, extra: u8) Object {
         _ = .{ cls, ptr, extra, unreachable };
     }
 
@@ -209,6 +238,12 @@ pub const Object = packed struct(u64) {
     }
     pub inline fn ifHeapObject(_: object.Object) ?*HeapObject {
         return null;
+    }
+    pub fn returnLiteralClosure(_: Object, _: anytype) ?Object {
+        return null;
+    }
+    pub fn isImmediate(_: Object) bool {
+        return false;
     }
 
     const OF = object.ObjectFunctions;

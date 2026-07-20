@@ -78,8 +78,7 @@ pub fn main() !void {
         }
     }
 
-    std.debug.print("of {} tests, {} passed, {} skipped, {} failed, {} leaks\n",
-        .{ test_fn_list.len, passed_count, skip_count, fail_count, leaks });
+    std.debug.print("of {} tests, {} passed, {} skipped, {} failed, {} leaks\n", .{ test_fn_list.len, passed_count, skip_count, fail_count, leaks });
     if (leaks != 0 or fail_count != 0) {
         std.process.exit(1);
     }
@@ -336,6 +335,6 @@ pub fn myLogFn(
         .warn => yellow,
         .err => red,
     };
-    nosuspend stderr.print("{s}" ++ comptime level.asText() ++ "{s}: ", .{ color, reset}) catch return;
+    nosuspend stderr.print("{s}" ++ comptime level.asText() ++ "{s}: ", .{ color, reset }) catch return;
     nosuspend stderr.print(format ++ "\n", args) catch return;
 }
