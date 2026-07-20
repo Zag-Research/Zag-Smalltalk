@@ -40,6 +40,30 @@ const noneIndex = switch (config.objectEncoding) {
     .taggedLow, .taggedHigh => siIndex,
     else => 0,
 };
+pub fn heapBits() u32 {
+    var bit: u32 = 1;
+    var bits: u32 = 0;
+    inline for(std.meta.fields(Object.Compact)) |f| {
+        bits |= switch (@as(ClassIndex,@enumFromInt(f.value))) {
+        .ThunkReturnLocal,
+        .ThunkReturnInstance,
+        .ThunkReturnObject,
+        .ThunkReturnImmediate,
+        .ThunkLocal,
+        .BlockAssignLocal,
+        .ThunkInstance,
+        .BlockAssignInstance,
+        .ThunkHeap,
+        .ThunkReturnCharacter,
+        .ThunkReturnFloat,
+        .Float,
+        .heap => bit,
+        else => 0,
+        };
+        bit <<= 1;
+    }
+    return bits;
+}
 const Compact = Object.Compact;
 pub const ClassIndex = zag.DeriveEnum(Compact, u16, 0, .{
     .{.base = Compact.immutableClasses, .names = .{

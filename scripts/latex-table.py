@@ -246,25 +246,25 @@ SCATTER_ENCODINGS = [
     #    "taggedSMI",
     #    "taggedLow",
     #   "taggedHigh",
-    "ptr",
+    # "ptr",
     "nan",
     "spur",
     #    "spurOpt",
     "spurNZ",
     #    "spurFST",
     #    "compact1",
-    "compact2",
+    # "compact2",
     #    "compact4",
     #    "compact6",
     "compactI1",
     "compactI2",
-    "compactI4",
+    # "compactI4",
     #    "compactI6",
     #    "compactY",
     #    "compactZ",
     "compactA2",
     #   "zagMixed",
-    "zagSpur",
+    # "zagSpur",
     "zag",
 ]
 
@@ -366,14 +366,18 @@ def scatter_plot_raw(absolute, include_pareto, records):
     if xmin < xmax * 0.35 and ymin < ymax * 0.35:
         xmin = 0
         ymin = 0
+    omin = min(xmin, ymin)
+    # (omax - omin) * 0.55 + omin
+    xmax = max(xmax, (ymax - omin) / 0.55 + omin)
+    ymax = max(ymax, (xmax - omin) * 0.55 + omin)
     lines.append("\\begin{tikzpicture}")
     lines.append("\\begin{axis}[")
-    lines.append("    width=\\columnwidth,")
-    lines.append("    height=\\columnwidth,")
-    lines.append("    xlabel={Integer (ms)},")
-    lines.append("    ylabel={Float (ms)},")
-    lines.append(f"    xmin={min(xmin, ymin)}, xmax={max(xmax, ymax)},")
-    lines.append(f"    ymin={min(xmin, ymin)}, ymax={max(xmax, ymax)},")
+    lines.append("    width=0.95\\columnwidth,")
+    lines.append("    height=0.55\\columnwidth,")
+    lines.append("    xlabel={Float (ms)},")
+    lines.append("    ylabel={Integer (ms)},")
+    lines.append(f"    xmin={omin}, xmax={xmax},")
+    lines.append(f"    ymin={omin}, ymax={ymax},")
     lines.append("    grid=major,")
     lines.append("    grid style={line width=0.2pt, draw=gray!30},")
     lines.append("    legend style={")
@@ -451,12 +455,12 @@ def main():
         print("\\newcommand{\\" + arch + "ScatterPlot}{")
         print(
             scatter_plot_raw(
-                False,
+                True,
                 True,
                 [
                     {
-                        "x": "Integer",
-                        "y": "Float",
+                        "y": "Integer",
+                        "x": "Float",
                         "arch": arch,
                         "colour": colour + "!90",
                         "results": results,
@@ -468,12 +472,36 @@ def main():
         print("\\newcommand{\\" + arch + "ScatterPlotClosure}{")
         print(
             scatter_plot_raw(
-                False,
+                True,
                 True,
                 [
                     {
-                        "x": "IClosure",
-                        "y": "FClosure",
+                        "y": "IClosure",
+                        "x": "FClosure",
+                        "arch": arch,
+                        "colour": colour + "!30",
+                        "results": results,
+                    },
+                ],
+            )
+        )
+        print("}")
+        print("\\newcommand{\\" + arch + "ScatterPlotBoth}{")
+        print(
+            scatter_plot_raw(
+                True,
+                False,
+                [
+                    {
+                        "y": "Integer",
+                        "x": "Float",
+                        "arch": arch,
+                        "colour": colour + "!90",
+                        "results": results,
+                    },
+                    {
+                        "y": "IClosure",
+                        "x": "FClosure",
                         "arch": arch,
                         "colour": colour + "!30",
                         "results": results,
@@ -495,29 +523,29 @@ def main():
                 False,
                 [
                     {
-                        "x": "Integer",
-                        "y": "Float",
+                        "y": "Integer",
+                        "x": "Float",
                         "arch": arch_a,
                         "colour": "blue!90",
                         "results": results_a,
                     },
                     {
-                        "x": "IClosure",
-                        "y": "FClosure",
+                        "y": "IClosure",
+                        "x": "FClosure",
                         "arch": arch_a,
                         "colour": "blue!30",
                         "results": results_a,
                     },
                     {
-                        "x": "Integer",
-                        "y": "Float",
+                        "y": "Integer",
+                        "x": "Float",
                         "arch": arch_b,
                         "colour": "red!90",
                         "results": results_b,
                     },
                     {
-                        "x": "IClosure",
-                        "y": "FClosure",
+                        "y": "IClosure",
+                        "x": "FClosure",
                         "arch": arch_b,
                         "colour": "red!30",
                         "results": results_b,
