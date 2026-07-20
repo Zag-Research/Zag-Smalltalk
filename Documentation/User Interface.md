@@ -3,6 +3,8 @@ Supporting all the I/O components that provide the UI in Pharo, Cuis, or Squeak 
 Instead, we are looking for interfaces that will run remotely, so all we need to provide is the network support, and the API for the external interface to be able to talk to Zag.
 #### [Zed](https://zed.dev) extension
 One possibility for a Zag GUI would be for Zed to use [[#Language Server Protocol]]. And to have Zag look like a folder/file system to Zed (package/class/method). Additionally, extend the Zed task model to create playgrounds and test-runners as Zed tasks, and have Zag debug bring up Zed debug windows.
+
+There is a similar approach [Jasper for Gemstone on VSCodium/VSCode](https://github.com/jgfoster/Jasper/) which might have some code that would help get us there.
 #### [Webside](https://github.com/guillermoamaral/Webside)
 This is another possibility for Zag GUI, and looks very promising.
 #### Other web approaches

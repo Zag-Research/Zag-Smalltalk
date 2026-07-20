@@ -41,6 +41,9 @@ Ben Eater’s video series [gates to CPU](https://www.youtube.com/playlist?list=
 ## NotebookLM
 [Describes how to use NptebookLM to learn](https://pub.towardsai.net/the-notebooklm-workflow-that-changed-how-i-learn-any-technology-373f430a17e5)
 
+## AmbientTalk
+[wikipedia](https://en.wikipedia.org/wiki/AmbientTalk) [SOFT lab](https://soft.vub.ac.be/amop/)
+
 ## Logic diagrams
 [(A AND (NOT B)) OR C](https://www.101computing.net/logic-gates/?title=%28+A+AND+%28+NOT+B+%29+%29+OR+C)
 [Circuit Verse](https://circuitverse.org/)
@@ -56,3 +59,12 @@ I don't have a good app for drawing the gates but here are some word problems I 
 
 ## Using LLMs
 [Karpathy's 3-layer method: Spec, verifier, environment - codifying your understanding](https://www.youtube.com/watch?v=7zZy1QTvokM)
+
+## Bun rewritten in Rust
+[Zig->Rust](https://bun.com/blog/bun-in-rust#just-be-really-smart-and-don-t-make-mistakes)
+
+## Why Aren’t More Users More Happy With Our VMs?
+[Part 1](https://tratt.net/laurie/blog/2018/why_arent_more_users_more_happy_with_our_vms_part_1.html) [Part 2](https://tratt.net/laurie/blog/2018/why_arent_more_users_more_happy_with_our_vms_part_2.html)
+
+## protoST
+[Actors in protoST](https://medium.com/@gamarino_99916/building-an-actor-native-smalltalk-on-an-immutable-kernel-introducing-protost-7399c206a0e2)
