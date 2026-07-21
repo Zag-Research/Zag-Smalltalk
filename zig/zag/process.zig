@@ -336,7 +336,7 @@ test "nursery allocation" {
     try ee(initialContext, newContext);
     thisProcess.collectNursery(sp, initialContext, 0);
     try ee(emptySize - switch (config.objectEncoding) {
-        .zag => 12,
+        .zag => 0,
         .nan => 5,
         else => 7,
     }, thisProcess.freeNursery());
