@@ -5,7 +5,7 @@ Class {
 		'encoder'
 	],
 	#pools : [
-		'ZagConstants'
+		'AnObsoleteZagConstants'
 	],
 	#category : 'Zag-Exporter-Tests-Tests',
 	#package : 'Zag-Exporter-Tests',

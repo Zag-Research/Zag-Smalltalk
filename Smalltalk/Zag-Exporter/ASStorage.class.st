@@ -13,7 +13,7 @@ Class {
 		'freeIndex'
 	],
 	#pools : [
-		'ZagConstants'
+		'AnObsoleteZagConstants'
 	],
 	#category : 'Zag-Exporter-Exporting',
 	#package : 'Zag-Exporter',

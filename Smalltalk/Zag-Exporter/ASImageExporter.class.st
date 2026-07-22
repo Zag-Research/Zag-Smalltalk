@@ -24,7 +24,7 @@ Class {
 		'encoder'
 	],
 	#pools : [
-		'ZagConstants'
+		'ZagImageEncodeZag'
 	],
 	#classInstVars : [
 		'imageFolder'
@@ -160,17 +160,6 @@ ASImageExporter >> currentHeap [
 	^ currentHeap
 ]
 
-{ #category : 'accessing' }
-ASImageExporter >> encoder [
-	^ encoder
-]
-
-{ #category : 'initialization' }
-ASImageExporter >> encoder: constantsClass [
-
-	encoder := constantsClass
-]
-
 { #category : 'adding' }
 ASImageExporter >> findHeapWithSpaceFor: size [
 
@@ -195,8 +184,9 @@ ASImageExporter >> imageSending: aSymbol to: anObject [
 	header symbolTable:
 		((extraSymbols asChunkedArraysOfSize: 127) encodedBy: self).
 	header codeAddresses:
-		(ZagConstants asDoubleWordArray encodedBy: self).
-	header dispatchTable: (dispatchTable collect: [ : each | each encodedBy: self]).
+		(encoder codeAddresses encodedBy: self).
+	header dispatchTable:
+		(dispatchTable collect: [ :each | each encodedBy: self ]).
 	^ header
 ]
 
@@ -259,7 +249,9 @@ ASImageExporter >> initClasses [
 ASImageExporter >> initialize [
 
 	super initialize.
+	extraSymbols := OrderedCollection new: 500.
 	encoder := ZagImageEncodeZag.
+	symbols := ZagSymbols newWithEncoder: encoder.
 	objects := IdentityDictionary new.
 	classes := IdentityDictionary new.
 	methods := IdentityDictionary new.
@@ -380,11 +372,11 @@ ASImageExporter >> objectString: aString [
 ASImageExporter >> objectSymbol: aString [
 
 	aString isSymbol ifFalse: [ ^ self objectSymbol: aString asSymbol ].
-	^ self symbols at: aString ifAbsentPut: [
-		  extraSymbols add: aString.
-		  encoder
-			  symbolArity: aString numArgs
-			  hash:  (symbols size + 1 * 10368889 bitAnd: 16rffffff) ]
+	^ symbols at: aString orGenerateWith: [ : index |
+			  extraSymbols add: aString.
+			  encoder
+				  symbolArity: aString numArgs
+				  hash: index ]
 ]
 
 { #category : 'writing' }
@@ -412,21 +404,6 @@ ASImageExporter >> selector: aSymbol [
 
 ]
 
-{ #category : 'initialization' }
-ASImageExporter >> symbols [
-	" return the symbol table.
-	If there isn't one, create one and add all the pre-defined ones first.
-	But then remove them from the extraSymbols collection because the zag runtime already knows about them.
-	Must not be called until the encoder has been defined "
-
-	symbols ifNotNil: [ ^ symbols ].
-	symbols := Dictionary new.
-	extraSymbols := OrderedCollection new: 500.
-	ASZagSymbols symbols do: [ :aString | self objectSymbol: aString ].
-	extraSymbols removeLast: extraSymbols size.
-	^ symbols
-]
-
 { #category : 'writing' }
 ASImageExporter >> writeClassTable [
 
@@ -438,7 +415,7 @@ ASImageExporter >> writeImageSending: aSymbol to: anObject [
 
 	| folder |
 	folder := self imageFolder.
+	self halt.
 	(self imageSending: aSymbol to: anObject) toDirectory: folder.
-	subHeaps do: [ : subHeap | subHeap toDirectory: folder]
-
+	subHeaps do: [ :subHeap | subHeap toDirectory: folder ]
 ]

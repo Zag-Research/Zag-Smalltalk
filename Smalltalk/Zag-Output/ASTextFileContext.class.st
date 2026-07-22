@@ -23,7 +23,7 @@ ASTextFileContext >> asString [
 ASTextFileContext >> initialize [
 
 	super initialize.
-	symbols := ASZagSymbols new.
+	symbols := ZagSymbols new.
 
 ]
 
