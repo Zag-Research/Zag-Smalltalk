@@ -10,12 +10,6 @@ Class {
 }
 
 { #category : 'converting' }
-ZagImageEncodeMix class >> boolean: value [
-
-	^ self literal: 0 class: ClassFalse + value asBit
-]
-
-{ #category : 'converting' }
 ZagImageEncodeMix class >> double: aFloat for: anImage [
 
 	| fullFloat tag |
@@ -25,10 +19,16 @@ ZagImageEncodeMix class >> double: aFloat for: anImage [
 	^ anImage objectHeapFloat: fullFloat
 ]
 
+{ #category : 'class initialization' }
+ZagImageEncodeMix class >> initialize [
+
+	self initializeAllConstants
+]
+
 { #category : 'converting' }
 ZagImageEncodeMix class >> literal: l class: c [
 
-	^ (l bitShift: 3) + (c bitShift: 59) + 1
+	^ (l bitShift: 3) + (c bitShift: 59)
 ]
 
 { #category : 'magic' }
@@ -38,20 +38,15 @@ ZagImageEncodeMix class >> magic [
 ]
 
 { #category : 'converting' }
-ZagImageEncodeMix class >> pointer: p [
-
-	^ p
-]
-
-{ #category : 'converting' }
 ZagImageEncodeMix class >> smallInteger: anInteger [
 
 	^ ((anInteger bitAnd: 16r3fffffffffffffff) bitShift: 2) + 2
 ]
 
 { #category : 'convertin' }
-ZagImageEncodeMix class >> symbolArity: arity hash: hash [ 
-	^ self literal: (hash bitShift: 5) + arity + arity class: ClassSymbol
+ZagImageEncodeMix class >> symbolArity: arity hash: hash [
+
+	^ self literal: (hash bitShift: 5) + arity class: classSymbol
 ]
 
 { #category : 'converting' }

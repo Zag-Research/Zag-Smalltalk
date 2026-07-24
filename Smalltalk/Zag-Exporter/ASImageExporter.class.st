@@ -160,6 +160,14 @@ ASImageExporter >> currentHeap [
 	^ currentHeap
 ]
 
+{ #category : 'accessing' }
+ASImageExporter >> encoder: anEncoder [
+
+	encoder := anEncoder.
+	symbols := ZagSymbols newWithEncoder: anEncoder.
+
+]
+
 { #category : 'adding' }
 ASImageExporter >> findHeapWithSpaceFor: size [
 
@@ -250,8 +258,7 @@ ASImageExporter >> initialize [
 
 	super initialize.
 	extraSymbols := OrderedCollection new: 500.
-	encoder := ZagImageEncodeZag.
-	symbols := ZagSymbols newWithEncoder: encoder.
+	self encoder: ZagImageEncodeZag.
 	objects := IdentityDictionary new.
 	classes := IdentityDictionary new.
 	methods := IdentityDictionary new.
@@ -279,7 +286,7 @@ ASImageExporter >> objectBoolean: value [
 { #category : 'writing' }
 ASImageExporter >> objectCharacter: aCharacter [
 
-	^ encoder literal: aCharacter asInteger class: ClassCharacter
+	^ encoder character: aCharacter
 ]
 
 { #category : 'adding' }

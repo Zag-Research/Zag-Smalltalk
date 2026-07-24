@@ -10,15 +10,15 @@ Class {
 }
 
 { #category : 'converting' }
-ZagImageEncodeNan class >> boolean: value [
-
-	^ self literal: 0 class: ClassFalse + value asBit
-]
-
-{ #category : 'converting' }
 ZagImageEncodeNan class >> double: n for: ignored [
 
 	^ ('16r' , n hex) asNumber
+]
+
+{ #category : 'class initialization' }
+ZagImageEncodeNan class >> initialize [
+
+	self initializeAllConstants
 ]
 
 { #category : 'converting' }
@@ -46,12 +46,13 @@ ZagImageEncodeNan class >> smallInteger: n [
 ]
 
 { #category : 'converting' }
-ZagImageEncodeNan class >> symbolArity: arity hash: hash [ 
-	^ self literal: (hash bitShift: 8) + arity class: ClassSymbol
+ZagImageEncodeNan class >> symbolArity: arity hash: hash [
+
+	^ self literal: (hash bitShift: 8) + arity class: classSymbol
 ]
 
 { #category : 'converting' }
 ZagImageEncodeNan class >> undefinedObject [
 
-	^ self literal: 0 class: 16
+	^ self literal: 0 class: undefinedObject
 ]

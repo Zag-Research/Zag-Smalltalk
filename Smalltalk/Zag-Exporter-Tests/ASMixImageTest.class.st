@@ -44,10 +44,10 @@ ASMixImageTest >> testSimple [
 	self image: [ :i | i encodingOf: true ] equals: 16r6800000000000001.
 	self image: [ :i | i encodingOf: false ] equals: 16r6000000000000001.
 	self image: [ :i | i encodingOf: nil ] equals: 16r0000000000000000.
-	self image: [ :i | i encodingOf: $A ] equals: 16r7000000000000209.
-	self image: [ :i | i encodingOf: #Object ] equals: 16r58000000C17C0D01.
-	self image: [ :i | i encodingOf: #value ] equals: 16r580000003C6EF201.
-	self image: [ :i | i encodingOf: #value: ] equals: 16r58000000DAA66B11.
+	self image: [ :i | i encodingOf: $A ] equals: 16r7800000000000209.
+	self image: [ :i | i halt; encodingOf: #Object ] equals: 16r70000000C17C0D01.
+	self image: [ :i | i encodingOf: #value ] equals: 16r700000003C6EF201.
+	self image: [ :i | i encodingOf: #value: ] equals: 16r70000000DAA66B11.
 	self
 		image: [ :i | i encodingOf: #value:value: ]
 		equals: 16r58000000E3779021.
@@ -57,4 +57,26 @@ ASMixImageTest >> testSimple [
 		image: [ :i | i encodingOf: -6.25e-2 ]
 		equals: 16rF600000000000014.
 	self image: [ :i | i encodingOf: #'==' ] equals: 16r58000000A7089E11
+]
+
+{ #category : 'tests' }
+ASMixImageTest >> testValues [
+	" encoding: .zag "
+
+	self image: [ :i | i encodingOf: 42 ] equals: 16r00000000000000aa.
+	self image: [ :i | i encodingOf: 1 ] equals: 16r0000000000000006.
+	self image: [ :i | i encodingOf: -1 ] equals: 16rfffffffffffffffe.
+	self image: [ :i | i encodingOf: true ] equals: 16r6800000000000000.
+	self image: [ :i | i encodingOf: false ] equals: 16r6000000000000000.
+	self image: [ :i | i encodingOf: nil ] equals: 16r0000000000000000.
+	"self image: [ :i | i encodingOf: 42.0 ] equals: 16r08a000000000000d".
+	"self image: [ :i | i encodingOf: 2.0 ] equals: 16r000000000000000d".
+	"self image: [ :i | i encodingOf: -0.0625 ] equals: 16rf60000000000001c".
+	self image: [ :i | i encodingOf: $A ] equals: 16r7800000000000208.
+	"self image: [ :i | i encodingOf: $😇 ] equals: 16r780000043cc4ff80".
+	self image: [ :i | i encodingOf: #Object ] equals: 16r70000000fdeaff00.
+	self image: [ :i | i encodingOf: #value ] equals: 16r700000009e377900.
+	self image: [ :i | i encodingOf: #value: ] equals: 16r70000000daa66b08.
+	self image: [ :i | i encodingOf: #value:value: ] equals: 16r70000000736ad110.
+	self image: [ :i | i encodingOf: #== ] equals: 16r700000001fe68208.
 ]

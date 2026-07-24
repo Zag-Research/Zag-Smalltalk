@@ -44,13 +44,13 @@ ASZagImageTest >> testObjects [
 { #category : 'tests' }
 ASZagImageTest >> testSimple [
 
-	self image: [ :i | i encodingOf: 42 ] equals: 16r0000000000002aa9.
-	self image: [ :i | i encodingOf: 1 ] equals: 16r00000000000001a9.
-	self image: [ :i | i encodingOf: -1 ] equals: 16rffffffffffffffa9.
+	self image: [ :i | i encodingOf: 42 ] equals: 16r0000000000002a59.
+	self image: [ :i | i encodingOf: 1 ] equals: 16r0000000000000159.
+	self image: [ :i | i encodingOf: -1 ] equals: 16rffffffffffffff59.
 	self image: [ :i | i encodingOf: true ] equals: 16r0000000000000069.
 	self image: [ :i | i encodingOf: false ] equals: 16r0000000000000061.
 	self image: [ :i | i encodingOf: nil ] equals: 16r0000000000000000.
-	self image: [ :i | i encodingOf: $A ] equals: 16r0000000000004171.
+	self image: [ :i | i encodingOf: $A ] equals: 16r0000000000004179.
 	self image: [ :i | i encodingOf: #Object ] equals: 16rC17C0D59.
 	self image: [ :i | i encodingOf: #value ] equals: 16r3C6EF259.
 	self image: [ :i | i encodingOf: #value: ] equals: 16r1DAA66B59.
