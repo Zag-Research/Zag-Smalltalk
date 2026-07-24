@@ -65,7 +65,7 @@ pub const PointedObject = packed struct {
         float: f64,
         boolean: bool,
         nil: void,
-        character: u24,
+        character: u21,
         object: Object,
         objects: ?[*]Object,
     };

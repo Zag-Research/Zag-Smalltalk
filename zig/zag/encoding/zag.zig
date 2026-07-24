@@ -22,7 +22,7 @@ const floatEncoding = @import("floatEncoding.zig").Fst2(4);
 const encode = floatEncoding.encode;
 const decode = floatEncoding.decode;
 
-pub const Tag = enum(u3) {
+const Tag = enum(u3) {
     heap = 0,
     smallinteger = 2,
     floatA = 4,
@@ -50,9 +50,9 @@ pub const Object = packed struct(u64) {
         ThunkHeap,
         ThunkImmediate,
         SmallInteger,
-        Symbol,
         False,
         True,
+        Symbol,
         Character,
         Signature,
         ThunkReturnCharacter,
@@ -62,6 +62,10 @@ pub const Object = packed struct(u64) {
         UndefinedObject,
         Float,
         _,
+        const heapBits = object.heapBits();
+        inline fn isHeap(self: Compact) bool {
+            return (heapBits >> @intFromEnum(self)) & 1 != 0;
+        }
         pub inline fn classIndex(cp: Compact) ClassIndex {
             return @enumFromInt(@intFromEnum(cp));
         }
@@ -133,7 +137,7 @@ pub const Object = packed struct(u64) {
     pub inline fn fromNativeI(i: IntType, _: anytype, _: anytype) Object {
         return fromUntaggedI(asUntaggedI(i), null, null);
     }
-    pub inline fn asUntaggedI(i: IntType) i64 {
+    inline fn asUntaggedI(i: IntType) i64 {
         return @as(i64, i) << intShift;
     }
     inline fn isInt(self: object.Object) bool {
@@ -250,9 +254,19 @@ pub const Object = packed struct(u64) {
             }
         }
     };
+    pub inline fn asCharacter(codepoint: u21) Object {
+        var buf: extern union {
+            bytes: [4]u8,
+            int: u32,
+        } = undefined;
+        buf.int = 0;
+        _ = std.unicode.utf8Encode(codepoint, &buf.bytes) catch @panic("illegal codepoint");
+        return makeImmediate(.Character, buf.int);
+    }
     pub inline fn from(value: anytype, sp: SP, context: *Context) object.Object {
         const T = @TypeOf(value);
         if (T == object.Object) return value;
+        if (T == u21) return asCharacter(value);
         switch (@typeInfo(T)) {
             .int, .comptime_int => return fromNativeI(value, null, null),
             .float, .comptime_float => return fromNativeF(value, sp, context),
@@ -307,8 +321,7 @@ pub const Object = packed struct(u64) {
         }
         @panic("Trying to convert Object to " ++ @typeName(T));
     }
-    pub inline //
-    fn which_class(self: object.Object) ClassIndex {
+    pub inline fn which_class(self: object.Object) ClassIndex {
         const u: u64 = @bitCast(self);
         if (true) {
             if (u & 2 != 0) {
@@ -346,7 +359,7 @@ pub const Object = packed struct(u64) {
     }
 
     pub inline fn hasHeapReference(self: Object) bool {
-        return self.tag == .heap and self.class == .heap and self != Nil();
+        return self.tag == .heap and self.class.isHeap() and self != Nil();
     }
     pub inline fn ifHeapObject(self: object.Object) ?*HeapObject {
         if (self.hasHeapReference()) return self.encodedPointer(*HeapObject);
