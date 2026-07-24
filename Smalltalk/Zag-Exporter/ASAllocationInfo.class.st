@@ -19,7 +19,7 @@ Class {
 		'HashCounter'
 	],
 	#pools : [
-		'ZagConstants'
+		'AnObsoleteZagConstants'
 	],
 	#category : 'Zag-Exporter-Exporting',
 	#package : 'Zag-Exporter',
