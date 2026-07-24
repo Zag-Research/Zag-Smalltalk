@@ -11,6 +11,7 @@ const Process = zag.process;
 const heap = zag.heap;
 const globalArena = zag.globalArena;
 const symbol = zag.symbol;
+const Sym = symbol.Symbols;
 const utilities = zag.utilities;
 const threadedFn = zag.threadedFn;
 const llvm = zag.llvm;
@@ -59,7 +60,7 @@ const ZagImageHeader = struct {
 var zagImageHeader: ZagImageHeader = undefined;
 fn usage() void {
     std.debug.print(
-        \\Usage: zag [--help|--version|image-directory]
+        \\Usage: zag [--help|--version|image-directory|--SmalltalkClasses|--SmalltalkTf|--SmalltalkValues|--SmalltalkSymbols]
         \\
     , .{});
 }
@@ -67,24 +68,49 @@ fn version() void {
     std.debug.print("Zag Smalltalk {s} using {} object encoding\n", .{ config.git_version, config.objectEncoding });
 }
 fn smalltalkThreadedFns() void {
-    std.debug.print("zagThreadesFns\n\t^ #(\n",.{});
+    std.debug.print("zagThreadesFns\n\t^ #(\n", .{});
     for (0..500) |tf|
-        switch (@as(threadedFn.Enum,@enumFromInt(tf))) {
+        switch (@as(threadedFn.Enum, @enumFromInt(tf))) {
             ._end => break,
-            else => |tag| std.debug.print("\t#T_{s}\n",.{@tagName(tag)}),
+            else => |tag| std.debug.print("\t#{s}\n", .{@tagName(tag)}),
         };
     std.debug.print(")\n", .{});
 }
 fn smalltalkClasses() void {
-    std.debug.print("zagClasses\n\n\t^ #(\n",.{});
+    std.debug.print("zagClasses\n\n\t^ #(\n", .{});
     for (0..500) |cl|
         if (std.enums.tagName(object.ClassIndex, @enumFromInt(cl))) |tagName| {
             if (tagName[0] <= 'Z')
-                std.debug.print("\t#Class{s} {}\n",.{tagName, cl});
+                std.debug.print("\t#{s} {}\n", .{ tagName, cl });
         };
-        std.debug.print("\t)\n", .{});
+    std.debug.print("\t)\n", .{});
 }
-
+fn smalltalkSymbols() void {
+    std.debug.print("zagSymbols\n\n\t^ #(\n", .{});
+    inline for (std.meta.fields(Sym)) |sym|
+        std.debug.print("\t{s}\n", .{sym.name});
+    std.debug.print("\t)\n", .{});
+}
+fn smalltalkValues() void {
+    std.debug.print("testValues\n\t\" encoding: {} \"\n\n", .{config.objectEncoding});
+    inline for (.{
+        42, 1, -1, true, false, null, 42.0, 2.0, -6.25e-2,
+        @as(u21, 'A'),            @as(u21, '😇'), // U+1F607, UTF-8: 0xF0 0x9F 0x98 0x87
+        Sym.Object.asObject(),    Sym.value.asObject(),
+        Sym.@"value:".asObject(), Sym.@"value:value:".asObject(),
+        Sym.@"==".asObject(),
+    }) |value| {
+        std.debug.print("\tself image: [ :i | i encodingOf: ", .{});
+        switch (@TypeOf(value)) {
+            u21 => if (value < 128) std.debug.print("${u}", .{value}) else std.debug.print("(Character codePoint: 16r{x})", .{value}),
+            @TypeOf(null) => std.debug.print("nil", .{}),
+            f64, comptime_float => if (value == @trunc(value)) std.debug.print("{:.1}", .{value}) else std.debug.print("{}", .{value}),
+            Object => std.debug.print("{f}", .{value}),
+            else => std.debug.print("{}", .{value}),
+        }
+        std.debug.print(" ] equals: 16r{x:0>16}.\n", .{@as(u64, @bitCast(Object.from(value, undefined, undefined)))});
+    }
+}
 fn extensionMatches(name: []const u8, ext: []const u8) bool {
     if (name.len <= ext.len) return false;
     for (name[name.len - ext.len ..], ext) |n, e| {
@@ -248,6 +274,8 @@ pub fn main() !void {
                 .@"--version", .@"-v" => return version(),
                 .@"--SmalltalkTf" => return smalltalkThreadedFns(),
                 .@"--SmalltalkClasses" => return smalltalkClasses(),
+                .@"--SmalltalkValues" => return smalltalkValues(),
+                .@"--SmalltalkSymbols" => return smalltalkSymbols(),
                 .invalid => {
                     std.debug.print("Error: '{s}' is not a valid switch.\n", .{arg});
                     return;
@@ -267,5 +295,7 @@ const ValidSwitches = enum {
     @"-v",
     @"--SmalltalkTf",
     @"--SmalltalkClasses",
+    @"--SmalltalkValues",
+    @"--SmalltalkSymbols",
     invalid,
 };

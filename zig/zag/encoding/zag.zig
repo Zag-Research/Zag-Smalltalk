@@ -50,9 +50,9 @@ pub const Object = packed struct(u64) {
         ThunkHeap,
         ThunkImmediate,
         SmallInteger,
-        Symbol,
         False,
         True,
+        Symbol,
         Character,
         Signature,
         ThunkReturnCharacter,
@@ -254,9 +254,19 @@ pub const Object = packed struct(u64) {
             }
         }
     };
+    pub inline fn asCharacter(codepoint: u21) Object {
+        var buf: extern union {
+            bytes: [4]u8,
+            int: u32,
+        } = undefined;
+        buf.int = 0;
+        _ = std.unicode.utf8Encode(codepoint, &buf.bytes) catch @panic("illegal codepoint");
+        return makeImmediate(.Character, buf.int);
+    }
     pub inline fn from(value: anytype, sp: SP, context: *Context) object.Object {
         const T = @TypeOf(value);
         if (T == object.Object) return value;
+        if (T == u21) return asCharacter(value);
         switch (@typeInfo(T)) {
             .int, .comptime_int => return fromNativeI(value, null, null),
             .float, .comptime_float => return fromNativeF(value, sp, context),

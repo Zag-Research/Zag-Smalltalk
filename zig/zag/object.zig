@@ -43,22 +43,10 @@ const noneIndex = switch (config.objectEncoding) {
 pub fn heapBits() u32 {
     var bit: u32 = 1;
     var bits: u32 = 0;
-    inline for(std.meta.fields(Object.Compact)) |f| {
-        bits |= switch (@as(ClassIndex,@enumFromInt(f.value))) {
-        .ThunkReturnLocal,
-        .ThunkReturnInstance,
-        .ThunkReturnObject,
-        .ThunkReturnImmediate,
-        .ThunkLocal,
-        .BlockAssignLocal,
-        .ThunkInstance,
-        .BlockAssignInstance,
-        .ThunkHeap,
-        .ThunkReturnCharacter,
-        .ThunkReturnFloat,
-        .Float,
-        .heap => bit,
-        else => 0,
+    inline for (std.meta.fields(Object.Compact)) |f| {
+        bits |= switch (@as(ClassIndex, @enumFromInt(f.value))) {
+            .ThunkReturnLocal, .ThunkReturnInstance, .ThunkReturnObject, .ThunkReturnImmediate, .ThunkLocal, .BlockAssignLocal, .ThunkInstance, .BlockAssignInstance, .ThunkHeap, .ThunkReturnCharacter, .ThunkReturnFloat, .Float, .heap => bit,
+            else => 0,
         };
         bit <<= 1;
     }
@@ -66,11 +54,11 @@ pub fn heapBits() u32 {
 }
 const Compact = Object.Compact;
 pub const ClassIndex = zag.DeriveEnum(Compact, u16, 0, .{
-    .{.base = Compact.immutableClasses, .names = .{
+    .{ .base = Compact.immutableClasses, .names = .{
         "SmallInteger",
-        "Symbol",
         "False",
         "True",
+        "Symbol",
         "Character",
         "Signature",
         "ThunkReturnLocal",
@@ -89,20 +77,23 @@ pub const ClassIndex = zag.DeriveEnum(Compact, u16, 0, .{
         "LLVM",
         "UndefinedObject",
         "Float",
-    }},
-    .{.base = Compact.mutableClasses, .names = .{
+        "String",
+        "Utf8String",
+    } },
+    .{ .base = Compact.mutableClasses, .names = .{
         "heap",
         "Context",
         "ProtoObject",
         "Object",
+        "Boolean",
         "Array",
-        "String",
-        "Utf8String",
+        "ByteArray",
         "DoubleWordArray",
         "BlockClosure",
         "Process",
         "Class",
         "CompiledMethod",
+        "Method",
         "Dispatch",
         "Association",
         "Exception",
@@ -113,17 +104,17 @@ pub const ClassIndex = zag.DeriveEnum(Compact, u16, 0, .{
         "BlockClosureValue",
         "LLVMPrimitives",
         "LLVMGenerator",
-    }},
+    } },
     .{ .base = Compact.mutableClasses - 5, .names = .{
         "o4",
         "o3",
         "o2",
         "o1",
         "o0",
-    }},
-    .{ .base = config.max_classes - 1, .names = .{ "testClass" }},
-    .{ .base = 0x3fff, .names = .{ "leaveObjectOnStack" }},
-    .{ .base = 0xffff - 7, .names = .{ "ReplacementIndices" }},
+    } },
+    .{ .base = config.max_classes - 1, .names = .{"testClass"} },
+    .{ .base = 0x3fff, .names = .{"leaveObjectOnStack"} },
+    .{ .base = 0xffff - 7, .names = .{"ReplacementIndices"} },
 });
 comptime {
     std.debug.assert(@intFromEnum(ClassIndex.ReplacementIndices) == 0xfff8);
@@ -143,7 +134,7 @@ pub const ObjectFunctions = struct {
     pub inline fn equals(self: Object, other: Object) bool {
         return @as(u64, @bitCast(self)) == @as(u64, @bitCast(other));
     }
-    pub inline fn asCharacter(int: u32) Object {
+    pub inline fn asCharacter(int: u21) Object {
         return Object.makeImmediate(.Character, int);
     }
     pub inline //

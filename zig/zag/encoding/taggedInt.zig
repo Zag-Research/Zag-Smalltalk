@@ -177,7 +177,7 @@ pub const Object = packed union {
         return false;
     }
 
-    pub inline fn characterValue(self: Self) ?u32 {
+    pub inline fn characterValue(self: Self) ?u21 {
         if (self.isCharacter())
             return @intCast(self.raw >> 3);
         return null;
