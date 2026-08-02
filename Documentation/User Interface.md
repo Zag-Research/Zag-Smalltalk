@@ -13,6 +13,8 @@ Also - [Pharo-Webview](https://github.com/eftomi/Pharo-Webview)
 Also - [Photino](https://www.tryphotino.io/)
 #### Home-grown UI
 Mohammed had been working on an interface based on PharoJS and talking directly to the standard Pharo UI code. Unfortunately this code has been lost.
+## Datastar
+Possible way to write a complete web app that is completely server-side. [Datastar](https://data-star.dev/) allows the backend to get frontend performance, events, etc.
 #### Possibly random Storybook reference
 [Storybook](https://storybook.js.org/docs/get-started/why-storybook) is a tool to develop UI in isolation. Could work with PharoJS to build a Home-grown UI
 ## Language Server Protocol
