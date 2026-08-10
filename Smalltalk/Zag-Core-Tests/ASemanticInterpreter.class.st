@@ -62,7 +62,7 @@ ASemanticInterpreter >> basicBlocks [
 
 { #category : 'as yet unclassified' }
 ASemanticInterpreter >> beforeTailSend: aSelector [
-
+self halt.
 	stackArray := self createStackForCall: aSelector numArgs.
 	stackPointer := 11 - aSelector numArgs - 1.
 	pc basicBlock hasContext ifFalse: [ ^ self ].
@@ -112,6 +112,7 @@ ASemanticInterpreter >> contextAt: anInteger [
 
 { #category : 'accessing' }
 ASemanticInterpreter >> contextDataAt: anInteger [ 
+self halt.
 	^ contextData at: 1+ anInteger 
 ]
 
@@ -161,6 +162,7 @@ Locals do not need to be factored into the creation of a context."
 	aCompiledMethodOrBlock := pc basicBlock.
 	newStackArray := self createStackForCall.
 	"copy the current calls data into a contextData"
+	self halt.
 	context := ASIContext new
 					  method: blockToReturnTo sourceBlock;
 		           contextData: (self createContextData: blockToReturnTo sourceBlock );
@@ -314,6 +316,8 @@ ASemanticInterpreter >> installContextIfNone: blockToReturnTo [
 	newContext populateFrom: self.
 	context := newContext."
 
+	"we don't need to create a context if one has already been created for the overall method or block we are executing
+	how to reuse the existing context?"
 	self createContext: blockToReturnTo
 ]
 
@@ -333,7 +337,8 @@ ASemanticInterpreter >> pop [
 
 { #category : 'accessing' }
 ASemanticInterpreter >> pop: anObject into: offset [
-
+self halt.
+"what do do here? if there's a context then the value should be poped into the context?"
 	stackPointer := stackPointer + 1. "remove the value on the top of the stack"
 	^ stackArray at: stackArray size - offset put: anObject
 ]
@@ -554,14 +559,8 @@ ASemanticInterpreter >> stackSize: stackSize [
 
 { #category : 'accessing' }
 ASemanticInterpreter >> targetAt: numArgs [ 
-"the target must be in the context"	
-	"the context can be in the stack or heap" 
-	"the element in the context maybe the target or a closure"
-	    "the element will return itself"
-		"a closure will return targetAt its offset"
-		"a closure object should return itself"
-		self halt.
-^ stackArray at: stackPointer + numArgs
+	"the target will always be on the stack since it was pushed on the stack before the call"
+	 ^ stackArray at: stackPointer + numArgs
 ]
 
 { #category : 'primitive execution' }
