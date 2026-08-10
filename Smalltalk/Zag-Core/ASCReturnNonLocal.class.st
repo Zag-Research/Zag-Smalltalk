@@ -19,6 +19,7 @@ ASCReturnNonLocal >> interpretFor: anInterpreter [
 		^ anInterpreter
 			  return: anInterpreter top
 			  selfContext: stackElement offset ]."
+		self halt.
 	^ anInterpreter
 		  returnNonLocal: anInterpreter top
 ]
