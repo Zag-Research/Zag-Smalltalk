@@ -248,6 +248,34 @@ ASCompilerInlineTest >> testBlockEvaluationWithCallAndLocalWithoutTailCall [
 ]
 
 { #category : 'tests' }
+ASCompilerInlineTest >> testBlockEvaluationWithCallAndLocalWithoutTailCall2 [
+	"blockEvaluationWithCallAndLocalWithoutTailCall
+		""bar ^42""
+		| x |
+		x := [ |y| y:= self bar + 5. ^y ] value.
+		^ x "
+
+	self
+		assertEquivalentSending:
+		#blockEvaluationWithCallAndLocalWithoutTailCall2
+		to: ASCompileTestClass1 new
+]
+
+{ #category : 'tests' }
+ASCompilerInlineTest >> testBlockEvaluationWithCallAndLocalWithoutTailCall3 [
+	"blockEvaluationWithCallAndLocalWithoutTailCall
+		""bar ^42""
+		| x |
+		x := [ |y| y:= self bar. ^y ] value.
+		^ x "
+
+	self
+		assertEquivalentSending:
+		#blockEvaluationWithCallAndLocalWithoutTailCall3
+		to: ASCompileTestClass1 new
+]
+
+{ #category : 'tests' }
 ASCompilerInlineTest >> testBlockEvaluationWithCallNonLocal [
 	"blockEvaluationWithCall
 		""bar ^42""
