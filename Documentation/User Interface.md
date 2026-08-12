@@ -5,12 +5,17 @@ Instead, we are looking for interfaces that will run remotely, so all we need to
 One possibility for a Zag GUI would be for Zed to use [[#Language Server Protocol]]. And to have Zag look like a folder/file system to Zed (package/class/method). Additionally, extend the Zed task model to create playgrounds and test-runners as Zed tasks, and have Zag debug bring up Zed debug windows.
 
 There is a similar approach [Jasper for Gemstone on VSCodium/VSCode](https://github.com/jgfoster/Jasper/) which might have some code that would help get us there.
+
+Another possible connection for Zed to Pharo/Zag using [Zed remote development](https://zed.dev/docs/remote-development) There would certainly be complexities, but the idea is use FFI and `libssh` to accept connections, then act enough like a shell and implement the Zed remote protocol so that it looks to Zed like it’s talking to a remote-Zed-server. So a “terminal” is really a REPL running in Smalltalk. Tasks could include test suites and transcripts. The LSP would be within the image. I haven’t looked at the Zed remote protocol, but it may not be too complicated, at least for our needs.
 #### [Webside](https://github.com/guillermoamaral/Webside)
 This is another possibility for Zag GUI, and looks very promising.
 #### Other web approaches
 There is also - [_Chromium_ Embedded Framework](https://github.com/chromiumembedded/cef)
 Also - [Pharo-Webview](https://github.com/eftomi/Pharo-Webview)
 Also - [Photino](https://www.tryphotino.io/)
+
+#### WebDav
+An incomplete solution, but one that lets Zed (or other editor) edit the image directly is WebDav, which I've implemented as part of [Zag-GUI](https://github.com/Zag-Research/Zag-GUI). From an editor, you can edit or create methods and class Comments, although not create classes or change properties like categories, inheritance, instance variables, or class variables.
 #### Home-grown UI
 Mohammed had been working on an interface based on PharoJS and talking directly to the standard Pharo UI code. Unfortunately this code has been lost.
 ## Datastar
