@@ -53,12 +53,13 @@ const DispatchHandler = struct {
     fn stats(index: ClassIndex) Dispatch.Stats {
         return dispatches[@intFromEnum(index)].stats();
     }
-    fn methodSlice(index: ClassIndex) []DispatchElement {
-        return dispatches[@intFromEnum(index)].methodSlice();
-    }
     fn addMethod(method: *const CompiledMethod) void {
-        const index = method.signature.getClassIndex();
-        trace("addMethod({b} {f} {}) {} {*}", .{ @as(u64, @bitCast(method.signature)), method.signature, method.signature.fullHash(), index, dispatches[index] });
+        const index = method.getClassIndex();
+        if (index > n_classes) {
+            trace("addMethod: index {} exceeds n_classes {}", .{ index, n_classes });
+            @panic("addMethod: index exceeds n_classes");
+        }
+        trace("addMethod({f} {}) {} {*}", .{ method.signature, method.signature.fullHash(), index, dispatches[index] });
         if (dispatches[index].addIfAllocated(method)) return;
         while (true) {
             if (dispatches[index].lock()) |dispatch| {
@@ -82,7 +83,7 @@ const DispatchHandler = struct {
     }
     fn alloc(words: usize) *Dispatch {
         const nMethods = smallestPrimeAtLeast(words);
-        const nInstVars = (nMethods * @sizeOf(DispatchElement) + @offsetOf(Dispatch, "matches")) / @sizeOf(Object) - 1;
+        const nInstVars = (DispatchElement.size(nMethods) + @offsetOf(Dispatch, "matches")) / @sizeOf(Object) - 1;
         const aR = globalArena.aHeapAllocator().alloc(.CompiledMethod, @intCast(nInstVars), null, Object, false);
         const newDispatch: *Dispatch = @ptrCast(@alignCast(aR.allocated));
         newDispatch.initialize(nMethods);
@@ -131,10 +132,6 @@ const Dispatch = struct {
         self.nMethods = nMethods;
         for (self.methodsAllocatedSlice()) |*ptr|
             ptr.initUpdateable();
-    }
-    fn allocationSize(nMethods: usize) usize { // includes the header, so may need to subtract 1
-        return @divExact(@sizeOf(Self) +
-            @sizeOf(DispatchElement) * (smallestPrimeAtLeast(@max(5, nMethods)) + overAllocate - 1), @sizeOf(Object)); // extra -1 is for `start` field
     }
     inline //
     fn methods(self: *const Self) [*]DispatchElement {
@@ -214,139 +211,6 @@ const Dispatch = struct {
         _ = .{ process, context, extra };
         @as(*usize, @ptrFromInt(programCounter.uint())).* += 1;
         return sp;
-    }
-
-    pub inline fn getBoundedFast(
-        self: *Self,
-        selector: Signature,
-    ) ?CompiledMethod {
-        const VEC_LEN = 16;
-        const VEC_LEN_MASK: u64 = @bitCast(-@as(i64, VEC_LEN));
-        const Vec = @Vector(VEC_LEN, u32);;
-        const target_key = selector.fullHash(); // must not be 0
-        const primary_idx = getIndex(selector, self.num_keys());
-        const target_vec: Vec = @splat(target_key);
-        // self points to a cache-aligned 64-bit header word
-        // this is followed by an array of u32s containing the hash table
-        // there are n+VEC_LEN-2 of them, where n is the number of keys in the hash table
-        // to do the lookup on a cache-line boundary, we include the 2 u32s that make up the header in the matching
-        const keys: [*]u32 = @ptrCast(self);
-
-        // --- CHECK Primary Hashed Block ---
-        // Align primary_idx down to the start of the 16-u32 block boundary
-        const off1 = primary_idx & VEC_LEN_MASK;
-
-        // Load 16 contiguous u32s directly into a vector register
-        const chunk1: Vec = @as(*const Vec, @ptrCast(&keys[off1])).*;
-        var match1: u16 = @bitCast(chunk1 == target_vec);
-
-        // Zero out bits 0 and 1 if off1 == 0 (ignore possible header matches)
-        if (off1 == 0) match1 &= 0xFFFC;
-
-        if (match1 != 0) {
-            return self.values(off1 + @ctz(match1));
-            // note: off1 + @ctz(match1) will never be 0 or 1, so self.values needs to take that into account
-        }
-
-        // --- CHECK BLOCK 1 (Adjacent Overflow Block) ---
-        // if the primary block doesn't match, we check the adjacent block
-        // note that the block beyond the last real block is padded with zeros so that we can't get matches beyond the overflow
-        const off2 = off1 + VEC_LEN;
-        const chunk2: Vec = @as(*const Vec, @ptrCast(&keys[off2])).*;
-        const match2: u16 = @bitCast(chunk2 == target_vec);
-
-        if (match2 != 0) {
-            return self.values(off2 + @ctz(match2));
-        }
-        return null;
-    }
-    pub inline fn getBoundedFast2(
-        self: *Self,
-        selector: Signature,
-    ) ?CompiledMethod {
-        const VEC_LEN = 8; // 8 u64 elements = 4 (Key, Value) pairs = 64 bytes
-        const VEC_LEN_MASK: usize = ~@as(usize, VEC_LEN - 1);
-        const Vec = @Vector(VEC_LEN, u64);
-        const base: [*]const u64 = @ptrCast(self);
-
-        const target_key = selector.fullHash(); // Must not be 0
-        const primary_idx = getIndex(selector, self.num_keys()) * 2; // num_keys should be a multiple of VEC_LEN
-        const target_vec: Vec = @splat(target_key);
-
-        // --- CHECK Primary Hashed Block ---
-        const offs = primary_idx & VEC_LEN_MASK;
-        var keys = base + offs;
-
-        const chunk1: Vec = @as(*const Vec, @ptrCast(keys)).*;
-        var match: u8 = @bitCast(chunk1 == target_vec);
-
-        // Keep only even bit positions (Keys), and drop bits 0 & 1 if in header block
-        match &= if (offs == 0) 0x54 else 0x55;
-
-        if (match != 0) {
-            // @ctz gives the matching key index (even). The value is at index + 1.
-            return @bitCast(keys[@ctz(match) + 1]);
-        }
-
-        // --- CHECK Overflow Blocks (Linear Scan Right) ---
-        const overAllocate = 2;
-        const total_u64s = (self.num_keys() + 1 + overAllocate) * 2; // Including header u64s
-        const end_offs = (total_u64s + VEC_LEN) & VEC_LEN_MASK;
-        const end = base + end_offs;
-
-        keys += VEC_LEN; // Advance past primary block
-
-        while (@intFromPtr(keys) < @intFromPtr(end)) : (keys += VEC_LEN) {
-            const chunk2: Vec = @as(*const Vec, @ptrCast(keys)).*;
-            match = @bitCast(chunk2 == target_vec);
-
-            // Crucial: Mask out odd bit positions (Values) during overflow check too!
-            match &= 0x55;
-
-            if (match != 0) {
-                return @bitCast(keys[@ctz(match) + 1]);
-            }
-        }
-
-        return null;
-    }
-    pub inline fn getBoundedFast3(
-        self: *Self,
-        selector: Signature,
-    ) ?CompiledMethod {
-        const VEC_LEN = 8; // 8 u64 elements = 4 (Key, Value) pairs = 64 bytes
-        const VEC_LEN_MASK: usize = ~@as(usize, VEC_LEN - 1);
-        const Vec = @Vector(VEC_LEN, u64);
-        const base: [*]const u64 = @ptrCast(self);
-
-        const target_key = selector.fullHash(); // Must not be 0
-        const target_vec: Vec = @splat(target_key);
-
-        var keys = base;
-        const end_offs = keys[1]; // end offset is stored in slot 1, rounded up to VEC_LEN
-        const end = base + end_offs;
-
-        // --- First Block (Includes Header at slots 0 & 1) ---
-        const chunk: Vec = @as(*const Vec, @ptrCast(keys)).*;
-        var match: u8 = @bitCast(chunk == target_vec);
-        // Mask out odd bits (Values) AND bits 0 & 1 (Header)
-        match &= 0x54;
-        if (match != 0) {
-            return @bitCast(keys[@ctz(match) + 1]);
-        }
-
-        // --- Subsequent Blocks (Pure Key/Value pairs) ---
-        keys += VEC_LEN;
-        while (@intFromPtr(keys) < @intFromPtr(end)) : (keys += VEC_LEN) {
-            const chunk: Vec = @as(*const Vec, @ptrCast(keys)).*;
-            match = @bitCast(chunk == target_vec);
-            // Mask out odd bits (Values)
-            match &= 0x55;
-            if (match != 0) {
-                return @bitCast(keys[@ctz(match) + 1]);
-            }
-        }
-        return null;
     }
 };
 fn dummyCompiledMethod(signature: Signature) CompiledMethod {
@@ -535,7 +399,7 @@ pub const threadedFunctions = struct {
     };
 };
 
-const DispatchElementType = enum { method, signature, function };
+const DispatchElementType = enum { method, signature, function, simd };
 const dispatchElementType = DispatchElementType.method;
 const DispatchElement = switch (dispatchElementType) {
     .method => DispatchMethod,
@@ -615,6 +479,59 @@ const DispatchMatch = struct {
                 return element;
             if (element.match(signature)) |_|
                 return element;
+        }
+        return null;
+    }
+};
+const DispatchSIMD = struct {
+    const VEC_LEN = 8; // 8 u64 elements = 4 (Key, Value) pairs = 64 bytes
+    const VEC_LEN_MASK: usize = ~@as(usize, VEC_LEN - 1);
+    const Vec = @Vector(VEC_LEN, u64);
+    const Self = @This();
+    pub inline fn getBoundedFast3(
+        self: *Self,
+        selector: Signature,
+    ) ?*CompiledMethod {
+        return self.search(
+            selector,
+            selector.fullHash(), // Must not be 0
+        );
+    }
+    inline fn search(
+        self: *Self,
+        selector: anytype,
+        target_key: u64,
+    ) ?*CompiledMethod {
+        const doHash = false;
+        const target_vec: Vec = @splat(target_key);
+
+        const base: [*]const u64 = @ptrCast(self);
+        // end address (rounded up to VEC_LEN) is stored in slot 1
+        const end: [*]const u64 = @ptrFromInt(base[1]);
+        const offset = if (doHash) getIndex(selector, @intFromPtr(end) - @intFromPtr(base) - VEC_LEN * 8) & VEC_LEN_MASK else 0;
+
+        var keys = base + offset;
+
+        if (keys == base) {
+            // --- First Block (Includes Header at slots 0 & 1) ---
+            const chunk: Vec = @as(*const Vec, @ptrCast(keys)).*;
+            var match: u8 = @bitCast(chunk == target_vec);
+            // Mask out odd bits (Values) AND bits 0 & 1 (Header)
+            match &= 0x54;
+            if (match != 0) {
+                return @bitCast(keys[@ctz(match) + 1]);
+            }
+            // --- Subsequent Blocks (Pure Key/Value pairs) ---
+            keys += VEC_LEN;
+        }
+        while (@intFromPtr(keys) < @intFromPtr(end)) : (keys += VEC_LEN) {
+            const chunk: Vec = @as(*const Vec, @ptrCast(keys)).*;
+            match = @bitCast(chunk == target_vec);
+            // Mask out odd bits (Values)
+            match &= 0x55;
+            if (match != 0) {
+                return @bitCast(keys[@ctz(match) + 1]);
+            }
         }
         return null;
     }

@@ -116,7 +116,7 @@ pub const Signature = packed struct {
     pub inline fn primitive(self: Signature) u8 {
         return @intCast(self.hash & 0xff);
     }
-    pub inline fn getClassIndex(self: Signature) u16 {
+    inline fn getClassIndex(self: Signature) u16 {
         return @intFromEnum(self.getClass());
     }
     pub inline fn getClass(self: Signature) ClassIndex {
@@ -690,6 +690,9 @@ fn CompileTimeMethod(comptime counts: usize) type {
         pub fn getCodeSize(_: *Self) usize {
             return codes;
         }
+        pub inline fn getClassIndex(self: Self) u16 {
+            return self.signature.getClassIndex();
+        }
         fn execute(self: *Self, sp: SP, process: *Process, context: *Context) Result {
             return @as(*CompiledMethod, @ptrCast(self)).execute(sp, process, context);
         }
@@ -1086,7 +1089,7 @@ pub const Execution = struct {
             exe.getContext().setReturn(PC.exit());
             trace("SendTo: context {*} {*} {f}", .{ exe.getContext(), exe.getContext().npc, exe.getContext().tpc });
             const class = receiver.which_class();
-            trace("selector: 0x{x:0>16}",.{@as(u64,@bitCast(selector))});
+            trace("selector: 0x{x:0>16}", .{@as(u64, @bitCast(selector))});
             const signature = if (selector.symbolHash()) |hsh| Signature.from(hsh, selector.numArgs(), class) else unreachable;
             exe.method = zag.dispatch.lookupMethodForClass(class, signature);
             exe.execute(&[_]Object{receiver});
