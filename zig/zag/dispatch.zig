@@ -53,8 +53,8 @@ const DispatchHandler = struct {
     fn stats(index: ClassIndex) Dispatch.Stats {
         return dispatches[@intFromEnum(index)].stats();
     }
-    fn addMethod(method: *const CompiledMethod) void {
-        const index = method.getClassIndex();
+    fn addMethod(ci: ClassIndex, method: *const CompiledMethod) void {
+        const index = @intFromEnum(ci);
         if (index > n_classes) {
             trace("addMethod: index {} exceeds n_classes {}", .{ index, n_classes });
             @panic("addMethod: index exceeds n_classes");
@@ -81,8 +81,7 @@ const DispatchHandler = struct {
             }
         }
     }
-    fn alloc(words: usize) *Dispatch {
-        const nMethods = smallestPrimeAtLeast(words);
+    fn alloc(nMethods: usize) *Dispatch {
         const nInstVars = (DispatchElement.size(nMethods) + @offsetOf(Dispatch, "matches")) / @sizeOf(Object) - 1;
         const aR = globalArena.aHeapAllocator().alloc(.CompiledMethod, @intCast(nInstVars), null, Object, false);
         const newDispatch: *Dispatch = @ptrCast(@alignCast(aR.allocated));
@@ -485,30 +484,38 @@ const DispatchMatch = struct {
 };
 const DispatchSIMD = struct {
     const VEC_LEN = 8; // 8 u64 elements = 4 (Key, Value) pairs = 64 bytes
-    const VEC_LEN_MASK: usize = ~@as(usize, VEC_LEN - 1);
+    const VEC_LEN_MASK = ~@as(usize, VEC_LEN * 8 - 1);
     const Vec = @Vector(VEC_LEN, u64);
     const Self = @This();
     pub inline fn getBoundedFast3(
-        self: *Self,
+        dispatch: *Dispatch,
         selector: Signature,
     ) ?*CompiledMethod {
-        return self.search(
+        return search(
+            dispatch,
             selector,
             selector.fullHash(), // Must not be 0
+            ?*CompiledMethod,
         );
     }
+    //
     inline fn search(
-        self: *Self,
+        dispatch: *Dispatch,
         selector: anytype,
         target_key: u64,
-    ) ?*CompiledMethod {
-        const doHash = false;
+        return_type: anytype,
+    ) return_type {
+        const size = dispatch.nMethods; // always a non-zero multiple of VEC_LEN
+        const doHash = false; // hash to a starting position, else start from 0
+        const return_match = return_type == *u64;
         const target_vec: Vec = @splat(target_key);
 
-        const base: [*]const u64 = @ptrCast(self);
-        // end address (rounded up to VEC_LEN) is stored in slot 1
-        const end: [*]const u64 = @ptrFromInt(base[1]);
-        const offset = if (doHash) getIndex(selector, @intFromPtr(end) - @intFromPtr(base) - VEC_LEN * 8) & VEC_LEN_MASK else 0;
+        const base: [*]const u64 = @ptrCast(dispatch);
+        const end = &base[size];
+        comptime {
+            assert(@offsetOf(comptime T: type, comptime field_name: []const u8));
+        }
+        const offset = if (doHash) Dispatch.getIndex(selector, size - VEC_LEN) * VEC_LEN else 0;
 
         var keys = base + offset;
 
@@ -518,9 +525,8 @@ const DispatchSIMD = struct {
             var match: u8 = @bitCast(chunk == target_vec);
             // Mask out odd bits (Values) AND bits 0 & 1 (Header)
             match &= 0x54;
-            if (match != 0) {
-                return @bitCast(keys[@ctz(match) + 1]);
-            }
+            if (match != 0)
+                return if (return_match) &keys[@ctz(match)] else @ptrFromInt(keys[@ctz(match) + 1]);
             // --- Subsequent Blocks (Pure Key/Value pairs) ---
             keys += VEC_LEN;
         }
@@ -529,9 +535,8 @@ const DispatchSIMD = struct {
             match = @bitCast(chunk == target_vec);
             // Mask out odd bits (Values)
             match &= 0x55;
-            if (match != 0) {
-                return @bitCast(keys[@ctz(match) + 1]);
-            }
+            if (match != 0)
+                return if (return_match) &keys[@ctz(match)] else @ptrFromInt(keys[@ctz(match) + 1]);
         }
         return null;
     }
