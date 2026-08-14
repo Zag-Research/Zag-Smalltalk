@@ -24,6 +24,7 @@ The [Strict Avalanche Criteria](https://en.wikipedia.org/wiki/Avalanche_effect) 
 [Here's an article](https://eng.libretexts.org/Courses/Folsom_Lake_College/CISP_430%3A_Data_Structures_(Aljuboori)/07%3A_Hash_Tables/7.02%3A_Choosing_a_good_hash_function) about choosing a good hash function
 [Integer Hash Functions](https://gist.github.com/badboy/6267743) has some good information
 - [Evaluating RNGs](https://pit-claudel.fr/clement/blog/how-random-is-pseudo-random-testing-pseudo-random-number-generators-and-measuring-randomness/)
+[Lemire Hashing](https://dl.acm.org/doi/abs/10.1145/3230636) is a multiply and shift on 64-bit hardware
 ## Treaps
 - [Open Data Structures Treap](http://opendatastructures.org/versions/edition-0.1g/ods-python/7_2_Treap_Randomized_Binary.html)
 - [On Random Cartesian Trtees](https://luc.devroye.org/devroye_1994_on_random_cartesian_trees.pdf)
