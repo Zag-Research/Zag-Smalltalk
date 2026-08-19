@@ -35,7 +35,6 @@ fn measureNativeFib(n: i64) u64 {
 
 const FibSetup = struct {
     const self = Context.makeVariable(0, 1, .Parameter, &.{});
-    const nullMethod = dispatch.nullMethod;
     const sig = symbol.signature;
 
     const tup = .{
@@ -49,12 +48,11 @@ const FibSetup = struct {
         "0const",        tf.@"inline-I",
         tf.fail,         tf.fail,
         tf.send,         sig(.fibonacci),
-        &nullMethod,     tf.push,
-        self,            tf.pushLiteral,
-        "1const",        tf.@"inline-I",
-        tf.fail,         tf.fail,
-        tf.send,         sig(.fibonacci),
-        &nullMethod,     tf.@"inline+I",
+        tf.push,         self,
+        tf.pushLiteral,  "1const",
+        tf.@"inline-I",  tf.fail,
+        tf.fail,         tf.send,
+        sig(.fibonacci), tf.@"inline+I",
         tf.fail,         tf.fail,
         tf.returnTop,
     };
