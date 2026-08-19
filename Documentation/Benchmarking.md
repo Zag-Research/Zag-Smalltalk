@@ -19,7 +19,7 @@ Element = Object (
 length = (
     | n |
     n := 0.
-    self do: [ :e | n := n + 1. e ifLast: [ ˆn ]. ].
+    self do: [ :e | n := n + 1. e ifLast: [  ^ n ]. ].
 )
 do: [block] = (
     block value: self.

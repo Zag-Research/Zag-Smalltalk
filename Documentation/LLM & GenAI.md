@@ -4,6 +4,8 @@
 	- another local "open weights" model I like a lot is gpt-oss-20b, even though OpenAI isn't my favorite company either.
 	- Tim: re: AGENT.md. Yes, some of them are in my GitHub repos (e.g., for the "smalltalk-mcp" project, [https://github.com/ccrraaiigg/smalltalk-mcp](https://github.com/ccrraaiigg/smalltalk-mcp) 
 
+## Dragon Hatchling
+_BDH (Dragon Hatchling_) is a post-transformer AI architecture that remembers, reasons, and improves itself over time. Pathway has released a [repo on Github](https://github.com/pathwaycom/bdh) [Youtube video describing it](https://www.youtube.com/watch?v=fjB6sEPC4CE) [The Dragon Hatchling: The Missing Link between the Transformer and Models of the Brain](https://arxiv.org/abs/2509.26507) 
 ## Model Context Protocol (MCP)
 [What Is MCP, and Why Is Everyone – Suddenly!– Talking About It?](https://huggingface.co/blog/Kseniase/mcp)
 
