@@ -498,8 +498,69 @@ const DispatchSIMD = struct {
             ?*CompiledMethod,
         );
     }
-    //
+    // Search using dense keys
     inline fn search(
+        key: anytype,
+        route_hash: @TypeOf(target_val), // The hash used to calculate the starting block
+        array: []const @TypeOf(key),
+    ) ?usize {
+        const T = @TypeOf(key);
+        const VEC_LEN = 64 / @sizeOf(T);
+        const Vec = @Vector(VEC_LEN, T);
+        const MaskT = std.meta.Int(.unsigned, VEC_LEN);
+
+        const size = array.len;
+        const target_vec: Vec = @splat(key);
+
+        const base: [*]const T = array.ptr;
+        const end = base + size;
+
+        // Comptime calculation: e.g., if ignoreFirst=4, maskFirst is 0xFFF0
+        const ignoreFirst = @offsetOf(Dispatch, "matches") / @sizeOf(T);
+        const maskFirst: MaskT = @intCast((1 << VEC_LEN) - (1 << ignoreFirst));
+
+        // Subtract 1 to reserve the final block for overflow
+        const num_blocks = (size / VEC_LEN) - 1;
+        const DoubleT = std.meta.Int(.unsigned, @bitSizeOf(T) * 2);
+        const doHash = false; // for less than a couple hundred keys
+
+        const block_idx = if (doHash)
+            @as(usize, @intCast((@as(DoubleT, route_hash) * num_blocks) >> @bitSizeOf(T)))
+        else 0;
+
+        var keys = base + (block_idx * VEC_LEN);
+
+        if (keys == base) {
+            // --- First Block ---
+            const chunk: Vec = @as(*const Vec, @ptrCast(keys)).*;
+            const match = @as(MaskT, @bitCast(chunk == target_vec)) & maskFirst;
+
+            if (match != 0) {
+                // Because keys == base, the offset is 0. Just return the ctz!
+                return @ctz(match);
+            }
+            keys += VEC_LEN;
+        }
+
+        // --- Subsequent Blocks ---
+        // The hot loop now contains zero integer math other than pointer advancing.
+        while (@intFromPtr(keys) < @intFromPtr(end)) : (keys += VEC_LEN) {
+            const chunk: Vec = @as(*const Vec, @ptrCast(keys)).*;
+            const match = @as(MaskT, @bitCast(chunk == target_vec));
+
+            if (match != 0) {
+                // This math only executes on the exit path.
+                // Division by @sizeOf(T) (a power of 2) compiles to a single bit-shift (>> 2).
+                const element_offset = (@intFromPtr(keys) - @intFromPtr(base)) / @sizeOf(T);
+                return element_offset + @ctz(match);
+            }
+        }
+
+        return null;
+    }
+
+    // Search using intermingled keys and pointers
+    inline fn searchCombined(
         dispatch: *Dispatch,
         selector: anytype,
         target_key: u64,
