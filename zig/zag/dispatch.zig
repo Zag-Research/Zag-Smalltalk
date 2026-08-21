@@ -35,7 +35,6 @@ pub const addMethod = DispatchHandler.addMethod;
 const static_classes = config.max_classes > 0;
 var n_classes: u16 = config.max_classes;
 const DispatchHandler = struct {
-    const loadFactor = 70; // hashing load factor
     var dispatches: if (static_classes) [config.max_classes]*Dispatch else [*]Dispatch =
         if (static_classes) [_]*Dispatch{&Dispatch.empty} ** config.max_classes else undefined;
     inline //
@@ -62,48 +61,83 @@ const DispatchHandler = struct {
         trace("addMethod({f} {}) {} {*}", .{ method.signature, method.signature.fullHash(), index, dispatches[index] });
         if (dispatches[index].addIfAllocated(method)) return;
         while (true) {
-            if (dispatches[index].lock()) |dispatch| {
-                defer {
-                    dispatch.state = if (dispatch != &Dispatch.empty) .dead else .clean;
+            const dispatch = @atomicLoad(*Dispatch, &dispatches[index], .acquire);
+            if (dispatch.state.lockTry()) {
+                // Automatically runs on BOTH 'continue' (mismatch) and 'return' (success)
+                defer dispatch.retire();
+
+                // Double-check: if swapped before locking, 'continue' triggers defer and restarts
+                if (@atomicLoad(*Dispatch, &dispatches[index], .monotonic) != dispatch) {
+                    continue;
                 }
                 var numMethods: usize = 3;
                 while (true) {
-                    numMethods = @max(numMethods, dispatch.nMethods + 1) * 100 / loadFactor; // *207 >> 7
+                    numMethods = @max(numMethods, dispatch.nMethods + 1) * 3 / 2;
                     const newDispatch = alloc(numMethods);
                     if (dispatch.addMethodsTo(newDispatch, method)) {
-                        dispatches[index] = newDispatch;
-                        // for (newDispatch.methodsAllocatedSlice(), 0..) |*ptr,idx| {
-                        //     trace("[{}]: {*}", .{idx, ptr.method});
-                        // }
-                        return;
+                        @atomicStore(*Dispatch, &dispatches[index], newDispatch, .release);
+                        return; // triggers defer and returns cleanly
                     }
                 }
+            } else {
+                std.atomic.spinLoopHint();
             }
         }
     }
+    fn requiredSpace(nMethods: usize) usize {
+        const keysPlusHeader = (16 + nMethods * @sizeOf(u32) + 63) / 64 * 16;
+        return keysPlusHeader - 4 + keysPlusHeader / 2;
+    }
     fn alloc(nMethods: usize) *Dispatch {
-        const nInstVars = (DispatchElement.size(nMethods) + @offsetOf(Dispatch, "matches")) / @sizeOf(Object) - 1;
+        const nInstVars = Dispatch.requiredSpace(nMethods) - 1;
+        //(DispatchElement.size(nMethods) + @offsetOf(Dispatch, "matches")) / @sizeOf(Object) - 1;
         const aR = globalArena.aHeapAllocator().alloc(.CompiledMethod, @intCast(nInstVars), null, Object, false);
         const newDispatch: *Dispatch = @ptrCast(@alignCast(aR.allocated));
         newDispatch.initialize(nMethods);
         return newDispatch;
     }
 };
+const DispatchState = enum(u32) {
+    clean,
+    beingUpdated,
+    dead,
+
+    inline fn unlock(self: *@This()) void {
+        @atomicStore(DispatchState, self, .clean, .release);
+    }
+
+    inline fn kill(self: *@This()) void {
+        @atomicStore(DispatchState, self, .dead, .release);
+    }
+
+    inline fn lockSpin(self: *@This()) void {
+        while (@cmpxchgWeak(DispatchState, self, .clean, .beingUpdated, .acquire, .monotonic)) |notClean| {
+            if (notClean == .dead) @panic("DeadDispatch");
+            // Spin hint for the CPU
+            std.atomic.spinLoopHint();
+        }
+    }
+    // this has the potential for a false negative
+    // so must be used where that is OK (in other words, where we will retry)
+    inline fn lockTry(self: *@This()) bool {
+        if (@cmpxchgWeak(DispatchState, self, .clean, .beingUpdated, .acquire, .monotonic)) |_| {
+            return false;
+        }
+        return true;
+    }
+};
+comptime {
+    std.debug.assert(@offsetOf(Dispatch, "header") == 0);
+    std.debug.assert(@offsetOf(Dispatch, "methods") == 16);
+}
 const Dispatch = struct {
     header: HeapHeader,
     nMethods: u32,
     state: DispatchState,
     matches: DispatchMatch, // this is just the empty size... normally a larger array
-    comptime {
-        // @compileLog(@sizeOf(Self));
-        // std.debug.assert(@as(usize, 1) << @ctz(@as(u62, @sizeOf(Self))) == @sizeOf(Self));
-        std.debug.assert(@offsetOf(Self, "header") == 0);
-        //        std.debug.assert(@offsetOf(Self, "methods") & 0xf == 0);
-    }
     const Self = @This();
     const matchSize = DispatchMatch.matchSize;
     const overAllocate = matchSize - 1;
-    const DispatchState = enum(u64) { clean, beingUpdated, dead };
     var empty = Self{
         // don't count header, but do count one element of methods
         .header = HeapHeader.staticHeaderWithClassStructHash(ClassIndex.Dispatch, Self, 0),
@@ -111,6 +145,16 @@ const Dispatch = struct {
         .state = .clean,
         .matches = DispatchMatch.empty,
     };
+    inline fn retire(self: *Dispatch) void {
+        // If nMethods == 0 (or self == &Dispatch.empty), unlock for reuse.
+        // empty is the only dispatch table that will have a nMethods == 0
+        // Otherwise, mark the superseded table as dead.
+        if (self.nMethods == 0) {
+            self.state.unlock();
+        } else {
+            self.state.kill();
+        }
+    }
     const Stats = struct {
         total: usize,
         active: usize,
@@ -165,31 +209,23 @@ const Dispatch = struct {
     fn getIndex(signature: Signature, size: u64) u64 {
         return signature.fullHash() * size >> 32;
     }
-    fn lock(self: *Self) ?*Self {
-        if (@cmpxchgWeak(DispatchState, &self.state, .clean, .beingUpdated, .seq_cst, .seq_cst)) |notClean| {
-            if (notClean == .dead) @panic("DeadDispatch");
-            return null;
-        }
-        return self;
-    }
     fn addIfAllocated(self: *Self, cmp: *const CompiledMethod) bool {
         if (self.nMethods == 0) return false;
         return self.add(cmp);
     }
-    fn add(self_: *Self, cmp: *const CompiledMethod) bool {
+    fn add(self: *Self, cmp: *const CompiledMethod) bool {
         const signature = cmp.signature;
-        if (self_.lock()) |self| {
-            defer {
-                self.state = .clean;
-            }
-            for (&self.dispatchMatch(signature).elements) |*element| {
-                if (element.match(signature)) |_| {
-                    element.storeMethod(cmp); // replace this
-                    return true;
-                } else if (element.isEmpty()) {
-                    element.storeMethod(cmp);
-                    return true;
-                }
+        self.state.lockSpin();
+        defer {
+            self.state.unlock();
+        }
+        for (&self.dispatchMatch(signature).elements) |*element| {
+            if (element.match(signature)) |_| {
+                element.storeMethod(cmp); // replace this
+                return true;
+            } else if (element.isEmpty()) {
+                element.storeMethod(cmp);
+                return true;
             }
         }
         return false;
@@ -222,7 +258,7 @@ fn dummyCompiledMethod(signature: Signature) CompiledMethod {
         .signature = signature,
     };
 }
-pub const nullMethod = dummyCompiledMethod(Signature.empty);
+const nullMethod = dummyCompiledMethod(Signature.empty);
 const defaultForTest = if (config.is_test) struct {
     var called: bool = false;
     const dummyMethod = dummyCompiledMethod(Signature.fromNameClass(symbols.value, ClassIndex.Object));
@@ -487,21 +523,53 @@ const DispatchSIMD = struct {
     const VEC_LEN_MASK = ~@as(usize, VEC_LEN * 8 - 1);
     const Vec = @Vector(VEC_LEN, u64);
     const Self = @This();
-    pub inline fn getBoundedFast3(
+    pub inline fn getMethodFromSelector(
         dispatch: *Dispatch,
         selector: Signature,
     ) ?*CompiledMethod {
-        return search(
-            dispatch,
-            selector,
-            selector.fullHash(), // Must not be 0
-            ?*CompiledMethod,
-        );
+        const base = @as([*]u32,@ptrCast(dispatch))[0..dispatch.nMethods];
+        const key = selector.fullHash();
+        if (search(
+            key,
+            key,
+            base)) |index|
+            return getMethodSlot(base,index,*CompiledMethod).*;
+        return null;
+    }
+    // given a slice of the header+keys, return the address of the corresponding method pointer
+    inline fn getMethodSlot(base: anytype, k: usize, comptime T: type) *T {
+        // Cast to multi-pointer of T
+        const methods_ptr: [*]T = @ptrCast(@alignCast(base.ptr + base.len));
+
+        // Return the memory address of the k-th slot
+        return &methods_ptr[k - 4];
+    }
+
+    inline fn setMethodForSelector(
+        dispatch: *Dispatch,
+        selector: Signature,
+        method: *CompiledMethod) void
+    {
+        const base = @as([*]u32, @ptrCast(dispatch))[0..dispatch.nMethods];
+        const key = selector.fullHash();
+        const index = search(key, 0, base).?;
+
+        // 1. Get the address of the slot and write the new method pointer
+        const slot = getMethodSlot(base, index, *CompiledMethod);
+        slot.* = method;
+
+        // 2. Publish the key with RELEASE semantics to ensure slot write is visible first
+        @atomicStore(u32, &base[index], key, .release);
+
+        dispatch.state.unlock();
     }
     // Search using dense keys
+    // search to find a key with search(k,k,theSlice)
+    // search to find a free spot for a key with `search(k,0,theSlice)
+    // the second key is ignored if doHash is false, but necessary if it's true
     inline fn search(
-        key: anytype,
-        route_hash: @TypeOf(target_val), // The hash used to calculate the starting block
+        route_hash: anytype,
+        key: @TypeOf(target_val), // The hash used to calculate the starting block
         array: []const @TypeOf(key),
     ) ?usize {
         const T = @TypeOf(key);
