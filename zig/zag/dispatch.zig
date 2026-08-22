@@ -3,6 +3,8 @@
 const std = @import("std");
 const assert = std.debug.assert;
 const expectEqual = std.testing.expectEqual;
+
+const smallestPrimeAtLeast = @import("utilities.zig").smallestPrimeAtLeast;
 const zag = @import("zag.zig");
 const config = zag.config;
 const trace = config.trace;
@@ -12,10 +14,8 @@ const Object = object.Object;
 const True = object.True;
 const False = object.False;
 const ClassIndex = object.ClassIndex;
-const o0 = object.testObjects[0];
 const execute = zag.execute;
 const PC = execute.PC;
-const SP = Process.SP;
 const Result = execute.Result;
 const Signature = execute.Signature;
 const Execution = execute.Execution;
@@ -27,13 +27,15 @@ const globalArena = zag.globalArena;
 const symbol = zag.symbol;
 const symbols = symbol.Symbols;
 const HeapHeader = zag.heap.HeapHeader;
-const smallestPrimeAtLeast = @import("utilities.zig").smallestPrimeAtLeast;
+var n_classes: u16 = config.max_classes;
+const SP = Process.SP;
+
+const o0 = object.testObjects[0];
 // note that self and other could become invalid after any method call if they are heap objects, so will need to be re-loaded from context.fields if needed thereafter
 
 pub const lookupMethodForClass = DispatchHandler.lookupMethodForClass;
 pub const addMethod = DispatchHandler.addMethod;
 const static_classes = config.max_classes > 0;
-var n_classes: u16 = config.max_classes;
 const DispatchHandler = struct {
     var dispatches: if (static_classes) [config.max_classes]*Dispatch else [*]Dispatch =
         if (static_classes) [_]*Dispatch{&Dispatch.empty} ** config.max_classes else undefined;
@@ -41,7 +43,7 @@ const DispatchHandler = struct {
     fn lookupMethodForClass(ci: ClassIndex, signature: Signature) *const CompiledMethod {
         if (dispatches[@intFromEnum(ci)].lookupMethod(signature)) |method|
             return method;
-        return @call(.never_inline, loadMethodForClass, .{ci, signature});
+        return @call(.never_inline, loadMethodForClass, .{ ci, signature });
     }
     fn loadMethodForClass(ci: ClassIndex, signature: Signature) *const CompiledMethod {
         if (defaultForTest != void)
@@ -130,15 +132,18 @@ const DispatchState = enum(u32) {
 };
 comptime {
     std.debug.assert(@offsetOf(Dispatch, "header") == 0);
-    std.debug.assert(@offsetOf(Dispatch, "methods") == 16);
+    std.debug.assert(@offsetOf(Dispatch, "matches") == 16);
 }
 const Dispatch = struct {
     header: HeapHeader,
-    nMethods: u32,
+    nMethods: u16,
+    nAllocated: u16,
     state: DispatchState,
     matches: D.Match, // this is just the empty size... normally a larger array
+    const Self = @This();
     const D = DispatchSIMD;
-    var empty = Dispatch {
+    const lookupMethod = D.lookupMethod;
+    var empty = Dispatch{
         // don't count header, but do count one element of methods
         .header = HeapHeader.staticHeaderWithClassStructHash(.Dispatch, Self, 0),
         .nMethods = 0,
@@ -172,10 +177,11 @@ const Dispatch = struct {
     }
     fn initialize(self: *Self, nMethods: usize) void {
         self.state = .clean;
-        self.nMethods = nMethods;
-        D.initialize(self, nMethods);
+        self.nAllocated = nMethods;
+        D.initialize(self);
+        for (self.methodsAllocatedSlice()) |*p|
+            p.* = empty;
     }
-    const methodsAllocatedSlice = D.methodsAllocatedSlice;
     inline //
     fn methods(self: *const Self) [*]D.Element {
         return @as([*]D.Element, @ptrCast(@alignCast(@constCast(&self.matches))));
@@ -186,7 +192,7 @@ const Dispatch = struct {
     }
     inline //
     fn methodsAllocatedSlice(self: *Self) []D.Element {
-        return self.methods()[0 .. self.nMethods + D.overAllocate];
+        return self.methods()[0..self.nAllocated];
     }
     fn addMethodsTo(self: *Self, newDispatch: *Self, method: *const CompiledMethod) bool {
         for (self.methodSlice()) |de| {
@@ -194,6 +200,151 @@ const Dispatch = struct {
                 if (!newDispatch.add(ptr)) return false;
         }
         return newDispatch.add(method);
+    }
+};
+const DispatchSIMD = struct {
+    const Self = Dispatch;
+    const intermingled = false;
+    const doHash = false;
+    const Element = if (intermingled) u128 else u32;
+    const empty: Element = 0;
+    const SIMD_bytes = 64; // bytes that can be handled in 1 cycle
+    inline fn round(n: u16) u16 {
+        const VEC_LEN: u16 = SIMD_bytes / @sizeOf(Element);
+        return (n & ~VEC_LEN) + VEC_LEN;
+    }
+    fn initialize(dispatch: *Dispatch) void {
+        dispatch.nMethods = round(0);
+    }
+    inline fn lookupMethod(
+        dispatch: *Dispatch,
+        selector: Signature,
+    ) ?*CompiledMethod {
+        const base = @as([*]u32, @ptrCast(dispatch))[0..dispatch.nMethods];
+        const key = selector.fullHash();
+        if (if (intermingled) searchIntermingled(key, 0, base) else search(key, 0, base)) |index|
+            return getMethodSlot(base, index, *CompiledMethod).*;
+        return null;
+    }
+    inline fn setMethod(dispatch: *Dispatch, selector: Signature, method: *CompiledMethod) void {
+        const base = @as([*]u32, @ptrCast(dispatch))[0..dispatch.nMethods];
+        const key = selector.fullHash();
+        if (if (intermingled) searchIntermingled(key, 0, base) else search(key, 0, base)) |index| {
+            // 1. Get the address of the slot and write the new method pointer
+            const slot = getMethodSlot(base, index, *CompiledMethod);
+            slot.* = method;
+
+            // 2. Publish the key with RELEASE semantics to ensure slot write is visible first
+            @atomicStore(u32, &base[index], key, .release);
+        } else @panic("setMethod");
+        dispatch.state.unlock();
+    }
+    // given a slice of the header+keys, return the address of the corresponding method pointer
+    inline fn getMethodSlot(base: anytype, k: usize, comptime T: type) *T {
+        // Cast to multi-pointer of T
+        const methods_ptr: [*]T = @ptrCast(@alignCast(base.ptr + base.len));
+        // Return the memory address of the k-th slot
+        return &methods_ptr[k - 4];
+    }
+
+    // Search using dense keys
+    // search to find a key with search(k,k,theSlice)
+    // search to find a free spot for a key with `search(k,0,theSlice)
+    inline fn search(
+        route_hash: anytype, // The hash used to calculate the starting block
+        key: @TypeOf(route_hash),
+        array: []const @TypeOf(key),
+    ) ?usize {
+        const T = @TypeOf(key);
+        const VEC_LEN = SIMD_bytes / @sizeOf(T);
+        const Vec = @Vector(VEC_LEN, T);
+        const MaskT = std.meta.Int(.unsigned, VEC_LEN);
+
+        const size = array.len;
+        const target_vec: Vec = @splat(key);
+
+        const base: [*]const T = array.ptr;
+        const end = base + size;
+
+        // Comptime calculation: e.g., if ignoreFirst=4, maskFirst is 0xFFF0
+        const ignoreFirst = @offsetOf(Dispatch, "matches") / @sizeOf(T);
+        const maskFirst: MaskT = @intCast((1 << VEC_LEN) - (1 << ignoreFirst));
+
+        const block_idx = if (doHash) blk: {
+            // Subtract 1 to reserve the final block for overflow for hashing
+            const num_blocks = (size / VEC_LEN) - 1;
+            const DoubleT = std.meta.Int(.unsigned, @bitSizeOf(T) * 2);
+            break :blk @as(usize, @intCast((@as(DoubleT, route_hash) * num_blocks) >> @bitSizeOf(T)));
+        } else 0;
+
+        var keys = base + (block_idx * VEC_LEN);
+
+        if (keys == base) {
+            // --- First Block ---
+            const chunk: Vec = @as(*const Vec, @ptrCast(keys)).*;
+            const match = @as(MaskT, @bitCast(chunk == target_vec)) & maskFirst;
+
+            if (match != 0) {
+                // Because keys == base, the offset is 0. Just return the ctz!
+                return @ctz(match);
+            }
+            keys += VEC_LEN;
+        }
+
+        // --- Subsequent Blocks ---
+        // The hot loop contains zero integer math other than pointer advancing.
+        while (@intFromPtr(keys) < @intFromPtr(end)) : (keys += VEC_LEN) {
+            const chunk: Vec = @as(*const Vec, @ptrCast(keys)).*;
+            const match: MaskT = @bitCast(chunk == target_vec);
+
+            if (match != 0) {
+                // This math only executes on the exit path.
+                const element_offset = (@intFromPtr(keys) - @intFromPtr(base)) / @sizeOf(T);
+                return element_offset + @ctz(match);
+            }
+        }
+
+        return null;
+    }
+
+    // Search using intermingled keys and pointers
+    inline fn searchIntermingled(
+        dispatch: *Dispatch,
+        selector: anytype,
+        target_key: u64,
+        return_type: anytype,
+    ) return_type {
+        const VEC_LEN = SIMD_bytes / (@sizeOf(target_key) + @sizeOf(return_type));
+        const Vec = @Vector(VEC_LEN, u64);
+        const MaskT = std.meta.Int(.unsigned, VEC_LEN);
+        const size = dispatch.nMethods; // always a non-zero multiple of VEC_LEN
+        const return_match = return_type == *u64;
+        const target_vec: Vec = @splat(target_key);
+
+        const base: [*]const u64 = @ptrCast(dispatch);
+        const end = &base[size];
+        const offset = if (doHash) Dispatch.getIndex(selector, size - VEC_LEN) * VEC_LEN else 0;
+
+        var keys = base + offset;
+
+        if (keys == base) {
+            // --- First Block (Includes Header at slots 0 & 1) ---
+            const chunk: Vec = @as(*const Vec, @ptrCast(keys)).*;
+            // Mask out odd bits (Values) AND bits 0 & 1 (Header)
+            const match = @as(MaskT, @bitCast(chunk == target_vec)) & 0x54;
+            if (match != 0)
+                return if (return_match) &keys[@ctz(match)] else @ptrFromInt(keys[@ctz(match) + 1]);
+            // --- Subsequent Blocks (Pure Key/Value pairs) ---
+            keys += VEC_LEN;
+        }
+        while (@intFromPtr(keys) < @intFromPtr(end)) : (keys += VEC_LEN) {
+            const chunk: Vec = @as(*const Vec, @ptrCast(keys)).*;
+            // Mask out odd bits (Values)
+            const match = @as(MaskT, @bitCast(chunk == target_vec)) & 0x55;
+            if (match != 0)
+                return if (return_match) &keys[@ctz(match)] else @ptrFromInt(keys[@ctz(match) + 1]);
+        }
+        return null;
     }
 };
 const DispatchOriginal = struct {
@@ -204,6 +355,7 @@ const DispatchOriginal = struct {
     const empty = DispatchMatch.empty;
     const Element = DispatchElement;
     fn initialize(self: *Self, nMethods: usize) void {
+        _ = nMethods; // autofix
         for (self.methodsAllocatedSlice()) |*ptr|
             ptr.initUpdateable();
     }
@@ -258,6 +410,90 @@ const DispatchOriginal = struct {
         _ = .{ process, context, extra };
         @as(*usize, @ptrFromInt(programCounter.uint())).* += 1;
         return sp;
+    }
+};
+const DispatchElementType = enum { method, signature, function, simd };
+const dispatchElementType = DispatchElementType.method;
+const DispatchElement = switch (dispatchElementType) {
+    .method => DispatchMethod,
+    else => unreachable,
+};
+const DispatchMethod = struct {
+    method: *const CompiledMethod,
+    const Self = @This();
+    const IntSelf = u64;
+    comptime {
+        std.debug.assert(@sizeOf(Self) == @sizeOf(IntSelf));
+    }
+    fn initUpdateable(self: *Self) void {
+        self.* = empty;
+    }
+    fn new(compiledMethod: *const CompiledMethod) Self {
+        return .{ .method = compiledMethod };
+    }
+    const emptyMethod = dummyCompiledMethod(Signature.empty);
+    const empty = new(&emptyMethod);
+    inline //
+    fn cas(self: *Self, replacement: *const CompiledMethod) ?Self {
+        const current = self.asInt();
+        const replace = new(replacement).asInt();
+        if (@cmpxchgWeak(IntSelf, self.asIntPtr(), current, replace, .seq_cst, .seq_cst)) |notClean|
+            return @bitCast(notClean);
+        return null;
+    }
+    inline //
+    fn storeMethod(self: *Self, replacement: *const CompiledMethod) void {
+        self.method = replacement;
+    }
+    inline //
+    fn match(self: *DispatchMethod, signature: Signature) ?*const CompiledMethod {
+        const method = self.method;
+        if (method.signature.equals(signature))
+            return method;
+        trace("match {*} {f} {f} ({x} {x})", .{ self, method.signature, signature, @as(u64, @bitCast(method.signature)), @as(u64, @bitCast(signature)) });
+        return null;
+    }
+    inline //
+    fn activeMethod(self: *const Self) ?*const CompiledMethod {
+        if (self.isEmpty())
+            return null;
+        return self.method;
+    }
+    inline //
+    fn isEmpty(self: *const Self) bool {
+        return self.method == &emptyMethod;
+    }
+    inline //
+    fn asInt(self: Self) IntSelf {
+        return @bitCast(self);
+    }
+    inline //
+    fn asIntPtr(self: *Self) *IntSelf {
+        return @ptrCast(@alignCast(self));
+    }
+};
+const DispatchMatch = struct {
+    elements: [matchSize]DispatchElement,
+    const matchSize = 3;
+    const empty = DispatchMatch{ .elements = [_]DispatchElement{DispatchElement.empty} ** matchSize };
+    inline //
+    fn match(self: *DispatchMatch, signature: Signature) ?*const CompiledMethod {
+        inline for (&self.elements) |*element| {
+            if (element.match(signature)) |method| {
+                return method;
+            }
+        }
+        return null;
+    }
+    inline //
+    fn matchOrEmpty(self: *DispatchMatch, signature: Signature) ?*DispatchMethod {
+        inline for (&self.elements) |*element| {
+            if (element.isEmpty())
+                return element;
+            if (element.match(signature)) |_|
+                return element;
+        }
+        return null;
     }
 };
 fn dummyCompiledMethod(signature: Signature) CompiledMethod {
@@ -444,241 +680,4 @@ pub const threadedFunctions = struct {
             return @call(tailCall, newPc.prim(), .{ newPc.next(), sp, process, context, Extra.forMethod(method) });
         }
     };
-};
-
-const DispatchElementType = enum { method, signature, function, simd };
-const dispatchElementType = DispatchElementType.method;
-const DispatchElement = switch (dispatchElementType) {
-    .method => DispatchMethod,
-    else => unreachable,
-};
-const DispatchMethod = struct {
-    method: *const CompiledMethod,
-    const Self = @This();
-    const IntSelf = u64;
-    comptime {
-        std.debug.assert(@sizeOf(Self) == @sizeOf(IntSelf));
-    }
-    fn initUpdateable(self: *Self) void {
-        self.* = empty;
-    }
-    fn new(compiledMethod: *const CompiledMethod) Self {
-        return .{ .method = compiledMethod };
-    }
-    const emptyMethod = dummyCompiledMethod(Signature.empty);
-    const empty = new(&emptyMethod);
-    inline //
-    fn cas(self: *Self, replacement: *const CompiledMethod) ?Self {
-        const current = self.asInt();
-        const replace = new(replacement).asInt();
-        if (@cmpxchgWeak(IntSelf, self.asIntPtr(), current, replace, .seq_cst, .seq_cst)) |notClean|
-            return @bitCast(notClean);
-        return null;
-    }
-    inline //
-    fn storeMethod(self: *Self, replacement: *const CompiledMethod) void {
-        self.method = replacement;
-    }
-    inline //
-    fn match(self: *DispatchMethod, signature: Signature) ?*const CompiledMethod {
-        const method = self.method;
-        if (method.signature.equals(signature))
-            return method;
-        trace("match {*} {f} {f} ({x} {x})", .{ self, method.signature, signature, @as(u64, @bitCast(method.signature)), @as(u64, @bitCast(signature)) });
-        return null;
-    }
-    inline //
-    fn activeMethod(self: *const Self) ?*const CompiledMethod {
-        if (self.isEmpty())
-            return null;
-        return self.method;
-    }
-    inline //
-    fn isEmpty(self: *const Self) bool {
-        return self.method == &emptyMethod;
-    }
-    inline //
-    fn asInt(self: Self) IntSelf {
-        return @bitCast(self);
-    }
-    inline //
-    fn asIntPtr(self: *Self) *IntSelf {
-        return @ptrCast(@alignCast(self));
-    }
-};
-const DispatchMatch = struct {
-    elements: [matchSize]DispatchElement,
-    const matchSize = 3;
-    const empty = DispatchMatch{ .elements = [_]DispatchElement{DispatchElement.empty} ** matchSize };
-    inline //
-    fn match(self: *DispatchMatch, signature: Signature) ?*const CompiledMethod {
-        inline for (&self.elements) |*element| {
-            if (element.match(signature)) |method| {
-                return method;
-            }
-        }
-        return null;
-    }
-    inline //
-    fn matchOrEmpty(self: *DispatchMatch, signature: Signature) ?*DispatchMethod {
-        inline for (&self.elements) |*element| {
-            if (element.isEmpty())
-                return element;
-            if (element.match(signature)) |_|
-                return element;
-        }
-        return null;
-    }
-};
-const DispatchSIMD = struct {
-    const VEC_LEN = 8; // 8 u64 elements = 4 (Key, Value) pairs = 64 bytes
-    const VEC_LEN_MASK = ~@as(usize, VEC_LEN * 8 - 1);
-    const Vec = @Vector(VEC_LEN, u64);
-    const Self = @This();
-    pub inline fn getMethodFromSelector(
-        dispatch: *Dispatch,
-        selector: Signature,
-    ) ?*CompiledMethod {
-        const base = @as([*]u32,@ptrCast(dispatch))[0..dispatch.nMethods];
-        const key = selector.fullHash();
-        if (search(
-            key,
-            key,
-            base)) |index|
-            return getMethodSlot(base,index,*CompiledMethod).*;
-        return null;
-    }
-    // given a slice of the header+keys, return the address of the corresponding method pointer
-    inline fn getMethodSlot(base: anytype, k: usize, comptime T: type) *T {
-        // Cast to multi-pointer of T
-        const methods_ptr: [*]T = @ptrCast(@alignCast(base.ptr + base.len));
-
-        // Return the memory address of the k-th slot
-        return &methods_ptr[k - 4];
-    }
-
-    inline fn setMethodForSelector(
-        dispatch: *Dispatch,
-        selector: Signature,
-        method: *CompiledMethod) void
-    {
-        const base = @as([*]u32, @ptrCast(dispatch))[0..dispatch.nMethods];
-        const key = selector.fullHash();
-        const index = search(key, 0, base).?;
-
-        // 1. Get the address of the slot and write the new method pointer
-        const slot = getMethodSlot(base, index, *CompiledMethod);
-        slot.* = method;
-
-        // 2. Publish the key with RELEASE semantics to ensure slot write is visible first
-        @atomicStore(u32, &base[index], key, .release);
-
-        dispatch.state.unlock();
-    }
-    // Search using dense keys
-    // search to find a key with search(k,k,theSlice)
-    // search to find a free spot for a key with `search(k,0,theSlice)
-    // the second key is ignored if doHash is false, but necessary if it's true
-    inline fn search(
-        route_hash: anytype,
-        key: @TypeOf(target_val), // The hash used to calculate the starting block
-        array: []const @TypeOf(key),
-    ) ?usize {
-        const T = @TypeOf(key);
-        const VEC_LEN = 64 / @sizeOf(T);
-        const Vec = @Vector(VEC_LEN, T);
-        const MaskT = std.meta.Int(.unsigned, VEC_LEN);
-
-        const size = array.len;
-        const target_vec: Vec = @splat(key);
-
-        const base: [*]const T = array.ptr;
-        const end = base + size;
-
-        // Comptime calculation: e.g., if ignoreFirst=4, maskFirst is 0xFFF0
-        const ignoreFirst = @offsetOf(Dispatch, "matches") / @sizeOf(T);
-        const maskFirst: MaskT = @intCast((1 << VEC_LEN) - (1 << ignoreFirst));
-
-        // Subtract 1 to reserve the final block for overflow
-        const num_blocks = (size / VEC_LEN) - 1;
-        const DoubleT = std.meta.Int(.unsigned, @bitSizeOf(T) * 2);
-        const doHash = false; // for less than a couple hundred keys
-
-        const block_idx = if (doHash)
-            @as(usize, @intCast((@as(DoubleT, route_hash) * num_blocks) >> @bitSizeOf(T)))
-        else 0;
-
-        var keys = base + (block_idx * VEC_LEN);
-
-        if (keys == base) {
-            // --- First Block ---
-            const chunk: Vec = @as(*const Vec, @ptrCast(keys)).*;
-            const match = @as(MaskT, @bitCast(chunk == target_vec)) & maskFirst;
-
-            if (match != 0) {
-                // Because keys == base, the offset is 0. Just return the ctz!
-                return @ctz(match);
-            }
-            keys += VEC_LEN;
-        }
-
-        // --- Subsequent Blocks ---
-        // The hot loop now contains zero integer math other than pointer advancing.
-        while (@intFromPtr(keys) < @intFromPtr(end)) : (keys += VEC_LEN) {
-            const chunk: Vec = @as(*const Vec, @ptrCast(keys)).*;
-            const match = @as(MaskT, @bitCast(chunk == target_vec));
-
-            if (match != 0) {
-                // This math only executes on the exit path.
-                // Division by @sizeOf(T) (a power of 2) compiles to a single bit-shift (>> 2).
-                const element_offset = (@intFromPtr(keys) - @intFromPtr(base)) / @sizeOf(T);
-                return element_offset + @ctz(match);
-            }
-        }
-
-        return null;
-    }
-
-    // Search using intermingled keys and pointers
-    inline fn searchCombined(
-        dispatch: *Dispatch,
-        selector: anytype,
-        target_key: u64,
-        return_type: anytype,
-    ) return_type {
-        const size = dispatch.nMethods; // always a non-zero multiple of VEC_LEN
-        const doHash = false; // hash to a starting position, else start from 0
-        const return_match = return_type == *u64;
-        const target_vec: Vec = @splat(target_key);
-
-        const base: [*]const u64 = @ptrCast(dispatch);
-        const end = &base[size];
-        comptime {
-            assert(@offsetOf(comptime T: type, comptime field_name: []const u8));
-        }
-        const offset = if (doHash) Dispatch.getIndex(selector, size - VEC_LEN) * VEC_LEN else 0;
-
-        var keys = base + offset;
-
-        if (keys == base) {
-            // --- First Block (Includes Header at slots 0 & 1) ---
-            const chunk: Vec = @as(*const Vec, @ptrCast(keys)).*;
-            var match: u8 = @bitCast(chunk == target_vec);
-            // Mask out odd bits (Values) AND bits 0 & 1 (Header)
-            match &= 0x54;
-            if (match != 0)
-                return if (return_match) &keys[@ctz(match)] else @ptrFromInt(keys[@ctz(match) + 1]);
-            // --- Subsequent Blocks (Pure Key/Value pairs) ---
-            keys += VEC_LEN;
-        }
-        while (@intFromPtr(keys) < @intFromPtr(end)) : (keys += VEC_LEN) {
-            const chunk: Vec = @as(*const Vec, @ptrCast(keys)).*;
-            match = @bitCast(chunk == target_vec);
-            // Mask out odd bits (Values)
-            match &= 0x55;
-            if (match != 0)
-                return if (return_match) &keys[@ctz(match)] else @ptrFromInt(keys[@ctz(match) + 1]);
-        }
-        return null;
-    }
 };

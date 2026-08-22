@@ -25,6 +25,7 @@ const heap = zag.heap;
 const primitives = zag.primitives;
 const empty = &[0]Object{};
 const tf = zag.threadedFn.Enum;
+const Dispatch = zag.dispatch;
 
 pub const moduleName = "SmallInteger";
 pub fn init() void {}
