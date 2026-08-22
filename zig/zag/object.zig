@@ -7,6 +7,7 @@
 //!
 //! The active encoding is chosen at compile time via `config.objectEncoding`:
 //! - `Object.zag`
+//! - `Object.zag6`
 //! - `Object.nan`
 //! - `object.spur`
 //! - `objectj.zagSpur`
@@ -40,9 +41,21 @@ const noneIndex = switch (config.objectEncoding) {
     .taggedLow, .taggedHigh => siIndex,
     else => 0,
 };
+pub fn heapBits() u32 {
+    var bit: u32 = 1;
+    var bits: u32 = 0;
+    inline for (std.meta.fields(Object.Compact)) |f| {
+        bits |= switch (@as(ClassIndex, @enumFromInt(f.value))) {
+            .ThunkReturnLocal, .ThunkReturnInstance, .ThunkReturnObject, .ThunkReturnImmediate, .ThunkLocal, .BlockAssignLocal, .ThunkInstance, .BlockAssignInstance, .ThunkHeap, .ThunkReturnCharacter, .ThunkReturnFloat, .Float, .heap => bit,
+            else => 0,
+        };
+        bit <<= 1;
+    }
+    return bits;
+}
 const Compact = Object.Compact;
 pub const ClassIndex = zag.DeriveEnum(Compact, u16, 0, .{
-    .{.base = Compact.immutableClasses, .names = .{
+    .{ .base = Compact.immutableClasses, .names = .{
         "SmallInteger",
         "Symbol",
         "False",
@@ -65,8 +78,8 @@ pub const ClassIndex = zag.DeriveEnum(Compact, u16, 0, .{
         "LLVM",
         "UndefinedObject",
         "Float",
-    }},
-    .{.base = Compact.mutableClasses, .names = .{
+    } },
+    .{ .base = Compact.mutableClasses, .names = .{
         "heap",
         "Context",
         "ProtoObject",
@@ -89,17 +102,17 @@ pub const ClassIndex = zag.DeriveEnum(Compact, u16, 0, .{
         "BlockClosureValue",
         "LLVMPrimitives",
         "LLVMGenerator",
-    }},
+    } },
     .{ .base = Compact.mutableClasses - 5, .names = .{
         "o4",
         "o3",
         "o2",
         "o1",
         "o0",
-    }},
-    .{ .base = config.max_classes - 1, .names = .{ "testClass" }},
-    .{ .base = 0x3fff, .names = .{ "leaveObjectOnStack" }},
-    .{ .base = 0xffff - 7, .names = .{ "ReplacementIndices" }},
+    } },
+    .{ .base = config.max_classes - 1, .names = .{"testClass"} },
+    .{ .base = 0x3fff, .names = .{"leaveObjectOnStack"} },
+    .{ .base = 0xffff - 7, .names = .{"ReplacementIndices"} },
 });
 comptime {
     std.debug.assert(@intFromEnum(ClassIndex.ReplacementIndices) == 0xfff8);

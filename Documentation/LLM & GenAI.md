@@ -4,6 +4,8 @@
 	- another local "open weights" model I like a lot is gpt-oss-20b, even though OpenAI isn't my favorite company either.
 	- Tim: re: AGENT.md. Yes, some of them are in my GitHub repos (e.g., for the "smalltalk-mcp" project, [https://github.com/ccrraaiigg/smalltalk-mcp](https://github.com/ccrraaiigg/smalltalk-mcp) 
 
+## Dragon Hatchling
+_BDH (Dragon Hatchling_) is a post-transformer AI architecture that remembers, reasons, and improves itself over time. Pathway has released a [repo on Github](https://github.com/pathwaycom/bdh) [Youtube video describing it](https://www.youtube.com/watch?v=fjB6sEPC4CE) [The Dragon Hatchling: The Missing Link between the Transformer and Models of the Brain](https://arxiv.org/abs/2509.26507) 
 ## Model Context Protocol (MCP)
 [What Is MCP, and Why Is Everyone – Suddenly!– Talking About It?](https://huggingface.co/blog/Kseniase/mcp)
 
@@ -134,3 +136,17 @@ Zed has excellent native support for local LLMs via **Ollama**.
 ---
 
 💡 **Pro Tip:** Since you have 48GB, avoid "4-bit" (Q4) quantizations. Use **Q6_K** or **Q8_0**. You will notice significantly fewer "hallucinated" syntax errors in your code during debugging.
+
+## RAG Design
+[Designing a Production-Grade RAG Architecture](https://levelup.gitconnected.com/designing-a-production-grade-rag-architecture-bee5a4e4d9aa)
+
+## NotebookLM
+[The NotebookLM Workflow That Changed How I Learn Any Technology](https://pub.towardsai.net/the-notebooklm-workflow-that-changed-how-i-learn-any-technology-373f430a17e5)
+### Open NotebookLM
+An open source, privacy-focused alternative to Google's Notebook LM.
+[git](https://github.com/lfnovo/open-notebook)
+[Open NotebookLM is INSANE! Fully Free Local NotebookLM Alternative with Gemini Integration](https://www.youtube.com/watch?v=-0VsUmqsyiI)
+
+### HyperbookLM
+A powerful research assistant built with Next.js 15, React 19, and Hyperbrowser. It allows users to aggregate diverse sources (Web URLs, PDFs) and gain deep insights through interactive AI tools.
+[git](https://github.com/hyperbrowserai/hyperbooklm)
