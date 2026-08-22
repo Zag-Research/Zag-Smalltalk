@@ -4,12 +4,13 @@ const std = @import("std");
 const math = std.math;
 const assert = std.debug.assert;
 const mem = std.mem;
+const SeqCst = std.builtin.AtomicOrder.seq_cst;
 const builtin = @import("builtin");
+
 const zag = @import("zag.zig");
 const config = zag.config;
 const tailCall = config.tailCall;
 const trace = config.trace;
-const SeqCst = std.builtin.AtomicOrder.seq_cst;
 const object = zag.object;
 const Object = object.Object;
 const Nil = object.Nil;
@@ -17,7 +18,6 @@ const True = object.True;
 const False = object.False;
 const ClassIndex = object.ClassIndex;
 const checkEqual = zag.utilities.checkEqual;
-//const dispatch = @import("dispatch.zig");
 const heap = zag.heap;
 const HeapHeader = heap.HeapHeader;
 const HeapObject = heap.HeapObject;
@@ -34,10 +34,9 @@ const Code = execute.Code;
 const PC = execute.PC;
 const Result = execute.Result;
 const largerPowerOf2 = zag.utilities.largerPowerOf2;
-
-/// this is really a Process object with the low bits encoding additional information
-const Self = @This();
 const process_total_size = config.process_total_size;
+
+const Self = @This();
 const Process = @This();
 next: ?*Process = null,
 os_target: ?OsHandle = null,
@@ -57,9 +56,16 @@ staticContext: Context = undefined,
 data: [data_size]Object = undefined, // some wastage as stack must be aligned
 
 const fields_size = 14 * 8 + @sizeOf(Context);
+comptime {
+    assert(fields_size == @offsetOf(@This(), "data"));
+}
 const data_size = (process_total_size - fields_size) / @sizeOf(Object);
 const percentage_stack = 10; // must be < 25 to maintian invariant that stack can be copied to nursery
 const stack_size: usize = largerPowerOf2(data_size * percentage_stack / 100) - 1;
+const stack_mask_overflow: usize = largerPowerOf2(stack_size * @sizeOf(Object));
+pub const stack_mask = stack_mask_overflow - @sizeOf(Object);
+pub const stack_mask_shift = @ctz(stack_mask_overflow);
+pub const StackMask = @import("std").meta.Int(.unsigned, stack_mask_shift);
 pub fn process_stack_size() usize {
     return stack_size;
 }
@@ -70,10 +76,6 @@ fn stackOffset() usize {
     const address = @intFromPtr(&thisProcess.data[data_size - stack_size]) >> stack_mask_shift << stack_mask_shift;
     return (address - @intFromPtr(&thisProcess.data[0])) >> 3;
 }
-const stack_mask_overflow: usize = largerPowerOf2(stack_size * @sizeOf(Object));
-pub const stack_mask = stack_mask_overflow - @sizeOf(Object);
-pub const stack_mask_shift = @ctz(stack_mask_overflow);
-pub const StackMask = @import("std").meta.Int(.unsigned, stack_mask_shift);
 fn init(aProcess: *Process, threadId: std.Thread, id: u64) void {
     aProcess.threadId = threadId;
     aProcess.id = id;
