@@ -6,9 +6,10 @@
 
 ## Dragon Hatchling
 _BDH (Dragon Hatchling_) is a post-transformer AI architecture that remembers, reasons, and improves itself over time. Pathway has released a [repo on Github](https://github.com/pathwaycom/bdh) [Youtube video describing it](https://www.youtube.com/watch?v=fjB6sEPC4CE) [The Dragon Hatchling: The Missing Link between the Transformer and Models of the Brain](https://arxiv.org/abs/2509.26507) 
+## TurboFieldfare
+[TurboFieldfare](https://github.com/drumih/turbo-fieldfare) uses Metal on Apple Silicon to run a 14GB model in only 2GB so that it can work on an 8GB machine
 ## Model Context Protocol (MCP)
-[What Is MCP, and Why Is Everyone – Suddenly!– Talking About It?](https://huggingface.co/blog/Kseniase/mcp)
-
+[What Is MCP, and Why Is Everyone – Suddenly!– Talking About It?](https://huggingface.co/blog/Kseniase/mcp) 
 ## GNNs
 - [Integrating Large Language Models and Graph Neural Networks](https://www.youtube.com/watch?v=reFeFpdzFaI)
 
