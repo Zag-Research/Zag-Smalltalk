@@ -41,7 +41,7 @@ const DispatchHandler = struct {
     fn lookupMethodForClass(ci: ClassIndex, signature: Signature) *const CompiledMethod {
         if (dispatches[@intFromEnum(ci)].lookupMethod(signature)) |method|
             return method;
-        return loadMethodForClass(ci, signature);
+        return @call(.never_inline, loadMethodForClass, .{ci, signature});
     }
     fn loadMethodForClass(ci: ClassIndex, signature: Signature) *const CompiledMethod {
         if (defaultForTest != void)
@@ -91,7 +91,7 @@ const DispatchHandler = struct {
     fn alloc(nMethods: usize) *Dispatch {
         const nInstVars = Dispatch.requiredSpace(nMethods) - 1;
         //(DispatchElement.size(nMethods) + @offsetOf(Dispatch, "matches")) / @sizeOf(Object) - 1;
-        const aR = globalArena.aHeapAllocator().alloc(.CompiledMethod, @intCast(nInstVars), null, Object, false);
+        const aR = globalArena.aHeapAllocator().alloc(.Dispatch, @intCast(nInstVars), null, Object, false);
         const newDispatch: *Dispatch = @ptrCast(@alignCast(aR.allocated));
         newDispatch.initialize(nMethods);
         return newDispatch;
@@ -117,8 +117,10 @@ const DispatchState = enum(u32) {
             std.atomic.spinLoopHint();
         }
     }
+
     // this has the potential for a false negative
     // so must be used where that is OK (in other words, where we will retry)
+    // the else arm of the test should use `std.atomic.spinLoopHint();` to prevent a huge performance hit
     inline fn lockTry(self: *@This()) bool {
         if (@cmpxchgWeak(DispatchState, self, .clean, .beingUpdated, .acquire, .monotonic)) |_| {
             return false;
@@ -134,16 +136,14 @@ const Dispatch = struct {
     header: HeapHeader,
     nMethods: u32,
     state: DispatchState,
-    matches: DispatchMatch, // this is just the empty size... normally a larger array
-    const Self = @This();
-    const matchSize = DispatchMatch.matchSize;
-    const overAllocate = matchSize - 1;
-    var empty = Self{
+    matches: D.Match, // this is just the empty size... normally a larger array
+    const D = DispatchSIMD;
+    var empty = Dispatch {
         // don't count header, but do count one element of methods
-        .header = HeapHeader.staticHeaderWithClassStructHash(ClassIndex.Dispatch, Self, 0),
+        .header = HeapHeader.staticHeaderWithClassStructHash(.Dispatch, Self, 0),
         .nMethods = 0,
         .state = .clean,
-        .matches = DispatchMatch.empty,
+        .matches = D.empty,
     };
     inline fn retire(self: *Dispatch) void {
         // If nMethods == 0 (or self == &Dispatch.empty), unlock for reuse.
@@ -173,20 +173,20 @@ const Dispatch = struct {
     fn initialize(self: *Self, nMethods: usize) void {
         self.state = .clean;
         self.nMethods = nMethods;
-        for (self.methodsAllocatedSlice()) |*ptr|
-            ptr.initUpdateable();
+        D.initialize(self, nMethods);
+    }
+    const methodsAllocatedSlice = D.methodsAllocatedSlice;
+    inline //
+    fn methods(self: *const Self) [*]D.Element {
+        return @as([*]D.Element, @ptrCast(@alignCast(@constCast(&self.matches))));
     }
     inline //
-    fn methods(self: *const Self) [*]DispatchElement {
-        return @as([*]DispatchElement, @ptrCast(@alignCast(@constCast(&self.matches))));
-    }
-    inline //
-    fn methodSlice(self: *Self) []DispatchElement {
+    fn methodSlice(self: *Self) []D.Element {
         return self.methods()[0..self.nMethods];
     }
     inline //
-    fn methodsAllocatedSlice(self: *Self) []DispatchElement {
-        return self.methods()[0 .. self.nMethods + overAllocate];
+    fn methodsAllocatedSlice(self: *Self) []D.Element {
+        return self.methods()[0 .. self.nMethods + D.overAllocate];
     }
     fn addMethodsTo(self: *Self, newDispatch: *Self, method: *const CompiledMethod) bool {
         for (self.methodSlice()) |de| {
@@ -194,6 +194,18 @@ const Dispatch = struct {
                 if (!newDispatch.add(ptr)) return false;
         }
         return newDispatch.add(method);
+    }
+};
+const DispatchOriginal = struct {
+    const Self = Dispatch;
+    const matchSize = DispatchMatch.matchSize;
+    const overAllocate = matchSize - 1;
+    const Match = DispatchMatch;
+    const empty = DispatchMatch.empty;
+    const Element = DispatchElement;
+    fn initialize(self: *Self, nMethods: usize) void {
+        for (self.methodsAllocatedSlice()) |*ptr|
+            ptr.initUpdateable();
     }
     inline //
     fn lookupMethod(self: *const Self, signature: Signature) ?*const CompiledMethod {
