@@ -76,10 +76,10 @@ const DispatchHandler = struct {
                 if (@atomicLoad(DispatchPtr, &dispatches[index], .monotonic) != dispatch) {
                     continue;
                 }
-                var numMethods: usize = 3;
+                var numMethods: u16 = 3;
                 while (true) {
                     numMethods = @max(numMethods, dispatch.nMethods + 1) * 3 / 2;
-                    const newDispatch: DispatchPtr = @alignCast(alloc(numMethods));
+                    const newDispatch: DispatchPtr = alloc(numMethods);
                     if (dispatch.addMethodsTo(newDispatch, method)) {
                         @atomicStore(DispatchPtr, &dispatches[index], newDispatch, .release);
                         return; // triggers defer and returns cleanly
@@ -90,12 +90,8 @@ const DispatchHandler = struct {
             }
         }
     }
-    fn requiredSpace(nMethods: usize) usize {
-        const keysPlusHeader = (16 + nMethods * @sizeOf(u32) + 63) / 64 * 16;
-        return keysPlusHeader - 4 + keysPlusHeader / 2;
-    }
-    fn alloc(nMethods: usize) DispatchPtr {
-        const nInstVars = Dispatch.requiredSpace(nMethods) - 1;
+    fn alloc(nMethods: u16) DispatchPtr {
+        const nInstVars = Dispatch.D.requiredSpace(nMethods) - 1;
         //(DispatchElement.size(nMethods) + @offsetOf(Dispatch, "matches")) / @sizeOf(Object) - 1;
         const aR = globalArena.aHeapAllocator().alloc(.Dispatch, @intCast(nInstVars), null, Object, false);
         const newDispatch: DispatchPtr = @ptrCast(@alignCast(aR.allocated));
@@ -116,6 +112,7 @@ const DispatchState = enum(u32) {
         @atomicStore(DispatchState, self, .dead, .release);
     }
 
+    /// this will spinlock until we own the Dispatch
     inline fn lockSpin(self: *@This()) void {
         while (@cmpxchgWeak(DispatchState, self, .clean, .beingUpdated, .acquire, .monotonic)) |notClean| {
             if (notClean == .dead) @panic("DeadDispatch");
@@ -124,9 +121,10 @@ const DispatchState = enum(u32) {
         }
     }
 
-    // this has the potential for a false negative
-    // so must be used where that is OK (in other words, where we will retry)
-    // the else arm of the test should use `std.atomic.spinLoopHint();` to prevent a huge performance hit
+    /// Try to lock the Dispatch.
+    /// This has the potential for a false negative,
+    /// so must be used where that is OK (in other words, where we will retry).
+    /// The else arm of the test should use `std.atomic.spinLoopHint();` to prevent a huge performance hit
     inline fn lockTry(self: *@This()) bool {
         if (@cmpxchgWeak(DispatchState, self, .clean, .beingUpdated, .acquire, .monotonic)) |_| {
             return false;
@@ -148,6 +146,7 @@ const Dispatch = extern struct {
     const D = DispatchSIMD;
     const lookupMethod = D.lookupMethod;
     const addIfAllocated = D.addIfAllocated;
+    const addMethod = D.addMethod;
     var empty: Dispatch align(SIMD_bytes) = .{
         // don't count header, but do count one element of methods
         .header = HeapHeader.staticHeaderWithClassStructHash(.Dispatch, Self, 0),
@@ -181,12 +180,12 @@ const Dispatch = extern struct {
         }
         return .{ .total = total, .active = active, .nMethods = self.nMethods, .percent = active * 100 / @max(total, 1) };
     }
-    fn initialize(self: *Self, nMethods: usize) void {
-        self.state = .clean;
-        self.nAllocated = nMethods;
-        D.initialize(self);
-        for (self.methodsAllocatedSlice()) |*p|
-            p.* = empty;
+    fn initialize(dispatch: DispatchPtr, nMethods: u16) void {
+        dispatch.state = .clean;
+        dispatch.nAllocated = nMethods;
+        D.initialize(dispatch);
+        for (dispatch.methodsAllocatedSlice()) |*p|
+            p.* = D.empty;
     }
     inline //
     fn methods(self: *const Self) [*]D.Element {
@@ -200,12 +199,12 @@ const Dispatch = extern struct {
     fn methodsAllocatedSlice(self: *Self) []D.Element {
         return self.methods()[0..self.nAllocated];
     }
-    fn addMethodsTo(self: *Self, newDispatch: *Self, method: *const CompiledMethod) bool {
-        for (self.methodSlice()) |de| {
-            if (de.activeMethod()) |ptr|
-                if (!newDispatch.add(ptr)) return false;
+    fn addMethodsTo(self: DispatchPtr, newDispatch: DispatchPtr, method: *const CompiledMethod) bool {
+        for (self.methodSlice()) |*de| {
+            if (D.activeMethod(self, de)) |ptr|
+                if (!newDispatch.addMethod(ptr)) return false;
         }
-        return newDispatch.add(method);
+        return newDispatch.addMethod(method);
     }
 };
 const DispatchSIMD = struct {
@@ -214,44 +213,56 @@ const DispatchSIMD = struct {
     const doHash = false;
     const Element = if (intermingled) u128 else u32;
     const empty: Element = 0;
+    const addMethod = setMethod;
+    fn requiredSpace(nMethods: usize) usize {
+        const keysPlusHeader = (16 + nMethods * @sizeOf(u32) + 63) / 64 * 16;
+        return keysPlusHeader - 4 + keysPlusHeader / 2;
+    }
     inline fn round(n: u16) u16 {
         const VEC_LEN: u16 = SIMD_bytes / @sizeOf(Element);
         return (n & ~VEC_LEN) + VEC_LEN;
+    }
+    fn activeMethod(dispatch: DispatchPtr, de: *Element) ?*const CompiledMethod {
+        if (intermingled) return @as(?*const CompiledMethod, de)[1];
+        const base_ptr: [*]align(SIMD_bytes) u32 = @ptrCast(dispatch);
+        const base = base_ptr[0..dispatch.nAllocated];
+        const index = (@intFromPtr(de) - @intFromPtr(base_ptr)) / @sizeOf(u32);
+        return getMethodSlot(base, index, ?*const CompiledMethod).*;
     }
     fn initialize(dispatch: DispatchPtr) void {
         dispatch.nMethods = round(0);
     }
     fn addIfAllocated(dispatch: DispatchPtr, cmp: *const CompiledMethod) bool {
-        if (dispatch.nMethods >= dispatch.nAllocated) return false;
+        if (intermingled and dispatch.nMethods >= dispatch.nAllocated) return false;
+        dispatch.state.lockSpin();
         return setMethod(dispatch, cmp);
     }
     inline fn lookupMethod(
         dispatch: DispatchPtr,
         selector: Signature,
     ) ?*const CompiledMethod {
-        // Retain the 64-byte alignment on the multi-pointer
-        const base_ptr: [*]align(SIMD_bytes) u32 = @ptrCast(dispatch);
-
-        // Slicing it now yields a slice with type `[]align(SIMD_bytes) u32`
-        const base = base_ptr[0..dispatch.nMethods];
         const key = selector.fullHash();
-        if (if (intermingled) searchIntermingled(key, 0, base) else search(key, 0, base)) |index|
+        if (intermingled) @panic("unimplemented");
+        const base = @as([*]align(SIMD_bytes) u32, @ptrCast(dispatch))[0..dispatch.nAllocated];
+        if (search(key, 0, base)) |index|
             return getMethodSlot(base, index, *const CompiledMethod).*;
         return null;
     }
-    inline fn setMethod(dispatch: DispatchPtr, method: *const CompiledMethod) void {
+    inline fn setMethod(dispatch: DispatchPtr, method: *const CompiledMethod) bool {
+        defer dispatch.state.unlock();
         const selector = method.signature;
-        const base = @as([*]align(SIMD_bytes) u32, @ptrCast(dispatch))[0..dispatch.nMethods];
         const key = selector.fullHash();
-        if (if (intermingled) searchIntermingled(key, 0, base) else search(key, 0, base)) |index| {
+        if (intermingled) @panic("unfinished");
+        const base = @as([*]align(SIMD_bytes) u32, @ptrCast(dispatch))[0..dispatch.nAllocated];
+        if (search(key, 0, base)) |index| {
             // 1. Get the address of the slot and write the new method pointer
-            const slot = getMethodSlot(base, index, *CompiledMethod);
+            const slot = getMethodSlot(base, index, *const CompiledMethod);
             slot.* = method;
-
             // 2. Publish the key with RELEASE semantics to ensure slot write is visible first
             @atomicStore(u32, &base[index], key, .release);
-        } else @panic("setMethod");
-        dispatch.state.unlock();
+            return true;
+        }
+        return false;
     }
     // given a slice of the header+keys, return the address of the corresponding method pointer
     inline fn getMethodSlot(base: anytype, k: usize, comptime T: type) *T {
@@ -407,6 +418,9 @@ const DispatchOriginal = struct {
             }
         }
         return false;
+    }
+    fn activeMethod(de: Element) ?*const CompiledMethod {
+        return de.activeMethod();
     }
     fn fail(programCounter: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
         _ = .{ programCounter, sp, process, context, extra };
