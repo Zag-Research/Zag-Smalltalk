@@ -30,15 +30,19 @@ const HeapHeader = zag.heap.HeapHeader;
 var n_classes: u16 = config.max_classes;
 const SP = Process.SP;
 
+const SIMD_bytes = 64; // bytes that can be handled in 1 cycle
+const DispatchPtr = *align(SIMD_bytes) Dispatch;
+
 const o0 = object.testObjects[0];
 // note that self and other could become invalid after any method call if they are heap objects, so will need to be re-loaded from context.fields if needed thereafter
 
 pub const lookupMethodForClass = DispatchHandler.lookupMethodForClass;
 pub const addMethod = DispatchHandler.addMethod;
+pub const fail = threadedFunctions.fail;
 const static_classes = config.max_classes > 0;
 const DispatchHandler = struct {
-    var dispatches: if (static_classes) [config.max_classes]*Dispatch else [*]Dispatch =
-        if (static_classes) [_]*Dispatch{&Dispatch.empty} ** config.max_classes else undefined;
+    var dispatches: if (static_classes) [config.max_classes]DispatchPtr else [*]Dispatch =
+        if (static_classes) [_]DispatchPtr{&Dispatch.empty} ** config.max_classes else undefined;
     inline //
     fn lookupMethodForClass(ci: ClassIndex, signature: Signature) *const CompiledMethod {
         if (dispatches[@intFromEnum(ci)].lookupMethod(signature)) |method|
@@ -63,21 +67,21 @@ const DispatchHandler = struct {
         trace("addMethod({f} {}) {} {*}", .{ method.signature, method.signature.fullHash(), index, dispatches[index] });
         if (dispatches[index].addIfAllocated(method)) return;
         while (true) {
-            const dispatch = @atomicLoad(*Dispatch, &dispatches[index], .acquire);
+            const dispatch = @atomicLoad(DispatchPtr, &dispatches[index], .acquire);
             if (dispatch.state.lockTry()) {
                 // Automatically runs on BOTH 'continue' (mismatch) and 'return' (success)
                 defer dispatch.retire();
 
                 // Double-check: if swapped before locking, 'continue' triggers defer and restarts
-                if (@atomicLoad(*Dispatch, &dispatches[index], .monotonic) != dispatch) {
+                if (@atomicLoad(DispatchPtr, &dispatches[index], .monotonic) != dispatch) {
                     continue;
                 }
                 var numMethods: usize = 3;
                 while (true) {
                     numMethods = @max(numMethods, dispatch.nMethods + 1) * 3 / 2;
-                    const newDispatch = alloc(numMethods);
+                    const newDispatch: DispatchPtr = @alignCast(alloc(numMethods));
                     if (dispatch.addMethodsTo(newDispatch, method)) {
-                        @atomicStore(*Dispatch, &dispatches[index], newDispatch, .release);
+                        @atomicStore(DispatchPtr, &dispatches[index], newDispatch, .release);
                         return; // triggers defer and returns cleanly
                     }
                 }
@@ -90,11 +94,11 @@ const DispatchHandler = struct {
         const keysPlusHeader = (16 + nMethods * @sizeOf(u32) + 63) / 64 * 16;
         return keysPlusHeader - 4 + keysPlusHeader / 2;
     }
-    fn alloc(nMethods: usize) *Dispatch {
+    fn alloc(nMethods: usize) DispatchPtr {
         const nInstVars = Dispatch.requiredSpace(nMethods) - 1;
         //(DispatchElement.size(nMethods) + @offsetOf(Dispatch, "matches")) / @sizeOf(Object) - 1;
         const aR = globalArena.aHeapAllocator().alloc(.Dispatch, @intCast(nInstVars), null, Object, false);
-        const newDispatch: *Dispatch = @ptrCast(@alignCast(aR.allocated));
+        const newDispatch: DispatchPtr = @ptrCast(@alignCast(aR.allocated));
         newDispatch.initialize(nMethods);
         return newDispatch;
     }
@@ -134,23 +138,25 @@ comptime {
     std.debug.assert(@offsetOf(Dispatch, "header") == 0);
     std.debug.assert(@offsetOf(Dispatch, "matches") == 16);
 }
-const Dispatch = struct {
+const Dispatch = extern struct {
     header: HeapHeader,
     nMethods: u16,
     nAllocated: u16,
     state: DispatchState,
-    matches: D.Match, // this is just the empty size... normally a larger array
+    matches: [1]D.Element, // this is just the empty size... normally a larger array
     const Self = @This();
     const D = DispatchSIMD;
     const lookupMethod = D.lookupMethod;
-    var empty = Dispatch{
+    const addIfAllocated = D.addIfAllocated;
+    var empty: Dispatch align(SIMD_bytes) = .{
         // don't count header, but do count one element of methods
         .header = HeapHeader.staticHeaderWithClassStructHash(.Dispatch, Self, 0),
         .nMethods = 0,
+        .nAllocated = 0,
         .state = .clean,
-        .matches = D.empty,
+        .matches = .{D.empty},
     };
-    inline fn retire(self: *Dispatch) void {
+    inline fn retire(self: DispatchPtr) void {
         // If nMethods == 0 (or self == &Dispatch.empty), unlock for reuse.
         // empty is the only dispatch table that will have a nMethods == 0
         // Otherwise, mark the superseded table as dead.
@@ -208,26 +214,34 @@ const DispatchSIMD = struct {
     const doHash = false;
     const Element = if (intermingled) u128 else u32;
     const empty: Element = 0;
-    const SIMD_bytes = 64; // bytes that can be handled in 1 cycle
     inline fn round(n: u16) u16 {
         const VEC_LEN: u16 = SIMD_bytes / @sizeOf(Element);
         return (n & ~VEC_LEN) + VEC_LEN;
     }
-    fn initialize(dispatch: *Dispatch) void {
+    fn initialize(dispatch: DispatchPtr) void {
         dispatch.nMethods = round(0);
     }
+    fn addIfAllocated(dispatch: DispatchPtr, cmp: *const CompiledMethod) bool {
+        if (dispatch.nMethods >= dispatch.nAllocated) return false;
+        return setMethod(dispatch, cmp);
+    }
     inline fn lookupMethod(
-        dispatch: *Dispatch,
+        dispatch: DispatchPtr,
         selector: Signature,
-    ) ?*CompiledMethod {
-        const base = @as([*]u32, @ptrCast(dispatch))[0..dispatch.nMethods];
+    ) ?*const CompiledMethod {
+        // Retain the 64-byte alignment on the multi-pointer
+        const base_ptr: [*]align(SIMD_bytes) u32 = @ptrCast(dispatch);
+
+        // Slicing it now yields a slice with type `[]align(SIMD_bytes) u32`
+        const base = base_ptr[0..dispatch.nMethods];
         const key = selector.fullHash();
         if (if (intermingled) searchIntermingled(key, 0, base) else search(key, 0, base)) |index|
-            return getMethodSlot(base, index, *CompiledMethod).*;
+            return getMethodSlot(base, index, *const CompiledMethod).*;
         return null;
     }
-    inline fn setMethod(dispatch: *Dispatch, selector: Signature, method: *CompiledMethod) void {
-        const base = @as([*]u32, @ptrCast(dispatch))[0..dispatch.nMethods];
+    inline fn setMethod(dispatch: DispatchPtr, method: *const CompiledMethod) void {
+        const selector = method.signature;
+        const base = @as([*]align(SIMD_bytes) u32, @ptrCast(dispatch))[0..dispatch.nMethods];
         const key = selector.fullHash();
         if (if (intermingled) searchIntermingled(key, 0, base) else search(key, 0, base)) |index| {
             // 1. Get the address of the slot and write the new method pointer
@@ -253,7 +267,7 @@ const DispatchSIMD = struct {
     inline fn search(
         route_hash: anytype, // The hash used to calculate the starting block
         key: @TypeOf(route_hash),
-        array: []const @TypeOf(key),
+        array: []align(SIMD_bytes) const @TypeOf(key),
     ) ?usize {
         const T = @TypeOf(key);
         const VEC_LEN = SIMD_bytes / @sizeOf(T);
@@ -263,7 +277,7 @@ const DispatchSIMD = struct {
         const size = array.len;
         const target_vec: Vec = @splat(key);
 
-        const base: [*]const T = array.ptr;
+        const base: [*]align(SIMD_bytes) const T = array.ptr;
         const end = base + size;
 
         // Comptime calculation: e.g., if ignoreFirst=4, maskFirst is 0xFFF0
@@ -281,7 +295,7 @@ const DispatchSIMD = struct {
 
         if (keys == base) {
             // --- First Block ---
-            const chunk: Vec = @as(*const Vec, @ptrCast(keys)).*;
+            const chunk: Vec = @as(*align(SIMD_bytes) const Vec, @ptrCast(keys)).*;
             const match = @as(MaskT, @bitCast(chunk == target_vec)) & maskFirst;
 
             if (match != 0) {
@@ -309,7 +323,7 @@ const DispatchSIMD = struct {
 
     // Search using intermingled keys and pointers
     inline fn searchIntermingled(
-        dispatch: *Dispatch,
+        dispatch: DispatchPtr,
         selector: anytype,
         target_key: u64,
         return_type: anytype,
@@ -651,6 +665,29 @@ pub const threadedFunctions = struct {
             return @call(tailCall, method.executeFn, .{ newPc.next(), sp, process, context, Extra.forMethod(method, selfAddr) });
         }
     };
+    pub fn fail(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
+        sp.traceStack("fail primitive", context, extra);
+        const signature = pc.signature();
+        const numArgs = signature.numArgs();
+        const selfAddr = sp.unreserve(numArgs);
+        const method = getMethod(pc, signature, selfAddr.top);
+        trace("method: {f}", .{method});
+        const newPc = method.codePc();
+        trace("newPc: {f}", .{newPc});
+        if (extra.installContextIfNone(sp, process, context)) |new| {
+            const newSp = new.sp;
+            const newContext = new.context;
+            newContext.setReturn(pc.next2());
+            const newExtra = Extra.forMethod(method, newSp.unreserve(numArgs));
+            trace("newExtra {x} {f}", .{ @as(u64, @bitCast(newExtra)), newExtra });
+            newSp.traceStack("send new stack", newContext, newExtra);
+            trace("newPc: {f} {?}", .{ newPc, @import("threadedFn.zig").find(method.executeFn) });
+            return @call(tailCall, method.executeFn, .{ newPc.next(), newSp, process, newContext, newExtra });
+        }
+        context.setReturn(pc.next2());
+        //method.dump();
+        return @call(tailCall, method.executeFn, .{ newPc.next(), sp, process, context, Extra.forMethod(method, selfAddr) });
+    }
     pub const send0 = struct {
         pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
             sp.traceStack("send0", context, extra);
