@@ -21,6 +21,7 @@ const object = zag.object;
 const Nil = object.Nil;
 const True = object.True;
 const False = object.False;
+const primitive = zag.execute.Signature.fromPrimitive;
 
 fn fibCheck(n: u32) u64 {
     if (n < 2) return n;
@@ -296,13 +297,13 @@ const fibIntegerClosure = struct {
         zag.dispatch.addMethod(.False, @ptrCast(&FifTrue));
         SIplus.resolve(Object.empty) catch @panic("Failed to resolve");
         SIplus.initExecute();
-        zag.dispatch.addMethod(@ptrCast(&SIplus));
+        zag.dispatch.addMethod(.SmallInteger, @ptrCast(&SIplus));
         SIminus.resolve(Object.empty) catch @panic("Failed to resolve");
         SIminus.initExecute();
-        zag.dispatch.addMethod(@ptrCast(&SIminus));
+        zag.dispatch.addMethod(.SmallInteger, @ptrCast(&SIminus));
         SIleq.resolve(Object.empty) catch @panic("Failed to resolve");
         SIleq.initExecute();
-        zag.dispatch.addMethod(@ptrCast(&SIleq));
+        zag.dispatch.addMethod(.SmallInteger, @ptrCast(&SIleq));
         if (zag.config.show_trace) {
             std.debug.print("\n", .{});
             std.debug.print("address of one {*}\n", .{&one});
@@ -454,7 +455,7 @@ const fibFloatClosure = struct {
         zag.dispatch.addMethod(.SmallInteger, @ptrCast(&SIminus));
         SIleq.resolve(Object.empty) catch @panic("Failed to resolve");
         SIleq.initExecute();
-        zag.dispatch.addMethod(@ptrCast(&SIleq));
+        zag.dispatch.addMethod(.SmallInteger, @ptrCast(&SIleq));
         if (zag.config.show_trace) {
             std.debug.print("\n", .{});
             std.debug.print("address of one {*}\n", .{&one});

@@ -176,16 +176,13 @@ const Dispatch = extern struct {
         var active: usize = 0;
         for (self.methodsAllocatedSlice()) |de| {
             total += 1;
-            if (!de.isEmpty()) active += 1;
+            if (de != D.empty) active += 1;
         }
         return .{ .total = total, .active = active, .nMethods = self.nMethods, .percent = active * 100 / @max(total, 1) };
     }
     fn initialize(dispatch: DispatchPtr, nMethods: u16) void {
         dispatch.state = .clean;
-        dispatch.nAllocated = nMethods;
-        D.initialize(dispatch);
-        for (dispatch.methodsAllocatedSlice()) |*p|
-            p.* = D.empty;
+        D.initialize(dispatch, nMethods);
     }
     inline //
     fn methods(self: *const Self) [*]D.Element {
@@ -229,11 +226,15 @@ const DispatchSIMD = struct {
         const index = (@intFromPtr(de) - @intFromPtr(base_ptr)) / @sizeOf(u32);
         return getMethodSlot(base, index, ?*const CompiledMethod).*;
     }
-    fn initialize(dispatch: DispatchPtr) void {
+    fn initialize(dispatch: DispatchPtr, nMethods: u16) void {
+        dispatch.nAllocated = round(nMethods);
         dispatch.nMethods = round(0);
+        for (dispatch.methodsAllocatedSlice()) |*p|
+            p.* = empty;
     }
     fn addIfAllocated(dispatch: DispatchPtr, cmp: *const CompiledMethod) bool {
         if (intermingled and dispatch.nMethods >= dispatch.nAllocated) return false;
+        if (dispatch.nMethods == 0) return false;
         dispatch.state.lockSpin();
         return setMethod(dispatch, cmp);
     }
@@ -379,9 +380,10 @@ const DispatchOriginal = struct {
     const Match = DispatchMatch;
     const empty = DispatchMatch.empty;
     const Element = DispatchElement;
-    fn initialize(self: *Self, nMethods: usize) void {
-        _ = nMethods; // autofix
-        for (self.methodsAllocatedSlice()) |*ptr|
+    fn initialize(dispatch: DispatchPtr, nMethods: usize) void {
+        dispatch.nAllocated = nMethods;
+        dispatch.nMethods = 0;
+        for (dispatch.methodsAllocatedSlice()) |*ptr|
             ptr.initUpdateable();
     }
     inline //
@@ -552,10 +554,10 @@ test "add/lookup" {
     const class = ClassIndex.Object;
     const sig = Signature.fromNameClass(selector, class);
     const emptyMethod = dummyCompiledMethod(sig);
-    addMethod(&emptyMethod);
+    addMethod(.Object, &emptyMethod);
     try std.testing.expectEqual(lookupMethodForClass(class, sig), &emptyMethod);
     const altMethod = dummyCompiledMethod(Signature.fromNameClass(selector, class));
-    addMethod(&altMethod);
+    addMethod(.Object, &altMethod);
     try std.testing.expectEqual(lookupMethodForClass(class, sig), &altMethod);
     const stats = DispatchHandler.stats(class);
     try std.testing.expectEqual(1, stats.active);

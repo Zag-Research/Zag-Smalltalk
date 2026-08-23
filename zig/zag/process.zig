@@ -41,6 +41,7 @@ m: [process_total_size]u8 align(1), // alignment explicitly stated to emphasize 
 pub const alignment = @max(stack_mask_overflow * 2, flagMask + 1);
 const alignment_mask = @as(u64, @bitCast(-@as(i64, alignment)));
 const stack_mask_overflow: usize = zag.utilities.largerPowerOf2(Process.stack_size * @sizeOf(Object));
+const stack_high_mask = @as(u64, @bitCast(-@as(i64, stack_mask_overflow)));
 pub const StackMask = zag.UInt(stack_mask_shift);
 pub const stack_mask = stack_mask_overflow - @sizeOf(Object);
 pub const stack_mask_shift = @ctz(stack_mask_overflow);
@@ -73,17 +74,6 @@ const Process = struct {
     const nursery_size = (processAvail - stack_size) / 2;
     const fill_size = processAvail - stack_size - nursery_size * 2;
     comptime {
-        // @compileLog("Process size: ", @sizeOf(Process));
-        // @compileLog("process_total_size: ", process_total_size);
-        // @compileLog("@sizeOf(Fields)", @sizeOf(Fields));
-        // @compileLog("@sizeOf(Context)", @sizeOf(Context));
-        // @compileLog("processAvail:", processAvail);
-        // @compileLog("approx_nursery_size:", approx_nursery_size);
-        // @compileLog("stack_size:", stack_size);
-        // @compileLog("nursery_size:", nursery_size);
-        // @compileLog("fill_size:", fill_size);
-        // @compileLog("alignment:", alignment);
-        // @compileLog("stack_mask_overflow:", stack_mask_overflow);
         assert(stack_size < nursery_size);
         assert(fill_size <= 1);
         assert(@offsetOf(Process, "stack") == 0);
@@ -493,7 +483,7 @@ const Stack = struct {
         return (@intFromPtr(other) - @intFromPtr(self)) / @sizeOf(Object);
     }
     pub inline fn contains(self: SP, other: anytype) bool {
-        return (@intFromPtr(other) ^ @intFromPtr(self)) >> stack_mask_shift == 0;
+        return (@intFromPtr(other) ^ @intFromPtr(self)) & stack_high_mask == 0;
     }
     pub inline fn array(self: SP) [*]Object {
         return @ptrCast(self);

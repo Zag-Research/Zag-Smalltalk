@@ -144,9 +144,9 @@ pub const @"<=" = struct {
         process.init();
         const sp = process.getSp();
         const context = process.getContext();
-        try expectEqual(Object.True(), try with(0, Object.from(0, sp, context), sp, context));
-        try expectEqual(Object.True(), try with(0, Object.from(1, sp, context), sp, context));
-        try expectEqual(Object.False(), try with(0, Object.from(-1, sp, context), sp, context));
+        try expectEqual(Object.True(), with(0, Object.from(0, sp, context), sp, context).?);
+        try expectEqual(Object.True(), with(0, Object.from(1, sp, context), sp, context).?);
+        try expectEqual(Object.False(), with(0, Object.from(-1, sp, context), sp, context).?);
     }
 };
 pub const @"*" = struct {
@@ -180,7 +180,7 @@ pub const @"*" = struct {
         process.init();
         const sp = process.getSp();
         const context = process.getContext();
-        try expectEqual(Object.from(12, sp, context), with(Object.fromNativeI(3, sp, context).untaggedI(), Object.from(4, sp, context), sp, context));
+        try expectEqual(Object.from(12, sp, context), with(Object.fromNativeI(3, sp, context).untaggedI().?, Object.from(4, sp, context), sp, context).?);
         try expectEqual(error.primitiveError, with(std.math.maxInt(i64), Object.from(2, sp, context), sp, context));
         try expectEqual(error.primitiveError, with(std.math.minInt(i64), Object.from(-1, sp, context), sp, context));
     }

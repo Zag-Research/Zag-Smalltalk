@@ -899,7 +899,7 @@ test "compileObject" {
         "third", // pointer to third object
         "0mref",
         ":second",
-        c.replace0, // second HeapObject - runtime ClassIndex #0
+        c.ReplacementIndices, // second HeapObject - runtime ClassIndex #0
         ":third",
         c.Dispatch, // third HeapObject
         "2True",
@@ -1084,7 +1084,7 @@ pub const Execution = struct {
         }
         pub fn sendTo(self: *MainExecutor, selector: Object, receiver: Object) !Object {
             var exe = &self.exe;
-            trace("Sending: {f} ({x}) to {f}", .{ selector, selector.testU(), receiver });
+            trace("Sending: ({x}) {f} to {f}", .{ selector.testU(), selector, receiver });
             exe.init(Object.empty);
             exe.getContext().setReturn(PC.exit());
             trace("SendTo: context {*} {*} {f}", .{ exe.getContext(), exe.getContext().npc, exe.getContext().tpc });

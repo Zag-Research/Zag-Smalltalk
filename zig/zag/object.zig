@@ -239,7 +239,7 @@ pub const ObjectFunctions = struct {
                 return ord.eq;
             }
         }
-        std.debug.print("\nself:  0x{x:0>16}\nother: 0x{x:0>16}\n", .{ self.testU(), other.testU() });
+        std.debug.print("\nself:  {f}\nother: {f}\n", .{ self, other });
         @panic("unreachable");
     }
     pub inline fn promoteToUnmovable(self: Object) !Object {
