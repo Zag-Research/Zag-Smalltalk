@@ -88,7 +88,7 @@ ASCompileTestClass1 >> blockEvaluationNestedWithSend [
 { #category : 'testing - examples' }
 ASCompileTestClass1 >> blockEvaluationWithCall [
 "bar ^42"
-	^ [ self bar + 5 ] value
+	^ [ ^ self bar + 5 ] value
 ]
 
 { #category : 'testing - examples' }
@@ -98,6 +98,18 @@ ASCompileTestClass1 >> blockEvaluationWithCallAndLocalWithoutTailCall [
 	| x |
 	x := [ self bar + 5 ] value.
 	^ x
+]
+
+{ #category : 'testing - examples' }
+ASCompileTestClass1 >> blockEvaluationWithCallAndReturnNonLocal [
+"bar ^42"
+	^ [ ^ self bar + 5 ] value
+]
+
+{ #category : 'testing - examples' }
+ASCompileTestClass1 >> blockEvaluationWithCallAndReturnTop [
+"bar ^42"
+	^ [ self bar + 5 ] value
 ]
 
 { #category : 'testing - examples' }
