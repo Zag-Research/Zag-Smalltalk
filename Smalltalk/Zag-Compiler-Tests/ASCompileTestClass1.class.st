@@ -202,6 +202,14 @@ ASCompileTestClass1 >> bracketWithValue [
 ]
 
 { #category : 'testing - examples' }
+ASCompileTestClass1 >> callWithLocal [
+
+	| y |
+	y := self simple1.
+	^ y
+]
+
+{ #category : 'testing - examples' }
 ASCompileTestClass1 >> cascade [
 
 	| foo |
@@ -417,8 +425,7 @@ ASCompileTestClass1 >> recursiveSum: listOfNumbers [
 
 { #category : 'testing - examples' }
 ASCompileTestClass1 >> simple1 [
-	..
-	^ 42..
+	^ 42
 ]
 
 { #category : 'testing - examples' }
