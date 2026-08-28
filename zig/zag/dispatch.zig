@@ -272,16 +272,21 @@ pub const threadedFunctions = struct {
             return @call(tailCall, process.branchCheck(callerContext.getNPc()), .{ callerContext.getTPc(), newSp, process, callerContext, newExtra });
         }
         test {
-            if (true) return config.skipForDebugging();
             var exe = Execution.initTest("returnSelf", .{
                 tf.pushLiteral,
-                91,
+                "0=91",
                 tf.pushLiteral,
-                17,
+                "1=17",
                 tf.returnSelf,
-                2,
+                "2=2",
                 tf.pushLiteral,
-                99,
+                "3=99",
+            });
+            try exe.resolve(&[_]Object{
+                exe.object(91),
+                exe.object(17),
+                exe.object(42),
+                exe.object(99),
             });
             try exe.runTest(
                 &[_]Object{exe.object(42)},
@@ -305,20 +310,24 @@ pub const threadedFunctions = struct {
             return @call(tailCall, process.branchCheck(callerContext.npc), .{ callerContext.tpc, newSp, process, callerContext, Extra.fromContextData(callerContext.contextDataPtr(sp)) });
         }
         test {
-            if (true) return config.skipForDebugging();
             var exe = Execution.initTest("returnTopNoContext", .{
                 tf.pushLiteral,
-                91,
+                "0=91",
                 tf.pushLiteral,
                 o0,
                 tf.returnTop,
-                2,
+                "1=2",
                 tf.pushLiteral,
-                99,
+                "2=99",
+            });
+            try exe.resolve(&[_]Object{
+                exe.object(91),
+                exe.object(2),
+                exe.object(99),
             });
             try exe.runTest(
                 &[_]Object{True()},
-                &[_]Object{exe.object(42)},
+                &[_]Object{o0},
             );
         }
     };

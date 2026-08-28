@@ -206,13 +206,12 @@ test "check HeapAllocations" {
     const fullHeapSize = HeapAllocation.size - HeapAllocation.headerSize;
     var ha = HeapAllocation.init();
     defer ha.deinit();
-    try config.skipForDebugging();
-    for ([_]u8{ 5, 6, 7, 8, 9, 10, 11 }) |index|
+    for ([_]u8{ 5, 6, 7, 8, 9, 10 }) |index|
         try ee(1, ha.freeCount(index));
-    try ee(3, ha.freeCount(12));
-    if (true) return error.SkipZigTest;
+    try ee(7, ha.freeCount(11));
     try ee(fullHeapSize, ha.freeSpace());
     //    try ee(ha.allocOfSize(.none, HeapHeader.maxLength + 2, null, Object), error.HeapFull);
+    if (true) return error.SkipZigTest;
     const alloc0 = try ha.allocOfSize(.none, 0, 60, u8);
     try ee(alloc0.header.length, 8);
     try ee(fullHeapSize - 9, ha.freeSpace());
@@ -305,10 +304,9 @@ test "freeList structure" {
     const ee = std.testing.expectEqual;
     const fls = FreeList.init(12);
     try ee(fls[0].header.length, 0);
-    try config.skipForDebugging();
     try ee(fls[9].header.length, 511);
-    try ee(fls.len, 13);
-    try ee(nFreeLists, 13);
+    try ee(fls.len, 12);
+    try ee(nFreeLists, 12);
 }
 
 var heapAllocations: ?HeapAllocationPtr = null;

@@ -46,7 +46,7 @@ pub fn heapBits() u32 {
     var bits: u32 = 0;
     inline for (std.meta.fields(Object.Compact)) |f| {
         bits |= switch (@as(ClassIndex, @enumFromInt(f.value))) {
-            .ThunkReturnLocal, .ThunkReturnInstance, .ThunkReturnObject, .ThunkReturnImmediate, .ThunkLocal, .BlockAssignLocal, .ThunkInstance, .BlockAssignInstance, .ThunkHeap, .ThunkReturnCharacter, .ThunkReturnFloat, .Float, .heap => bit,
+            .ThunkReturnLocal, .ThunkReturnInstance, .ThunkReturnObject, .ThunkReturnImmediate, .ThunkLocal, .BlockAssignLocal, .ThunkInstance, .BlockAssignInstance, .ThunkHeap, .ThunkReturnCharacter, .ThunkReturnFloat, .Float, .memoryObject => bit,
             else => 0,
         };
         bit <<= 1;
@@ -80,7 +80,7 @@ pub const ClassIndex = zag.DeriveEnum(Compact, u16, 0, .{
         "Float",
     } },
     .{ .base = Compact.mutableClasses, .names = .{
-        "heap",
+        "memoryObject",
         "Context",
         "ProtoObject",
         "Object",
@@ -298,39 +298,40 @@ pub const ObjectFunctions = struct {
 };
 pub const PackedObject = packed struct {
     tag: Object.PackedTagType = Object.packedTagSmallInteger,
-    f1: u14,
-    f2: u14 = 0,
-    f3: u14 = 0,
+    f1: size,
+    f2: size = 0,
+    f3: size = 0,
     f4: zag.UInt(64 - 42 - @bitSizeOf(Object.PackedTagType)) = 0,
+    const size = u14;
     pub fn asU64(self: PackedObject) u64 {
         return @as(u64, @bitCast(self)) >> @bitSizeOf(Object.PackedTagType);
     }
-    fn combine(size: type, tup: anytype) comptime_int {
+    pub fn asObject(self: PackedObject) Object {
+        return @as(Object, @bitCast(self));
+    }
+    fn combine(tup: anytype) comptime_int {
         comptime var n: u48 = 0;
         comptime var shift = 0;
         inline for (tup) |field| {
             n |= @as(u48, switch (@TypeOf(field)) {
-                comptime_int => @as(size, field),
+                comptime_int, u14 => @as(size, field),
                 else => @intFromEnum(field),
             }) << shift;
-            shift += @typeInfo(size).int.bits;
+            shift += @bitSizeOf(size);
         }
         return n;
     }
-    pub fn combine14(comptime tup: anytype) comptime_int {
-        return combine(u14, tup);
-    }
-    pub fn classes(comptime tup: []const ClassIndex) PackedObject {
-        var result: PackedObject = @bitCast((@as(u64, combine(u14, tup)) << @bitSizeOf(Object.PackedTagType)));
+    pub fn pack(comptime tup: anytype) PackedObject {
+        var result: PackedObject = @bitCast((@as(u64, combine(tup)) << @bitSizeOf(Object.PackedTagType)));
         result.tag = Object.packedTagSmallInteger;
         return result;
     }
     test "combiners" {
         const expectEqual = std.testing.expectEqual;
-        try expectEqual(16384 + 2, combine14(.{ 2, 1 }));
+        try expectEqual(16384 + 2, combine(.{ 2, 1 }));
         try expectEqual(
             (@as(u32, @intFromEnum(ClassIndex.Symbol)) << 14) | @intFromEnum(ClassIndex.SmallInteger),
-            @as(u32, combine14([_]ClassIndex{ .SmallInteger, .Symbol })),
+            @as(u32, combine([_]ClassIndex{ .SmallInteger, .Symbol })),
         );
     }
 };

@@ -643,6 +643,7 @@ fn CompileTimeMethod(comptime counts: usize) type {
                         n = n + 1;
                     },
                     else => {
+                        // @compileLog(field);
                         if (field[0] != ':') {
                             if (field[0] >= '0' and field[0] <= '9') {
                                 code[n] = Code{ .offset = comptime intOf(field[0..]) };
@@ -896,7 +897,7 @@ test "compileObject" {
         "third", // pointer to third object
         "0mref",
         ":second",
-        c.replace0, // second HeapObject - runtime ClassIndex #0
+        c.ReplacementIndices, // second HeapObject - runtime ClassIndex #0
         ":third",
         c.Dispatch, // third HeapObject
         "2True",
@@ -934,7 +935,6 @@ test "compileObject" {
     try expectEqual(h3.header.classIndex, c.Dispatch);
     try expectEqual(h3.header.length, 3);
     try expectEqual(h3.header.age, .static);
-    try config.skipForDebugging();
     try expectEqual(h3.header.objectFormat, .notIndexableWithPointers);
 }
 pub fn compileRaw(comptime tup: anytype) CompileTimeObject(countNonLabels(tup)) {
@@ -1086,7 +1086,7 @@ pub const Execution = struct {
             exe.getContext().setReturn(PC.exit());
             trace("SendTo: context {*} {*} {f}", .{ exe.getContext(), exe.getContext().npc, exe.getContext().tpc });
             const class = receiver.which_class();
-            trace("selector: 0x{x:0>16}",.{@as(u64,@bitCast(selector))});
+            trace("selector: 0x{x:0>16}", .{@as(u64, @bitCast(selector))});
             const signature = if (selector.symbolHash()) |hsh| Signature.from(hsh, selector.numArgs(), class) else unreachable;
             exe.method = zag.dispatch.lookupMethodForClass(class, signature);
             exe.execute(&[_]Object{receiver});
