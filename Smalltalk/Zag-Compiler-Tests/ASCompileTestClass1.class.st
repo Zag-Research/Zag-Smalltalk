@@ -210,6 +210,15 @@ ASCompileTestClass1 >> callWithLocal [
 ]
 
 { #category : 'testing - examples' }
+ASCompileTestClass1 >> callWithLocalInitialized [
+
+	| y |
+	y:= 5.
+	y := self simple1.
+	^ y
+]
+
+{ #category : 'testing - examples' }
 ASCompileTestClass1 >> cascade [
 
 	| foo |
