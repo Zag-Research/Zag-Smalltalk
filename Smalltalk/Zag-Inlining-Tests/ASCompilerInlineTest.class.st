@@ -422,6 +422,21 @@ ASCompilerInlineTest >> testCallWithLocalInitialized [
 ]
 
 { #category : 'tests' }
+ASCompilerInlineTest >> testCallWithLocalInitialized [
+	"callWithLocalInitialized
+
+	| y |
+	y:= 5.
+	y := self simple1.
+	^ y"
+
+	self assertEquivalentSending: #callWithLocalInitialized to: ASCompileTestClass1 new.
+	interpreter inspect.
+	self assert: interpreter basicBlocks size equals: 1.
+	self assert: interpreter codeSize equals: 1
+]
+
+{ #category : 'tests' }
 ASCompilerInlineTest >> testFibWith3 [
 
 "fib: anInt
