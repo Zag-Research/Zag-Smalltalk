@@ -47,9 +47,8 @@ pub const @"+" = struct {
         }
         return @call(tailCall, Extra.primitiveFailed, .{ pc, sp, process, context, extra });
     }
-    test "simple add" {
-        try config.skipForDebugging();
-        var exe = Execution.initTest("simple add", .{ tf.primitive, comptime fromPrimitive(1) });
+    test "simple add (Float)" {
+        var exe = Execution.initTest("simple add", .{ tf.primitive, comptime fromPrimitive(41) });
         try exe.runTest(
             &[_]Object{
                 exe.object(25.0),

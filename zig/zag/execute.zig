@@ -643,6 +643,7 @@ fn CompileTimeMethod(comptime counts: usize) type {
                         n = n + 1;
                     },
                     else => {
+                        // @compileLog(field);
                         if (field[0] != ':') {
                             if (field[0] >= '0' and field[0] <= '9') {
                                 code[n] = Code{ .offset = comptime intOf(field[0..]) };
@@ -937,7 +938,6 @@ test "compileObject" {
     try expectEqual(h3.header.classIndex, c.Dispatch);
     try expectEqual(h3.header.length, 3);
     try expectEqual(h3.header.age, .static);
-    try config.skipForDebugging();
     try expectEqual(h3.header.objectFormat, .notIndexableWithPointers);
 }
 pub fn compileRaw(comptime tup: anytype) CompileTimeObject(countNonLabels(tup)) {

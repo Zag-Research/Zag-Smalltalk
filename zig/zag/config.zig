@@ -36,9 +36,6 @@ pub const notZag = objectEncoding != .zag;
 pub fn skipNotZag() !void {
     if (notZag) return error.SkipZigTest;
 }
-pub fn skipForDebugging() !void {
-    return error.SkipZigTest;
-}
 pub fn printConfig() void {
     std.debug.print(
         \\

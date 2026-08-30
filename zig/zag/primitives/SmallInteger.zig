@@ -180,9 +180,9 @@ pub const @"*" = struct {
         process.init();
         const sp = process.getSp();
         const context = process.getContext();
-        try expectEqual(Object.from(12, sp, context), with(Object.fromNativeI(3, sp, context).untaggedI().?, Object.from(4, sp, context), sp, context).?);
-        try expectEqual(error.primitiveError, with(std.math.maxInt(i64), Object.from(2, sp, context), sp, context));
-        try expectEqual(error.primitiveError, with(std.math.minInt(i64), Object.from(-1, sp, context), sp, context));
+        try expectEqual(Object.from(12, sp, context), with(Object.fromNativeI(3, sp, context).untaggedI().?, Object.from(4, sp, context), sp, context));
+        try expectEqual(null, with(std.math.maxInt(i64), Object.from(2, sp, context), sp, context));
+        try expectEqual(null, with(std.math.minInt(i64), Object.from(-1, sp, context), sp, context));
     }
 };
 pub const threadedFns = struct {
@@ -217,20 +217,24 @@ pub const threadedFns = struct {
         }
         test "countDown" {
             var exe = Execution.initTest("countDown", .{ tf.countDown, tf.pushLiteral, "0One", tf.countDown, tf.pushLiteral, "1Neg", tf.countDown, tf.countDown });
-            try exe.resolve(&[_]Object{ Object.fromNativeI(1, null, null), Object.fromNativeI(-5, null, null) });
-            try config.skipForDebugging();
+            try exe.resolve(&[_]Object{
+                Object.fromNativeI(1, null, null),
+                Object.fromNativeI(-5, null, null),
+            });
             try exe.runTest(
                 &[_]Object{
                     exe.object(42),
                 },
                 &[_]Object{
                     exe.object(true),
+                    exe.object(true),
+                    exe.object(-6),
+                    exe.object(true),
                     exe.object(0),
                     exe.object(false),
                     exe.object(41),
                 },
             );
-            return error.TestFailed;
         }
     };
 };

@@ -73,29 +73,31 @@ const codeAlignment = 64;
 const fibInteger = struct {
     const exclude: []const Encoding = &[_]Encoding{.onlyFloat};
     var info = Info{ .name = "Integer" };
-    const self = zag.Context.makeVariable(0, 1, .Parameter, &.{});
+    const self = zag.Context.makeVariable(0, 1, .parameter, &.{});
     const leq = tf.SmallInteger_leq;
     const plus = tf.SmallInteger_add;
     const minus = tf.SmallInteger_sub;
-    const classes = object.PackedObject.classes;
+    const classes = object.PackedObject.pack;
     const signature = zag.symbol.signature;
     var fib align(codeAlignment) =
         compileMethod(Sym.fibonacci, 0, .SmallInteger, .{
-            tf.push,               self,
-            tf.pushLiteral,        "2const",
-            leq,                   signature(.@"<="),
-            tf.classCase,          classes(&.{.False}),
-            "false",               tf.returnSelf,
-            ":false",              tf.push,
-            self,                  tf.pushLiteral,
-            "1const",              minus,
-            signature(.@"-"),      tf.send,
-            signature(.fibonacci), tf.push,
-            self,                  tf.pushLiteral,
-            "2const",              minus,
-            signature(.@"-"),      tf.send,
-            signature(.fibonacci), plus,
-            signature(.@"+"),      tf.returnTop,
+            tf.push,                                self,
+            tf.pushLiteral,                         "2const",
+            leq,                                    tf.fail,
+            tf.fail,                                tf.classCase,
+            classes(&[_]object.ClassIndex{.False}), "false",
+            tf.returnSelf,                          ":false",
+            tf.push,                                self,
+            tf.pushLiteral,                         "1const",
+            minus,                                  tf.fail,
+            tf.fail,                                tf.send,
+            signature(.fibonacci),                  tf.push,
+            self,                                   tf.pushLiteral,
+            "2const",                               minus,
+            tf.fail,                                tf.fail,
+            tf.send,                                signature(.fibonacci),
+            plus,                                   tf.fail,
+            tf.fail,                                tf.returnTop,
         });
     var exe: MainExecutor = undefined;
     var zero_: Object.StaticObject = undefined;
@@ -127,29 +129,31 @@ const fibInteger = struct {
 const fibInteger0 = struct {
     const exclude: []const Encoding = &[_]Encoding{.onlyFloat};
     var info = Info{ .name = "Integer0" };
-    const self = zag.Context.makeVariable(0, 1, .Parameter, &.{});
+    const self = zag.Context.makeVariable(0, 1, .parameter, &.{});
     const leq = tf.SmallInteger_leq;
     const plus = tf.SmallInteger_add;
     const minus = tf.SmallInteger_sub;
-    const classes = object.PackedObject.classes;
+    const classes = object.PackedObject.pack;
     const signature = zag.symbol.signature;
     var fib align(codeAlignment) =
         compileMethod(Sym.fibonacci, 0, .SmallInteger, .{
-            tf.push,               self,
-            tf.pushLiteral,        "2const",
-            leq,                   signature(.@"<="),
-            tf.classCase,          classes(&.{.False}),
-            "false",               tf.returnSelf,
-            ":false",              tf.push,
-            self,                  tf.pushLiteral,
-            "1const",              minus,
-            signature(.@"-"),      tf.send0,
-            signature(.fibonacci), tf.push,
-            self,                  tf.pushLiteral,
-            "2const",              minus,
-            signature(.@"-"),      tf.send0,
-            signature(.fibonacci), plus,
-            signature(.@"+"),      tf.returnTop,
+            tf.push,                                self,
+            tf.pushLiteral,                         "2const",
+            leq,                                    tf.fail,
+            tf.fail,                                tf.classCase,
+            classes(&[_]object.ClassIndex{.False}), "false",
+            tf.returnSelf,                          ":false",
+            tf.push,                                self,
+            tf.pushLiteral,                         "1const",
+            minus,                                  tf.fail,
+            tf.fail,                                tf.send0,
+            signature(.fibonacci),                  tf.push,
+            self,                                   tf.pushLiteral,
+            "2const",                               minus,
+            tf.fail,                                tf.fail,
+            tf.send0,                               signature(.fibonacci),
+            plus,                                   tf.fail,
+            tf.fail,                                tf.returnTop,
         });
     var exe: MainExecutor = undefined;
     var zero_: Object.StaticObject = undefined;
@@ -181,7 +185,7 @@ const fibInteger0 = struct {
 const fibIntegerBr = struct {
     const exclude: []const Encoding = &[_]Encoding{.onlyFloat};
     var info = Info{ .name = "IntegerBr" };
-    const self = zag.Context.makeVariable(0, 1, .Parameter, &.{});
+    const self = zag.Context.makeVariable(0, 1, .parameter, &.{});
     const leq = tf.SmallInteger_leq;
     const plus = tf.SmallInteger_add;
     const minus = tf.SmallInteger_sub;
@@ -245,7 +249,7 @@ const fibIntegerBr = struct {
 const fibIntegerClosure = struct {
     const exclude: []const Encoding = &[_]Encoding{ .onlyInt, .onlyFloat };
     var info = Info{ .name = "IntegerClosure" };
-    const self = zag.Context.makeVariable(0, 1, .Parameter, &.{});
+    const self = zag.Context.makeVariable(0, 1, .parameter, &.{});
     const classes = object.PackedObject.classes;
     const signature = zag.symbol.signature;
     var TifTrue align(codeAlignment) =
@@ -336,7 +340,7 @@ const fibIntegerClosure = struct {
 const fibFloat = struct {
     const exclude: []const Encoding = &[_]Encoding{.onlyInt};
     var info = Info{ .name = "Float" };
-    const self = zag.Context.makeVariable(0, 1, .Parameter, &.{});
+    const self = zag.Context.makeVariable(0, 1, .parameter, &.{});
     const leq = tf.Float_leq;
     const plus = tf.Float_add;
     const minus = tf.Float_sub;
@@ -395,7 +399,7 @@ const fibFloat = struct {
 const fibFloatClosure = struct {
     const exclude: []const Encoding = &[_]Encoding{ .onlyInt, .onlyFloat };
     var info = Info{ .name = "FloatClosure" };
-    const self = zag.Context.makeVariable(0, 1, .Parameter, &.{});
+    const self = zag.Context.makeVariable(0, 1, .parameter, &.{});
     const classes = object.PackedObject.classes;
     const signature = zag.symbol.signature;
     var TifTrue align(codeAlignment) =
@@ -449,13 +453,13 @@ const fibFloatClosure = struct {
         zag.dispatch.addMethod(.False, @ptrCast(&FifTrue));
         SIplus.resolve(Object.empty) catch @panic("Failed to resolve");
         SIplus.initExecute();
-        zag.dispatch.addMethod(.SmallInteger, @ptrCast(&SIplus));
+        zag.dispatch.addMethod(.Float, @ptrCast(&SIplus));
         SIminus.resolve(Object.empty) catch @panic("Failed to resolve");
         SIminus.initExecute();
-        zag.dispatch.addMethod(.SmallInteger, @ptrCast(&SIminus));
+        zag.dispatch.addMethod(.Float, @ptrCast(&SIminus));
         SIleq.resolve(Object.empty) catch @panic("Failed to resolve");
         SIleq.initExecute();
-        zag.dispatch.addMethod(.SmallInteger, @ptrCast(&SIleq));
+        zag.dispatch.addMethod(.Float, @ptrCast(&SIleq));
         if (zag.config.show_trace) {
             std.debug.print("\n", .{});
             std.debug.print("address of one {*}\n", .{&one});

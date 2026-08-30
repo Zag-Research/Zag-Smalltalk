@@ -106,10 +106,10 @@ pub const classCase = struct {
         }
     }
     test "classCase match" {
-        const classes = object.PackedObject.classes;
+        const classes = object.PackedObject.pack;
         var exe = Execution.initTest("classCase match", .{
             tf.classCase,
-            comptime classes(&.{.True}),
+            comptime classes(&[_]ClassIndex{.True}),
             "true",
             tf.pushLiteral,
             o1,
@@ -126,10 +126,10 @@ pub const classCase = struct {
         );
     }
     test "classCase no match" {
-        const classes = object.PackedObject.classes;
+        const classes = object.PackedObject.pack;
         var exe = Execution.initTest("classCase no match", .{
             tf.classCase,
-            comptime classes(&.{ .True, .False }),
+            comptime classes(&[_]ClassIndex{ .True, .False }),
             "true",
             "false",
             tf.pushLiteral,
@@ -152,10 +152,10 @@ pub const classCase = struct {
         );
     }
     test "classCase no match - leave" {
-        const classes = object.PackedObject.classes;
+        const classes = object.PackedObject.pack;
         var exe = Execution.initTest("classCase no match - leave", .{
             tf.classCase,
-            comptime classes(&.{ .True, .leaveObjectOnStack }),
+            comptime classes(&[_]ClassIndex{ .True, .leaveObjectOnStack }),
             "true",
             tf.branch,
             "end",
@@ -310,22 +310,31 @@ pub const push = struct {
         }
     }
     test {
-        if (true) return config.skipForDebugging();
-        var exe = Execution.initTest("push", .{ tf.pushLocal, 1, tf.pushLocal, 4 });
+        var exe = Execution.initTest("push", .{
+            tf.pushLiteral, "0:=17",
+            tf.pushLiteral, "1:=2",
+            tf.pushLiteral, "2:=3",
+            tf.push,        comptime Context.makeVariable(1, 0, .parameter, &[_]u10{}),
+            tf.push,        comptime Context.makeVariable(3, 0, .parameter, &[_]u10{}),
+            tf.push,        comptime Context.makeVariable(1, 0, .local, &[_]u10{}),
+        });
+        try exe.resolve(&[_]Object{
+            exe.object(17),
+            exe.object(2),
+            exe.object(3),
+        });
         try exe.runTest(
             &[_]Object{
                 exe.object(42),
-                exe.object(17),
-                exe.object(2),
-                exe.object(3),
             },
             &[_]Object{
+                exe.object(Nil()),
                 exe.object(3),
+                exe.object(17),
+                exe.object(3),
+                exe.object(2),
                 exe.object(17),
                 exe.object(42),
-                exe.object(17),
-                exe.object(2),
-                exe.object(3),
             },
         );
     }

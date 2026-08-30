@@ -425,7 +425,7 @@ pub fn initHeapClosure(self: *const Context, sp: SP, size: usize, class: ClassIn
     _ = .{ size, class, @panic("Context.initHeapClosure unimplemented") };
 }
 pub const Variable = packed struct {
-    lowBits: Object.PackedTagType,
+    lowBits: Object.PackedTagType = Object.packedTagSmallInteger,
     localIndex: u7,
     isLocal: bool,
     stackOffset: u8,
@@ -444,25 +444,21 @@ pub const Variable = packed struct {
             oi = oi | @as(usize, index) << @intCast(10 * shift);
         }
         return .{
-            .lowBits = Object.packedTagSmallInteger,
             .localIndex = localIndex,
-            .isLocal = options == .Local,
+            .isLocal = options == .local,
             .stackOffset = stackOffset,
             .objectIndices = @intCast(oi),
         };
     }
     pub inline fn getSimpleAddress(v: Variable, sp: SP, extra: Extra) [*]Object {
+        trace("getSimpleAddress {?*}\n", .{extra.selfAddress(sp)});
         return if (extra.selfAddress(sp)) |selfAddr|
             selfAddr - v.stackOffset
         else
             extra.contextDataPtr().localAddress(v.localIndex);
     }
     pub inline fn getAddress(v: Variable, sp: SP, extra: Extra) [*]Object {
-        var objs: [*]Object =
-            if (extra.selfAddress(sp)) |ptr|
-                ptr - v.stackOffset
-            else
-                extra.contextDataPtr().localAddress(v.localIndex);
+        var objs: [*]Object = v.getSimpleAddress(sp, extra);
         var ref = v.objectIndices;
         while (ref > 0) {
             objs = objs[ref & 0x3ff].to([*]Object);
@@ -470,7 +466,7 @@ pub const Variable = packed struct {
         }
         return objs;
     }
-    const Options = enum { Local, Parameter };
+    const Options = enum { local, parameter };
 };
 pub const makeVariable = Variable.make;
 
@@ -488,14 +484,14 @@ pub const threadedFunctions = struct {
             return @call(tailCall, process.check(pc.prim()), .{ pc.next(), sp, process, context, extra });
         }
         test "pushContext" {
-            try config.skipForDebugging();
             var exe = Execution.initTest("pushContext", .{
                 tf.pushContext,
                 tf.pushLiteral,
                 o0,
             });
             exe.execute(&[_]Object{Object.from(17, exe.process.getSp(), exe.process.getContext())});
-            try exe.matchStack(&[_]Object{Object.from(42, exe.process.getSp(), exe.process.getContext())});
+            try exe.matchStack(&[_]Object{o0});
+            // try exe.matchStack(&[_]Object{Object.from(42, exe.process.getSp(), exe.process.getContext())});
         }
         // test "init context" {
         //     //    const expectEqual = std.testing.expectEqual;
