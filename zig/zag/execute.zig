@@ -38,24 +38,18 @@ const tf = threadedFn.Enum;
 
 pub const Result = SP;
 pub const Signature = packed struct {
-    low: Object.LowTag = Object.signatureTag,
-    _filler1: zag.UInt(8 - @bitSizeOf(Object.LowTag)) = 0,
-    hash: zag.UInt(32 - @max(8, @bitSizeOf(Object.LowTag))) = 0,
-    high: Object.HighTag = 0,
+    lowTag: Object.LowTagType = Object.lowTagSignature,
+    numArgs: zag.UInt(8 - @bitSizeOf(Object.LowTagType)) = 0,
+    hash: u24 = 0,
     class: ClassIndex = @enumFromInt(0),
-    _filler2: zag.UInt(16 - @bitSizeOf(Object.HighTag)) = 0,
+    _fillerHigh: zag.UInt(64 - 48 - @bitSizeOf(Object.HighTagType)) = 0,
+    highTag: Object.HighTagType = Object.highTagSignature,
     fn isTagged(self: Signature) bool {
-        switch (Object.signatureTag) {
-            0 => return @as(Object, @bitCast(self)).isImmediateClass(.Signature),
-            else => |tag| return self.low == tag,
-        }
+        return self.highTag == Object.highTagSignature;
     }
     pub const empty = new();
     fn new() Signature {
-        switch (Object.signatureTag) {
-            0 => return @bitCast(Object.makeImmediate(.Signature, 0)),
-            else => return .{},
-        }
+        return .{};
     }
     pub inline fn asInt(self: Signature) u64 {
         return @bitCast(self);
@@ -66,38 +60,19 @@ pub const Signature = packed struct {
     pub fn fullHash(self: Signature) u32 {
         return @intCast(self.asInt() & 0xffffff00);
     }
-    pub inline fn numArgs(self: Signature) u4 {
-        if (Object.HighTag != u0) {
-            return @intCast(self.high);
-        }
-        return @intCast(self.low);
-    }
     pub fn from(hash: u24, arity: u4, class: ClassIndex) Signature {
         var result = fromHash(hash, arity);
         result.class = class;
         return result;
     }
     pub inline fn fromHash(hash: u24, arity: u4) Signature {
-        var result = new();
-        result.hash = hash;
-        if (Object.HighTag != u0) {
-            result.high = arity;
-        } else result.low = arity;
-        return result;
+        return .{ .hash = hash, .numArgs = arity };
     }
     pub fn fromPrimitive(primitiveNumber: u8) Signature {
-        var result = new();
-        result.hash = primitiveNumber;
-        return result;
+        return .{ .hash = primitiveNumber };
     }
     pub fn fromNameClass(name: symbol.Symbols, class: ClassIndex) Signature {
         return from(name.symbolHash().?, name.numArgs(), class);
-    }
-    pub fn fromClassU8X(class: ClassIndex, number: u8) Signature {
-        return .{ .class = class, .hash = number };
-    }
-    pub fn fromClassI8X(class: ClassIndex, number: i8) Signature {
-        return .{ .class = class, .hash = @as(u8, @bitCast(number)) };
     }
     pub fn equals(self: Signature, other: Signature) bool {
         return (self.asInt() ^ other.asInt()) & 0xffffff00 == 0;
@@ -113,8 +88,8 @@ pub const Signature = packed struct {
     pub inline fn asObject(self: Signature) Object {
         return @bitCast(self);
     }
-    pub inline fn primitive(self: Signature) u8 {
-        return @intCast(self.hash & 0xff);
+    pub inline fn primitive(self: Signature) u24 {
+        return @intCast(self.hash);
     }
     inline fn getClassIndex(self: Signature) u16 {
         return @intFromEnum(self.getClass());
@@ -129,10 +104,10 @@ pub const Signature = packed struct {
         self: Signature,
         writer: anytype,
     ) !void {
-        if (self.isEmpty() or true) {
+        if (self.isEmpty()) {
             try writer.print("Signature{{empty}}", .{});
         } else {
-            if (self.getClass() == .none and self.primitive() < 256) {
+            if (self.getClass() == Object.Compact.none and self.primitive() < 256) {
                 try writer.print(" prim: {}", .{self.primitive()});
             } else try writer.print("{} >> #{s}", .{ self.getClass(), symbol.asString(self.asSymbol()).arrayAsSlice(u8) catch "???" });
         }

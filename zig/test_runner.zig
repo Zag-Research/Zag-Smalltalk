@@ -13,12 +13,12 @@ fn option(comptime name: []const u8) ?bool {
 var test_name: []const u8 = "no test active";
 var cwd_buffer: [std.fs.max_path_bytes]u8 = undefined;
 var cwd: ?[]const u8 = null;
-var red: []const u8 = "";
-var green: []const u8 = "";
-var yellow: []const u8 = "";
-var blue: []const u8 = "";
-var cyan: []const u8 = "";
-var reset: []const u8 = "";
+var red: []const u8 = "<";
+var green: []const u8 = "<";
+var yellow: []const u8 = "<";
+var blue: []const u8 = "<";
+var cyan: []const u8 = "<";
+var reset: []const u8 = ">";
 
 var quitOnFirstFailure: bool = option("quitOnFirstFailure") orelse false;
 
@@ -51,7 +51,7 @@ pub fn main() !void {
         defer std.debug.unlockStderrWriter();
         test_name = extractName(test_fn);
         if (ignoring) {
-            stderr.print("{s}{s} untried{s}\n", .{ test_name, yellow, reset }) catch return;
+            stderr.print("{s}{s} untried{s}\n", .{ test_name, cyan, reset }) catch return;
             ignored_count += 1;
             continue;
         }
@@ -87,7 +87,7 @@ pub fn main() !void {
         }
     }
 
-    std.debug.print("of {} tests, {} passed, {} skipped, {} failed, {} leaks {} tests untried\n", .{ test_fn_list.len, passed_count, skip_count, fail_count, leaks, ignored_count });
+    std.debug.print("Of {} tests: {} passed, {} skipped, {} failed, {} leaks {} untried\n", .{ test_fn_list.len, passed_count, skip_count, fail_count, leaks, ignored_count });
     if (leaks != 0 or fail_count != 0) {
         std.process.exit(1);
     }

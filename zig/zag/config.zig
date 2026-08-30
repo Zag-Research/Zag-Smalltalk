@@ -15,6 +15,7 @@ pub const git_version = options.git_version;
 pub const compile_date = options.compile_date;
 pub const objectEncoding = options.objectEncoding;
 pub const max_classes = options.maxClasses;
+pub const picSize = 0;
 pub const singleSteppable = false; //options.singleSteppable;
 // must be more than HeapObject.maxLength*8 so externally allocated
 pub const process_total_size: usize = if (is_test or testRun) 2048 * 4 else 64 * 1024;

@@ -211,11 +211,13 @@ pub const threadedFns = struct {
             },
             .ThunkReturnObject => {
                 closureAddress.atSet(0, Object.fromAddress(context));
-                closureAddress.atSet(1, Object.from(@as(i8, @bitCast(signature.primitive())), sp, context));
+                @panic("incomplete");
+                //closureAddress.atSet(1, Object.from(@as(i8, @bitCast(signature.primitive())), sp, context));
             },
             .ThunkReturnImmediate => {
                 closureAddress.atSet(0, Object.fromAddress(context));
-                closureAddress.atSet(1, extraToObject(signature.primitive()));
+                @panic("incomplete");
+                //closureAddress.atSet(1, extraToObject(signature.primitive()));
             },
             else => @panic("incomplete"),
         }
