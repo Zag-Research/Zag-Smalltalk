@@ -40,6 +40,21 @@ pub const lookupMethodForClass = DispatchHandler.lookupMethodForClass;
 pub const addMethod = DispatchHandler.addMethod;
 pub const fail = threadedFunctions.fail;
 const static_classes = config.max_classes > 0;
+
+/// for experimental purposes, we can choose a variety of dispatch types
+const DispatchType = enum {
+    SIMDFlat,
+    SIMDHashed,
+    SIMDFlatInterleaved,
+    SIMDHashedInterleaved,
+    method,
+    signature,
+    function,
+    const choice = DispatchType.SIMDFlat;
+};
+// for experimental purposes, we can choose the number of PIC entries after a send
+const PICSize = config.picSize;
+
 const DispatchHandler = struct {
     var dispatches: if (static_classes) [config.max_classes]DispatchPtr else [*]Dispatch =
         if (static_classes) [_]DispatchPtr{&Dispatch.empty} ** config.max_classes else undefined;
@@ -138,13 +153,6 @@ comptime {
     std.debug.assert(@offsetOf(Dispatch, "header") == 0);
     std.debug.assert(@offsetOf(Dispatch, "matches") == 16);
 }
-const DispatchType = enum {
-    SIMDFlat,
-    SIMDFlatInterleaved,
-    SIMDHashed,
-    SIMDHashedInterleaved,
-    const choice = DispatchType.SIMDFlat;
-};
 const Dispatch = extern struct {
     header: HeapHeader,
     nMethods: u16,
@@ -154,6 +162,7 @@ const Dispatch = extern struct {
     const Self = @This();
     const D = switch (DispatchType.choice) {
         .SIMDFlat, .SIMDFlatInterleaved, .SIMDHashed, .SIMDHashedInterleaved => DispatchSIMD,
+        else => DispatchOriginal,
     };
     const lookupMethod = D.lookupMethod;
     const addIfAllocated = D.addIfAllocated;
@@ -222,7 +231,6 @@ const Dispatch = extern struct {
     }
 };
 const DispatchSIMD = struct {
-    const Self = Dispatch;
     const ignoreMethods = @offsetOf(Dispatch, "matches") / @sizeOf(Element);
     const interleaved = switch (DispatchType.choice) {
         else => false,
@@ -247,7 +255,7 @@ const DispatchSIMD = struct {
         return ((n + ignoreMethods) & ~(VEC_LEN - 1)) + VEC_LEN;
     }
     fn activeMethod(dispatch: DispatchPtr, de: *Element) ?*const CompiledMethod {
-        if (interleaved) return @as(?*const CompiledMethod, de)[1];
+        if (interleaved) return @as(?*const CompiledMethod, @ptrCast(de))[1];
         const base_ptr: [*]align(SIMD_bytes) Element = @ptrCast(dispatch);
         const base = base_ptr[0..dispatch.nAllocated];
         const index = (@intFromPtr(de) - @intFromPtr(base_ptr)) / @sizeOf(Element);
@@ -347,7 +355,7 @@ const DispatchSIMD = struct {
             break :blk @as(usize, @intCast((@as(DoubleT, route_hash) * num_blocks) >> @bitSizeOf(T)));
         } else 0;
 
-        var keys = base + (block_idx * VEC_LEN);
+        var keys: [*]align(SIMD_bytes) const T = @alignCast(base + block_idx * VEC_LEN);
 
         if (keys == base) {
             // --- First Block ---
@@ -418,11 +426,19 @@ const DispatchSIMD = struct {
     }
 };
 const DispatchOriginal = struct {
+    const DispatchElement = switch (DispatchType.choice) {
+        .method => DispatchMethod,
+        else => unreachable,
+    };
     const overAllocate = DispatchMatch.matchSize - 1;
-    const Match = DispatchMatch;
-    const empty = DispatchMatch.empty;
+    const ignoreMethods = 0;
+    const empty = Element.empty;
     const Element = DispatchElement;
-    fn initialize(dispatch: DispatchPtr, nMethods: usize) void {
+    const addMethod = add;
+    fn requiredSpace(nMethods: usize) usize {
+        return (@offsetOf(Dispatch, "matches") + nMethods * @sizeOf(Element)) / @sizeOf(Object);
+    }
+    fn initialize(dispatch: DispatchPtr, nMethods: u16) void {
         dispatch.nAllocated = nMethods;
         dispatch.nMethods = 0;
         for (dispatch.methodsAllocatedSlice()) |*ptr|
@@ -430,7 +446,7 @@ const DispatchOriginal = struct {
     }
     inline //
     fn lookupMethod(self: *const Dispatch, signature: Signature) ?*const CompiledMethod {
-        const dm = self.dispatchMatch(signature);
+        const dm = dispatchMatch(self, signature);
         return dm.match(signature);
     }
     inline //
@@ -444,7 +460,7 @@ const DispatchOriginal = struct {
     }
     fn addIfAllocated(self: *Dispatch, cmp: *const CompiledMethod) bool {
         if (self.nMethods == 0) return false;
-        return self.add(cmp);
+        return add(self, cmp);
     }
     fn add(self: *Dispatch, cmp: *const CompiledMethod) bool {
         const signature = cmp.signature;
@@ -452,7 +468,7 @@ const DispatchOriginal = struct {
         defer {
             self.state.unlock();
         }
-        for (&self.dispatchMatch(signature).elements) |*element| {
+        for (&dispatchMatch(self, signature).elements) |*element| {
             if (element.match(signature)) |_| {
                 element.storeMethod(cmp); // replace this
                 return true;
@@ -463,7 +479,7 @@ const DispatchOriginal = struct {
         }
         return false;
     }
-    fn activeMethod(de: Element) ?*const CompiledMethod {
+    fn activeMethod(_: *const Dispatch, de: *Element) ?*const CompiledMethod {
         return de.activeMethod();
     }
     fn fail(programCounter: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
@@ -483,13 +499,7 @@ const DispatchOriginal = struct {
         @as(*usize, @ptrFromInt(programCounter.uint())).* += 1;
         return sp;
     }
-    const DispatchElementType = enum { method, signature, function, simd };
-    const dispatchElementType = DispatchElementType.method;
-    const DispatchElement = switch (dispatchElementType) {
-        .method => DispatchMethod,
-        else => unreachable,
-    };
-    const DispatchMethod = struct {
+    const DispatchMethod = extern struct {
         method: *const CompiledMethod,
         const Self = @This();
         const IntSelf = u64;
@@ -543,7 +553,7 @@ const DispatchOriginal = struct {
             return @ptrCast(@alignCast(self));
         }
     };
-    const DispatchMatch = struct {
+    const DispatchMatch = extern struct {
         elements: [matchSize]DispatchElement,
         const matchSize = 3;
         const empty = DispatchMatch{ .elements = [_]DispatchElement{DispatchElement.empty} ** matchSize };
@@ -690,7 +700,6 @@ pub const threadedFunctions = struct {
             @panic("unreachable");
         }
     };
-    const PICSize = config.picSize;
     inline fn getMethod(pc: PC, signature: Signature, receiver: Object) *const CompiledMethod {
         const class = receiver.which_class();
         if (PICSize == 0) {

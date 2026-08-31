@@ -292,7 +292,6 @@ const fibIntegerClosure = struct {
         const two = two_.init(2);
         fib.resolve(&[_]Object{ zero, one, two }) catch @panic("Failed to resolve");
         fib.initExecute();
-        zag.dispatch.addMethod(.SmallInteger, @ptrCast(&fib));
         TifTrue.resolve(Object.empty) catch @panic("Failed to resolve");
         TifTrue.initExecute();
         zag.dispatch.addMethod(.True, @ptrCast(&TifTrue));
@@ -308,6 +307,7 @@ const fibIntegerClosure = struct {
         SIleq.resolve(Object.empty) catch @panic("Failed to resolve");
         SIleq.initExecute();
         zag.dispatch.addMethod(.SmallInteger, @ptrCast(&SIleq));
+        zag.dispatch.addMethod(.SmallInteger, @ptrCast(&fib));
         if (zag.config.show_trace) {
             std.debug.print("\n", .{});
             std.debug.print("address of one {*}\n", .{&one});
@@ -444,7 +444,6 @@ const fibFloatClosure = struct {
         const oneI = oneI_.init(1);
         fib.resolve(&[_]Object{ zero, one, two, oneI }) catch @panic("Failed to resolve");
         fib.initExecute();
-        zag.dispatch.addMethod(.Float, @ptrCast(&fib));
         TifTrue.resolve(Object.empty) catch @panic("Failed to resolve");
         TifTrue.initExecute();
         zag.dispatch.addMethod(.True, @ptrCast(&TifTrue));
@@ -460,6 +459,7 @@ const fibFloatClosure = struct {
         SIleq.resolve(Object.empty) catch @panic("Failed to resolve");
         SIleq.initExecute();
         zag.dispatch.addMethod(.Float, @ptrCast(&SIleq));
+        zag.dispatch.addMethod(.Float, @ptrCast(&fib));
         if (zag.config.show_trace) {
             std.debug.print("\n", .{});
             std.debug.print("address of one {*}\n", .{&one});
