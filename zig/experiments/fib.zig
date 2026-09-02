@@ -110,6 +110,7 @@ const fibInteger = struct {
         const two = two_.init(2);
         fib.resolve(&[_]Object{ zero, one, two }) catch @panic("Failed to resolve");
         fib.initExecute();
+        zag.dispatch.resetForTests();
         zag.dispatch.addMethod(.SmallInteger, @ptrCast(&fib));
         if (zag.config.show_trace) {
             std.debug.print("\n", .{});
@@ -166,6 +167,7 @@ const fibInteger0 = struct {
         const two = two_.init(2);
         fib.resolve(&[_]Object{ zero, one, two }) catch @panic("Failed to resolve");
         fib.initExecute();
+        zag.dispatch.resetForTests();
         zag.dispatch.addMethod(.SmallInteger, @ptrCast(&fib));
         if (zag.config.show_trace) {
             std.debug.print("\n", .{});
@@ -222,6 +224,7 @@ const fibIntegerBr = struct {
         const two = two_.init(2);
         fib.resolve(&[_]Object{ zero, one, two }) catch @panic("Failed to resolve");
         fib.initExecute();
+        zag.dispatch.resetForTests();
         zag.dispatch.addMethod(.SmallInteger, @ptrCast(&fib));
         if (zag.config.show_trace) {
             std.debug.print("\n", .{});
@@ -294,6 +297,7 @@ const fibIntegerClosure = struct {
         fib.initExecute();
         TifTrue.resolve(Object.empty) catch @panic("Failed to resolve");
         TifTrue.initExecute();
+        zag.dispatch.resetForTests();
         zag.dispatch.addMethod(.True, @ptrCast(&TifTrue));
         FifTrue.resolve(Object.empty) catch @panic("Failed to resolve");
         FifTrue.initExecute();
@@ -375,6 +379,7 @@ const fibFloat = struct {
         const two = two_.init(2.0);
         fib.resolve(&[_]Object{ zero, one, two }) catch @panic("Failed to resolve");
         fib.initExecute();
+        zag.dispatch.resetForTests();
         zag.dispatch.addMethod(.Float, @ptrCast(&fib));
         if (zag.config.show_trace) {
             std.log.err("\n", .{});
@@ -446,6 +451,7 @@ const fibFloatClosure = struct {
         fib.initExecute();
         TifTrue.resolve(Object.empty) catch @panic("Failed to resolve");
         TifTrue.initExecute();
+        zag.dispatch.resetForTests();
         zag.dispatch.addMethod(.True, @ptrCast(&TifTrue));
         FifTrue.resolve(Object.empty) catch @panic("Failed to resolve");
         FifTrue.initExecute();

@@ -58,7 +58,7 @@ pub const Signature = packed struct {
         return self.equals(empty);
     }
     pub fn fullHash(self: Signature) u32 {
-        return @intCast(self.asInt() & 0xffffff00);
+        return @truncate(self.asInt());
     }
     pub fn from(hash: u24, arity: u4, class: ClassIndex) Signature {
         var result = fromHash(hash, arity);
