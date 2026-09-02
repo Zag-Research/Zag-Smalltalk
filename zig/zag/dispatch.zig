@@ -54,7 +54,7 @@ const DispatchType = enum {
     method,
     signature,
     function,
-    const choice = DispatchType.SIMDFlat;
+    const choice = DispatchType.method;
 };
 // for experimental purposes, we can choose the number of PIC entries after a send
 const PICSize = config.picSize;
