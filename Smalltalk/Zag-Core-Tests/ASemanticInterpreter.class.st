@@ -136,7 +136,7 @@ Locals do not need to be factored into the creation of a context."
 	"copy the current calls data into a contextData"
 	context := ASIContext new
 					method: aCompiledMethodOrBlock;
-		           contextData: (context createContextData: self);
+		           contextData: (self createContextData: aCompiledMethodOrBlock);
 		           returnPC: pc;
 		           
 		           sendingContext: context.
@@ -202,14 +202,15 @@ ASemanticInterpreter >> createContext: locals extra: extra [
 
 { #category : 'interpreting' }
 ASemanticInterpreter >> createContextData: aMethod [
-
+self halt.
 	(aMethod notNil and: contextDataMethod == aMethod) ifTrue: [ ^ contextData ].
 
 	contextDataMethod := aMethod.
 	contextData := Array new: aMethod arguments + aMethod locals + 1.
-	(11 - contextData size) to: 10 by: 1 do: [ :idx |
-			contextData at: 11 - idx put: (stackArray at: idx) ].
-
+	1 to: (contextData size - aMethod locals) by: 1 do: [ :idx |
+		self halt.
+			contextData at: (contextData size - idx) put: (stackArray at: (11 - idx) ) ].
+self halt.
 	^ contextData
 ]
 
@@ -337,7 +338,8 @@ ASemanticInterpreter >> pop [
 
 { #category : 'accessing' }
 ASemanticInterpreter >> pop: anObject into: offset [
-self halt.
+
+	self installContextIfNone.
 "what do do here? if there's a context then the value should be poped into the context?"
 	stackPointer := stackPointer + 1. "remove the value on the top of the stack"
 	^ stackArray at: stackArray size - offset put: anObject

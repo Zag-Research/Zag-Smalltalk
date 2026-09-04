@@ -106,7 +106,8 @@ ASStackElement >> indirectElement [
 ASStackElement >> initialize [
 
 	super initialize.
-	location := AStackLocation new
+	location := AStackLocation new.
+	offset := nil
 ]
 
 { #category : 'API' }
