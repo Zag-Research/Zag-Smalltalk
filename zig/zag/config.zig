@@ -14,6 +14,7 @@ pub const includeLLVM = options.includeLLVM;
 pub const git_version = options.git_version;
 pub const compile_date = options.compile_date;
 pub const objectEncoding = options.objectEncoding;
+pub const dispatchChoice = options.dispatchChoice;
 pub const max_classes = options.maxClasses;
 pub const picSize = 0;
 pub const singleSteppable = false; //options.singleSteppable;
@@ -45,6 +46,7 @@ pub fn printConfig() void {
         \\  git_version    = {s}
         \\  cpu            = {s} ({}){s}
         \\  objectEncoding = {}
+        \\  dispatchChoice = {}
         \\  max_classes    = {}
         \\  stack/nursery  = {d}w/{d}w ({d}w){s}{s}{s}{s}
         \\
@@ -55,6 +57,7 @@ pub fn printConfig() void {
         builtin.target.cpu.arch,
         if (native_endian == .big) " big endian" else "",
         objectEncoding,
+        dispatchChoice,
         max_classes,
         Process.process_stack_size,
         Process.process_nursery_size,

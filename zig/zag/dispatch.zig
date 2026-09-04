@@ -45,17 +45,21 @@ var n_classes: u16 = config.max_classes;
 const static_classes = config.max_classes > 0;
 
 /// for experimental purposes, we can choose a variety of dispatch types
-const DispatchType = enum {
+pub const DispatchType = enum {
     SIMDFlat,
     SIMDHashed,
     SIMDFlatInterleaved,
     SIMDHashedInterleaved,
     Swiss,
     method,
-    signature,
-    function,
-    const choice = DispatchType.method;
+    // signature,
+    // function,
+    forTest,
+    pub fn default() DispatchType {
+        return .method;
+    }
 };
+const DispatchChoice = config.dispatchChoice;
 // for experimental purposes, we can choose the number of PIC entries after a send
 const PICSize = config.picSize;
 
@@ -73,6 +77,7 @@ const DispatchHandler = struct {
     }
     inline //
     fn lookupMethodForClass(ci: ClassIndex, signature: Signature) *const CompiledMethod {
+        trace("lookupMethodForClass: ci={} signature={}", .{ ci, signature });
         if (dispatches[@intFromEnum(ci)].lookupMethod(signature)) |method|
             return method;
         return @call(.never_inline, loadMethodForClass, .{ ci, signature });
@@ -132,7 +137,7 @@ const DispatchHandler = struct {
     }
     fn alloc(nAllocated: u16) DispatchPtr {
         const nInstVars = Dispatch.D.requiredSpace(nAllocated) - 1;
-        //(DispatchElement.size(nAllocated) + @offsetOf(Dispatch, "matches")) / @sizeOf(Object) - 1;
+        std.debug.print("alloc: nInstVars={} nAllocated={}\n", .{ nInstVars, nAllocated });
         const aR = globalArena.aHeapAllocator().alloc(.Dispatch, @intCast(nInstVars), null, Object, false);
         const newDispatch: DispatchPtr = @ptrCast(@alignCast(aR.allocated));
         trace("alloc: nAllocated={} {x}-{x}", .{ nAllocated, @intFromPtr(aR.allocated), @intFromPtr(@as([*]Object, @ptrCast(aR.allocated)) + nInstVars) });
@@ -183,10 +188,11 @@ const Dispatch = extern struct {
         std.debug.assert(@offsetOf(Dispatch, "header") == 0);
     }
     const Self = @This();
-    const D = switch (DispatchType.choice) {
+    const D = switch (DispatchChoice) {
         .SIMDFlat, .SIMDFlatInterleaved, .SIMDHashed, .SIMDHashedInterleaved => DispatchSIMD,
         .Swiss => DispatchSwiss,
-        else => DispatchOriginal,
+        .method => DispatchOriginal,
+        else => @compileError("unimplented"),
     };
     const lookupMethod = D.lookupMethod;
     const addIfAllocated = D.addIfAllocated;
@@ -253,6 +259,12 @@ const Dispatch = extern struct {
     pub fn format(self: *const Dispatch, writer: anytype) !void {
         try writer.print("Dispatch{{.nMethods={}, .nAllocated={} {any}}}", .{ self.nMethods, self.nAllocated, self.methodsAllocatedSlice() });
     }
+};
+const DispatchForTest = struct {
+    const overAllocate = 0;
+    const ignoreMethods = 0;
+    const allocUnit = 0;
+    const Element = void;
 };
 const DispatchSwiss = struct {
     const overAllocate = 0;
@@ -371,15 +383,15 @@ const DispatchSIMD = struct {
     }
     const ignoreMethods = @offsetOf(Dispatch, "matches") / @sizeOf(Element);
     const allocUnit = 16;
-    const interleaved = switch (DispatchType.choice) {
+    const interleaved = switch (DispatchChoice) {
         else => false,
         .SIMDFlatInterleaved, .SIMDHashedInterleaved => true,
     };
-    const doHash = switch (DispatchType.choice) {
+    const doHash = switch (DispatchChoice) {
         else => false,
         .SIMDHashed, .SIMDHashedInterleaved => true,
     };
-    const overAllocate = switch (DispatchType.choice) {
+    const overAllocate = switch (DispatchChoice) {
         else => 0,
         .SIMDHashed, .SIMDHashedInterleaved => SIMD_bytes / @sizeOf(Element),
     };
@@ -571,7 +583,7 @@ const DispatchOriginal = struct {
     comptime {
         std.debug.assert(@offsetOf(Dispatch, "matches") == 16);
     }
-    const DispatchElement = switch (DispatchType.choice) {
+    const DispatchElement = switch (DispatchChoice) {
         .method => DispatchMethod,
         else => @compileError("original not method"),
     };
@@ -711,7 +723,7 @@ const DispatchOriginal = struct {
     };
     const DispatchMatch = extern struct {
         elements: [matchSize]DispatchElement,
-        const matchSize = 3;
+        const matchSize = 10;
         const empty = DispatchMatch{ .elements = [_]DispatchElement{DispatchElement.empty} ** matchSize };
         inline //
         fn match(self: *DispatchMatch, signature: Signature) ?*const CompiledMethod {

@@ -2,6 +2,21 @@
 //
 [
   {
+    "label": "dispatch",
+    "command": "date;time zig build dispatch;date",
+    "cwd": "$ZED_WORKTREE_ROOT/zig",
+  },
+  {
+    "label": "dispatch trace",
+    "command": "date;time zig build dispatch -Dtrace;date",
+    "cwd": "$ZED_WORKTREE_ROOT/zig",
+  },
+  {
+    "label": "dispatch targets",
+    "command": "zig build dispatch -Dtarget=x86_64-linux; zig build dispatch -Dtarget=aarch64-linux; zig build dispatch -Dtarget=riscv64-linux-gnu; zig build-exe ../zag/encoding/floatEncoding.zig -O ReleaseFast -target aarch64-linux-musl -femit-bin=aarch64/floatEncoding; zig build-exe ../zag/encoding/floatEncoding.zig -O ReleaseFast -target x86_64-linux-musl -femit-bin=x86_64/floatEncoding; zig build-exe ../zag/encoding/floatEncoding.zig -O ReleaseFast -target riscv64-linux-gnu -femit-bin=riscv64/floatEncoding; for i in aarch64 x86_64 riscv64;do cp ../../scripts/run-dispatchmarks $i && tar zcf $i.tgz $i;done;ls -l *.tgz",
+    "cwd": "$ZED_WORKTREE_ROOT/zig/zig-out",
+  },
+  {
     "label": "bench",
     "command": "date;time zig build bench;date",
     "cwd": "$ZED_WORKTREE_ROOT/zig",

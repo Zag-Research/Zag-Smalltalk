@@ -116,7 +116,7 @@ const SymbolsEnum = enum(u32) {
         }
         return Object.fromAddress(&staticSymbols[index - 1]);
     }
-    fn signature(sym: SymbolsEnum) Signature {
+    pub fn signature(sym: SymbolsEnum) Signature {
         const int = @intFromEnum(sym);
         return Signature.fromHash(hash(@truncate(int)), @intCast(int >> 24));
     }
