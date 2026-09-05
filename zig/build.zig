@@ -348,9 +348,9 @@ fn createDispatchStep(
         else
             &[_]Dispatch{
                 .method,
-                .SIMDFlat,
-                .SIMDHashed,
-                .Swiss,
+                // .SIMDFlat,
+                // .SIMDHashed,
+                // .Swiss,
                 .forTest,
             };
 

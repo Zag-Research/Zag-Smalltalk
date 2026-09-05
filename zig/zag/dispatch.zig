@@ -630,18 +630,14 @@ const DispatchOriginal = struct {
         defer {
             self.state.unlock();
         }
-        for (&dispatchMatch(self, signature).elements) |*element| {
+        const target = dispatchMatch(self, signature);
+        if (target.matchOrEmpty(signature)) |element| {
             trace("add: trying {*}", .{element});
-            if (element.match(signature)) |_| {
-                element.storeMethod(cmp); // replace this
-                trace("add: match found {*}", .{element});
-                return true;
-            } else if (element.isEmpty()) {
-                element.storeMethod(cmp);
+            if (element.isEmpty())
                 self.nMethods += 1;
-                trace("add: added {*}", .{element});
-                return true;
-            }
+            element.storeMethod(cmp); // replace this
+            trace("add: match found {*}", .{element});
+            return true;
         }
         trace("add: no match for {f}", .{signature});
         return false;
@@ -735,8 +731,8 @@ const DispatchOriginal = struct {
             return null;
         }
         inline //
-        fn matchOrEmpty(self: *DispatchMatch, signature: Signature) ?*DispatchMethod {
-            inline for (&self.elements) |*element| {
+        fn matchOrEmpty(self: *DispatchMatch, signature: Signature) ?*DispatchElement {
+            for (&self.elements) |*element| {
                 if (element.isEmpty())
                     return element;
                 if (element.match(signature)) |_|

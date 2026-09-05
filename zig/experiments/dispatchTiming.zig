@@ -58,8 +58,8 @@ fn loadMethods() void {
         }
     }
 }
-inline fn dummyLookupMethod(ci: ClassIndex, signature: Signature) *const CompiledMethod {
-    return @ptrFromInt(@intFromEnum(ci) + signature.fullHash());
+inline fn dummyLookupMethod(_: ClassIndex, signature: Signature) *const CompiledMethod {
+    return @ptrFromInt(signature.fullHash());
 }
 const print = std.debug.print;
 const Stats = zag.Stats;
