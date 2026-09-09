@@ -18,6 +18,11 @@ ASComment class >> text: aString [
 	^self new text: aString; yourself
 ]
 
+{ #category : 'comparing' }
+ASComment >> = other [
+	^self class = other class and: [ self text = other text ]
+]
+
 { #category : 'visiting' }
 ASComment >> accept: aVisitor [
 	^aVisitor visitComment: self
@@ -29,6 +34,11 @@ ASComment >> asPharoAST [
 	^OCCommentNode new
 		with: self text from: nil to: nil;
 		yourself
+]
+
+{ #category : 'comparing' }
+ASComment >> hash [
+	^(super hash hashMultiply + self text hash) hashMultiply
 ]
 
 { #category : 'accessing' }
