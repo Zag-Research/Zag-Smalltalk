@@ -202,13 +202,12 @@ ASemanticInterpreter >> createContext: locals extra: extra [
 
 { #category : 'interpreting' }
 ASemanticInterpreter >> createContextData: aMethod [
-self halt.
+	"not a big fan of this, should this test be part of the context or context data instead of a var on semantic intepreter?"
 	(aMethod notNil and: contextDataMethod == aMethod) ifTrue: [ ^ contextData ].
 
 	contextDataMethod := aMethod.
 	contextData := Array new: aMethod arguments + aMethod locals + 1.
 	1 to: (contextData size - aMethod locals) by: 1 do: [ :idx |
-		self halt.
 			contextData at: (contextData size - idx) put: (stackArray at: (11 - idx) ) ].
 self halt.
 	^ contextData
@@ -304,7 +303,9 @@ ASemanticInterpreter >> installContextIfNone [
 	newContext sendingContext: context.
 	newContext populateFrom: self.
 	context := newContext."
+	context notNil & context method isNotNil & (context method == contextDataMethod) ifFalse: [ 
 	self createContext
+	]
 ]
 
 { #category : 'interpreting' }
@@ -319,7 +320,13 @@ ASemanticInterpreter >> installContextIfNone: blockToReturnTo [
 
 	"we don't need to create a context if one has already been created for the overall method or block we are executing
 	how to reuse the existing context?"
-	self createContext: blockToReturnTo
+	self halt.
+	context notNil & (context method == contextDataMethod)
+	ifTrue: [ 
+		context returnPC: (ASIProgramCounter new forBasicBlock: blockToReturnTo).
+	] ifFalse: [ 
+		self createContext: blockToReturnTo
+	]
 ]
 
 { #category : 'interpreting' }
@@ -340,9 +347,7 @@ ASemanticInterpreter >> pop [
 ASemanticInterpreter >> pop: anObject into: offset [
 
 	self installContextIfNone.
-"what do do here? if there's a context then the value should be poped into the context?"
-	stackPointer := stackPointer + 1. "remove the value on the top of the stack"
-	^ stackArray at: stackArray size - offset put: anObject
+	^ contextData at: (contextData size - offset) put: anObject
 ]
 
 { #category : 'primitive execution' }
