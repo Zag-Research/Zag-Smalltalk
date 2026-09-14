@@ -62,7 +62,7 @@ ASemanticInterpreter >> basicBlocks [
 
 { #category : 'as yet unclassified' }
 ASemanticInterpreter >> beforeTailSend: aSelector [
-self halt.
+
 	stackArray := self createStackForCall: aSelector numArgs.
 	stackPointer := 11 - aSelector numArgs - 1.
 	pc basicBlock hasContext ifFalse: [ ^ self ].
@@ -112,7 +112,7 @@ ASemanticInterpreter >> contextAt: anInteger [
 
 { #category : 'accessing' }
 ASemanticInterpreter >> contextDataAt: anInteger [ 
-self halt.
+
 	^ contextData at: 1+ anInteger 
 ]
 
@@ -202,6 +202,7 @@ ASemanticInterpreter >> createContext: locals extra: extra [
 
 { #category : 'interpreting' }
 ASemanticInterpreter >> createContextData: aMethod [
+
 	"not a big fan of this, should this test be part of the context or context data instead of a var on semantic intepreter?"
 	(aMethod notNil and: contextDataMethod == aMethod) ifTrue: [ ^ contextData ].
 
@@ -209,7 +210,7 @@ ASemanticInterpreter >> createContextData: aMethod [
 	contextData := Array new: aMethod arguments + aMethod locals + 1.
 	1 to: (contextData size - aMethod locals) by: 1 do: [ :idx |
 			contextData at: (contextData size - idx) put: (stackArray at: (11 - idx) ) ].
-self halt.
+
 	^ contextData
 ]
 
@@ -320,7 +321,6 @@ ASemanticInterpreter >> installContextIfNone: blockToReturnTo [
 
 	"we don't need to create a context if one has already been created for the overall method or block we are executing
 	how to reuse the existing context?"
-	self halt.
 	context notNil & (context method == contextDataMethod)
 	ifTrue: [ 
 		context returnPC: (ASIProgramCounter new forBasicBlock: blockToReturnTo).
@@ -494,7 +494,10 @@ ASemanticInterpreter >> return: anObject selfOffset: selfOffset [
 	stackPointer := 10.
 	stackArray := Array new: 10.
 	stackArray at: stackPointer put: anObject.
-	pc := context returnPC
+	
+	"can this be done more eligantly, should a return always set the context to the sendingContext?"
+	pc := context sendingContext ifNil: [ context returnPC ]
+	ifNotNil: [ context sendingContext returnPC ]
 ]
 
 { #category : 'as yet unclassified' }

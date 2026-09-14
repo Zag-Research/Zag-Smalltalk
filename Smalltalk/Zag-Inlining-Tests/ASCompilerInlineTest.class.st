@@ -417,8 +417,8 @@ ASCompilerInlineTest >> testCallWithLocalInitialized [
 
 	self assertEquivalentSending: #callWithLocalInitialized to: ASCompileTestClass1 new.
 	interpreter inspect.
-	self assert: interpreter basicBlocks size equals: 1.
-	self assert: interpreter codeSize equals: 1
+	self assert: interpreter basicBlocks size equals: 3.
+	self assert: interpreter codeSize equals: 3
 ]
 
 { #category : 'tests' }
