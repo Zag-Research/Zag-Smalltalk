@@ -38,9 +38,7 @@ ASComment >> accept: aVisitor [
 { #category : 'converting' }
 ASComment >> asPharoAST [
 	"Converts me to the associated Pharo AST."
-	^OCCommentNode new
-		with: self text from: nil to: nil;
-		yourself
+	^nil
 ]
 
 { #category : 'comparing' }
