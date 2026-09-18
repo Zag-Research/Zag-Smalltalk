@@ -185,6 +185,13 @@ ZagSmalltalk >> visitCodeBlock: aCodeBlock [
 ]
 
 { #category : 'visiting' }
+ZagSmalltalk >> visitComment: aComment [
+	| formattedText |
+	formattedText := aComment text copyReplaceAll: '"' with: '""'.
+	stream nextPut: $"; nextPutAll: formattedText; nextPut: $".
+]
+
+{ #category : 'visiting' }
 ZagSmalltalk >> visitId: anId [
 	self shouldBeImplemented.
 ]
