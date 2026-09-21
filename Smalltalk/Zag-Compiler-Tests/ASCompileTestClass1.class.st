@@ -101,6 +101,24 @@ ASCompileTestClass1 >> blockEvaluationWithCallAndLocalWithoutTailCall [
 ]
 
 { #category : 'testing - examples' }
+ASCompileTestClass1 >> blockEvaluationWithCallAndLocalWithoutTailCall2 [
+	"bar ^42"
+
+	| x |
+	x := [ | y | y := self bar + 5. ^ y ] value.
+	^ x
+]
+
+{ #category : 'testing - examples' }
+ASCompileTestClass1 >> blockEvaluationWithCallAndLocalWithoutTailCall3 [
+	"bar ^42"
+
+	| x |
+	x := [ | y | y := self bar. ^ y ] value.
+	^ x
+]
+
+{ #category : 'testing - examples' }
 ASCompileTestClass1 >> blockEvaluationWithCallAndReturnNonLocal [
 "bar ^42"
 	^ [ ^ self bar + 5 ] value
@@ -181,6 +199,23 @@ ASCompileTestClass1 >> bracketSend [
 { #category : 'testing - examples' }
 ASCompileTestClass1 >> bracketWithValue [
 	^ [ :x | x + 5 ] value: 10
+]
+
+{ #category : 'testing - examples' }
+ASCompileTestClass1 >> callWithLocal [
+
+	| y |
+	y := self simple1.
+	^ y
+]
+
+{ #category : 'testing - examples' }
+ASCompileTestClass1 >> callWithLocalInitialized [
+
+	| y |
+	y:= 5.
+	y := self simple1.
+	^ y
 ]
 
 { #category : 'testing - examples' }
@@ -399,8 +434,7 @@ ASCompileTestClass1 >> recursiveSum: listOfNumbers [
 
 { #category : 'testing - examples' }
 ASCompileTestClass1 >> simple1 [
-	..
-	^ 42..
+	^ 42
 ]
 
 { #category : 'testing - examples' }
