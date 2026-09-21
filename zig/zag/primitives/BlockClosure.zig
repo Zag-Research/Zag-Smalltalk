@@ -24,7 +24,7 @@ const True = object.True;
 const False = object.False;
 const Nil = object.Nil;
 const PackedObject = object.PackedObject;
-const object14 = object.PackedObject.object14;
+const pack = object.PackedObject.pack;
 const Sym = zag.symbol.symbols;
 const heap = zag.heap;
 const tf = zag.threadedFn.Enum;
@@ -132,7 +132,10 @@ pub const threadedFns = struct {
             return @call(tailCall, process.check(pc.skip(2).prim()), .{ pc.skip(2).next(), newSp, process, newContext, newExtra });
         }
         test "pushClosure" {
-            if (true) return config.skipForDebugging();
+            var process: Process align(Process.alignment) = undefined;
+            process.init();
+            const sp = process.getSp();
+            const context = process.getContext();
             const exe1 = Execution.init(.{});
             const testMethod = exe1.method;
             var exe = Execution.initTest("pushClosure", .{
@@ -143,12 +146,16 @@ pub const threadedFns = struct {
                 tf.pushLiteral,
                 "2Nil",
                 tf.pushLiteral,
-                1,
+                "3One",
                 tf.pushClosure,
-                comptime object14(.{ 3, 4, 0 }),
+                "4Variable",
                 "0block",
             });
-            try exe.resolve(&[_]Object{ exe.object(&testMethod), True(), Nil() });
+            try exe.resolve(&[_]Object{
+                exe.object(&testMethod),                      True(), Nil(), Object.from(1, sp, context),
+                comptime pack(&[_]u14{ 3, 4, 0 }).asObject(),
+            });
+            if (true) return error.SkipZigTest;
             exe.execute(&[_]Object{
                 exe.object(17),
             });

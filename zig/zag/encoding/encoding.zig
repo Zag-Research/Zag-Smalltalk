@@ -1,6 +1,7 @@
 const std = @import("std");
 pub const Encoding = enum {
     zag,
+    zag6,
     zagSpur,
     zagOrig,
     compact1,
@@ -42,7 +43,7 @@ pub const Encoding = enum {
 };
 pub fn module(self: anytype) type {
     return switch (self) {
-        .zag => @import("zag.zig"),
+        .zag, .zag6 => @import("zag.zig"),
         .zagSpur => @import("zagSpur.zig"),
         .zagOrig => @import("zagOrig.zig"),
         .compact1, .compact2, .compact4, .compact6, .compactI1, .compactI2, .compactI4, .compactI6, .compactA2, .compactY, .compactZ => @import("compact.zig"),
@@ -69,6 +70,7 @@ test "fromName" {
     const match = Encoding.fromName;
     const expect = std.testing.expect;
     try expect(try match("zag") == .zag);
+    try expect(try match("zag6") == .zag6);
     try expect(try match("zagOrig") == .zagOrig);
     try expect(try match("zagSpur") == .zagSpur);
     try expect(try match("compact1") == .compact1);

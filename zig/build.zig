@@ -328,6 +328,7 @@ fn createBenchStep(
                 .nan,
                 .nun,
                 .zag,
+                .zag6,
                 .zagSpur,
                 .zagOrig,
                 .compact1,

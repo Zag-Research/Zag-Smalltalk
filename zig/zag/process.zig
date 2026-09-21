@@ -629,8 +629,6 @@ test "Stack" {
     try ee(True(), sp1.next);
     try ee(False(), sp1.top);
     _ = sp1.drop().push(Object.from(42, sp1, context));
-    std.debug.print("sp1.top = {x} {x}\n", .{ sp1.top.testU(), Object.from(42, sp1, context).testU() });
-    try config.skipForDebugging();
     try ee(sp1.top.to(i64), 42);
 }
 pub const threadedFunctions = struct {

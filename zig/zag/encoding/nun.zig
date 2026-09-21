@@ -46,6 +46,10 @@ pub const Object = packed struct(u64) {
         immediates,
         Float,
         _,
+        const heapBits = object.heapBits();
+        inline fn isHeap(self: Compact) bool {
+            return (heapBits >> @intFromEnum(self)) & 1 != 0;
+        }
         pub inline fn classIndex(cp: Compact) ClassIndex {
             return @enumFromInt(@intFromEnum(cp));
         }
@@ -351,9 +355,6 @@ pub const Object = packed struct(u64) {
                 return @ptrFromInt((unsigned << 16) >> 16);
             },
         }
-    }
-    pub inline fn asUntaggedI(i: IntType) i64 {
-        return @as(i64, i) << intShift;
     }
 
     pub const Scanner = struct {

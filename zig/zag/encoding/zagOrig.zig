@@ -64,6 +64,10 @@ pub const Object = packed struct(u64) {
         UndefinedObject,
         Float,
         _,
+        const heapBits = object.heapBits();
+        inline fn isHeap(self: Compact) bool {
+            return (heapBits >> @intFromEnum(self)) & 1 != 0;
+        }
         pub inline fn classIndex(cp: Compact) ClassIndex {
             return @enumFromInt(@intFromEnum(cp));
         }
@@ -510,10 +514,6 @@ pub const Object = packed struct(u64) {
     }
     pub fn isImmediate(self: Object) bool {
         return self.rawU() & 7 != 0;
-    }
-
-    pub inline fn asUntaggedI(i: i56) i64 {
-        return @as(i64, i) << tagAndClassBits;
     }
 
     pub fn returnObjectClosure(self: Object, context: *Context) ?Object {

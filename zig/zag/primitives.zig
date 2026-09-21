@@ -176,7 +176,6 @@ const testModule = if (config.is_test) struct {
             }
         }
         pub fn primitiveError(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
-            std.debug.print("primitiveError255: {} {}", .{ sp.next.which_class(), sp.top.which_class() });
             if (sp.next.which_class() != sp.top.which_class()) {
                 const newSp = sp.push(Sym.value.asObject());
                 return @call(tailCall, Extra.primitiveFailed, .{ pc, newSp.?, process, context, extra });
@@ -239,7 +238,6 @@ pub const threadedFunctions = struct {
             return @call(tailCall, method.executeFn, .{ pc, sp, process, context, extra });
         }
         test "primitive found" {
-            try config.skipForDebugging();
             var exe = Execution.initTest("primitive: found", .{
                 tf.primitive,
                 comptime fromPrimitive(255),
@@ -323,7 +321,6 @@ pub const threadedFunctions = struct {
                 tf.pushLiteral,
                 o0,
             });
-            try config.skipForDebugging();
             try exe.runTest(
                 &[_]Object{
                     exe.object(42),
@@ -341,7 +338,6 @@ pub const threadedFunctions = struct {
                 tf.pushLiteral,
                 o0,
             });
-            try config.skipForDebugging();
             try exe.runTest(
                 &[_]Object{
                     True(),
@@ -358,11 +354,10 @@ pub const threadedFunctions = struct {
         test "primitive:error: not found" {
             var exe = Execution.initTest("primitive:error: not found", .{
                 tf.primitiveError,
-                comptime fromPrimitive(255),
+                comptime fromPrimitive(254),
                 tf.pushLiteral,
                 o0,
             });
-            try config.skipForDebugging();
             try exe.runTest(
                 &[_]Object{
                     exe.object(42),
@@ -404,7 +399,6 @@ pub const threadedFunctions = struct {
         const primitive255 = testModule.zName;
         const primitiveNotDefined = testModule.primitiveNotDefined;
         test "primitive:module: found" {
-            try config.skipForDebugging();
             var exe = Execution.initTest("primitive:module: found", .{
                 tf.primitiveModule,
                 "0name",
@@ -487,7 +481,6 @@ pub const threadedFunctions = struct {
         const primitive255 = testModule.zName;
         const primitiveNotDefined = testModule.primitiveNotDefined;
         test "primitive:module:error: found" {
-            try config.skipForDebugging();
             var exe = Execution.initTest("primitive:module:error: found", .{
                 tf.primitiveModuleError,
                 "0name",
@@ -505,7 +498,6 @@ pub const threadedFunctions = struct {
             }, exe.stack());
         }
         test "primitive:module:error: with error" {
-            try config.skipForDebugging();
             var exe = Execution.initTest("primitive:module:error: with error", .{
                 tf.primitiveModuleError,
                 "0name",
@@ -526,7 +518,6 @@ pub const threadedFunctions = struct {
             }, exe.stack());
         }
         test "primitive:module:error: not found" {
-            if (true) return error.SkipZigTest;
             var exe = Execution.initTest("primitive:module:error: not found", .{
                 tf.primitiveModuleError,
                 "0name",

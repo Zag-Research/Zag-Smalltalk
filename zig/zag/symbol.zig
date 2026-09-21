@@ -68,7 +68,8 @@ const SymbolsEnum = enum(u32) {
     @"value:value:value:value:" = 0x4000000 + 37,
     @"cull:cull:cull:cull:",
     @"perform:with:with:with:",
-    yourself = 40,
+    @"perform:with:with:with:with:" = 0x5000000 + 40,
+    yourself = 41,
     size,
     negated,
     new,
@@ -244,6 +245,10 @@ pub const SymbolTable = struct {
         try std.testing.expectEqual(symbol, other);
     }
 };
+test "symbols are correct immediate class" {
+    const expect = std.testing.expect;
+    try expect(Symbols.value.asObject().isSymbol());
+}
 pub const noStrings = &[0]heap.HeapObjectConstPtr{};
 test "symbols match initialized symbol table" {
     const expectEqual = std.testing.expectEqual;
