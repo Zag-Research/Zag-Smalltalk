@@ -4,6 +4,10 @@
 	- another local "open weights" model I like a lot is gpt-oss-20b, even though OpenAI isn't my favorite company either.
 	- Tim: re: AGENT.md. Yes, some of them are in my GitHub repos (e.g., for the "smalltalk-mcp" project, [https://github.com/ccrraaiigg/smalltalk-mcp](https://github.com/ccrraaiigg/smalltalk-mcp) 
 
+## Typesafe.ai
+[Typesafe](https://typesafe.ai/manifesto) provides a new approach to something like LLMs. Jev is a new kind of frontier model
+[Nate Jones guide](https://unlock-ai.natebjones.com/guides/jev-shaped-problems) [substack](https://natesnewsletter.substack.com/p/jev-classifier-use-cases) 
+[Jev: what it is, and how to use it - by ZazenCodes](https://www.youtube.com/watch?v=EAh1h1GYxDM)
 ## Dragon Hatchling
 _BDH (Dragon Hatchling_) is a post-transformer AI architecture that remembers, reasons, and improves itself over time. Pathway has released a [repo on Github](https://github.com/pathwaycom/bdh) [Youtube video describing it](https://www.youtube.com/watch?v=fjB6sEPC4CE) [The Dragon Hatchling: The Missing Link between the Transformer and Models of the Brain](https://arxiv.org/abs/2509.26507) 
 ## TurboFieldfare
