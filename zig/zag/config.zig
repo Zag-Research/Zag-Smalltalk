@@ -14,7 +14,9 @@ pub const includeLLVM = options.includeLLVM;
 pub const git_version = options.git_version;
 pub const compile_date = options.compile_date;
 pub const objectEncoding = options.objectEncoding;
+pub const dispatchChoice = options.dispatchChoice;
 pub const max_classes = options.maxClasses;
+pub const picSize = 0;
 pub const singleSteppable = false; //options.singleSteppable;
 // must be more than HeapObject.maxLength*8 so externally allocated
 pub const process_total_size: usize = if (is_test or testRun) 2048 * 4 else 64 * 1024;
@@ -25,19 +27,16 @@ const show_error_stack = debugging;
 pub const show_trace = debugging or options.trace;
 
 pub const immediateIntegers = switch (objectEncoding) {
-    .zag, .nan, .nun, .zagSpur, .zagOrig, .compact1, .compact2, .compact4, .compact6, .compactI1, .compactI2, .compactI4, .compactI6, .compactY, .compactZ, .compactA2, .spur, .spurOpt, .spurNZ, .spurFST, .onlyInt, .taggedInt, .taggedLow, .taggedHigh => true,
+    .zag, .zag6, .nan, .nun, .zagSpur, .zagOrig, .compact1, .compact2, .compact4, .compact6, .compactI1, .compactI2, .compactI4, .compactI6, .compactY, .compactZ, .compactA2, .spur, .spurOpt, .spurNZ, .spurFST, .onlyInt, .taggedInt, .taggedLow, .taggedHigh => true,
     else => false,
 };
 pub const immediateSymbols = switch (objectEncoding) {
-    .zag, .nan, .nun, .zagSpur, .zagOrig, .compact1, .compact2, .compact4, .compact6, .compactI1, .compactI2, .compactI4, .compactI6, .compactY, .compactZ, .compactA2, .onlyInt, .onlyFloat, .taggedLow, .taggedHigh => true,
+    .zag, .zag6, .nan, .nun, .zagSpur, .zagOrig, .compact1, .compact2, .compact4, .compact6, .compactI1, .compactI2, .compactI4, .compactI6, .compactY, .compactZ, .compactA2, .onlyInt, .onlyFloat, .taggedLow, .taggedHigh => true,
     else => false,
 };
 pub const notZag = objectEncoding != .zag;
 pub fn skipNotZag() !void {
     if (notZag) return error.SkipZigTest;
-}
-pub fn skipForDebugging() !void {
-    return error.SkipZigTest;
 }
 pub fn printConfig() void {
     std.debug.print(
@@ -47,6 +46,7 @@ pub fn printConfig() void {
         \\  git_version    = {s}
         \\  cpu            = {s} ({}){s}
         \\  objectEncoding = {}
+        \\  dispatchChoice = {}
         \\  max_classes    = {}
         \\  stack/nursery  = {d}w/{d}w ({d}w){s}{s}{s}{s}
         \\
@@ -57,6 +57,7 @@ pub fn printConfig() void {
         builtin.target.cpu.arch,
         if (native_endian == .big) " big endian" else "",
         objectEncoding,
+        dispatchChoice,
         max_classes,
         Process.process_stack_size,
         Process.process_nursery_size,

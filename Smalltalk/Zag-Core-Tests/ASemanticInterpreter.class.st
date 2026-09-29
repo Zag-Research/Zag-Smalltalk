@@ -66,8 +66,10 @@ ASemanticInterpreter >> beforeTailSend: aSelector [
 	stackArray := self createStackForCall: aSelector numArgs.
 	stackPointer := 11 - aSelector numArgs - 1.
 	pc basicBlock hasContext ifFalse: [ ^ self ].
+	context sendingContext ifNil: [ ^ self ].
+	"reset the context "
+	contextData := context contextData.
 	context := context sendingContext.
-	contextData := context contextData
 ]
 
 { #category : 'primitive execution' }
@@ -503,7 +505,7 @@ ASemanticInterpreter >> self [
 ASemanticInterpreter >> send: aSymbol [
 
 	| obj method |
-	obj := self stackAt: aSymbol numArgs.
+	obj := self targetAt: aSymbol numArgs.
 	method := self getMethod: aSymbol for: obj.
 	pc := ASIProgramCounter new forBasicBlock: method
 ]
@@ -532,7 +534,9 @@ ASemanticInterpreter >> stackAt: anOffset [
 		^ stackArray at: stackPointer + anOffset ].
 	
 	^ contextData at: (anOffset + 1)"
-	^ stackArray at: stackPointer + anOffset
+	"^ stackArray at: stackPointer + anOffset"
+	
+^ stackArray at: 10 - anOffset
 ]
 
 { #category : 'private - testing' }
@@ -546,6 +550,18 @@ ASemanticInterpreter >> stackSize: stackSize [
 
 	stackArray := Array new: stackSize.
 	stackPointer := stackSize + 1
+]
+
+{ #category : 'accessing' }
+ASemanticInterpreter >> targetAt: numArgs [ 
+"the target must be in the context"	
+	"the context can be in the stack or heap" 
+	"the element in the context maybe the target or a closure"
+	    "the element will return itself"
+		"a closure will return targetAt its offset"
+		"a closure object should return itself"
+		self halt.
+^ stackArray at: stackPointer + numArgs
 ]
 
 { #category : 'primitive execution' }

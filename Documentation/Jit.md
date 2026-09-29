@@ -10,6 +10,11 @@ If a method is jit'ed or built-in, the first word will point to the jit'ed or bu
 [Discussion by Clement Bera about OpenSmalltalkVM and LLVM](https://clementbera.wordpress.com/2014/05/28/the-sista-chronicles-viii-integrating-llvm-in-cog/)
 #### Details
 
+## YK is a simple converter to jit from an interpreter
+Possibly an alternative to CnP.
+[YK](https://ykjit.github.io/yk/dev/gotchas.html) and [GitHub](https://github.com/ykjit/yk/)
+
+
 
 #### Importing Pharo code
 We want to be able to use the methods that are sitting in the Pharo image to run for Zag instead of rewriting every one from scratch. 

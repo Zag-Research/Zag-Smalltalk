@@ -234,17 +234,6 @@ ASCompilerInlineTest >> testBlockEvaluationNestedWithSend [
 ]
 
 { #category : 'tests' }
-ASCompilerInlineTest >> testBlockEvaluationWithCall [
-	"blockEvaluationWithCall
-		""bar ^42""
-		^ [ self bar + 5 ] value"
-	
-	self assertEquivalentSending: #blockEvaluationWithCall to: ASCompileTestClass1 new.
-	
-	
-]
-
-{ #category : 'tests' }
 ASCompilerInlineTest >> testBlockEvaluationWithCallAndLocalWithoutTailCall [
 	"blockEvaluationWithCallAndLocalWithoutTailCall
 		""bar ^42""
@@ -256,6 +245,28 @@ ASCompilerInlineTest >> testBlockEvaluationWithCallAndLocalWithoutTailCall [
 		assertEquivalentSending:
 		#blockEvaluationWithCallAndLocalWithoutTailCall
 		to: ASCompileTestClass1 new
+]
+
+{ #category : 'tests' }
+ASCompilerInlineTest >> testBlockEvaluationWithCallNonLocal [
+	"blockEvaluationWithCall
+		""bar ^42""
+		^ [ self bar + 5 ] value"
+	
+	self assertEquivalentSending: #blockEvaluationWithCallAndReturnNonLocal to: ASCompileTestClass1 new.
+	
+	
+]
+
+{ #category : 'tests' }
+ASCompilerInlineTest >> testBlockEvaluationWithCallReturnTop [
+	"blockEvaluationWithCall
+		""bar ^42""
+		^ [ self bar + 5 ] value"
+	
+	self assertEquivalentSending: #blockEvaluationWithCallAndReturnTop to: ASCompileTestClass1 new.
+	
+	
 ]
 
 { #category : 'tests' }

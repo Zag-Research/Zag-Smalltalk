@@ -1,4 +1,63 @@
-Threaded Words or Threaded Functions or Code Words are the functions that are pointed to by the threaded part of a `CompiledMethod`.
+Threaded Words or Threaded Functions or Code Words are the functions that are pointed to by the threaded part of a `CompiledMethod`. Gemini calls this **Direct Tail-Call Threaded Code**.
+
+### Considerations for threaded execution
+This allows checking if we've run out of registers for temporaries (should be on x86-64: 5 for linux/macos (3-5 on Windows), for aarch64: 13 - plus 1 more if a newSp is loaded and the original isn't referenced thereafter):
+```zig
+const std = @import("std");
+const builtin = @import("builtin");
+
+pub const OpFn = *const fn (ip: [*]const OpFn, sp: [*]u64, fp: [*]u64, ctx: u64) void;
+
+// Helper to read the physical native stack pointer register
+inline fn getNativeSP() usize {
+    return switch (builtin.cpu.arch) {
+        .x86_64 => asm ("mov %%rsp, %[ret]" : [ret] "=r" (-> usize)),
+        .aarch64 => asm ("mov %[ret], sp" : [ret] "=r" (-> usize)),
+        else => @compileError("Unsupported architecture"),
+    };
+}
+
+pub fn opTestTemporaries(ip: [*]const OpFn, sp: [*]u64, fp: [*]u64, ctx: u64) void {
+    // 1. Capture the stack pointer exactly upon function entry
+    const entry_rsp = getNativeSP();
+
+    // 2. Introduce a dense pool of local temporary variables.
+    // We modify them to ensure LLVM doesn't optimize them away.
+    var t1: u64 = ctx + 1;
+    var t2: u64 = ctx + 2;
+    var t3: u64 = ctx + 3;
+    var t4: u64 = ctx + 4;
+    var t5: u64 = ctx + 5;
+    var t6: u64 = ctx + 6;
+    
+    // For AArch64, you can confidently keep scaling this up to t12+
+    // var t7: u64 = ctx + 7; 
+    // var t8: u64 = ctx + 8;
+
+    // Interleave operations to force them to stay alive simultaneously
+    t1 += sp[0];
+    t2 += sp[1];
+    t3 += fp[0];
+    t4 += t1;
+    t5 += t2;
+    t6 += t3;
+    
+    const combined_scratch = t1 + t2 + t3 + t4 + t5 + t6;
+
+    // 3. Capture the stack pointer right before leaving
+    const exit_rsp = getNativeSP();
+
+    // 4. Assert that the stack didn't move. 
+    // In ReleaseFast, panic will trigger if a spill caused a stack frame allocation.
+    if (entry_rsp != exit_rsp) {
+        @panic("STACK SPILL DETECTED: Compiler allocated a local stack frame!");
+    }
+
+    // 5. Chain to the next operator, passing our computed value somewhere to keep it alive
+    return @call(.always_tail, ip[0], .{ ip + 1, sp, fp, combined_scratch });
+}
+```
+
 
 # ThreadedFns
 The following threaded functions are defined. In the stack diagrams, TOS is to the right. The stack to the left of the arrow is what is expected (with unspecified values below it), and the stack to the right is the result with the unspecified values unaffected unless mentioned in the description. 
