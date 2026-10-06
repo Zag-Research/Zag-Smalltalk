@@ -172,9 +172,10 @@ pub const classCase = struct {
 };
 pub const drop = struct {
     pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
-        sp.traceStack("drop", context, extra);
+        //sp.traceStack("drop", context, extra);
         const newSp = sp.drop();
-        return @call(tailCall, process.check(pc.prim()), .{ pc.next(), newSp, process, context, extra });
+        return @call(tailCall, pc.prim(), .{ pc.next(), newSp, process, context, extra });
+        // return @call(tailCall, process.check(pc.prim()), .{ pc.next(), newSp, process, context, extra });
     }
     test "drop" {
         var exe = Execution.initTest("drop", .{tf.drop});

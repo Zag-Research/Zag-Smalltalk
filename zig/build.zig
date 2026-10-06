@@ -4,8 +4,9 @@ const Dispatch = @import("zag/dispatch.zig").DispatchType;
 
 pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
-    const optimize = b.standardOptimizeOption(.{});
-
+    const optimize = b.standardOptimizeOption(.{
+        .preferred_optimize_mode = .ReleaseFast,
+    });
     // Build options
     const build_options = createBuildOptions(b);
 
@@ -170,6 +171,38 @@ fn createExperimentExecutables(
     });
     b.installArtifact(dispatch);
 
+    const extract = b.addExecutable(.{
+        .name = "extract",
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("experiments/extract-insns.zig"),
+            .target = target,
+            .optimize = .ReleaseFast,
+            // 1. Omit frame pointer setup (RBP / X29 frame creation)
+            .omit_frame_pointer = true,
+            //.omit_frame_pointer = build_options.omit_frame_pointer,
+            // 2. Strip unwind tables (.eh_frame / ARM exidx)
+            .unwind_tables = .none,
+            // 3. Strip all debug symbols and symbol tables
+            //.strip = true,
+            .strip = false, // Guarantees symbol table and DWARF debug info are preserved
+            // 4. (Optional) Single-threaded mode eliminates TLS/atomic bloat
+            //.single_threaded = true,
+            .imports = &.{
+                .{ .name = "zag", .module = zag },
+            },
+        }),
+        .use_llvm = true,
+    });
+    const capstone_dependency = b.dependency("capstone", .{
+        .target = target,
+        .optimize = .ReleaseFast, //optimize,
+    });
+    extract.linkLibrary(capstone_dependency.artifact("capstone"));
+    if (target.result.os.tag == .windows) {
+        extract.linkSystemLibrary("dbghelp");
+    }
+    b.installArtifact(extract);
+
     const branchPrediction = b.addExecutable(.{
         .name = "branchPrediction",
         .root_module = b.createModule(.{
@@ -278,7 +311,9 @@ fn createCnpBuilds(b: *std.Build, target: std.Build.ResolvedTarget, optimize: st
             .root_source_file = b.path("zag/jit/cnp.zig"),
             .target = target,
             .optimize = optimize,
-            .imports = &.{ .{ .name = "zag", .module = zag }, },
+            .imports = &.{
+                .{ .name = "zag", .module = zag },
+            },
             .omit_frame_pointer = build_options.omit_frame_pointer,
         }),
     });

@@ -156,11 +156,11 @@ pub const PC = packed struct {
     fn targetPC(self: PC) PC {
         return .{ .code = self.codeAddress() };
     }
-    pub // inline //
+    pub inline //
     fn asThreadedFn(self: PC) *const fn (PC, SP, *Process, *Context, Extra) Result {
         return primOf("PC_asThreadedFn: ", self.code);
     }
-    pub // inline //
+    pub inline //
     fn prim(self: PC) *const fn (PC, SP, *Process, *Context, Extra) Result {
         return primOf("PC_prim:         ", self.code);
     }

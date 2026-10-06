@@ -36,8 +36,16 @@ pub const @"+" = struct {
     pub const name = moduleName ++ "_add";
     inline fn with(self: i64, other: Object, sp: SP, context: *Context) ?Object { // INLINED - Add
         if (other.untaggedI()) |untagged| {
-            const result, const overflow = @addWithOverflow(self, untagged);
-            if (overflow == 0) return Object.fromTaggedI(result, sp, context);
+            if (false) {
+                const result, const overflow = @addWithOverflow(self, untagged);
+                if (overflow == 0) return Object.fromTaggedI(result, sp, context);
+            } else {
+                const result = self +% untagged; // Wrapping addition (scalar, no tuple)
+                // If sign bit of ((self ^ result) & (untagged ^ result)) is 0, NO overflow occurred
+                if (((self ^ result) & (untagged ^ result)) >= 0) {
+                    return Object.fromTaggedI(result, sp, context);
+                }
+            }
         }
         return null;
     }
@@ -90,8 +98,16 @@ pub const @"-" = struct {
     pub const inlined = signature(.@"-", number);
     inline fn with(self: i64, other: Object, sp: SP, context: *Context) ?Object { // Subtract
         if (other.untaggedI()) |untagged| {
-            const result, const overflow = @subWithOverflow(self, untagged);
-            if (overflow == 0) return Object.fromTaggedI(result, sp, context);
+            if (false) { // because LLVM gets this wrong
+                const result, const overflow = @subWithOverflow(self, untagged);
+                if (overflow == 0) return Object.fromTaggedI(result, sp, context);
+            } else {
+                const result = self -% untagged; // Wrapping subtraction (scalar, no tuple)
+                // If sign bit of ((self ^ untagged) & (self ^ result)) is 0, NO overflow occurred
+                if (((self ^ untagged) & (self ^ result)) >= 0) {
+                    return Object.fromTaggedI(result, sp, context);
+                }
+            }
         }
         return null;
     }

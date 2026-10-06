@@ -1,0 +1,13 @@
+// Project-local debug tasks
+//
+// For more documentation on how to configure debug tasks,
+// see: https://zed.dev/docs/debugger
+[
+  {
+    "label": "extract",
+    "adapter": "CodeLLDB",
+    "program": "zig-out
+    /bin/extract",
+    "request": "launch",
+  }
+]
