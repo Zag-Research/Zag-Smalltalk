@@ -6,7 +6,7 @@ Safe and efficient memory management is an essential part of a Smalltalk system.
 Zag Smalltalk has several features that minimize garbage creation:
 - activation records (contexts) are stack allocated
 - `nil`, `true`, `false`, Symbols, Characters, SmallIntegers and most Floats are encoded as immediate values
-- SmallIntegers have a wide range (2^55) so extension to BigIntegers (which would be heap-allocated) is rare
+- SmallIntegers have a wide range (62 bits, so -2^61 to 2^61-1) so extension to BigIntegers (which would be heap-allocated) is rare
 - BlockClosures are stack allocated
 - JITed code blocks are generated outside the heap
 - several kinds of common BlockClosures are encoded as immediate values
