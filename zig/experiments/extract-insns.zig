@@ -408,12 +408,16 @@ fn getArm64ImmTarget(insn: *c.cs_insn, op_idx: usize) ?u64 {
 
 fn isInternalTarget(start_addr: u64, target: u64) bool {
     if (target == @intFromPtr(&zag.dispatch.fail)) return false;
+    if (target == @intFromPtr(&std.debug.defaultPanic)) return false;
     return (target >= start_addr and target < start_addr + 0x1000);
     // or (target < start_addr and start_addr - target < 0x1000);
 }
 fn smalltalkThreadedFns(dump: bool) void {
     std.debug.print("zagThreadesFns\n", .{});
-    for (0..500) |tf|
+    for ( //[_]i32{12}
+        0..500
+        //
+    ) |tf|
         switch (@as(threadedFn.Enum, @enumFromInt(tf))) {
             ._end => break,
             else => |tag| {

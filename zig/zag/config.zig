@@ -18,6 +18,7 @@ pub const dispatchChoice = options.dispatchChoice;
 pub const max_classes = options.maxClasses;
 pub const picSize = 0;
 pub const singleSteppable = false; //options.singleSteppable;
+pub const branchCheck = false; //options.branchCheck;
 // must be more than HeapObject.maxLength*8 so externally allocated
 pub const process_total_size: usize = if (is_test or testRun) 2048 * 4 else 64 * 1024;
 

@@ -240,13 +240,13 @@ pub fn getCurrentMethod(self: *Context, extra: Extra) *const CompiledMethod {
 inline fn headerOf(self: *const Context) *HeapHeader {
     return @as(*HeapObject, @ptrCast(@constCast(self))).headerPtr();
 }
-pub inline fn popTargetContext(target: *Context, sp: SP, result: Object) struct { SP, *Context } {
+pub fn popTargetContext(target: *Context, sp: SP, result: Object) struct { SP, *Context } {
     //TODO: check if result is on the stack and ?copy to heap if so?
     const newSp, const newTarget = target.pop(sp);
     newSp.top = result;
     return .{ newSp, newTarget };
 }
-pub inline fn pop(self: *Context, sp: SP) struct { SP, *Context } {
+pub fn pop(self: *Context, sp: SP) struct { SP, *Context } {
     if (self.ifOnStack(sp)) |contextOnStack| {
         const newSp: SP = @ptrCast(contextOnStack.selfAddress());
         trace("popContext: {*}, {*}", .{ self, newSp });

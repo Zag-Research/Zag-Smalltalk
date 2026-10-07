@@ -232,7 +232,7 @@ pub inline fn branchCheck(self: *align(1) const Self, next: *const fn (PC, SP, *
     return if (self.needsCheck()) &fullCheck else next;
 }
 inline fn needsCheck(self: *align(1) const Self) bool {
-    return (@intFromPtr(self) & checkFlags) != 0;
+    return config.branchCheck and (@intFromPtr(self) & checkFlags) != 0;
 }
 fn fullCheck(pc: PC, sp: SP, process: *align(1) Self, context: *Context, extra: Extra) Result {
     trace("fullCheck: {f} {}", .{ extra, process.header().singleStepping });
