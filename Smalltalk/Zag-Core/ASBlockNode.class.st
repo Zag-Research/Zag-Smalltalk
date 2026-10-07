@@ -25,7 +25,7 @@ ASBlockNode >> accept: aVisitor [
 { #category : 'converting' }
 ASBlockNode >> asPharoAST [
 	| pharoBody |
-	pharoBody := OCSequenceNode temporaries: (locals collect: #asPharoAST) statements: (body collect: #asPharoAST).
+	pharoBody := OCSequenceNode temporaries: (locals collect: #asPharoAST) statements: (body collect: #asPharoAST thenReject: #isNil).
 	^OCBlockNode arguments: (arguments collect: #asPharoAST) body: pharoBody.
 ]
 

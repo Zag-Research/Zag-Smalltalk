@@ -112,6 +112,7 @@ ASemanticInterpreter >> contextAt: anInteger [
 
 { #category : 'accessing' }
 ASemanticInterpreter >> contextDataAt: anInteger [ 
+
 	^ contextData at: 1+ anInteger 
 ]
 
@@ -135,7 +136,7 @@ Locals do not need to be factored into the creation of a context."
 	"copy the current calls data into a contextData"
 	context := ASIContext new
 					method: aCompiledMethodOrBlock;
-		           contextData: (context createContextData: self);
+		           contextData: (self createContextData: aCompiledMethodOrBlock);
 		           returnPC: pc;
 		           
 		           sendingContext: context.
@@ -161,6 +162,7 @@ Locals do not need to be factored into the creation of a context."
 	aCompiledMethodOrBlock := pc basicBlock.
 	newStackArray := self createStackForCall.
 	"copy the current calls data into a contextData"
+	self halt.
 	context := ASIContext new
 					  method: blockToReturnTo sourceBlock;
 		           contextData: (self createContextData: blockToReturnTo sourceBlock );
@@ -201,12 +203,13 @@ ASemanticInterpreter >> createContext: locals extra: extra [
 { #category : 'interpreting' }
 ASemanticInterpreter >> createContextData: aMethod [
 
+	"not a big fan of this, should this test be part of the context or context data instead of a var on semantic intepreter?"
 	(aMethod notNil and: contextDataMethod == aMethod) ifTrue: [ ^ contextData ].
 
 	contextDataMethod := aMethod.
 	contextData := Array new: aMethod arguments + aMethod locals + 1.
-	(11 - contextData size) to: 10 by: 1 do: [ :idx |
-			contextData at: 11 - idx put: (stackArray at: idx) ].
+	1 to: (contextData size - aMethod locals) by: 1 do: [ :idx |
+			contextData at: (contextData size - idx) put: (stackArray at: (11 - idx) ) ].
 
 	^ contextData
 ]
@@ -301,7 +304,9 @@ ASemanticInterpreter >> installContextIfNone [
 	newContext sendingContext: context.
 	newContext populateFrom: self.
 	context := newContext."
+	context notNil & context method isNotNil & (context method == contextDataMethod) ifFalse: [ 
 	self createContext
+	]
 ]
 
 { #category : 'interpreting' }
@@ -314,7 +319,14 @@ ASemanticInterpreter >> installContextIfNone: blockToReturnTo [
 	newContext populateFrom: self.
 	context := newContext."
 
-	self createContext: blockToReturnTo
+	"we don't need to create a context if one has already been created for the overall method or block we are executing
+	how to reuse the existing context?"
+	context notNil & (context method == contextDataMethod)
+	ifTrue: [ 
+		context returnPC: (ASIProgramCounter new forBasicBlock: blockToReturnTo).
+	] ifFalse: [ 
+		self createContext: blockToReturnTo
+	]
 ]
 
 { #category : 'interpreting' }
@@ -334,8 +346,8 @@ ASemanticInterpreter >> pop [
 { #category : 'accessing' }
 ASemanticInterpreter >> pop: anObject into: offset [
 
-	stackPointer := stackPointer + 1. "remove the value on the top of the stack"
-	^ stackArray at: stackArray size - offset put: anObject
+	self installContextIfNone.
+	^ contextData at: (contextData size - offset) put: anObject
 ]
 
 { #category : 'primitive execution' }
@@ -482,7 +494,10 @@ ASemanticInterpreter >> return: anObject selfOffset: selfOffset [
 	stackPointer := 10.
 	stackArray := Array new: 10.
 	stackArray at: stackPointer put: anObject.
-	pc := context returnPC
+	
+	"can this be done more eligantly, should a return always set the context to the sendingContext?"
+	pc := context sendingContext ifNil: [ context returnPC ]
+	ifNotNil: [ context sendingContext returnPC ]
 ]
 
 { #category : 'as yet unclassified' }
@@ -554,14 +569,8 @@ ASemanticInterpreter >> stackSize: stackSize [
 
 { #category : 'accessing' }
 ASemanticInterpreter >> targetAt: numArgs [ 
-"the target must be in the context"	
-	"the context can be in the stack or heap" 
-	"the element in the context maybe the target or a closure"
-	    "the element will return itself"
-		"a closure will return targetAt its offset"
-		"a closure object should return itself"
-		self halt.
-^ stackArray at: stackPointer + numArgs
+	"the target will always be on the stack since it was pushed on the stack before the call"
+	 ^ stackArray at: stackPointer + numArgs
 ]
 
 { #category : 'primitive execution' }
