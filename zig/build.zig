@@ -1,10 +1,12 @@
 const std = @import("std");
 const Encoding = @import("zag/encoding/encoding.zig").Encoding;
+const Dispatch = @import("zag/dispatch.zig").DispatchType;
 
 pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
-    const optimize = b.standardOptimizeOption(.{});
-
+    const optimize = b.standardOptimizeOption(.{
+        .preferred_optimize_mode = .ReleaseFast,
+    });
     // Build options
     const build_options = createBuildOptions(b);
 
@@ -19,11 +21,12 @@ pub fn build(b: *std.Build) void {
 
     // Experiment executables
     createExperimentExecutables(b, target, optimize, build_options, zag);
-    // createCnpBuilds(b, target, optimize, build_options, zag);
+    createCnpBuilds(b, target, optimize, build_options, zag);
 
     // Test and benchmark steps
     createTestStep(b, target, optimize, build_options, llvm_module);
     createBenchStep(b, target, .ReleaseFast, build_options, llvm_module);
+    createDispatchStep(b, target, .ReleaseFast, build_options, llvm_module);
     createDocsStep(b, target, optimize, build_options, llvm_module);
 }
 
@@ -33,6 +36,7 @@ fn createBuildOptions(b: *std.Build) BuildOptions {
     const compile_date_with_extra = b.run(&.{ "date", "+%Y-%m-%dT%H:%M:%S%z" });
     const compile_date = std.mem.trim(u8, compile_date_with_extra, " \n\r");
     const encoding_option = b.option(Encoding, "encoding", "Object encoding");
+    const dispatch_option = b.option(Dispatch, "dispatch", "Dispatch encoding");
     const max_classes = b.option(u16, "maxClasses", "Maximum number of classes") orelse 255;
     const trace = b.option(bool, "trace", "trace execution") orelse false;
     const quit_on_first_failure = b.option(bool, "quitOnFirstFailure", "Stop after first error");
@@ -43,6 +47,7 @@ fn createBuildOptions(b: *std.Build) BuildOptions {
         .git_version = git_version,
         .compile_date = compile_date,
         .encoding_option = encoding_option,
+        .dispatch_option = dispatch_option,
         .max_classes = max_classes,
         .trace = trace,
         .quit_on_first_failure = quit_on_first_failure,
@@ -50,9 +55,10 @@ fn createBuildOptions(b: *std.Build) BuildOptions {
     };
 }
 
-fn addCommonOptions(options: *std.Build.Step.Options, build_options: BuildOptions, encoding: Encoding) void {
+fn addCommonOptions(options: *std.Build.Step.Options, build_options: BuildOptions, encoding: Encoding, dispatch: Dispatch) void {
     options.addOption(bool, "includeLLVM", build_options.include_llvm);
     options.addOption([]const u8, "git_version", build_options.git_version);
+    options.addOption(Dispatch, "dispatchChoice", dispatch);
     options.addOption([]const u8, "compile_date", build_options.compile_date);
     options.addOption(Encoding, "objectEncoding", encoding);
     options.addOption(u16, "maxClasses", build_options.max_classes);
@@ -68,7 +74,8 @@ fn createZagModule(
 ) *std.Build.Module {
     const options = b.addOptions();
     const encoding = build_options.encoding_option orelse Encoding.default();
-    addCommonOptions(options, build_options, encoding);
+    const dispatch = build_options.dispatch_option orelse Dispatch.default();
+    addCommonOptions(options, build_options, encoding, dispatch);
 
     const zag = b.createModule(.{
         .root_source_file = b.path("zag/zag.zig"),
@@ -94,7 +101,8 @@ fn createMainExecutable(
 ) void {
     const options = b.addOptions();
     const encoding = build_options.encoding_option orelse Encoding.default();
-    addCommonOptions(options, build_options, encoding);
+    const dispatch = build_options.dispatch_option orelse Dispatch.default();
+    addCommonOptions(options, build_options, encoding, dispatch);
 
     const exe = b.addExecutable(.{
         .name = "zag",
@@ -147,6 +155,53 @@ fn createExperimentExecutables(
         .use_llvm = true,
     });
     b.installArtifact(fib);
+
+    const dispatch = b.addExecutable(.{
+        .name = "dispatch",
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("experiments/dispatchTiming.zig"),
+            .target = target,
+            .optimize = optimize,
+            .imports = &.{
+                .{ .name = "zag", .module = zag },
+            },
+            .omit_frame_pointer = build_options.omit_frame_pointer,
+        }),
+        .use_llvm = true,
+    });
+    b.installArtifact(dispatch);
+
+    const extract = b.addExecutable(.{
+        .name = "extract",
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("experiments/extract-insns.zig"),
+            .target = target,
+            .optimize = .ReleaseFast,
+            // 1. Omit frame pointer setup (RBP / X29 frame creation)
+            .omit_frame_pointer = true,
+            //.omit_frame_pointer = build_options.omit_frame_pointer,
+            // 2. Strip unwind tables (.eh_frame / ARM exidx)
+            .unwind_tables = .none,
+            // 3. Strip all debug symbols and symbol tables
+            //.strip = true,
+            .strip = false, // Guarantees symbol table and DWARF debug info are preserved
+            // 4. (Optional) Single-threaded mode eliminates TLS/atomic bloat
+            //.single_threaded = true,
+            .imports = &.{
+                .{ .name = "zag", .module = zag },
+            },
+        }),
+        .use_llvm = true,
+    });
+    const capstone_dependency = b.dependency("capstone", .{
+        .target = target,
+        .optimize = .ReleaseFast, //optimize,
+    });
+    extract.linkLibrary(capstone_dependency.artifact("capstone"));
+    if (target.result.os.tag == .windows) {
+        extract.linkSystemLibrary("dbghelp");
+    }
+    b.installArtifact(extract);
 
     const branchPrediction = b.addExecutable(.{
         .name = "branchPrediction",
@@ -249,6 +304,23 @@ fn createCnpBuilds(b: *std.Build, target: std.Build.ResolvedTarget, optimize: st
     const run_cnp_fib_bench = b.addRunArtifact(cnp_fib_bench);
     const run_cnp_fib_bench_step = b.step("cnp-fib-bench", "Run CNP JIT fibonacci benchmarks");
     run_cnp_fib_bench_step.dependOn(&run_cnp_fib_bench.step);
+
+    const test_cnp_exe = b.addTest(.{
+        .name = "test-cnp",
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("zag/jit/cnp.zig"),
+            .target = target,
+            .optimize = optimize,
+            .imports = &.{
+                .{ .name = "zag", .module = zag },
+            },
+            .omit_frame_pointer = build_options.omit_frame_pointer,
+        }),
+    });
+    b.installArtifact(test_cnp_exe);
+    const test_cnp_cmd = b.addRunArtifact(test_cnp_exe);
+    const test_cnp_run = b.step("test-cnp", "run cnp tests");
+    test_cnp_run.dependOn(&test_cnp_cmd.step);
 }
 
 fn createTestStep(
@@ -271,7 +343,7 @@ fn createTestStep(
 
     for (test_encodings) |enc| {
         const enc_options = b.addOptions();
-        addCommonOptions(enc_options, build_options, enc);
+        addCommonOptions(enc_options, build_options, enc, .method);
 
         if (build_options.quit_on_first_failure) |quit| {
             enc_options.addOption(bool, "quitOnFirstFailure", quit);
@@ -313,6 +385,67 @@ fn createTestStep(
     }
 }
 
+fn createDispatchStep(
+    b: *std.Build,
+    target: std.Build.ResolvedTarget,
+    optimize: std.builtin.OptimizeMode,
+    build_options: BuildOptions,
+    llvm_module: *std.Build.Module,
+) void {
+    const dispatchers: []const Dispatch =
+        if (build_options.dispatch_option) |specific_dispatcher|
+            &[_]Dispatch{specific_dispatcher}
+        else
+            &[_]Dispatch{
+                .method,
+                // .SIMDFlat,
+                // .SIMDHashed,
+                // .Swiss,
+                .forTest,
+            };
+
+    const dispatch_build_step = b.step("dispatch-build", "Build dispatch for all encoding types (no run)");
+    const dispatch_step = b.step("dispatch", "Run dispatch for all encoding types");
+
+    for (dispatchers) |disp| {
+        const enc_options = b.addOptions();
+        addCommonOptions(enc_options, build_options, .zag, disp);
+
+        const enc_zag = b.createModule(.{
+            .root_source_file = b.path("zag/zag.zig"),
+            .target = target,
+            .optimize = optimize,
+        });
+        enc_zag.addOptions("options", enc_options);
+        if (build_options.include_llvm) {
+            enc_zag.addImport("llvm-build-module", llvm_module);
+        }
+
+        const dispatch_exe = b.addExecutable(.{
+            .name = b.fmt("dispatch-{s}", .{@tagName(disp)}),
+            .root_module = b.createModule(.{
+                .root_source_file = b.path("experiments/dispatchTiming.zig"),
+                .target = target,
+                .optimize = optimize,
+                .imports = &.{
+                    .{ .name = "zag", .module = enc_zag },
+                },
+                .omit_frame_pointer = build_options.omit_frame_pointer,
+            }),
+            .use_llvm = true,
+        });
+
+        const arch_name = @tagName(target.result.cpu.arch);
+        const install = b.addInstallArtifact(dispatch_exe, .{
+            .dest_dir = .{ .override = .{ .custom = arch_name } },
+        });
+        dispatch_build_step.dependOn(&install.step);
+        dispatch_step.dependOn(&install.step);
+
+        const run_dispatch = b.addRunArtifact(dispatch_exe);
+        dispatch_step.dependOn(&run_dispatch.step);
+    }
+}
 fn createBenchStep(
     b: *std.Build,
     target: std.Build.ResolvedTarget,
@@ -361,7 +494,7 @@ fn createBenchStep(
 
     for (bench_encodings) |enc| {
         const enc_options = b.addOptions();
-        addCommonOptions(enc_options, build_options, enc);
+        addCommonOptions(enc_options, build_options, enc, .method);
 
         const enc_zag = b.createModule(.{
             .root_source_file = b.path("zag/zag.zig"),
@@ -408,7 +541,8 @@ fn createDocsStep(
 ) void {
     const options = b.addOptions();
     const encoding = build_options.encoding_option orelse Encoding.default();
-    addCommonOptions(options, build_options, encoding);
+    const dispatch = build_options.dispatch_option orelse Dispatch.default();
+    addCommonOptions(options, build_options, encoding, dispatch);
 
     const docs_module = b.createModule(.{
         .root_source_file = b.path("zag/docs.zig"),
@@ -483,6 +617,7 @@ const BuildOptions = struct {
     git_version: []const u8,
     compile_date: []const u8,
     encoding_option: ?Encoding,
+    dispatch_option: ?Dispatch,
     max_classes: u16,
     trace: bool,
     quit_on_first_failure: ?bool,

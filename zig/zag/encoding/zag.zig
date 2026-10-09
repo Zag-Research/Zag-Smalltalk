@@ -67,6 +67,7 @@ pub const Object = packed struct(u64) {
         memoryObject,
         _,
         const heapBits = object.heapBits();
+        pub const none = ClassIndex.c;
         inline fn isHeap(self: Compact) bool {
             return (heapBits >> @intFromEnum(self)) & 1 != 0;
         }
@@ -95,13 +96,13 @@ pub const Object = packed struct(u64) {
     }
     pub const LowTagType = Tag;
     pub const lowTagSmallInteger = Tag.smallinteger;
+    pub const lowTagSignature = Tag.heap;
     pub const HighTagType = u5;
     pub const highTagSmallInteger = 0;
+    pub const highTagSignature = @intFromEnum(Compact.Signature);
     pub const PackedTagType = Tag;
     pub const packedTagSmallInteger = Tag.smallinteger;
     pub const signatureTag = 0;
-    pub const LowTag = u0;
-    pub const HighTag = u8;
     inline fn tagbits(self: u64) u64 {
         return math.rotl(u64, @bitCast(self), 5) & 0xff;
     }
@@ -376,7 +377,9 @@ pub const Object = packed struct(u64) {
         _ = sp;
         switch (class) {
             .ThunkReturnObject, .ThunkReturnLocal, .ThunkReturnInstance, .ThunkReturnImmediate, .ThunkReturnCharacter, .ThunkReturnFloat => {
-                return oImmAddr(Compact.from(class), context, sig.primitive());
+                _ = context;
+                @panic("incomplete");
+                //return oImmAddr(Compact.from(class), context, sig.primitive());
             },
             else => return null,
         }

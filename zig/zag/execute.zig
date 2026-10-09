@@ -38,24 +38,18 @@ const tf = threadedFn.Enum;
 
 pub const Result = SP;
 pub const Signature = packed struct {
-    low: Object.LowTag = Object.signatureTag,
-    _filler1: zag.UInt(8 - @bitSizeOf(Object.LowTag)) = 0,
-    hash: zag.UInt(32 - @max(8, @bitSizeOf(Object.LowTag))) = 0,
-    high: Object.HighTag = 0,
+    lowTag: Object.LowTagType = Object.lowTagSignature,
+    numArgs: zag.UInt(8 - @bitSizeOf(Object.LowTagType)) = 0,
+    hash: u24 = 0,
     class: ClassIndex = @enumFromInt(0),
-    _filler2: zag.UInt(16 - @bitSizeOf(Object.HighTag)) = 0,
+    _fillerHigh: zag.UInt(64 - 48 - @bitSizeOf(Object.HighTagType)) = 0,
+    highTag: Object.HighTagType = Object.highTagSignature,
     fn isTagged(self: Signature) bool {
-        switch (Object.signatureTag) {
-            0 => return @as(Object, @bitCast(self)).isImmediateClass(.Signature),
-            else => |tag| return self.low == tag,
-        }
+        return self.highTag == Object.highTagSignature;
     }
     pub const empty = new();
     fn new() Signature {
-        switch (Object.signatureTag) {
-            0 => return @bitCast(Object.makeImmediate(.Signature, 0)),
-            else => return .{},
-        }
+        return .{};
     }
     pub inline fn asInt(self: Signature) u64 {
         return @bitCast(self);
@@ -64,13 +58,7 @@ pub const Signature = packed struct {
         return self.equals(empty);
     }
     pub fn fullHash(self: Signature) u32 {
-        return @intCast(self.asInt() & 0xffffff00);
-    }
-    pub inline fn numArgs(self: Signature) u4 {
-        if (Object.HighTag != u0) {
-            return @intCast(self.high);
-        }
-        return @intCast(self.low);
+        return @truncate(self.asInt());
     }
     pub fn from(hash: u24, arity: u4, class: ClassIndex) Signature {
         var result = fromHash(hash, arity);
@@ -78,26 +66,13 @@ pub const Signature = packed struct {
         return result;
     }
     pub inline fn fromHash(hash: u24, arity: u4) Signature {
-        var result = new();
-        result.hash = hash;
-        if (Object.HighTag != u0) {
-            result.high = arity;
-        } else result.low = arity;
-        return result;
+        return .{ .hash = hash, .numArgs = arity };
     }
     pub fn fromPrimitive(primitiveNumber: u8) Signature {
-        var result = new();
-        result.hash = primitiveNumber;
-        return result;
+        return .{ .hash = primitiveNumber };
     }
     pub fn fromNameClass(name: symbol.Symbols, class: ClassIndex) Signature {
         return from(name.symbolHash().?, name.numArgs(), class);
-    }
-    pub fn fromClassU8X(class: ClassIndex, number: u8) Signature {
-        return .{ .class = class, .hash = number };
-    }
-    pub fn fromClassI8X(class: ClassIndex, number: i8) Signature {
-        return .{ .class = class, .hash = @as(u8, @bitCast(number)) };
     }
     pub fn equals(self: Signature, other: Signature) bool {
         return (self.asInt() ^ other.asInt()) & 0xffffff00 == 0;
@@ -113,10 +88,10 @@ pub const Signature = packed struct {
     pub inline fn asObject(self: Signature) Object {
         return @bitCast(self);
     }
-    pub inline fn primitive(self: Signature) u8 {
-        return @intCast(self.hash & 0xff);
+    pub inline fn primitive(self: Signature) u24 {
+        return @intCast(self.hash);
     }
-    pub inline fn getClassIndex(self: Signature) u16 {
+    inline fn getClassIndex(self: Signature) u16 {
         return @intFromEnum(self.getClass());
     }
     pub inline fn getClass(self: Signature) ClassIndex {
@@ -129,10 +104,10 @@ pub const Signature = packed struct {
         self: Signature,
         writer: anytype,
     ) !void {
-        if (self.isEmpty() or true) {
+        if (self.isEmpty()) {
             try writer.print("Signature{{empty}}", .{});
         } else {
-            if (self.getClass() == .none and self.primitive() < 256) {
+            if (self.getClass() == Object.Compact.none and self.primitive() < 256) {
                 try writer.print(" prim: {}", .{self.primitive()});
             } else try writer.print("{} >> #{s}", .{ self.getClass(), symbol.asString(self.asSymbol()).arrayAsSlice(u8) catch "???" });
         }
@@ -181,11 +156,11 @@ pub const PC = packed struct {
     fn targetPC(self: PC) PC {
         return .{ .code = self.codeAddress() };
     }
-    pub // inline //
+    pub inline //
     fn asThreadedFn(self: PC) *const fn (PC, SP, *Process, *Context, Extra) Result {
         return primOf("PC_asThreadedFn: ", self.code);
     }
-    pub // inline //
+    pub inline //
     fn prim(self: PC) *const fn (PC, SP, *Process, *Context, Extra) Result {
         return primOf("PC_prim:         ", self.code);
     }
@@ -418,13 +393,14 @@ pub const StackStructure = packed struct {
     _fillerHigh: zag.UInt(64 - 48 - @bitSizeOf(Object.HighTagType)) = 0,
     highTag: Object.HighTagType = Object.highTagSmallInteger,
 };
-pub const endMethod = CompiledMethod.init(Sym.value, Code.end);
+pub const endMethod = CompiledMethod.init(Sym.value, Code.end, 1);
 pub const CompiledMethod = struct {
     header: HeapHeader,
     signature: Signature,
     stackStructure: StackStructure,
     executeFn: *const fn (PC, SP, *Process, *Context, Extra) Result,
     jitted: ?*const fn (PC, SP, *Process, *Context, Extra) Result,
+    size: usize,
     code: [codeSize]Code, // the threaded version of the method
     const Self = @This();
     const codeSize = 1;
@@ -455,7 +431,7 @@ pub const CompiledMethod = struct {
             std.debug.print("[{x:0>12}]: {f}\n", .{ @intFromPtr(instruction), instruction.* });
         }
     }
-    pub fn init(name: anytype, methodFn: *const fn (PC, SP, *Process, *Context, Extra) Result) Self {
+    pub fn init(name: anytype, methodFn: *const fn (PC, SP, *Process, *Context, Extra) Result, size: usize) Self {
         return Self{
             .header = HeapHeader.calc(.CompiledMethod, codeOffsetInObjects + codeSize, 42 //name.hash24()
                 , .static, null, Object, false) catch unreachable,
@@ -463,12 +439,16 @@ pub const CompiledMethod = struct {
             .signature = Signature.fromNameClass(name, .testClass),
             .executeFn = methodFn,
             .jitted = methodFn,
+            .size = size,
             .code = .{Code.primOf(methodFn)},
         };
     }
+    pub fn initPC(self: *const Self) PC {
+        return PC.init(&self.code[0]);
+    }
     pub fn execute(self: *const Self, sp: SP, process: *Process, context: *Context) Result {
         const newExtra = Extra.forMethod(self, sp);
-        const pc = PC.init(&self.code[0]).next();
+        const pc = self.initPC().next();
         return self.executeFn(pc, sp, process, context, newExtra);
     }
     inline fn asHeapObjectPtr(self: *const Self) HeapObjectConstPtr {
@@ -476,6 +456,9 @@ pub const CompiledMethod = struct {
     }
     pub inline fn codePtr(self: *const Self) *const Code {
         return &self.code[0];
+    }
+    pub inline fn codeSlice(self: *const Self) []const Code {
+        return self.code[0..self.size];
     }
     pub inline fn codePc(self: *const Self) PC {
         return PC.init(@ptrCast(&self.code[0]));
@@ -550,6 +533,7 @@ fn CompileTimeMethod(comptime counts: usize) type {
         stackStructure: StackStructure, // f1 - locals, f3 - selfOffset
         executeFn: *const fn (PC, SP, *Process, *Context, Extra) Result,
         jitted: ?*const fn (PC, SP, *Process, *Context, Extra) Result,
+        size: usize,
         code: [codes]Code,
         offsets: [codes]OffsetType align(8),
         const OffsetType = enum(u2) {
@@ -583,6 +567,7 @@ fn CompileTimeMethod(comptime counts: usize) type {
                 .stackStructure = StackStructure{ .locals = locals, .selfOffset = locals + name.numArgs() + 1 },
                 .executeFn = &Code.panic,
                 .jitted = function,
+                .size = codes,
                 .code = undefined,
                 .offsets = [_]OffsetType{.none} ** codes,
             };
@@ -690,6 +675,9 @@ fn CompileTimeMethod(comptime counts: usize) type {
         }
         pub fn getCodeSize(_: *Self) usize {
             return codes;
+        }
+        pub inline fn getClassIndex(self: Self) u16 {
+            return self.signature.getClassIndex();
         }
         fn execute(self: *Self, sp: SP, process: *Process, context: *Context) Result {
             return @as(*CompiledMethod, @ptrCast(self)).execute(sp, process, context);
@@ -1042,6 +1030,19 @@ pub const Execution = struct {
                 try self.resolve(objects);
                 try self.runWithValidator(&validate, source, expected);
             }
+            pub fn runJittedTest(self: *Self, comptime JitTechnique: type, source: []const Object, expected: []const Object) !void {
+                return self.runJittedTestWithObjects(JitTechnique, Object.empty, source, expected);
+            }
+            pub fn runJittedTestWithObjects(self: *Self, comptime JitTechnique: type, objects: []const Object, source: []const Object, expected: []const Object) !void {
+                try self.resolve(objects);
+
+                var jit = try JitTechnique.init();
+                defer jit.deinit();
+                try jit.install(&self.method);
+
+                self.execute(source);
+                try self.matchStack(expected);
+            }
             pub const ValidateErrors = error{
                 TestAborted,
                 TestExpectedEqual,
@@ -1081,7 +1082,7 @@ pub const Execution = struct {
         }
         pub fn sendTo(self: *MainExecutor, selector: Object, receiver: Object) !Object {
             var exe = &self.exe;
-            trace("Sending: {f} ({x}) to {f}", .{ selector, selector.testU(), receiver });
+            trace("Sending: ({x}) {f} to {f}", .{ selector.testU(), selector, receiver });
             exe.init(Object.empty);
             exe.getContext().setReturn(PC.exit());
             trace("SendTo: context {*} {*} {f}", .{ exe.getContext(), exe.getContext().npc, exe.getContext().tpc });

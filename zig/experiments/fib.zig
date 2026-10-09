@@ -21,6 +21,7 @@ const object = zag.object;
 const Nil = object.Nil;
 const True = object.True;
 const False = object.False;
+const primitive = zag.execute.Signature.fromPrimitive;
 
 fn fibCheck(n: u32) u64 {
     if (n < 2) return n;
@@ -78,7 +79,6 @@ const fibInteger = struct {
     const minus = tf.SmallInteger_sub;
     const classes = object.PackedObject.pack;
     const signature = zag.symbol.signature;
-    const nullMethod = zag.dispatch.nullMethod;
     var fib align(codeAlignment) =
         compileMethod(Sym.fibonacci, 0, .SmallInteger, .{
             tf.push,                                self,
@@ -91,12 +91,11 @@ const fibInteger = struct {
             tf.pushLiteral,                         "1const",
             minus,                                  tf.fail,
             tf.fail,                                tf.send,
-            signature(.fibonacci),                  &nullMethod,
-            tf.push,                                self,
-            tf.pushLiteral,                         "2const",
-            minus,                                  tf.fail,
-            tf.fail,                                tf.send,
-            signature(.fibonacci),                  &nullMethod,
+            signature(.fibonacci),                  tf.push,
+            self,                                   tf.pushLiteral,
+            "2const",                               minus,
+            tf.fail,                                tf.fail,
+            tf.send,                                signature(.fibonacci),
             plus,                                   tf.fail,
             tf.fail,                                tf.returnTop,
         });
@@ -111,7 +110,8 @@ const fibInteger = struct {
         const two = two_.init(2);
         fib.resolve(&[_]Object{ zero, one, two }) catch @panic("Failed to resolve");
         fib.initExecute();
-        zag.dispatch.addMethod(@ptrCast(&fib));
+        zag.dispatch.resetForTests();
+        zag.dispatch.addMethod(.SmallInteger, @ptrCast(&fib));
         if (zag.config.show_trace) {
             std.debug.print("\n", .{});
             fib.dump();
@@ -136,7 +136,6 @@ const fibInteger0 = struct {
     const minus = tf.SmallInteger_sub;
     const classes = object.PackedObject.pack;
     const signature = zag.symbol.signature;
-    const nullMethod = zag.dispatch.nullMethod;
     var fib align(codeAlignment) =
         compileMethod(Sym.fibonacci, 0, .SmallInteger, .{
             tf.push,                                self,
@@ -149,12 +148,11 @@ const fibInteger0 = struct {
             tf.pushLiteral,                         "1const",
             minus,                                  tf.fail,
             tf.fail,                                tf.send0,
-            signature(.fibonacci),                  &nullMethod,
-            tf.push,                                self,
-            tf.pushLiteral,                         "2const",
-            minus,                                  tf.fail,
-            tf.fail,                                tf.send0,
-            signature(.fibonacci),                  &nullMethod,
+            signature(.fibonacci),                  tf.push,
+            self,                                   tf.pushLiteral,
+            "2const",                               minus,
+            tf.fail,                                tf.fail,
+            tf.send0,                               signature(.fibonacci),
             plus,                                   tf.fail,
             tf.fail,                                tf.returnTop,
         });
@@ -169,7 +167,8 @@ const fibInteger0 = struct {
         const two = two_.init(2);
         fib.resolve(&[_]Object{ zero, one, two }) catch @panic("Failed to resolve");
         fib.initExecute();
-        zag.dispatch.addMethod(@ptrCast(&fib));
+        zag.dispatch.resetForTests();
+        zag.dispatch.addMethod(.SmallInteger, @ptrCast(&fib));
         if (zag.config.show_trace) {
             std.debug.print("\n", .{});
             fib.dump();
@@ -194,27 +193,23 @@ const fibIntegerBr = struct {
     const minus = tf.SmallInteger_sub;
     const classes = object.PackedObject.classes;
     const signature = zag.symbol.signature;
-    const nullMethod = zag.dispatch.nullMethod;
     var fib align(codeAlignment) =
         compileMethod(Sym.fibonacci, 0, .SmallInteger, .{
             //            tf.debug,
             tf.push,        self,
             tf.pushLiteral, "2const",
-            leq,            tf.fail,
-            tf.fail,        tf.branchFalse,
-            "false",        tf.returnSelf,
-            ":false",       tf.push,
-            self,           tf.pushLiteral,
-            "1const",       minus,
-            tf.fail,        tf.fail,
+            leq,            signature(.@"<="),
+            tf.branchFalse, "false",
+            tf.returnSelf,  ":false",
+            tf.push,        self,
+            tf.pushLiteral, "1const",
+            minus,          signature(.@"-"),
             tf.send,        signature(.fibonacci),
-            &nullMethod,    tf.push,
-            self,           tf.pushLiteral,
-            "2const",       minus,
-            tf.fail,        tf.fail,
+            tf.push,        self,
+            tf.pushLiteral, "2const",
+            minus,          signature(.@"-"),
             tf.send,        signature(.fibonacci),
-            &nullMethod,    plus,
-            tf.fail,        tf.fail,
+            plus,           signature(.@"+"),
             //            tf.enddebug,
             tf.returnTop,
         });
@@ -229,7 +224,8 @@ const fibIntegerBr = struct {
         const two = two_.init(2);
         fib.resolve(&[_]Object{ zero, one, two }) catch @panic("Failed to resolve");
         fib.initExecute();
-        zag.dispatch.addMethod(@ptrCast(&fib));
+        zag.dispatch.resetForTests();
+        zag.dispatch.addMethod(.SmallInteger, @ptrCast(&fib));
         if (zag.config.show_trace) {
             std.debug.print("\n", .{});
             fib.dump();
@@ -259,8 +255,6 @@ const fibIntegerClosure = struct {
     const self = zag.Context.makeVariable(0, 1, .parameter, &.{});
     const classes = object.PackedObject.classes;
     const signature = zag.symbol.signature;
-    const nullMethod = zag.dispatch.nullMethod;
-    const primitive = zag.execute.Signature.fromPrimitive;
     var TifTrue align(codeAlignment) =
         compileMethod(Sym.@"ifTrue:", 0, .True, .{ tf.dup, tf.value, tf.returnTop });
     var FifTrue align(codeAlignment) =
@@ -274,25 +268,21 @@ const fibIntegerClosure = struct {
     var fib align(codeAlignment) =
         compileMethod(Sym.fibonacci, 0, .SmallInteger, .{
             //            tf.debug,
-            tf.push,                self,
-            tf.pushLiteral,         "2const",
-            tf.send,                signature(.@"<="),
-            &nullMethod,            tf.returnLocalClosure,
-            "1const",               tf.send,
-            signature(.@"ifTrue:"), &nullMethod,
-            tf.drop,                tf.push,
-            self,                   tf.pushLiteral,
-            "1const",               tf.send,
-            signature(.@"-"),       &nullMethod,
-            tf.send,                signature(.fibonacci),
-            &nullMethod,            tf.push,
-            self,                   tf.pushLiteral,
-            "2const",               tf.send,
-            signature(.@"-"),       &nullMethod,
-            tf.send,                signature(.fibonacci),
-            &nullMethod,            tf.send,
-            signature(.@"+"),       &nullMethod,
-            tf.returnTop,
+            tf.push,               self,
+            tf.pushLiteral,        "2const",
+            tf.send,               signature(.@"<="),
+            tf.returnLocalClosure, "1const",
+            tf.send,               signature(.@"ifTrue:"),
+            tf.drop,               tf.push,
+            self,                  tf.pushLiteral,
+            "1const",              tf.send,
+            signature(.@"-"),      tf.send,
+            signature(.fibonacci), tf.push,
+            self,                  tf.pushLiteral,
+            "2const",              tf.send,
+            signature(.@"-"),      tf.send,
+            signature(.fibonacci), tf.send,
+            signature(.@"+"),      tf.returnTop,
         });
     var exe: MainExecutor = undefined;
     var zero_: Object.StaticObject = undefined;
@@ -305,22 +295,23 @@ const fibIntegerClosure = struct {
         const two = two_.init(2);
         fib.resolve(&[_]Object{ zero, one, two }) catch @panic("Failed to resolve");
         fib.initExecute();
-        zag.dispatch.addMethod(@ptrCast(&fib));
         TifTrue.resolve(Object.empty) catch @panic("Failed to resolve");
         TifTrue.initExecute();
-        zag.dispatch.addMethod(@ptrCast(&TifTrue));
+        zag.dispatch.resetForTests();
+        zag.dispatch.addMethod(.True, @ptrCast(&TifTrue));
         FifTrue.resolve(Object.empty) catch @panic("Failed to resolve");
         FifTrue.initExecute();
-        zag.dispatch.addMethod(@ptrCast(&FifTrue));
+        zag.dispatch.addMethod(.False, @ptrCast(&FifTrue));
         SIplus.resolve(Object.empty) catch @panic("Failed to resolve");
         SIplus.initExecute();
-        zag.dispatch.addMethod(@ptrCast(&SIplus));
+        zag.dispatch.addMethod(.SmallInteger, @ptrCast(&SIplus));
         SIminus.resolve(Object.empty) catch @panic("Failed to resolve");
         SIminus.initExecute();
-        zag.dispatch.addMethod(@ptrCast(&SIminus));
+        zag.dispatch.addMethod(.SmallInteger, @ptrCast(&SIminus));
         SIleq.resolve(Object.empty) catch @panic("Failed to resolve");
         SIleq.initExecute();
-        zag.dispatch.addMethod(@ptrCast(&SIleq));
+        zag.dispatch.addMethod(.SmallInteger, @ptrCast(&SIleq));
+        zag.dispatch.addMethod(.SmallInteger, @ptrCast(&fib));
         if (zag.config.show_trace) {
             std.debug.print("\n", .{});
             std.debug.print("address of one {*}\n", .{&one});
@@ -359,26 +350,22 @@ const fibFloat = struct {
     const minus = tf.Float_sub;
     const classes = object.PackedObject.classes;
     const signature = zag.symbol.signature;
-    const nullMethod = zag.dispatch.nullMethod;
     var fib align(codeAlignment) =
         compileMethod(Sym.fibonacci, 0, .Float, .{
             tf.push,        self,
             tf.pushLiteral, "2const",
-            leq,            tf.fail,
-            tf.fail,        tf.branchFalse,
-            "false",        tf.returnSelf,
-            ":false",       tf.push,
-            self,           tf.pushLiteral,
-            "1const",       minus,
-            tf.fail,        tf.fail,
+            leq,            signature(.@"<="),
+            tf.branchFalse, "false",
+            tf.returnSelf,  ":false",
+            tf.push,        self,
+            tf.pushLiteral, "1const",
+            minus,          signature(.@"-"),
             tf.send,        signature(.fibonacci),
-            &nullMethod,    tf.push,
-            self,           tf.pushLiteral,
-            "2const",       minus,
-            tf.fail,        tf.fail,
+            tf.push,        self,
+            tf.pushLiteral, "2const",
+            minus,          signature(.@"-"),
             tf.send,        signature(.fibonacci),
-            &nullMethod,    plus,
-            tf.fail,        tf.fail,
+            plus,           signature(.@"+"),
             tf.returnTop,
         });
     var exe: MainExecutor = undefined;
@@ -392,7 +379,8 @@ const fibFloat = struct {
         const two = two_.init(2.0);
         fib.resolve(&[_]Object{ zero, one, two }) catch @panic("Failed to resolve");
         fib.initExecute();
-        zag.dispatch.addMethod(@ptrCast(&fib));
+        zag.dispatch.resetForTests();
+        zag.dispatch.addMethod(.Float, @ptrCast(&fib));
         if (zag.config.show_trace) {
             std.log.err("\n", .{});
             fib.dump();
@@ -419,8 +407,6 @@ const fibFloatClosure = struct {
     const self = zag.Context.makeVariable(0, 1, .parameter, &.{});
     const classes = object.PackedObject.classes;
     const signature = zag.symbol.signature;
-    const nullMethod = zag.dispatch.nullMethod;
-    const primitive = zag.execute.Signature.fromPrimitive;
     var TifTrue align(codeAlignment) =
         compileMethod(Sym.@"ifTrue:", 0, .True, .{ tf.dup, tf.value, tf.returnTop });
     var FifTrue align(codeAlignment) =
@@ -434,25 +420,21 @@ const fibFloatClosure = struct {
     var fib align(codeAlignment) =
         compileMethod(Sym.fibonacci, 0, .Float, .{
             //            tf.debug,
-            tf.push,                self,
-            tf.pushLiteral,         "2const",
-            tf.send,                signature(.@"<="),
-            &nullMethod,            tf.returnLocalClosure,
-            "3const 1I",            tf.send,
-            signature(.@"ifTrue:"), &nullMethod,
-            tf.drop,                tf.push,
-            self,                   tf.pushLiteral,
-            "1const",               tf.send,
-            signature(.@"-"),       &nullMethod,
-            tf.send,                signature(.fibonacci),
-            &nullMethod,            tf.push,
-            self,                   tf.pushLiteral,
-            "2const",               tf.send,
-            signature(.@"-"),       &nullMethod,
-            tf.send,                signature(.fibonacci),
-            &nullMethod,            tf.send,
-            signature(.@"+"),       &nullMethod,
-            tf.returnTop,
+            tf.push,               self,
+            tf.pushLiteral,        "2const",
+            tf.send,               signature(.@"<="),
+            tf.returnLocalClosure, "3const 1I",
+            tf.send,               signature(.@"ifTrue:"),
+            tf.drop,               tf.push,
+            self,                  tf.pushLiteral,
+            "1const",              tf.send,
+            signature(.@"-"),      tf.send,
+            signature(.fibonacci), tf.push,
+            self,                  tf.pushLiteral,
+            "2const",              tf.send,
+            signature(.@"-"),      tf.send,
+            signature(.fibonacci), tf.send,
+            signature(.@"+"),      tf.returnTop,
         });
     var exe: MainExecutor = undefined;
     var zero_: Object.StaticObject = undefined;
@@ -467,22 +449,23 @@ const fibFloatClosure = struct {
         const oneI = oneI_.init(1);
         fib.resolve(&[_]Object{ zero, one, two, oneI }) catch @panic("Failed to resolve");
         fib.initExecute();
-        zag.dispatch.addMethod(@ptrCast(&fib));
         TifTrue.resolve(Object.empty) catch @panic("Failed to resolve");
         TifTrue.initExecute();
-        zag.dispatch.addMethod(@ptrCast(&TifTrue));
+        zag.dispatch.resetForTests();
+        zag.dispatch.addMethod(.True, @ptrCast(&TifTrue));
         FifTrue.resolve(Object.empty) catch @panic("Failed to resolve");
         FifTrue.initExecute();
-        zag.dispatch.addMethod(@ptrCast(&FifTrue));
+        zag.dispatch.addMethod(.False, @ptrCast(&FifTrue));
         SIplus.resolve(Object.empty) catch @panic("Failed to resolve");
         SIplus.initExecute();
-        zag.dispatch.addMethod(@ptrCast(&SIplus));
+        zag.dispatch.addMethod(.Float, @ptrCast(&SIplus));
         SIminus.resolve(Object.empty) catch @panic("Failed to resolve");
         SIminus.initExecute();
-        zag.dispatch.addMethod(@ptrCast(&SIminus));
+        zag.dispatch.addMethod(.Float, @ptrCast(&SIminus));
         SIleq.resolve(Object.empty) catch @panic("Failed to resolve");
         SIleq.initExecute();
-        zag.dispatch.addMethod(@ptrCast(&SIleq));
+        zag.dispatch.addMethod(.Float, @ptrCast(&SIleq));
+        zag.dispatch.addMethod(.Float, @ptrCast(&fib));
         if (zag.config.show_trace) {
             std.debug.print("\n", .{});
             std.debug.print("address of one {*}\n", .{&one});
