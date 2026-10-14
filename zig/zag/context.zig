@@ -1,3 +1,5 @@
+//! Execution context (stack frame) management.
+
 const std = @import("std");
 const assert = std.debug.assert;
 const zag = @import("zag.zig");
