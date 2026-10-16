@@ -62,14 +62,14 @@ ASemanticInterpreter >> basicBlocks [
 
 { #category : 'as yet unclassified' }
 ASemanticInterpreter >> beforeTailSend: aSelector [
-
+self halt.
 	stackArray := self createStackForCall: aSelector numArgs.
 	stackPointer := 11 - aSelector numArgs - 1.
 	pc basicBlock hasContext ifFalse: [ ^ self ].
 	context sendingContext ifNil: [ ^ self ].
 	"reset the context "
 	contextData := context contextData.
-	context := context sendingContext.
+	context := context sendingContext
 ]
 
 { #category : 'primitive execution' }
