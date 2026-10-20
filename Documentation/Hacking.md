@@ -17,6 +17,13 @@ We will shortly be moving development to a separate branch so that (barring zig 
 Download a recent Zig directory/folder from [ziglang.org](https://ziglang.org/download/) Currently we are holding at Zig 0.15.1 so we're all on the same version.
 Untar or unzip in a convenient place and add the resulting folder to your path.
 
+#### macOS 26
+Zig 0.15.1 and 0.15.2 cannot link on macOS 26, including for a hello-world program, failing with `undefined symbol: _sigemptyset` and similar. Reinstalling the Command Line Tools does not help, and neither does pointing `SDKROOT` at an older SDK.
+
+Zig 0.16.0 links correctly on macOS 26. It compiles this project up to two uses of `@Type`, which 0.16 replaced with `@Enum`: `zig/zag/threadedFn.zig:143` and `zig/zag/utilities/deriveEnum.zig:76`. Compilation stops there, so there may be further changes behind those two.
+
+Until that is resolved, building on macOS 26 requires Linux, a container, or CI.
+
 ### Compiling and Running
 Here are some common command lines I use.
 In the `Zag-Smalltalk/zig` directory:
