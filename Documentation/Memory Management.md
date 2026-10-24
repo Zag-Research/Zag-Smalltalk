@@ -95,7 +95,7 @@ All objects are allocated with the data preceded by a header. As all global obje
 There are special cases for objects with a small number of indexable fields (0-109 bytes or 0 anything) (See [[Mapping#Format]])
 
 ## Global Arena Structure
-The Global Arena keeps free space in 12 free lists, one per power of two up to `HeapHeader.maxLength`.
+The Global Arena uses a binary heap.
 #### Free-space allocation
 Free-space is split up into power-of-2-sized pieces and put on the appropriate queue:
 - all allocations are on power-of-2 boundaries; hence small objects will never span 2 cache-lines. A flag can be set so no list for values smaller than a cache-line is maintained, in which case no cache line would contain multiple objects. This can reduce cache thrashing between threads/cores. Thanks to [Peter Lount](https://www.linkedin.com/in/peterlount/) for pointing out [the potential bad behaviour on multi-threaded access](https://en.algorithmica.org/hpc/cpu-cache/cache-lines/). 
