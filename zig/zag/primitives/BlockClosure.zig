@@ -38,13 +38,13 @@ pub fn moduleInit() void {}
 pub const moduleName = "BlockClosure";
 const zModuleName = stringOf(moduleName).init().obj();
 pub const ThunkReturnObject = struct {
-    pub fn primitive(_: PC, sp: SP, process: *Process, _: *Context, _: Extra) Result {
+    pub fn primitive(_: PC, sp: SP, _: *Context, _: Extra) Result {
         if (true) @panic("unreachable");
         const val = sp.top;
         const result = Object.from(@as(i50, val.extraI()), null);
         const targetContext = val.encodedPointer(*Context).?;
-        const newSp, const callerContext = targetContext.popTargetContext(process, result);
-        return @call(tailCall, process.check(callerContext.getNPc()), .{ callerContext.getTPc(), newSp, process, callerContext, Extra.fromContextData(callerContext.contextData) });
+        const newSp, const callerContext = targetContext.popTargetContext(result);
+        return @call(tailCall, callerContext.getNPc(), .{ callerContext.getTPc(), newSp, callerContext, Extra.fromContextData(callerContext.contextData) });
     }
     const name = stringOf("ThunkReturnObject").init().obj();
     test "ThunkReturnObject" {
@@ -56,42 +56,42 @@ pub const ThunkReturnObject = struct {
 
 pub const threadedFns = struct {
     pub const returnLiteralClosure = struct {
-        pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
+        pub fn threadedFn(pc: PC, sp: SP, context: *Context, extra: Extra) Result {
             sp.traceStack("returnLiteralClosure", context, extra);
-            if (extra.installContextIfNone(sp, process, context)) |new| {
+            if (extra.installContextIfNone(sp, context)) |new| {
                 const newSp = new.sp;
                 const newContext = new.context;
                 newContext.setReturn(pc.next2());
                 const newExtra = new.extra;
                 newSp.traceStack("returnLiteralClosure new stack", newContext, newExtra);
-                return @call(tailCall, threadedFn, .{ pc, newSp, process, newContext, newExtra });
+                return @call(tailCall, threadedFn, .{ pc, newSp, newContext, newExtra });
             }
             if (pc.object().returnLiteralClosure(context)) |closure| {
                 if (sp.push(closure)) |newSp| {
-                    return @call(tailCall, process.check(pc.prim2()), .{ pc.next2(), newSp, process, context, extra });
+                    return @call(tailCall, pc.prim2(), .{ pc.next2(), newSp, context, extra });
                 }
                 const newSp, const newContext, const newExtra = sp.spillStack(context, extra);
-                return @call(tailCall, threadedFn, .{ pc, newSp, process, newContext, newExtra });
+                return @call(tailCall, threadedFn, .{ pc, newSp, newContext, newExtra });
             }
             std.log.err("returnLiteralClosure: {f} - ", .{pc.object()});
             @panic("Unexpected object encoding");
         }
     };
     pub const returnLocalClosure = struct {
-        pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
+        pub fn threadedFn(pc: PC, sp: SP, context: *Context, extra: Extra) Result {
             sp.traceStack("returnLocalClosure", context, extra);
-            if (extra.installContextIfNone(sp, process, context)) |new| {
+            if (extra.installContextIfNone(sp, context)) |new| {
                 const newSp = new.sp;
                 const newContext = new.context;
                 const newExtra = new.extra;
                 newContext.setReturn(pc.next2());
                 newSp.traceStack("returnLocalClosure new stack", newContext, newExtra);
-                return @call(tailCall, threadedFn, .{ pc, newSp, process, newContext, newExtra });
+                return @call(tailCall, threadedFn, .{ pc, newSp, newContext, newExtra });
             }
             if (pc.object().returnLocalClosure(context)) |closure| {
                 trace("returnLocalClosure: 0x{x:0>16} {f}", .{ closure.testU(), closure });
                 if (sp.push(closure)) |newSp| {
-                    return @call(tailCall, process.check(pc.prim2()), .{ pc.next2(), newSp, process, context, extra });
+                    return @call(tailCall, pc.prim2(), .{ pc.next2(), newSp, context, extra });
                 }
             }
             const closure, const newSp, const newContext, const newExtra = context.pushClosure(.ThunkReturnLocal, 2, sp, extra);
@@ -99,11 +99,11 @@ pub const threadedFns = struct {
             fields[1] = Object.fromAddress(newContext);
             fields[2] = pc.object();
             closure.nowHasPointers();
-            return @call(tailCall, process.check(pc.prim2()), .{ pc.next2(), newSp, process, newContext, newExtra });
+            return @call(tailCall, pc.prim2(), .{ pc.next2(), newSp, newContext, newExtra });
         }
     };
     pub const pushClosure = struct {
-        pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
+        pub fn threadedFn(pc: PC, sp: SP, context: *Context, extra: Extra) Result {
             const structure: PackedObject = pc.packedObject();
             const stackedFields = structure.f1;
             const stackOffset = structure.f2;
@@ -129,7 +129,7 @@ pub const threadedFns = struct {
             closure[1] = pc.next().object();
             if (includeContext != 0) closure[2] = Object.fromAddress(context);
             newSp.top = Object.fromAddress(closure.ptr);
-            return @call(tailCall, process.check(pc.skip(2).prim()), .{ pc.skip(2).next(), newSp, process, newContext, newExtra });
+            return @call(tailCall, pc.skip(2).prim(), .{ pc.skip(2).next(), newSp, newContext, newExtra });
         }
         test "pushClosure" {
             var process: Process align(Process.alignment) = undefined;
@@ -174,33 +174,33 @@ pub const threadedFns = struct {
         }
     };
     pub const createClosure = struct {
-        pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
+        pub fn threadedFn(pc: PC, sp: SP, context: *Context, extra: Extra) Result {
             // at several places where the context could move we re-call this function rather than handling all the cases inline
             // this has a bit of cost, but it's worth it for the simplicity and is very rare
-            if (extra.installContextIfNone(sp, process, context)) |new| {
-                return @call(tailCall, threadedFn, .{ pc, new.sp, process, new.context, new.extra });
+            if (extra.installContextIfNone(sp, context)) |new| {
+                return @call(tailCall, threadedFn, .{ pc, new.sp, new.context, new.extra });
             }
             const signature = pc.signature();
             if (Object.immediateClosure(signature, sp, context)) |closure| {
                 if (sp.push(closure)) |newSp| {
-                    return @call(tailCall, process.check(pc.prim2()), .{ pc.next2(), newSp, process, context, extra });
+                    return @call(tailCall, pc.prim2(), .{ pc.next2(), newSp, context, extra });
                 } else {
                     const newSp, const newContext, const newExtra = sp.spillStack(context, extra);
-                    return @call(tailCall, threadedFn, .{ pc, newSp, process, newContext, newExtra });
+                    return @call(tailCall, threadedFn, .{ pc, newSp, newContext, newExtra });
                 }
             }
             if (context.initStackClosure(sp, 2, signature.getClass())) |closureAddress| {
                 if (sp.push(initMemoryClosure(closureAddress, signature, sp, context))) |newSp| {
-                    return @call(tailCall, process.check(pc.prim()), .{ pc.next(), newSp, process, context, extra });
+                    return @call(tailCall, pc.prim(), .{ pc.next(), newSp, context, extra });
                 }
             }
             if (context.initHeapClosure(sp, 2, signature.getClass())) |closureAddress| {
                 if (sp.push(initMemoryClosure(closureAddress, signature, sp, context))) |newSp| {
-                    return @call(tailCall, process.check(pc.prim()), .{ pc.next(), newSp, process, context, extra });
+                    return @call(tailCall, pc.prim(), .{ pc.next(), newSp, context, extra });
                 }
             }
             const newSp, const newContext, const newExtra = sp.spillStack(context, extra);
-            return @call(tailCall, threadedFn, .{ pc, newSp, process, newContext, newExtra });
+            return @call(tailCall, threadedFn, .{ pc, newSp, newContext, newExtra });
         }
     };
     fn initMemoryClosure(closureAddress: *HeapObject, signature: Signature, sp: SP, context: *Context) Object {
@@ -225,7 +225,7 @@ pub const threadedFns = struct {
         unreachable;
     }
     pub const value = struct {
-        pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
+        pub fn threadedFn(pc: PC, sp: SP, context: *Context, extra: Extra) Result {
             sp.traceStack("value", context, extra);
             const val = sp.top;
             const class = val.which_class();
@@ -246,7 +246,7 @@ pub const threadedFns = struct {
                 trace("newSp = {*}..{*} newConect = {*} newExtra = {x} newContext.npc = {*}", .{ newSp, newSp.endOfStack(), newContext, @as(u64, @bitCast(newExtra)), newContext.npc });
                 newSp.top = result;
                 newSp.traceStack("value after", newContext, newExtra);
-                return @call(tailCall, process.check(newContext.npc), .{ newContext.tpc, newSp, process, newContext, newExtra });
+                return @call(tailCall, newContext.npc, .{ newContext.tpc, newSp, newContext, newExtra });
             }
             std.log.err("class: {} - ", .{class});
             _ = .{ pc, @panic("Unimplemented class") };
@@ -285,7 +285,7 @@ pub const threadedFns = struct {
                 //         },
                 //         .ThunkLocal, .ThunkInstance, .ThunkFloat, .none => { // this is the common part for other immediate BlockClosures
                 //             sp.top = result;
-                //             return @call(tailCall, process.check(pc.prim()), .{ pc.next(), sp, process, context, extra });
+                //             return @call(tailCall, process.check(pc.prim()), .{ pc.next(), sp, context, extra });
                 //         },
                 //         .BlockAssignLocal, .BlockAssignInstance => {
                 //             @panic("unreachable");
@@ -316,23 +316,23 @@ pub const threadedFns = struct {
         }
     };
     pub const cullColon = struct {
-        pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
-            _ = .{ pc, sp, process, context, extra, unreachable };
+        pub fn threadedFn(pc: PC, sp: SP, context: *Context, extra: Extra) Result {
+            _ = .{ pc, sp, context, extra, unreachable };
         }
     };
     pub const valueColon = struct {
-        pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, _: Extra) Result {
+        pub fn threadedFn(pc: PC, sp: SP, context: *Context, _: Extra) Result {
             const val = sp.next;
             if (false and val.isImmediate()) {
                 switch (val.class) {
                     .BlockAssignLocal, .BlockAssignInstance => {
                         const closure = val.to(*HeapObject);
                         const method = closure.prev().to(*CompiledMethod);
-                        //                if (!Sym.@"value:".selectorEquals(method.selector)) @panic("wrong selector"); //return @call(tailCall,eprocess.check(.dnu),.{pc,sp,process,context,selector});
+                        //                if (!Sym.@"value:".selectorEquals(method.selector)) @panic("wrong selector"); //return @call(tailCall,eprocess.check(.dnu),.{pc,sp,context,selector});
                         const newPc = method.codePtr();
                         context.setReturn(pc);
                         if (true) @panic("unfinished");
-                        return @call(tailCall, process.check(newPc[0].prim), .{ newPc + 1, sp, process, context, Sym.value });
+                        return @call(tailCall, newPc[0].prim, .{ newPc + 1, sp, context, Sym.value });
                     },
                     .ThunkReturnObject, .ThunkReturnImmediate, .ThunkReturnCharacter, .ThunkReturnFloat, .ThunkReturnLocal, .ThunkReturnInstance, .ThunkImmediate, .ThunkHeap, .ThunkLocal, .ThunkInstance, .ThunkFloat => @panic("wrong # arguments"),
                     else => {},
@@ -343,11 +343,11 @@ pub const threadedFns = struct {
     };
 };
 // pub const ThunkImmediate = struct {
-//     pub fn primitive(_: PC, sp: SP, process: *Process, context: *Context, _: Extra) Result {
+//     pub fn primitive(_: PC, sp: SP, context: *Context, _: Extra) Result {
 //         const result = sp.top.extraValue();
 //         const newSp, const callerContext = context.pop(sp);
 //         newSp.top = result;
-//         return @call(tailCall, process.check(callerContext.getNPc()), .{ callerContext.getTPc(), newSp, process, callerContext, undefined });
+//         return @call(tailCall, callerContext.getNPc(), .{ callerContext.getTPc(), newSp, callerContext, undefined });
 //     }
 //     const name = stringOf("ThunkImmediate").init().obj();
 //     test "ThunkImmediate" {
@@ -382,10 +382,10 @@ pub const inlines = struct {
         _ = other;
         return error.primitiveError;
     }
-    pub fn immutableClosure(sp: SP, process: *Process) SP {
+    pub fn immutableClosure(sp: SP) SP {
         // const val = sp.top;
         // var newSp = sp;
-        _ = .{ sp, process, @panic("immutableClosure") };
+        _ = .{ sp, @panic("immutableClosure") };
         // if (val.isInt() and val.rawU() <= Object.from(0x3fff_ffff_ffff).rawU() and val.rawU() >= Object.from(-0x4000_0000_0000).rawU()) {
         //     sp.top = Object.makeGroup(.numericThunk, @as(u47, @truncate(val.u())));
         // } else if (val.isDouble() and (val.u() & 0x1ffff) == 0) {
@@ -395,18 +395,18 @@ pub const inlines = struct {
         // } else if (val.ifHeapObject()) |_| {
         //     sp.top.tag = .heapThunk;
         // } else {
-        //     newSp = generalClosure(sp.drop(), process, val);
+        //     newSp = generalClosure(sp.drop(), val);
         // }
         // return newSp;
     }
-    pub inline fn generalClosure(oldSp: SP, process: *Process, val: Object) SP {
+    pub inline fn generalClosure(oldSp: SP, val: Object) SP {
         // const sp = process.allocStack(oldSp, .BlockClosure, 1, null, Object) catch @panic("unreachable"); // can't fail because preallocated
         // sp.third = val;
         // return sp;
-        _ = .{ oldSp, process, val, unreachable };
+        _ = .{ oldSp, val, unreachable };
     }
     var valueClosureMethod = CompiledMethod.init2(Sym.value, pushValue, tf.returnNoContext);
-    pub inline fn fullClosure(oldSp: SP, process: *Process, block: *CompiledMethod, context: *Context, extra: Extra) Result {
+    pub inline fn fullClosure(oldSp: SP, block: *CompiledMethod, context: *Context, extra: Extra) Result {
         // const flags = block.stackStructure.locals; // TODO: wrong
         // const fields = flags & 63;
         // const sp = process.allocStackSpace(oldSp, fields + 2 - (flags >> 7)) catch @panic("no stack");
@@ -426,52 +426,52 @@ pub const inlines = struct {
         //     op.* = Nil;
         // sp[fields + 1] = heap.HeapObject.simpleStackObject(object.BlockClosure_C, fields, block.selector.hash24()).o();
         // return sp;
-        _ = .{ oldSp, process, block, context, extra, @panic("fullClosure") };
+        _ = .{ oldSp, block, context, extra, @panic("fullClosure") };
     }
-    fn pushValue(_: PC, sp: SP, _: *Process, _: *Context, _: Object) SP {
+    fn pushValue(_: PC, sp: SP, _: *Context, _: Object) SP {
         const closure = sp.top.to(*HeapObject);
         sp.top = closure.prevPrev();
         @panic("unfinished");
     }
-    fn nonLocalReturn(_: PC, sp: SP, process: *Process, targetContext: *Context, _: Object) SP {
+    fn nonLocalReturn(_: PC, sp: SP, targetContext: *Context, _: Object) SP {
         const val = sp.top;
-        const result = targetContext.pop(process);
+        const result = targetContext.pop();
         const newSp = result.sp;
         if (!val.equals(unreachable))
             newSp.top = val;
         const callerContext = result.ctxt;
-        return @call(tailCall, process.check(callerContext.getNPc()), .{ callerContext.getTPc(), newSp, process, @constCast(callerContext), undefined, undefined });
+        return @call(tailCall, callerContext.getNPc(), .{ callerContext.getTPc(), newSp, @constCast(callerContext), undefined, undefined });
     }
 };
 const fallback = execute.fallback;
-pub fn immutableClosure(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
-    const newSp = inlines.immutableClosure(sp, process);
-    return @call(tailCall, process.check(pc.prim()), .{ pc.next(), newSp, process, context, extra });
+pub fn immutableClosure(pc: PC, sp: SP, context: *Context, extra: Extra) Result {
+    const newSp = inlines.immutableClosure(sp);
+    return @call(tailCall, pc.prim(), .{ pc.next(), newSp, context, extra });
 }
-pub fn generalClosureX(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
-    const newSp = inlines.generalClosure(sp.drop(), process, sp.top);
-    return @call(tailCall, process.check(pc.prim2()), .{ pc.next2(), newSp, process, context, extra });
+pub fn generalClosureX(pc: PC, sp: SP, context: *Context, extra: Extra) Result {
+    const newSp = inlines.generalClosure(sp.drop(), sp.top);
+    return @call(tailCall, pc.prim2(), .{ pc.next2(), newSp, context, extra });
 }
-// pub fn fullClosure(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
+// pub fn fullClosure(pc: PC, sp: SP, context: *Context, extra: Extra) Result {
 //     const block = pc.object();
-//     const newSp = inlines.fullClosure(sp, process, @ptrFromInt(block.nativeU_noCheck()), context, extra);
-//     return @call(tailCall, process.check(pc.prim2()), .{ pc.next2(), newSp, process, context, undefined });
+//     const newSp = inlines.fullClosure(sp, @ptrFromInt(block.nativeU_noCheck()), context, extra);
+//     return @call(tailCall, pc.prim2(), .{ pc.next2(), newSp, context, undefined });
 // }
-// pub fn closureData(pc: PC, sp: SP, process: *Process, context: *Context, _: Extra) Result {
+// pub fn closureData(pc: PC, sp: SP, context: *Context, _: Extra) Result {
 //     const newSp = process.allocStack(sp, .BlockClosure, @truncate(pc.uint() + 3), null, Object) catch @panic("closureData");
-//     return @call(tailCall, process.check(pc.prim2()), .{ pc.next2(), newSp, process, context, undefined });
+//     return @call(tailCall, pc.prim2(), .{ pc.next2(), newSp, context, undefined });
 // }
 
-// fn testImmutableClosure(process: *Process, value: Extra) !object.Group {
+// fn testImmutableClosure(value: Extra) !object.Group {
 //     const ee = std.testing.expectEqual;
 //     var context = Context.init();
 //     const sp = process.endOfStack().push(value);
-//     const newSp = embedded.immutableClosure(Code.endThread, sp, process, &context, Nil, cache.dontCache());
+//     const newSp = embedded.immutableClosure(Code.endThread, sp, &context, Nil, cache.dontCache());
 //     if (newSp != sp) {
 //         try ee(value.u(), newSp.next.u());
 //     }
 //     const tag = newSp.top.tag;
-//     const newerSp = embedded.value(Code.endThread, newSp, process, &context, Nil, cache.dontCache());
+//     const newerSp = embedded.value(Code.endThread, newSp, &context, Nil, cache.dontCache());
 //     try ee(value.u(), newerSp.top.u());
 //     return tag;
 // }
@@ -491,16 +491,16 @@ pub fn generalClosureX(pc: PC, sp: SP, process: *Process, context: *Context, ext
 //     try ee(try testImmutableClosure(&process, Object.from(-0x4000_0000_0001)), .heapClosure);
 //     try ee(try testImmutableClosure(&process, Object.from(1000.3)), .heapClosure);
 // }
-// fn testNonlocalClosure(process: *Process, value: Extra) !object.Group {
+// fn testNonlocalClosure(value: Extra) !object.Group {
 //     const ee = std.testing.expectEqual;
 //     var context = Context.init();
 //     const sp = process.endOfStack().push(value);
-//     const newSp = embedded.immutableClosure(Code.endThread, sp, process, &context, Nil, cache.dontCache());
+//     const newSp = embedded.immutableClosure(Code.endThread, sp, &context, Nil, cache.dontCache());
 //     if (newSp != sp) {
 //         try ee(value.u(), newSp.next.u());
 //     }
 //     const tag = newSp.top.tag;
-//     const newerSp = embedded.value(Code.endThread, newSp, process, &context, Nil, cache.dontCache());
+//     const newerSp = embedded.value(Code.endThread, newSp, &context, Nil, cache.dontCache());
 //     try ee(value.u(), newerSp.top.u());
 //     return tag;
 // }
@@ -527,19 +527,19 @@ pub fn generalClosureX(pc: PC, sp: SP, process: *Process, context: *Context, ext
 //     try ee(try testNonlocalClosure(&process, Object.from(1000.3)), .nonLocalClosure);
 // }
 pub const primitives = struct {
-    pub fn p201(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result { // value
-        _ = .{ pc, sp, process, context, extra, @panic("prim201") };
+    pub fn p201(pc: PC, sp: SP, context: *Context, extra: Extra) Result { // value
+        _ = .{ pc, sp, context, extra, @panic("prim201") };
     }
-    pub fn p202(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result { // value:
-        _ = .{ pc, sp, process, context, extra, @panic("prim202") };
+    pub fn p202(pc: PC, sp: SP, context: *Context, extra: Extra) Result { // value:
+        _ = .{ pc, sp, context, extra, @panic("prim202") };
     }
-    pub fn p203(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result { // value:value:
-        _ = .{ pc, sp, process, context, extra, @panic("prim203") };
+    pub fn p203(pc: PC, sp: SP, context: *Context, extra: Extra) Result { // value:value:
+        _ = .{ pc, sp, context, extra, @panic("prim203") };
     }
-    pub fn p204(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result { // value:value:value:
-        _ = .{ pc, sp, process, context, extra, @panic("prim204") };
+    pub fn p204(pc: PC, sp: SP, context: *Context, extra: Extra) Result { // value:value:value:
+        _ = .{ pc, sp, context, extra, @panic("prim204") };
     }
-    pub fn p205(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result { // value:value:value:value:
-        _ = .{ pc, sp, process, context, extra, @panic("prim205") };
+    pub fn p205(pc: PC, sp: SP, context: *Context, extra: Extra) Result { // value:value:value:value:
+        _ = .{ pc, sp, context, extra, @panic("prim205") };
     }
 };

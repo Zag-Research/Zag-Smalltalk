@@ -20,13 +20,12 @@ pub const drop = struct {
     pub fn threadedFn(
 		    pc: PC,
 		    sp: SP,
-		    process: *Process,
 		    context: *Context,
 		    extra: Extra)
 		      Result {
         const newSp = sp.drop();
         return @call(tailCall, process.check(pc.prim()),
-	         .{ pc.next(), newSp, process, context, extra });
+	         .{ pc.next(), newSp, context, extra });
     }
 };
 ```

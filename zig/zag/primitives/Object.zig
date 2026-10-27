@@ -57,31 +57,31 @@ pub const inlines = struct {
 };
 pub const @"basicAt:" = struct {
     pub const number = 60;
-    pub fn primitive(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
+    pub fn primitive(pc: PC, sp: SP, context: *Context, extra: Extra) Result {
         if (inlines.@"basicAt:"(sp.next, sp.top)) |result| {
             const newSp = sp.dropPut(result);
-            return @call(tailCall, process.check(context.npc.f), .{ context.tpc, newSp, process, context, undefined });
+            return @call(tailCall, context.npc.f, .{ context.tpc, newSp, context, undefined });
         } else |_| {}
-        return @call(tailCall, Extra.primitiveFailed, .{ pc, sp, process, context, extra });
+        return @call(tailCall, Extra.primitiveFailed, .{ pc, sp, context, extra });
     }
 };
 pub const @"==" = struct {
     pub const number = 110;
-    pub fn primitive(_: PC, sp: SP, process: *Process, context: *Context, _: Extra) Result {
+    pub fn primitive(_: PC, sp: SP, context: *Context, _: Extra) Result {
         const newSp = sp.dropPut(Object.from(inlines.@"=="(sp.next, sp.top), sp, context));
-        return @call(tailCall, process.check(context.npc), .{ context.tpc, newSp, process, context, Extra.fromContextData(context.contextDataPtr(sp)) });
+        return @call(tailCall, context.npc, .{ context.tpc, newSp, context, Extra.fromContextData(context.contextDataPtr(sp)) });
     }
 };
 pub const @"~~" = struct {
     pub const number = 169;
-    pub fn primitive(_: PC, sp: SP, process: *Process, context: *Context, _: Extra) Result {
+    pub fn primitive(_: PC, sp: SP, context: *Context, _: Extra) Result {
         const newSp = sp.dropPut(Object.from(inlines.@"~~"(sp.next, sp.top), sp, context));
-        return @call(tailCall, process.check(context.npc), .{ context.tpc, newSp, process, context, Extra.fromContextData(context.contextDataPtr(sp)) });
+        return @call(tailCall, context.npc, .{ context.tpc, newSp, context, Extra.fromContextData(context.contextDataPtr(sp)) });
     }
 };
 pub const @"perform:" = struct { // perform: perform:with: perform:with:with: perform:with:with:with:
     pub const number = 83;
-    pub fn primitive(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
+    pub fn primitive(pc: PC, sp: SP, context: *Context, extra: Extra) Result {
         // the same primitive number is used for perform:, perform:with:, etc.
         // so we need to find out where the selector is
         const arity = extra.getMethod().?.signature.numArgs() - 1;
@@ -91,44 +91,44 @@ pub const @"perform:" = struct { // perform: perform:with: perform:with:with: pe
             //     const newPc = lookupAddress(selector);//, sp.next.which_class());
             @panic("unreachable");
         }
-        return @call(tailCall, Extra.primitiveFailed, .{ pc, sp, process, context, extra });
+        return @call(tailCall, Extra.primitiveFailed, .{ pc, sp, context, extra });
     }
 };
 pub const @"perform:withArguments:" = struct {
     pub const number = 84;
-    pub fn primitive(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
+    pub fn primitive(pc: PC, sp: SP, context: *Context, extra: Extra) Result {
         //     const context = tfAsContext(_context);
         //     const selector = sp.next;
         //     sp.next = sp.top;
         //     if (selector.numArgs() != 1) @panic("wrong number of args");
         //     const newPc = lookupAddress(selector);//, sp.third.which_class());
         //     context.setTPc(pc + 1);
-        //     return @call(tailCall, process.check(newPc.prim()), .{ newPc.next(), sp + 1, process, context, undefined });
-        _ = .{ pc, sp, process, context, extra, unreachable };
+        //     return @call(tailCall, newPc.prim(), .{ newPc.next(), sp + 1, context, undefined });
+        _ = .{ pc, sp, context, extra, unreachable };
     }
 };
 pub const @"perform:withArguments:inSuperclass:" = struct {
     pub const number = 100;
-    pub fn primitive(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
-        _ = .{ pc, sp, process, context, extra, unreachable };
+    pub fn primitive(pc: PC, sp: SP, context: *Context, extra: Extra) Result {
+        _ = .{ pc, sp, context, extra, unreachable };
     }
 };
 
 pub const @"basicAt:put:" = struct {
     pub const number = 61;
-    pub fn primitive(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
-        _ = .{ pc, sp, process, context, extra, unreachable };
+    pub fn primitive(pc: PC, sp: SP, context: *Context, extra: Extra) Result {
+        _ = .{ pc, sp, context, extra, unreachable };
     }
 };
 pub const @"atAllPut:" = struct {
     pub const number = 145;
-    pub fn primitive(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
-        _ = .{ pc, sp, process, context, extra, unreachable };
+    pub fn primitive(pc: PC, sp: SP, context: *Context, extra: Extra) Result {
+        _ = .{ pc, sp, context, extra, unreachable };
     }
 };
 pub const @"ProtoObject>>class" = struct {
     pub const number = 111;
-    pub fn primitive(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
-        _ = .{ pc, sp, process, context, extra, unreachable };
+    pub fn primitive(pc: PC, sp: SP, context: *Context, extra: Extra) Result {
+        _ = .{ pc, sp, context, extra, unreachable };
     }
 };

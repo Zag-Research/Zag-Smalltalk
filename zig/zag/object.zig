@@ -339,16 +339,15 @@ test {
     _ = tests;
 }
 const tests = struct {
-    var process: Process align(Process.alignment) = undefined;
     var sp: Process.SP = undefined;
     var context: *zag.Context = undefined;
     const ee = std.testing.expectEqual;
     const expect = std.testing.expect;
     const iTest = i40;
     fn init() void {
-        process.init();
-        sp = process.getSp();
-        context = process.getContext();
+        Process.initProcess(0);
+        sp = Process.getSp();
+        context = Process.getContext();
     }
     fn isInt(obj: Object) bool {
         if (obj.nativeI()) |_| return true;

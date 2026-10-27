@@ -76,34 +76,34 @@ fn runObject(_: usize) void {
 
 var fibCPSM = compileMethod(Sym.i_0, 0, 0, .{&fibCPS});
 const fibCPST = PC.init(&fibCPSM.code[0]);
-pub fn fibCPS(pc: PC, sp: SP, process: *Process, context: ContextPtr, selector: Object) callconv(stdCall) SP {
+pub fn fibCPS(pc: PC, sp: SP, context: ContextPtr, selector: Object) callconv(stdCall) SP {
     if (!fibCPSM.selector.selectorEquals(selector)) {
-        return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, selector });
+        return @call(tailCall, pc.prim(), .{ pc.next(), sp, context, selector });
     }
-    return @call(tailCall, fibCPS0, .{ fibCPST.next(), sp, process, context, selector });
+    return @call(tailCall, fibCPS0, .{ fibCPST.next(), sp, context, selector });
 }
-pub fn fibCPS0(pc: PC, sp: SP, process: *Process, context: ContextPtr, selector: Object) callconv(stdCall) SP {
+pub fn fibCPS0(pc: PC, sp: SP, context: ContextPtr, selector: Object) callconv(stdCall) SP {
     if (i.p5N(sp.top, two)) {
         sp.top = one;
-        return @call(tailCall, context.npc, .{ context.tpc, sp, process, context, selector });
+        return @call(tailCall, context.npc, .{ context.tpc, sp, context, selector });
     }
-    const newContext = context.push(sp, process, fibThreadMethod, 0, 2, 0);
-    const newSp = newContext.asNewSp().push(i.p2L(sp.top, 1) catch return @call(tailCall, pc.skip(10).prim(), .{ pc.skip(11), newContext.asNewSp().drop(), process, context, selector }));
+    const newContext = context.push(sp, fibThreadMethod, 0, 2, 0);
+    const newSp = newContext.asNewSp().push(i.p2L(sp.top, 1) catch return @call(tailCall, pc.skip(10).prim(), .{ pc.skip(11), newContext.asNewSp().drop(), context, selector }));
     newContext.setReturnBoth(fibCPS1, pc.skip(13)); // after first callRecursive
-    return @call(tailCall, fibCPS0, .{ fibCPST.next(), newSp, process, newContext, selector });
+    return @call(tailCall, fibCPS0, .{ fibCPST.next(), newSp, newContext, selector });
 }
-fn fibCPS1(pc: PC, sp: SP, process: *Process, context: ContextPtr, selector: Object) callconv(stdCall) SP {
-    const newSp = sp.push(i.p2L(context.getLocal(0), 2) catch return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, selector }));
+fn fibCPS1(pc: PC, sp: SP, context: ContextPtr, selector: Object) callconv(stdCall) SP {
+    const newSp = sp.push(i.p2L(context.getLocal(0), 2) catch return @call(tailCall, pc.prim(), .{ pc.next(), sp, context, selector }));
     context.setReturnBoth(fibCPS2, pc.skip(3)); // after 2nd callRecursive
-    return @call(tailCall, fibCPS0, .{ fibCPST.next(), newSp, process, context, selector });
+    return @call(tailCall, fibCPS0, .{ fibCPST.next(), newSp, context, selector });
 }
-fn fibCPS2(pc: PC, sp: SP, process: *Process, context: ContextPtr, selector: Object) callconv(stdCall) SP {
-    const sum = i.p1(sp.next, sp.top) catch return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, selector });
+fn fibCPS2(pc: PC, sp: SP, context: ContextPtr, selector: Object) callconv(stdCall) SP {
+    const sum = i.p1(sp.next, sp.top) catch return @call(tailCall, pc.prim(), .{ pc.next(), sp, context, selector });
     const result = context.pop(process);
     const newSp = result.sp;
     newSp.top = sum;
     const callerContext = result.ctxt;
-    return @call(tailCall, callerContext.npc, .{ callerContext.tpc, newSp, process, callerContext, selector });
+    return @call(tailCall, callerContext.npc, .{ callerContext.tpc, newSp, callerContext, selector });
 }
 fn runCPS(_: usize) void {
     fibThreadMethod = fibThread.asCompiledMethodPtr();

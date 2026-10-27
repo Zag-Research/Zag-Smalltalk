@@ -36,18 +36,18 @@ pub const inlines = struct {
 };
 pub const embedded = struct {
     const fallback = execute.fallback;
-    pub fn @"new:"(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
-        sp.next = inlines.p71(sp.next, sp.top) catch return @call(tailCall, process.check(fallback), .{ pc, sp, process, context, undefined, undefined });
-        return @call(tailCall, process.check(pc.prim()), .{ pc.next(), sp.drop(), process, context, extra });
+    pub fn @"new:"(pc: PC, sp: SP, context: *Context, extra: Extra) Result {
+        sp.next = inlines.p71(sp.next, sp.top) catch return @call(tailCall, fallback, .{ pc, sp, context, undefined, undefined });
+        return @call(tailCall, pc.prim(), .{ pc.next(), sp.drop(), context, extra });
     }
 };
 pub const primitives = struct {
-    pub fn p70(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result { // basicNew
-        _ = .{ pc, sp, process, context, extra };
+    pub fn p70(pc: PC, sp: SP, context: *Context, extra: Extra) Result { // basicNew
+        _ = .{ pc, sp, context, extra };
         @panic("unreachable");
     }
-    pub fn p71(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result { // basicNew:
-        _ = .{ pc, sp, process, context, extra };
+    pub fn p71(pc: PC, sp: SP, context: *Context, extra: Extra) Result { // basicNew:
+        _ = .{ pc, sp, context, extra };
         @panic("unreachable");
     }
 };
