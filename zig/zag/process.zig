@@ -97,6 +97,7 @@ pub fn process_nursery_size() usize {
 fn initProcess( //threadId: std.Thread,
     id: u64,
 ) void {
+    trace("initProcess", .{});
     thisProcess.next = null;
     thisProcess.os_target = null;
     thisThread = undefined; //threadId;
@@ -381,11 +382,13 @@ test "nursery allocation" {
     const news, const newContext, const newExtra = sp.spillStack(initialContext, Extra.none);
     try ee(sp, news);
     try ee(initialContext, newContext);
-    sp.dumpStack("Original stack before collect", newContext, newExtra);
-    dumpHeap();
+    // ToDo: age test
+    _ = newExtra;
+    // sp.dumpStack("Original stack before collect", newContext, newExtra);
+    // dumpHeap();
     Process.collectNursery(sp, initialContext, 0);
-    sp.dumpStack("stack after collect", newContext, newExtra);
-    dumpHeap();
+    // sp.dumpStack("stack after collect", newContext, newExtra);
+    // dumpHeap();
     try ee(emptySize - switch (config.objectEncoding) {
         .zag => 12,
         .nan => 5,
@@ -404,7 +407,6 @@ test "nursery allocation" {
             try ee(a2v[1], a2.asObject());
         } else return error.ShouldBeHeapObject;
     } else return error.ShouldBeHeapObject;
-    // age test
 }
 pub const SP = *Stack;
 pub const initStack = Stack.from;
@@ -612,9 +614,9 @@ test "Stack" {
 }
 pub const threadedFunctions = struct {
     pub const pushThisProcess = struct {
-        pub fn threadedFn(pc: PC, sp: SP, _: *Process, context: *Context, extra: Extra) Result {
+        pub fn threadedFn(pc: PC, sp: SP, context: *Context, extra: Extra) Result {
             if (sp.push(Object.fromAddress(&thisProcess))) |newSp| {
-                return @call(tailCall, pc.prim(), .{ pc.next(), newSp, &thisProcess, context, extra });
+                return @call(tailCall, pc.prim(), .{ pc.next(), newSp, context, extra });
             } else {
                 @panic("StackOverflow");
             }

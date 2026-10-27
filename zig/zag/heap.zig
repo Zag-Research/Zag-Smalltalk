@@ -813,8 +813,8 @@ pub const HeapObject = packed struct {
     ) !void {
         try writer.print("{{{f}, ...}}", .{self.header});
     }
-    pub fn allocator(self: *HeapObject, process: *zag.Process) *fn () void {
-        _ = .{ self, process, @panic("undefined") };
+    pub fn allocator(self: *HeapObject) *fn () void {
+        _ = .{ self, @panic("undefined") };
     }
     pub fn nowHasPointers(self: *HeapObject) void {
         self.header = self.header.nowHasPointers();

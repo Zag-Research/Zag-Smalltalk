@@ -82,7 +82,7 @@ thread 961657 panic: executing the 'fail' threadedFn
         @panic("executing the 'fail' threadedFn");
         ^
 /Users/dmason/git/Zag-Smalltalk/zig/zag/execute.zig:472:30: 0x10272985f in sendTo (fib-taggedLow)
-        return self.executeFn(pc, sp, process, context, newExtra);
+        return self.executeFn(pc, sp, context, newExtra);
                              ^
 /Users/dmason/git/Zag-Smalltalk/zig/experiments/fib.zig:247:31: 0x102726697 in runIt (fib-taggedLow)
         const obj = exe.sendTo(Sym.fibonacci.asObject(), exe.object(fibN)) catch unreachable;
@@ -409,7 +409,7 @@ thread 964742 panic: Method not found
         @panic("Method not found");
         ^
 /Users/dmason/git/Zag-Smalltalk/zig/zag/execute.zig:472:30: 0x10270d833 in sendTo (fib-taggedHigh)
-        return self.executeFn(pc, sp, process, context, newExtra);
+        return self.executeFn(pc, sp, context, newExtra);
                              ^
 /Users/dmason/git/Zag-Smalltalk/zig/experiments/fib.zig:247:31: 0x10270a65f in runIt (fib-taggedHigh)
         const obj = exe.sendTo(Sym.fibonacci.asObject(), exe.object(fibN)) catch unreachable;

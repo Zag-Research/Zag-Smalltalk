@@ -30,18 +30,18 @@ pub fn init() void {}
 
 pub const threadedFns = struct {
     pub const array = struct {
-        pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
+        pub fn threadedFn(pc: PC, sp: SP, context: *Context, extra: Extra) Result {
             const size = pc.object();
             // allocate array of that size and copy elements from the top of the stack on reverse
-            _ = .{ size, sp, process, context, extra, unreachable };
+            _ = .{ size, sp, context, extra, unreachable };
         }
     };
 };
 pub const @"new:" = struct {
     pub const number = 71;
-    pub fn primitive(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result { // Array class>>#new:
+    pub fn primitive(pc: PC, sp: SP, context: *Context, extra: Extra) Result { // Array class>>#new:
         const size = sp.top;
         _ = size;
-        return @call(tailCall, context.npc, .{ pc, sp, process, context, extra });
+        return @call(tailCall, context.npc, .{ pc, sp, context, extra });
     }
 };

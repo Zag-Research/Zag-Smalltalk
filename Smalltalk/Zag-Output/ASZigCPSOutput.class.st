@@ -17,7 +17,7 @@ Class {
 }
 
 { #category : 'compiling' }
-ASZigCPSOutput class >> blockClass [ ^ ASZigCPSBlockOutput 
+ASZigCPSOutput class >> blockClass [ ^ ASZigCPSBlockOutput
 ]
 
 { #category : 'accessing' }
@@ -37,8 +37,8 @@ ASZigCPSOutput >> doBasicBlock: bb [
 		print: bb number + 1;
 		nextPutAll: '), ';
 		rVal: #sp;
-		nextPutAll: ', process, context, extra })';
-		endStatement 
+		nextPutAll: ', context, extra })';
+		endStatement
 ]
 
 { #category : 'local variable handling' }
@@ -114,7 +114,7 @@ ASZigCPSOutput >> outputMethodStart: bb [
 		nextPutAll: 'fn ';
 		id: bb label;
 		nextPutAll:
-			'(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
+			'(pc: PC, sp: SP, context: *Context, extra: Extra) Result {
 '.
 	currentLVal := nil.
 	lVals := Dictionary new
@@ -138,7 +138,7 @@ ASZigCPSOutput >> rVal: aString [
 ]
 
 { #category : 'local variable handling' }
-ASZigCPSOutput >> sp: anInteger [ 
+ASZigCPSOutput >> sp: anInteger [
 	self rVal: #sp;nextPutAll: '.at(';print: anInteger ;nextPut: $)
 ]
 
@@ -149,7 +149,7 @@ ASZigCPSOutput >> verifySelector: aSymbol [
 		nextPutAll: 'if(!';
 		putDirectSymbol: aSymbol;
 		nextPutAll:
-			'.hashEquals(selector))return @call(tailCall,dnu,.{pc,sp,process,context,selector,cache})';
+			'.hashEquals(selector))return @call(tailCall,dnu,.{pc,sp,context,selector,cache})';
 		endStatement
 ]
 
@@ -175,7 +175,7 @@ ASZigCPSOutput >> visitPushBlock: anASCBlock [
 
 	anASCBlock manifest
 		ifTrue: [ self visitPushLocalOrBlock: anASCBlock ]
-		ifFalse: [ self visitPushLiteral: nil ] 
+		ifFalse: [ self visitPushLiteral: nil ]
 ]
 
 { #category : 'API' }
@@ -186,7 +186,7 @@ ASZigCPSOutput >> visitPushContext [
 		rVal: #context;
 		nextPutAll: '.push(';
 		rVal: #sp;
-		nextPutAll: ', process, &';
+		nextPutAll: ', &';
 		nextPutAll: componentName;
 		nextPutAll: ', 0, 2, 0)';
 		endStatement;
@@ -204,7 +204,7 @@ ASZigCPSOutput >> visitPushContext: unused [
 		rVal: #context;
 		nextPutAll: '.push(';
 		rVal: #sp;
-		nextPutAll: ', process, &';
+		nextPutAll: ', &';
 		nextPutAll: componentName;
 		nextPutAll: ', 0, 2, 0)';
 		endStatement;
@@ -223,7 +223,7 @@ ASZigCPSOutput >> visitPushLiteral: aLiteral [
 		nextPutAll: '.push(';
 		nextPutAll: aLiteral asZigLiteral;
 		nextPut: $);
-		endStatement 
+		endStatement
 ]
 
 { #category : 'API' }
@@ -277,7 +277,7 @@ ASZigCPSOutput >> visitReturnTop [
 		endStatement;
 		nextPutAll: 'return @call(tailCall, cContext.npc, .{ cContext.tpc, ';
 		rVal: #sp;
-		nextPutAll: ', process, cContext, extra })';
+		nextPutAll: ', cContext, extra })';
 		endStatement;
 		flush
 ]
@@ -292,7 +292,7 @@ ASZigCPSOutput >> visitSend: aSelector returnIndex: index receiver: target [
 		print: index - 1;
 		nextPutAll: '])';
 		endStatement].
-		self 
+		self
 		lConst: #pc;
 		nextPutAll: 'dispatch.lookup(';
 		putDirectSymbol: aSelector;
@@ -315,7 +315,7 @@ ASZigCPSOutput >> visitSend: aSelector returnIndex: index receiver: target [
 		rVal: #pc;
 		nextPutAll: '.next(),';
 		rVal: #sp;
-		nextPutAll: ', process, context, ';
+		nextPutAll: ', context, ';
 		putDirectSymbol: aSelector;
 		nextPutAll: ', cache });
 ';

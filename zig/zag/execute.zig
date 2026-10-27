@@ -182,14 +182,14 @@ pub const PC = packed struct {
         return .{ .code = self.codeAddress() };
     }
     pub // inline //
-    fn asThreadedFn(self: PC) *const fn (PC, SP, *Process, *Context, Extra) Result {
+    fn asThreadedFn(self: PC) *const fn (PC, SP, *Context, Extra) Result {
         return primOf("PC_asThreadedFn: ", self.code);
     }
     pub // inline //
-    fn prim(self: PC) *const fn (PC, SP, *Process, *Context, Extra) Result {
+    fn prim(self: PC) *const fn (PC, SP, *Context, Extra) Result {
         return primOf("PC_prim:         ", self.code);
     }
-    inline fn primOf(str: []const u8, code: *const Code) *const fn (PC, SP, *Process, *Context, Extra) Result {
+    inline fn primOf(str: []const u8, code: *const Code) *const fn (PC, SP, *Context, Extra) Result {
         if (logging) |log| {
             // log("{s}{x:0>12}: ", .{ str, @intFromPtr(code) });
             // for ((@as([*]const u64, @ptrCast(code))-10)[0..21]) |*word| {
@@ -262,13 +262,13 @@ pub const PC = packed struct {
     pub inline fn prev(self: PC) PC {
         return asPC(self.array() - 1);
     }
-    pub inline fn prim2(self: PC) *const fn (PC, SP, *Process, *Context, Extra) Result {
+    pub inline fn prim2(self: PC) *const fn (PC, SP, *Context, Extra) Result {
         return primOf("PC_prim2:        ", &self.array()[1]);
     }
     pub inline fn next2(self: PC) PC {
         return asPC(self.array() + 2);
     }
-    pub inline fn prim3(self: PC) *const fn (PC, SP, *Process, *Context, Extra) Result {
+    pub inline fn prim3(self: PC) *const fn (PC, SP, *Context, Extra) Result {
         return primOf("PC_prim3:        ", &self.array()[2]);
     }
     pub inline fn next3(self: PC) PC {
@@ -306,19 +306,19 @@ pub const Code = union(enum) {
     none: u64,
     object: Object,
     variable: Variable,
-    threadedFn: *const fn (PC, SP, *Process, *Context, Extra) Result,
+    threadedFn: *const fn (PC, SP, *Context, Extra) Result,
     method: *const CompiledMethod,
     codePtr: *Code,
     offset: i64,
     packedObject: PackedObject,
     structure: StackStructure,
     signature: Signature,
-    pub inline fn primOf(pp: *const fn (PC, SP, *Process, *Context, Extra) Result) Code {
+    pub inline fn primOf(pp: *const fn (PC, SP, *Context, Extra) Result) Code {
         //@compileLog(pp);
         const result = Code{ .threadedFn = pp };
         return result;
     }
-    pub inline fn patchPrim(self: *Code, pp: *const fn (PC, SP, *Process, *Context, Extra) Result) void {
+    pub inline fn patchPrim(self: *Code, pp: *const fn (PC, SP, *Context, Extra) Result) void {
         self.* = Code{ .threadedFn = pp };
     }
     pub inline fn patchMethod(self: *Code, signature: Signature, method: *const CompiledMethod) void {
@@ -358,27 +358,27 @@ pub const Code = union(enum) {
         return Code{ .codePtr = @ptrCast(addr + @as(u64, @bitCast(offs))) };
     }
     pub inline //
-    fn prim(self: Code) *const fn (PC, SP, *Process, *Context, Extra) Result {
+    fn prim(self: Code) *const fn (PC, SP, *Context, Extra) Result {
         return self.threadedFn;
     }
-    fn endM(_: PC, sp: SP, process: *Process, context: *Context, _: Extra) Result { // not embedded
+    fn endM(_: PC, sp: SP, context: *Context, _: Extra) Result { // not embedded
         trace("endM: {*} {?*}", .{ context, context.prevCtxt });
-        process.setContext(context);
-        process.setSp(sp);
+        Process.setContext(context);
+        Process.setSp(sp);
         return sp;
     }
     pub const endMain = primOf(endM);
-    pub fn end(_: PC, sp: SP, _: *Process, context: *Context, _: Extra) Result { // not embedded
+    pub fn end(_: PC, sp: SP, context: *Context, _: Extra) Result { // not embedded
         Process.setContext(context);
         Process.setSp(sp);
         return sp;
     }
     pub const endCode = primOf(end);
-    pub fn panic(_: PC, _: SP, _: *Process, _: *Context, _: Extra) Result { // not embedded
+    pub fn panic(_: PC, _: SP, _: *Context, _: Extra) Result { // not embedded
         @panic("not implemented");
     }
-    fn noOp(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
-        return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, extra });
+    fn noOp(pc: PC, sp: SP, context: *Context, extra: Extra) Result {
+        return @call(tailCall, pc.prim(), .{ pc.next(), sp, context, extra });
     }
     pub fn format(
         self: *const Code,
@@ -423,8 +423,8 @@ pub const CompiledMethod = struct {
     header: HeapHeader,
     signature: Signature,
     stackStructure: StackStructure,
-    executeFn: *const fn (PC, SP, *Process, *Context, Extra) Result,
-    jitted: ?*const fn (PC, SP, *Process, *Context, Extra) Result,
+    executeFn: *const fn (PC, SP, *Context, Extra) Result,
+    jitted: ?*const fn (PC, SP, *Context, Extra) Result,
     code: [codeSize]Code, // the threaded version of the method
     const Self = @This();
     const codeSize = 1;
@@ -455,7 +455,7 @@ pub const CompiledMethod = struct {
             std.debug.print("[{x:0>12}]: {f}\n", .{ @intFromPtr(instruction), instruction.* });
         }
     }
-    pub fn init(name: anytype, methodFn: *const fn (PC, SP, *Process, *Context, Extra) Result) Self {
+    pub fn init(name: anytype, methodFn: *const fn (PC, SP, *Context, Extra) Result) Self {
         return Self{
             .header = HeapHeader.calc(.CompiledMethod, codeOffsetInObjects + codeSize, 42 //name.hash24()
                 , .static, null, Object, false) catch unreachable,
@@ -469,7 +469,7 @@ pub const CompiledMethod = struct {
     pub fn execute(self: *const Self, sp: SP, context: *Context) Result {
         const newExtra = Extra.forMethod(self, sp);
         const pc = PC.init(&self.code[0]).next();
-        return self.executeFn(pc, sp, undefined, context, newExtra);
+        return self.executeFn(pc, sp, context, newExtra);
     }
     inline fn asHeapObjectPtr(self: *const Self) HeapObjectConstPtr {
         return @ptrCast(self);
@@ -548,8 +548,8 @@ fn CompileTimeMethod(comptime counts: usize) type {
         header: HeapHeader,
         signature: Signature,
         stackStructure: StackStructure, // f1 - locals, f3 - selfOffset
-        executeFn: *const fn (PC, SP, *Process, *Context, Extra) Result,
-        jitted: ?*const fn (PC, SP, *Process, *Context, Extra) Result,
+        executeFn: *const fn (PC, SP, *Context, Extra) Result,
+        jitted: ?*const fn (PC, SP, *Context, Extra) Result,
         code: [codes]Code,
         offsets: [codes]OffsetType align(8),
         const OffsetType = enum(u2) {
@@ -575,7 +575,7 @@ fn CompileTimeMethod(comptime counts: usize) type {
                 } });
             }
         }
-        pub fn init(name: anytype, comptime locals: u11, function: ?*const fn (PC, SP, *Process, *Context, Extra) Result, class: ClassIndex, tup: anytype) Self {
+        pub fn init(name: anytype, comptime locals: u11, function: ?*const fn (PC, SP, *Context, Extra) Result, class: ClassIndex, tup: anytype) Self {
             const header = comptime HeapHeader.calc(.CompiledMethod, codeOffsetInUnits + codes, 0, Age.static, null, Object, false) catch @compileError("method too big");
             var method = Self{
                 .header = header,
@@ -595,7 +595,7 @@ fn CompileTimeMethod(comptime counts: usize) type {
                         code[n] = Code.objectOf(Object.Nil());
                         n = n + 1;
                     },
-                    *const fn (PC, SP, *Process, *Context, Extra) Result => {
+                    *const fn (PC, SP, *Context, Extra) Result => {
                         //@compileLog(field);
                         if (needFunction) {
                             method.executeFn = field;
@@ -721,7 +721,7 @@ pub fn compileMethod(name: anytype, comptime locals: comptime_int, comptime clas
 fn lookupLabel(tup: anytype, comptime field: []const u8) i56 {
     comptime var lp = 0;
     inline for (tup) |t| {
-        if (@TypeOf(t) == *const fn (PC, SP, *Process, *Context, Extra) Result) {
+        if (@TypeOf(t) == *const fn (PC, SP, *Context, Extra) Result) {
             lp += 1;
             if (t == null) lp += 4;
         } else switch (@typeInfo(@TypeOf(t))) {
@@ -980,6 +980,7 @@ pub const Execution = struct {
                 };
             }
             pub fn initProcess(self: *Self) void {
+                trace("Executer.inintProcess: {}", .{self.process_initted});
                 if (!self.process_initted) {
                     Process.initProcess(0);
                     self.process_initted = true;
@@ -1072,12 +1073,13 @@ pub const Execution = struct {
             return .{ .exe = ExecutorType.new(undefined) };
         }
         pub inline fn object(_: MainExecutor, value: anytype) Object {
-            return ExecutorType.object(value);
+            return ExecutorType.object(undefined, value);
         }
         pub fn sendTo(self: *MainExecutor, selector: Object, receiver: Object) !Object {
             var exe = &self.exe;
             trace("Sending: {f} ({x}) to {f}", .{ selector, selector.testU(), receiver });
-            _ = init(Object.empty);
+            _ = exe.init(Object.empty);
+            trace("after init", .{});
             ExecutorType.getContext().setReturn(PC.exit());
             trace("SendTo: context {*} {*} {f}", .{ ExecutorType.getContext(), ExecutorType.getContext().npc, ExecutorType.getContext().tpc });
             const class = receiver.which_class();

@@ -9,7 +9,7 @@ const PC = zag.execute.PC;
 const SP = Process.SP;
 const Code = zag.execute.Code;
 const Object = zag.Object;
-pub const ThreadedFn = *const fn (PC, SP, *Process, *Context, Extra) zag.execute.Result;
+pub const ThreadedFn = *const fn (PC, SP, *Context, Extra) zag.execute.Result;
 
 pub fn initJitTest(method: anytype, process: *align(Process.alignment) Process, title: []const u8) !void {
     const MethodType = @TypeOf(method.*);
@@ -40,7 +40,7 @@ pub fn runCompiled(
     }
     const pc = PC.init(&code[0]).next();
     const extra = Extra.forMethod(compiled.asCompiledMethodPtr(), sp);
-    const result_sp = method.getEntryFor(0)(pc, sp, process, context, extra);
+    const result_sp = method.getEntryFor(0)(pc, sp, context, extra);
     return result_sp.at(0).to(i64);
 }
 
@@ -110,13 +110,12 @@ pub fn measureIter(
     entry: anytype,
     pc: PC,
     sp: SP,
-    process: *Process,
     ctx: *Context,
     extra: Extra,
 ) u64 {
     var timer = std.time.Timer.start() catch unreachable;
     for (0..N) |_| {
-        _ = @call(.never_inline, entry, .{ pc, sp, process, ctx, extra });
+        _ = @call(.never_inline, entry, .{ pc, sp, ctx, extra });
     }
     return timer.read() / N;
 }
