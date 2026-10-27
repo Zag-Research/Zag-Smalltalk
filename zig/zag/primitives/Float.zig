@@ -43,7 +43,7 @@ pub const @"+" = struct {
         if (sp.next.nativeF()) |self| {
             const newSp = sp.dropPut(with(self, sp.top, sp, context) catch
                 return @call(tailCall, Extra.primitiveFailed, .{ pc, sp, process, context, extra }));
-            return @call(tailCall, process.check(context.npc), .{ context.tpc, newSp, process, context, Extra.fromContextData(context.contextDataPtr(sp)) });
+            return @call(tailCall, context.npc, .{ context.tpc, newSp, process, context, Extra.fromContextData(context.contextDataPtr(sp)) });
         }
         unreachable;
     }
@@ -65,7 +65,7 @@ pub const @"+" = struct {
         if (sp.next.nativeF()) |self| {
             const newSp = sp.dropPut(with(self, sp.top, sp, context) catch
                 return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, extra }));
-            return @call(tailCall, process.check(pc.prim3()), .{ pc.next3(), newSp, process, context, extra });
+            return @call(tailCall, pc.prim3(), .{ pc.next3(), newSp, process, context, extra });
         }
         trace("Float>>#inlinePrimitive: + {f}", .{sp.next});
         return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, extra });
@@ -85,7 +85,7 @@ pub const @"-" = struct {
         if (sp.next.nativeF()) |self| {
             const newSp = sp.dropPut(with(self, sp.top, sp, context) catch
                 return @call(tailCall, Extra.primitiveFailed, .{ pc, sp, process, context, extra }));
-            return @call(tailCall, process.check(context.npc), .{ context.tpc, newSp, process, context, Extra.fromContextData(context.contextDataPtr(sp)) });
+            return @call(tailCall, context.npc, .{ context.tpc, newSp, process, context, Extra.fromContextData(context.contextDataPtr(sp)) });
         }
         unreachable;
     }
@@ -94,7 +94,7 @@ pub const @"-" = struct {
         if (sp.next.nativeF()) |self| {
             const newSp = sp.dropPut(with(self, sp.top, sp, context) catch
                 return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, extra }));
-            return @call(tailCall, process.check(pc.prim3()), .{ pc.next3(), newSp, process, context, extra });
+            return @call(tailCall, pc.prim3(), .{ pc.next3(), newSp, process, context, extra });
         }
         trace("Float>>#inlinePrimitive: - {f}", .{sp.next});
         return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, extra });
@@ -114,7 +114,7 @@ pub const @"<=" = struct {
         if (sp.next.nativeF()) |self| {
             const newSp = sp.dropPut(with(self, sp.top, sp, context) catch
                 return @call(tailCall, Extra.primitiveFailed, .{ pc, sp, process, context, extra }));
-            return @call(tailCall, process.check(context.npc), .{ context.tpc, newSp, process, context, Extra.fromContextData(context.contextDataPtr(sp)) });
+            return @call(tailCall, context.npc, .{ context.tpc, newSp, process, context, Extra.fromContextData(context.contextDataPtr(sp)) });
         }
         unreachable;
     }
@@ -123,10 +123,10 @@ pub const @"<=" = struct {
         if (sp.next.nativeF()) |self| {
             const newSp = sp.dropPut(with(self, sp.top, sp, context) catch
                 return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, extra }));
-            return @call(tailCall, process.check(pc.prim3()), .{ pc.next3(), newSp, process, context, extra });
+            return @call(tailCall, pc.prim3(), .{ pc.next3(), newSp, process, context, extra });
         }
         trace("Inline <= called, {*} {f}", .{ sp, extra });
-        return @call(tailCall, process.check(pc.prim()), .{ pc.next(), sp, process, context, extra });
+        return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, extra });
     }
 };
 pub const @"*" = struct {
@@ -143,7 +143,7 @@ pub const @"*" = struct {
         if (sp.next.nativeF()) |self| {
             const newSp = sp.dropPut(with(self, sp.top, sp, context) catch
                 return @call(tailCall, Extra.primitiveFailed, .{ pc, sp, process, context, extra }));
-            return @call(tailCall, process.check(context.npc), .{ context.tpc, newSp, process, context, Extra.fromContextData(context.contextDataPtr(sp)) });
+            return @call(tailCall, context.npc, .{ context.tpc, newSp, process, context, Extra.fromContextData(context.contextDataPtr(sp)) });
         }
         unreachable;
     }
@@ -151,9 +151,9 @@ pub const @"*" = struct {
         if (sp.next.nativeF()) |self| {
             const newSp = sp.dropPut(with(self, sp.top, sp, context) catch
                 return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, extra }));
-            return @call(tailCall, process.check(pc.prim3()), .{ pc.next3(), newSp, process, context, extra });
+            return @call(tailCall, pc.prim3(), .{ pc.next3(), newSp, process, context, extra });
         }
-        return @call(tailCall, process.check(pc.prim()), .{ pc.next(), sp, process, context, extra });
+        return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, extra });
     }
 };
 pub const threadedFns = struct {

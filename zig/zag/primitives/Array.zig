@@ -42,6 +42,6 @@ pub const @"new:" = struct {
     pub fn primitive(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result { // Array class>>#new:
         const size = sp.top;
         _ = size;
-        return @call(tailCall, process.check(context.npc), .{ pc, sp, process, context, extra });
+        return @call(tailCall, context.npc, .{ pc, sp, process, context, extra });
     }
 };

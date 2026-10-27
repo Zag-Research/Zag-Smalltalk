@@ -172,7 +172,7 @@ const testModule = if (config.is_test) struct {
                 return @call(tailCall, Extra.primitiveFailed, .{ pc, sp, process, context, extra });
             } else {
                 const newSp = sp.dropPut(Object.from(sp.next.equals(sp.top), sp, context));
-                return @call(tailCall, process.check(context.npc), .{ context.tpc, newSp, process, context, Extra.fromContextData(context.contextDataPtr(sp)) });
+                return @call(tailCall, context.npc, .{ context.tpc, newSp, process, context, Extra.fromContextData(context.contextDataPtr(sp)) });
             }
         }
         pub fn primitiveError(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
@@ -182,7 +182,7 @@ const testModule = if (config.is_test) struct {
                 return @call(tailCall, Extra.primitiveFailed, .{ pc, newSp.?, process, context, extra });
             } else {
                 const newSp = sp.dropPut(Object.from(sp.next.equals(sp.top), sp, context));
-                return @call(tailCall, process.check(context.npc), .{ context.tpc, newSp, process, context, Extra.fromContextData(context.contextDataPtr(sp)) });
+                return @call(tailCall, context.npc, .{ context.tpc, newSp, process, context, Extra.fromContextData(context.contextDataPtr(sp)) });
             }
         }
         pub fn inlinePrimitive(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
@@ -190,7 +190,7 @@ const testModule = if (config.is_test) struct {
                 return @call(tailCall, inlinePrimitiveFailed, .{ pc, sp, process, context, extra });
             } else {
                 const newSp = sp.dropPut(Object.from(sp.next.equals(sp.top), sp, context));
-                return @call(tailCall, process.check(pc.prim2()), .{ pc.next2(), newSp, process, context, extra });
+                return @call(tailCall, pc.prim2(), .{ pc.next2(), newSp, process, context, extra });
             }
         }
     };
@@ -199,17 +199,17 @@ const testModule = if (config.is_test) struct {
 };
 pub fn inlinePrimitiveFailed(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
     _ = .{ sp, process, context, std.debug.panic("inlinePrimitiveFailed: {f} {f} {f}\n", .{ extra, pc, sp }) };
-    //return @call(tailCall, process.check(pc.prev().prim()), .{ pc, sp, process, context, extra.encoded() });
+    //return @call(tailCall, pc.prev().prim(), .{ pc, sp, process, context, extra.encoded() });
 }
 
 fn noPrim(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
-    // return @call(tailCall, process.check(pc.prev().prim()), .{ pc, sp, process, context, extra.encoded() });
+    // return @call(tailCall, pc.prev().prim(), .{ pc, sp, process, context, extra.encoded() });
     // the following should be exactly the same, but causes an error instead
     return @call(tailCall, Extra.primitiveFailed, .{ pc, sp, process, context, extra });
 }
 fn noPrimWithError(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
     const newSp = sp.push(Nil()).?;
-    // return @call(tailCall, process.check(pc.prev().prim()), .{ pc, newSp, process, context, extra.encoded() });
+    // return @call(tailCall, pc.prev().prim(), .{ pc, newSp, process, context, extra.encoded() });
     // the following should be exactly the same, but causes an error instead
     return @call(tailCall, Extra.primitiveFailed, .{ pc, newSp, process, context, extra });
 }
@@ -221,7 +221,7 @@ pub const threadedFunctions = struct {
             if (extra.isEncoded()) {
                 trace("extra encoded {x} {f}", .{ @as(u64, @bitCast(extra)), extra });
                 const newPc = pc.next();
-                return @call(tailCall, process.check(newPc.prim()), .{ newPc.next(), sp, process, context, extra.decoded() });
+                return @call(tailCall, newPc.prim(), .{ newPc.next(), sp, process, context, extra.decoded() });
             }
             trace("extra not encoded {x} {f}", .{ @as(u64, @bitCast(extra)), extra });
             const primNumber = pc.signature().primitive();
@@ -299,7 +299,7 @@ pub const threadedFunctions = struct {
         pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
             if (extra.isEncoded()) {
                 const newPc = pc.next();
-                return @call(tailCall, process.check(newPc.prim()), .{ newPc.next(), sp, process, context, extra.decoded() });
+                return @call(tailCall, newPc.prim(), .{ newPc.next(), sp, process, context, extra.decoded() });
             }
             const primNumber = pc.signature().primitive();
             if (Module.findNumberedPrimitive(primNumber)) |prim| {
@@ -381,7 +381,7 @@ pub const threadedFunctions = struct {
         pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
             if (extra.isEncoded()) {
                 const newPc = pc.next().next();
-                return @call(tailCall, process.check(newPc.prim()), .{ newPc.next(), sp, process, context, extra.decoded() });
+                return @call(tailCall, newPc.prim(), .{ newPc.next(), sp, process, context, extra.decoded() });
             }
             if (pc.object().arrayAsSlice(u8) catch null) |primName| {
                 if (pc.next().object().arrayAsSlice(u8) catch null) |modName| {
@@ -464,7 +464,7 @@ pub const threadedFunctions = struct {
         pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
             if (extra.isEncoded()) {
                 const newPc = pc.next().next();
-                return @call(tailCall, process.check(newPc.prim()), .{ newPc.next(), sp, process, context, extra.decoded() });
+                return @call(tailCall, newPc.prim(), .{ newPc.next(), sp, process, context, extra.decoded() });
             }
             if (pc.object().arrayAsSlice(u8) catch null) |primName| {
                 if (pc.next().object().arrayAsSlice(u8) catch null) |modName| {

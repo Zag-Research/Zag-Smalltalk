@@ -343,9 +343,9 @@ const tests = struct {
     const expect = std.testing.expect;
     const iTest = i40;
     fn init() void {
-        Process.thisProcess.initProcess();
-        sp = Process.thisProcess.getSp();
-        context = Process.thisProcess.getContext();
+        Process.initProcess(0);
+        sp = Process.getSp();
+        context = Process.getContext();
     }
     fn isInt(obj: Object) bool {
         if (obj.nativeI()) |_| return true;

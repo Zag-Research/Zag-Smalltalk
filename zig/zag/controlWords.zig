@@ -60,7 +60,7 @@ pub const fail = struct {
 pub const branch = struct {
     pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
         const target = pc.targetPC();
-        return @call(tailCall, process.check(target.prim()), .{ target.next(), sp, process, context, extra });
+        return @call(tailCall, Process.check(target.prim()), .{ target.next(), sp, process, context, extra });
     }
     test "branch" {
         var exe = Execution.initTest("branch", .{
@@ -89,15 +89,15 @@ pub const classCase = struct {
                 if (currentClass == match) {
                     newPc = newPc.targetPC();
                     trace("classCase: match {*} extra: {f}", .{ sp, extra });
-                    return @call(tailCall, process.check(newPc.prim()), .{ newPc.next(), sp.drop(), process, context, extra });
+                    return @call(tailCall, newPc.prim(), .{ newPc.next(), sp.drop(), process, context, extra });
                 }
                 if (currentClass == 0) {
                     trace("classCase: 0 {*} extra: {f}", .{ sp, extra });
-                    return @call(tailCall, process.check(newPc.prim()), .{ newPc.next(), sp.drop(), process, context, extra });
+                    return @call(tailCall, newPc.prim(), .{ newPc.next(), sp.drop(), process, context, extra });
                 }
                 if (currentClass == 0x3FFF) {
                     trace("classCase: 3fff {*} extra: {f}", .{ sp, extra });
-                    return @call(tailCall, process.check(newPc.prim()), .{ newPc.next(), sp, process, context, extra });
+                    return @call(tailCall, newPc.prim(), .{ newPc.next(), sp, process, context, extra });
                 }
                 classes >>= 14;
                 newPc = newPc.next();
@@ -173,7 +173,7 @@ pub const drop = struct {
     pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
         sp.traceStack("drop", context, extra);
         const newSp = sp.drop();
-        return @call(tailCall, process.check(pc.prim()), .{ pc.next(), newSp, process, context, extra });
+        return @call(tailCall, pc.prim(), .{ pc.next(), newSp, process, context, extra });
     }
     test "drop" {
         var exe = Execution.initTest("drop", .{tf.drop});
@@ -193,10 +193,10 @@ pub const dup = struct {
         sp.traceStack("dup", context, extra);
         const value = sp.top;
         if (sp.push(value)) |newSp| {
-            return @call(tailCall, process.check(pc.prim()), .{ pc.next(), newSp, process, context, extra });
+            return @call(tailCall, pc.prim(), .{ pc.next(), newSp, process, context, extra });
         } else {
             const newSp, const newContext, const newExtra = sp.spillStackAndPush(value, context, extra);
-            return @call(tailCall, process.check(pc.prim()), .{ pc.next(), newSp, process, newContext, newExtra });
+            return @call(tailCall, pc.prim(), .{ pc.next(), newSp, process, newContext, newExtra });
         }
     }
     test "dup" {
@@ -219,10 +219,10 @@ pub const over = struct {
         sp.traceStack("over", context, extra);
         const value = sp.next;
         if (sp.push(value)) |newSp| {
-            return @call(tailCall, process.check(pc.prim()), .{ pc.next(), newSp, process, context, extra });
+            return @call(tailCall, pc.prim(), .{ pc.next(), newSp, process, context, extra });
         } else {
             const newSp, const newContext, const newExtra = sp.spillStackAndPush(value, context, extra);
-            return @call(tailCall, process.check(pc.prim()), .{ pc.next(), newSp, process, newContext, newExtra });
+            return @call(tailCall, pc.prim(), .{ pc.next(), newSp, process, newContext, newExtra });
         }
     }
     test "over" {
@@ -249,17 +249,17 @@ pub const pop = struct {
             const newSp = new.sp;
             const newExtra = new.extra;
             variable.getAddress(newSp, newExtra)[0] = result;
-            return @call(tailCall, process.check(pc.prim2()), .{ pc.next2(), newSp, process, new.context, newExtra });
+            return @call(tailCall, pc.prim2(), .{ pc.next2(), newSp, process, new.context, newExtra });
         }
         variable.getAddress(sp, extra)[0] = result;
-        return @call(tailCall, process.check(pc.prim2()), .{ pc.next2(), sp.drop(), process, context, extra });
+        return @call(tailCall, pc.prim2(), .{ pc.next2(), sp.drop(), process, context, extra });
     }
 };
 pub const popAssociationValue = struct {
     pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
         sp.traceStack("popAssociationValue", context, extra);
         pc.object().setField(2, sp.top);
-        return @call(tailCall, process.check(pc.prim2()), .{ pc.next2(), sp.drop(), process, context, extra });
+        return @call(tailCall, pc.prim2(), .{ pc.next2(), sp.drop(), process, context, extra });
     }
     test "popAssociationValue" {
         var exe = Execution.initTest("popAssociationValue", .{
@@ -292,20 +292,20 @@ pub const push = struct {
         trace("Pushing variable...{*} {f} {f} {f}", .{ sp, pc, extra, variable });
         if (variable.isLocal and extra.noContext()) {
             if (sp.push(Nil())) |newSp| {
-                return @call(tailCall, process.check(pc.prim2()), .{ pc.next2(), newSp, process, context, extra });
+                return @call(tailCall, pc.prim2(), .{ pc.next2(), newSp, process, context, extra });
             } else {
                 const newSp, const newContext, const newExtra = sp.spillStackAndPush(Nil(), context, extra);
-                return @call(tailCall, process.check(pc.prim2()), .{ pc.next2(), newSp, process, newContext, newExtra });
+                return @call(tailCall, pc.prim2(), .{ pc.next2(), newSp, process, newContext, newExtra });
             }
         }
         const address = variable.getAddress(sp, extra);
         const value = address[0];
         trace(" .... {*} {f}", .{ address, value });
         if (sp.push(value)) |newSp| {
-            return @call(tailCall, process.check(pc.prim2()), .{ pc.next2(), newSp, process, context, extra });
+            return @call(tailCall, pc.prim2(), .{ pc.next2(), newSp, process, context, extra });
         } else {
             const newSp, const newContext, const newExtra = sp.spillStackAndPush(value, context, extra);
-            return @call(tailCall, process.check(pc.prim2()), .{ pc.next2(), newSp, process, newContext, newExtra });
+            return @call(tailCall, pc.prim2(), .{ pc.next2(), newSp, process, newContext, newExtra });
         }
     }
     test {
@@ -334,10 +334,10 @@ pub const pushAssociationValue = struct {
         sp.traceStack("pushAssociationValue", context, extra);
         const value = pc.object().getField(2);
         if (sp.push(value)) |newSp| {
-            return @call(tailCall, process.check(pc.prim2()), .{ pc.next2(), newSp, process, context, extra });
+            return @call(tailCall, pc.prim2(), .{ pc.next2(), newSp, process, context, extra });
         } else {
             const newSp, const newContext, const newExtra = sp.spillStackAndPush(value, context, extra);
-            return @call(tailCall, process.check(pc.prim2()), .{ pc.next2(), newSp, process, newContext, newExtra });
+            return @call(tailCall, pc.prim2(), .{ pc.next2(), newSp, process, newContext, newExtra });
         }
     }
     test {
@@ -367,10 +367,10 @@ pub const pushLiteral = struct {
         sp.traceStack("pushLiteral", context, extra);
         const value = pc.object();
         if (sp.push(value)) |newSp| {
-            return @call(tailCall, process.check(pc.prim2()), .{ pc.next2(), newSp, process, context, extra });
+            return @call(tailCall, pc.prim2(), .{ pc.next2(), newSp, process, context, extra });
         } else {
             const newSp, const newContext, const newExtra = sp.spillStackAndPush(value, context, extra);
-            return @call(tailCall, process.check(pc.prim2()), .{ pc.next2(), newSp, process, newContext, newExtra });
+            return @call(tailCall, pc.prim2(), .{ pc.next2(), newSp, process, newContext, newExtra });
         }
     }
     test "pushLiteral" {
@@ -395,10 +395,10 @@ pub const store = struct {
             const newSp = new.sp;
             const newExtra = new.extra;
             variable.getAddress(newSp, newExtra)[0] = result;
-            return @call(tailCall, process.check(pc.prim2()), .{ pc.next2(), newSp, process, new.context, newExtra });
+            return @call(tailCall, pc.prim2(), .{ pc.next2(), newSp, process, new.context, newExtra });
         }
         variable.getAddress(sp, extra)[0] = result;
-        return @call(tailCall, process.check(pc.prim2()), .{ pc.next2(), sp, process, context, extra });
+        return @call(tailCall, pc.prim2(), .{ pc.next2(), sp, process, context, extra });
     }
 };
 pub const callLabel = if (zag.config.is_test) struct {
@@ -408,6 +408,6 @@ pub const callLabel = if (zag.config.is_test) struct {
         const target = pc.targetPC();
         // skip the structure word
         context.setReturn(pc.next().next());
-        return @call(tailCall, process.check(target.prim()), .{ target.next(), sp, process, context, Extra.forMethod(@ptrCast(pc.asCodePtr()), sp) });
+        return @call(tailCall, target.prim(), .{ target.next(), sp, process, context, Extra.forMethod(@ptrCast(pc.asCodePtr()), sp) });
     }
 } else struct {};

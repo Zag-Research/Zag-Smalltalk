@@ -44,7 +44,7 @@ pub const ThunkReturnObject = struct {
         const result = Object.from(@as(i50, val.extraI()), null);
         const targetContext = val.encodedPointer(*Context).?;
         const newSp, const callerContext = targetContext.popTargetContext(process, result);
-        return @call(tailCall, process.check(callerContext.getNPc()), .{ callerContext.getTPc(), newSp, process, callerContext, Extra.fromContextData(callerContext.contextData) });
+        return @call(tailCall, callerContext.getNPc(), .{ callerContext.getTPc(), newSp, process, callerContext, Extra.fromContextData(callerContext.contextData) });
     }
     const name = stringOf("ThunkReturnObject").init().obj();
     test "ThunkReturnObject" {
@@ -68,7 +68,7 @@ pub const threadedFns = struct {
             }
             if (pc.object().returnLiteralClosure(context)) |closure| {
                 if (sp.push(closure)) |newSp| {
-                    return @call(tailCall, process.check(pc.prim2()), .{ pc.next2(), newSp, process, context, extra });
+                    return @call(tailCall, pc.prim2(), .{ pc.next2(), newSp, process, context, extra });
                 }
                 const newSp, const newContext, const newExtra = sp.spillStack(context, extra);
                 return @call(tailCall, threadedFn, .{ pc, newSp, process, newContext, newExtra });
@@ -91,7 +91,7 @@ pub const threadedFns = struct {
             if (pc.object().returnLocalClosure(context)) |closure| {
                 trace("returnLocalClosure: 0x{x:0>16} {f}", .{ closure.testU(), closure });
                 if (sp.push(closure)) |newSp| {
-                    return @call(tailCall, process.check(pc.prim2()), .{ pc.next2(), newSp, process, context, extra });
+                    return @call(tailCall, pc.prim2(), .{ pc.next2(), newSp, process, context, extra });
                 }
             }
             const closure, const newSp, const newContext, const newExtra = context.pushClosure(.ThunkReturnLocal, 2, sp, extra);
@@ -99,7 +99,7 @@ pub const threadedFns = struct {
             fields[1] = Object.fromAddress(newContext);
             fields[2] = pc.object();
             closure.nowHasPointers();
-            return @call(tailCall, process.check(pc.prim2()), .{ pc.next2(), newSp, process, newContext, newExtra });
+            return @call(tailCall, pc.prim2(), .{ pc.next2(), newSp, process, newContext, newExtra });
         }
     };
     pub const pushClosure = struct {
@@ -129,7 +129,7 @@ pub const threadedFns = struct {
             closure[1] = pc.next().object();
             if (includeContext != 0) closure[2] = Object.fromAddress(context);
             newSp.top = Object.fromAddress(closure.ptr);
-            return @call(tailCall, process.check(pc.skip(2).prim()), .{ pc.skip(2).next(), newSp, process, newContext, newExtra });
+            return @call(tailCall, pc.skip(2).prim(), .{ pc.skip(2).next(), newSp, process, newContext, newExtra });
         }
         test "pushClosure" {
             if (true) return config.skipForDebugging();
@@ -176,7 +176,7 @@ pub const threadedFns = struct {
             const signature = pc.signature();
             if (Object.immediateClosure(signature, sp, context)) |closure| {
                 if (sp.push(closure)) |newSp| {
-                    return @call(tailCall, process.check(pc.prim2()), .{ pc.next2(), newSp, process, context, extra });
+                    return @call(tailCall, pc.prim2(), .{ pc.next2(), newSp, process, context, extra });
                 } else {
                     const newSp, const newContext, const newExtra = sp.spillStack(context, extra);
                     return @call(tailCall, threadedFn, .{ pc, newSp, process, newContext, newExtra });
@@ -184,12 +184,12 @@ pub const threadedFns = struct {
             }
             if (context.initStackClosure(sp, 2, signature.getClass())) |closureAddress| {
                 if (sp.push(initMemoryClosure(closureAddress, signature, sp, context))) |newSp| {
-                    return @call(tailCall, process.check(pc.prim()), .{ pc.next(), newSp, process, context, extra });
+                    return @call(tailCall, pc.prim(), .{ pc.next(), newSp, process, context, extra });
                 }
             }
             if (context.initHeapClosure(sp, 2, signature.getClass())) |closureAddress| {
                 if (sp.push(initMemoryClosure(closureAddress, signature, sp, context))) |newSp| {
-                    return @call(tailCall, process.check(pc.prim()), .{ pc.next(), newSp, process, context, extra });
+                    return @call(tailCall, pc.prim(), .{ pc.next(), newSp, process, context, extra });
                 }
             }
             const newSp, const newContext, const newExtra = sp.spillStack(context, extra);
@@ -239,7 +239,7 @@ pub const threadedFns = struct {
                 trace("newSp = {*}..{*} newConect = {*} newExtra = {x} newContext.npc = {*}", .{ newSp, newSp.endOfStack(), newContext, @as(u64, @bitCast(newExtra)), newContext.npc });
                 newSp.top = result;
                 newSp.traceStack("value after", newContext, newExtra);
-                return @call(tailCall, process.check(newContext.npc), .{ newContext.tpc, newSp, process, newContext, newExtra });
+                return @call(tailCall, newContext.npc, .{ newContext.tpc, newSp, process, newContext, newExtra });
             }
             std.log.err("class: {} - ", .{class});
             _ = .{ pc, @panic("Unimplemented class") };
@@ -325,7 +325,7 @@ pub const threadedFns = struct {
                         const newPc = method.codePtr();
                         context.setReturn(pc);
                         if (true) @panic("unfinished");
-                        return @call(tailCall, process.check(newPc[0].prim), .{ newPc + 1, sp, process, context, Sym.value });
+                        return @call(tailCall, newPc[0].prim, .{ newPc + 1, sp, process, context, Sym.value });
                     },
                     .ThunkReturnObject, .ThunkReturnImmediate, .ThunkReturnCharacter, .ThunkReturnFloat, .ThunkReturnLocal, .ThunkReturnInstance, .ThunkImmediate, .ThunkHeap, .ThunkLocal, .ThunkInstance, .ThunkFloat => @panic("wrong # arguments"),
                     else => {},
@@ -340,7 +340,7 @@ pub const threadedFns = struct {
 //         const result = sp.top.extraValue();
 //         const newSp, const callerContext = context.pop(sp);
 //         newSp.top = result;
-//         return @call(tailCall, process.check(callerContext.getNPc()), .{ callerContext.getTPc(), newSp, process, callerContext, undefined });
+//         return @call(tailCall, callerContext.getNPc(), .{ callerContext.getTPc(), newSp, process, callerContext, undefined });
 //     }
 //     const name = stringOf("ThunkImmediate").init().obj();
 //     test "ThunkImmediate" {
@@ -433,26 +433,26 @@ pub const inlines = struct {
         if (!val.equals(unreachable))
             newSp.top = val;
         const callerContext = result.ctxt;
-        return @call(tailCall, process.check(callerContext.getNPc()), .{ callerContext.getTPc(), newSp, process, @constCast(callerContext), undefined, undefined });
+        return @call(tailCall, callerContext.getNPc(), .{ callerContext.getTPc(), newSp, process, @constCast(callerContext), undefined, undefined });
     }
 };
 const fallback = execute.fallback;
 pub fn immutableClosure(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
     const newSp = inlines.immutableClosure(sp, process);
-    return @call(tailCall, process.check(pc.prim()), .{ pc.next(), newSp, process, context, extra });
+    return @call(tailCall, pc.prim(), .{ pc.next(), newSp, process, context, extra });
 }
 pub fn generalClosureX(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
     const newSp = inlines.generalClosure(sp.drop(), process, sp.top);
-    return @call(tailCall, process.check(pc.prim2()), .{ pc.next2(), newSp, process, context, extra });
+    return @call(tailCall, pc.prim2(), .{ pc.next2(), newSp, process, context, extra });
 }
 // pub fn fullClosure(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
 //     const block = pc.object();
 //     const newSp = inlines.fullClosure(sp, process, @ptrFromInt(block.nativeU_noCheck()), context, extra);
-//     return @call(tailCall, process.check(pc.prim2()), .{ pc.next2(), newSp, process, context, undefined });
+//     return @call(tailCall, pc.prim2(), .{ pc.next2(), newSp, process, context, undefined });
 // }
 // pub fn closureData(pc: PC, sp: SP, process: *Process, context: *Context, _: Extra) Result {
 //     const newSp = process.allocStack(sp, .BlockClosure, @truncate(pc.uint() + 3), null, Object) catch @panic("closureData");
-//     return @call(tailCall, process.check(pc.prim2()), .{ pc.next2(), newSp, process, context, undefined });
+//     return @call(tailCall, pc.prim2(), .{ pc.next2(), newSp, process, context, undefined });
 // }
 
 // fn testImmutableClosure(process: *Process, value: Extra) !object.Group {

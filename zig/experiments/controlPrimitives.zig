@@ -35,14 +35,14 @@ fn popLocalData(pc: PC, sp: SP, process: *Process, context: *Context, extra: Ext
     const local = context.getLocal(ref & 0xff);
     trace("popLocalData: {} {}", .{ ref, sp.top });
     local.setField(ref >> 12, sp.top);
-    return @call(tailCall, process.check(pc.prim2()), .{ pc.next2(), sp.drop(), process, context, undefined });
+    return @call(tailCall, pc.prim2(), .{ pc.next2(), sp.drop(), process, context, undefined });
 }
 fn popLocalField(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
     const ref = pc.uint();
     const local = context.getLocal(ref & 0xfff);
     trace("popLocalField: {} {}", .{ ref, sp.top });
     local.setField(ref >> 12, sp.top);
-    return @call(tailCall, process.check(pc.prim2()), .{ pc.next2(), sp.drop(), process, context, undefined });
+    return @call(tailCall, pc.prim2(), .{ pc.next2(), sp.drop(), process, context, undefined });
 }
 fn pushIndirect(pc: PC, sp: SP, process: *Process, context: *Context, signature: Extra) Result {
     _ = .{ pc, sp, process, context, signature, unreachable };
@@ -125,7 +125,7 @@ fn returnWithContext(_: PC, sp: SP, process: *Process, context: *Context, extra:
         trace("{any}", .{stack});
     } else trace("{}", .{stack.len});
     trace("rWC: sp={*} newSp={*}", .{ sp, newSp });
-    return @call(tailCall, process.check(callerContext.getNPc()), .{ callerContext.getTPc(), newSp, process, @constCast(callerContext), undefined });
+    return @call(tailCall, callerContext.getNPc(), .{ callerContext.getTPc(), newSp, process, @constCast(callerContext), undefined });
 }
 
 test "definitions" {
@@ -362,13 +362,13 @@ pub const controlPrimitivesX = struct {
         trace("returnNoContext: {any} N={} T={}", .{ context.stack(sp, process), context.getNPc(), context.getTPc() });
         const tPc = context.getTPc();
         const nPc = tPc.prev().prim();
-        return @call(tailCall, process.check(nPc), .{ tPc, sp, process, context, undefined });
+        return @call(tailCall, Pc, .{ tPc, sp, process, context, undefined });
     }
     pub fn isCallerInThreadedMode(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
         trace("returnNoContext: {any} N={} T={}", .{ context.stack(sp, process), context.getNPc(), context.getTPc() });
         const tPc = context.getTPc();
         const nPc = tPc.prev().prim();
         const newSp = sp.push(if (nPc == context.getNPc()) True else False);
-        return @call(tailCall, process.check(pc.prim()), .{ pc.next(), newSp, process, context, undefined });
+        return @call(tailCall, pc.prim(), .{ pc.next(), newSp, process, context, undefined });
     }
 };

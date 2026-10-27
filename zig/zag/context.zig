@@ -171,7 +171,7 @@ pub const Extra = packed struct {
     }
     pub fn primitiveFailed(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
         trace("primitiveFailed: {f} {f}", .{ extra, pc });
-        return @call(tailCall, process.check(pc.prev().prim()), .{ pc, sp, process, context, extra.encoded() });
+        return @call(tailCall, pc.prev().prim(), .{ pc, sp, process, context, extra.encoded() });
     }
     pub fn format(
         self: Extra,
@@ -483,9 +483,9 @@ pub const threadedFunctions = struct {
         /// return @call(tailCall, pushContext.threadedFn, .{ pc.prev(), sp, process, context, extra });
         pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
             if (extra.installContextIfNone(sp, process, context)) |new| {
-                return @call(tailCall, process.check(pc.prim()), .{ pc.next(), new.sp, process, new.context, new.extra });
+                return @call(tailCall, Process.check(pc.prim()), .{ pc.next(), new.sp, process, new.context, new.extra });
             }
-            return @call(tailCall, process.check(pc.prim()), .{ pc.next(), sp, process, context, extra });
+            return @call(tailCall, Process.check(pc.prim()), .{ pc.next(), sp, process, context, extra });
         }
         test "pushContext" {
             try config.skipForDebugging();
@@ -494,8 +494,8 @@ pub const threadedFunctions = struct {
                 tf.pushLiteral,
                 o0,
             });
-            exe.execute(&[_]Object{Object.from(17, exe.process.getSp(), exe.process.getContext())});
-            try exe.matchStack(&[_]Object{Object.from(42, exe.process.getSp(), exe.process.getContext())});
+            exe.execute(&[_]Object{Object.from(17, Process.getSp(), Process.getContext())});
+            try exe.matchStack(&[_]Object{Object.from(42, Process.getSp(), Process.getContext())});
         }
         // test "init context" {
         //     //    const expectEqual = std.testing.expectEqual;
@@ -526,10 +526,10 @@ pub const threadedFunctions = struct {
             const value = Object.fromAddress(context);
             if (true) @panic("unreachable");
             if (sp.push(value)) |newSp| {
-                return @call(tailCall, process.check(pc.prim()), .{ pc.next(), newSp, process, context, extra });
+                return @call(tailCall, Process.check(pc.prim()), .{ pc.next(), newSp, process, context, extra });
             } else {
                 const newSp, const newContext, const newExtra = process.spillStackAndPush(value, sp, context, extra);
-                return @call(tailCall, process.check(pc.prim()), .{ pc.next(), newSp, process, newContext, newExtra });
+                return @call(tailCall, Process.check(pc.prim()), .{ pc.next(), newSp, process, newContext, newExtra });
             }
         }
     };

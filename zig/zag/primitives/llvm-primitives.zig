@@ -148,7 +148,7 @@ pub const initNativeTarget = if (config.notZag) struct {} else struct {
     pub fn primitive(_: PC, sp: SP, process: *Process, context: *Context, _: Extra) Result {
         // TODO: future might need a fallback case if native target is incorrect
         llvm.target.initNativeTarget();
-        return @call(tailCall, process.check(context.npc.f), .{ context.tpc, sp, process, context, undefined });
+        return @call(tailCall, context.npc.f, .{ context.tpc, sp, process, context, undefined });
     }
     test "initNativeTarget" {
         _ = Execution.initTest("llvm init target", .{
@@ -168,7 +168,7 @@ pub const makeJITPrimitiveGenerator = if (config.notZag) struct {} else struct {
         primitiveGenerator.module = llvm.core.LLVMModuleCreateWithNameInContext("jit_module", primitiveGenerator.context);
         primitiveGenerator.builder = llvm.core.LLVMCreateBuilderInContext(primitiveGenerator.context);
         const new_sp = sp.push(PrimitiveGeneratorRef.asObject(primitiveGenerator));
-        return @call(tailCall, process.check(context.npc.f), .{ context.tpc, new_sp, process, context, undefined });
+        return @call(tailCall, context.npc.f, .{ context.tpc, new_sp, process, context, undefined });
     }
     test "makeJITPrimitiveGenerator" {
         // TODO: Refactor this test later
@@ -201,7 +201,7 @@ pub const freeBuilder = if (config.objectEncoding != .zag) struct {} else struct
             llvm.core.LLVMDisposeBuilder(jit.builder);
             jit.builder = null;
         }
-        return @call(tailCall, process.check(context.npc.f), .{ context.tpc, sp, process, context, undefined });
+        return @call(tailCall, context.npc.f, .{ context.tpc, sp, process, context, undefined });
     }
 };
 
@@ -217,7 +217,7 @@ pub const @"shiftLeftArithmeticly:by:" = if (config.objectEncoding != .zag) stru
         const result = llvm.core.LLVMBuildShl(primitiveGenerator.builder, value, offset, "shift-left");
         const newSp = sp.unreserve(2);
         newSp.top = ValueRef.asObject(result);
-        return @call(tailCall, process.check(context.npc.f), .{ context.tpc, newSp, process, context, undefined });
+        return @call(tailCall, context.npc.f, .{ context.tpc, newSp, process, context, undefined });
     }
 };
 
@@ -233,7 +233,7 @@ pub const @"shiftRightArithmeticly:by:" = if (config.objectEncoding != .zag) str
         const result = llvm.core.LLVMBuildAShr(primitiveGenerator.builder, value, offset, "shift-right");
         const newSp = sp.unreserve(2);
         newSp.top = ValueRef.asObject(result);
-        return @call(tailCall, process.check(context.npc.f), .{ context.tpc, newSp, process, context, undefined });
+        return @call(tailCall, context.npc.f, .{ context.tpc, newSp, process, context, undefined });
     }
 };
 
@@ -250,7 +250,7 @@ pub const @"or:with:" = if (config.objectEncoding != .zag) struct {} else struct
         const result = llvm.core.LLVMBuildOr(primitiveGenerator.builder, objA, objB, "or");
         const newSp = sp.unreserve(2);
         newSp.top = ValueRef.asObject(result);
-        return @call(tailCall, process.check(context.npc.f), .{ context.tpc, newSp, process, context, undefined });
+        return @call(tailCall, context.npc.f, .{ context.tpc, newSp, process, context, undefined });
     }
 };
 
@@ -271,7 +271,7 @@ pub const @"register:plus:name:" = if (config.objectEncoding != .zag) struct {} 
         const newSp = sp.unreserve(3);
         const incrementedReg = singleIndexGEP(@ptrCast(builder), tagObjectTy, regToModify, offset, name);
         newSp.top = ValueRef.asObject(incrementedReg);
-        return @call(tailCall, process.check(context.npc.f), .{ context.tpc, newSp, process, context, undefined });
+        return @call(tailCall, context.npc.f, .{ context.tpc, newSp, process, context, undefined });
     }
 };
 
@@ -287,14 +287,14 @@ pub const @"add:to:" = if (config.objectEncoding != .zag) struct {} else struct 
         const result = llvm.core.LLVMBuildAdd(primitiveGenerator.builder, objA, objB, "add");
         const newSp = sp.unreserve(2);
         newSp.top = ValueRef.asObject(result);
-        return @call(tailCall, process.check(context.npc.f), .{ context.tpc, newSp, process, context, undefined });
+        return @call(tailCall, context.npc.f, .{ context.tpc, newSp, process, context, undefined });
     }
 };
 
 pub const newLabel = struct {
     pub fn primitive(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
         if (isTestMode) return @call(tailCall, Extra.primitiveFailed, .{ pc, sp, process, context, extra });
-        return @call(tailCall, process.check(context.npc.f), .{ context.tpc, sp, process, context, undefined });
+        return @call(tailCall, context.npc.f, .{ context.tpc, sp, process, context, undefined });
     }
 };
 
@@ -302,7 +302,7 @@ pub const @"literalToRegister:" = if (config.objectEncoding != .zag) struct {} e
     pub fn primitive(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
         // const valueToPush = sp.top;
         if (isTestMode) return @call(tailCall, Extra.primitiveFailed, .{ pc, sp, process, context, extra });
-        return @call(tailCall, process.check(context.npc.f), .{ context.tpc, sp, process, context, undefined });
+        return @call(tailCall, context.npc.f, .{ context.tpc, sp, process, context, undefined });
     }
 };
 

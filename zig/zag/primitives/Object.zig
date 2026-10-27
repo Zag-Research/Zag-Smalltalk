@@ -60,7 +60,7 @@ pub const @"basicAt:" = struct {
     pub fn primitive(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
         if (inlines.@"basicAt:"(sp.next, sp.top)) |result| {
             const newSp = sp.dropPut(result);
-            return @call(tailCall, process.check(context.npc.f), .{ context.tpc, newSp, process, context, undefined });
+            return @call(tailCall, context.npc.f, .{ context.tpc, newSp, process, context, undefined });
         } else |_| {}
         return @call(tailCall, Extra.primitiveFailed, .{ pc, sp, process, context, extra });
     }
@@ -69,14 +69,14 @@ pub const @"==" = struct {
     pub const number = 110;
     pub fn primitive(_: PC, sp: SP, process: *Process, context: *Context, _: Extra) Result {
         const newSp = sp.dropPut(Object.from(inlines.@"=="(sp.next, sp.top), sp, context));
-        return @call(tailCall, process.check(context.npc), .{ context.tpc, newSp, process, context, Extra.fromContextData(context.contextDataPtr(sp)) });
+        return @call(tailCall, context.npc, .{ context.tpc, newSp, process, context, Extra.fromContextData(context.contextDataPtr(sp)) });
     }
 };
 pub const @"~~" = struct {
     pub const number = 169;
     pub fn primitive(_: PC, sp: SP, process: *Process, context: *Context, _: Extra) Result {
         const newSp = sp.dropPut(Object.from(inlines.@"~~"(sp.next, sp.top), sp, context));
-        return @call(tailCall, process.check(context.npc), .{ context.tpc, newSp, process, context, Extra.fromContextData(context.contextDataPtr(sp)) });
+        return @call(tailCall, context.npc, .{ context.tpc, newSp, process, context, Extra.fromContextData(context.contextDataPtr(sp)) });
     }
 };
 pub const @"perform:" = struct { // perform: perform:with: perform:with:with: perform:with:with:with:
@@ -103,7 +103,7 @@ pub const @"perform:withArguments:" = struct {
         //     if (selector.numArgs() != 1) @panic("wrong number of args");
         //     const newPc = lookupAddress(selector);//, sp.third.which_class());
         //     context.setTPc(pc + 1);
-        //     return @call(tailCall, process.check(newPc.prim()), .{ newPc.next(), sp + 1, process, context, undefined });
+        //     return @call(tailCall, newPc.prim(), .{ newPc.next(), sp + 1, process, context, undefined });
         _ = .{ pc, sp, process, context, extra, unreachable };
     }
 };

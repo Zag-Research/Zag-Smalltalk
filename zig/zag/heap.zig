@@ -861,8 +861,11 @@ pub const HeapObject = packed struct {
     fn isUnmoving(self: HeapObjectConstPtr) bool {
         return self.header.isUnmoving();
     }
-    pub fn isForwarded(self: HeapObjectConstPtr) bool {
+    pub inline fn isForwarded(self: HeapObjectConstPtr) bool {
         return self.header.isForwarded();
+    }
+    pub inline fn ifForwarded(self: HeapObjectConstPtr) ?*HeapObject {
+        return self.header.ifForwarded();
     }
     pub inline fn isNursery(self: HeapObjectConstPtr) bool {
         return self.header.age.isNursery();

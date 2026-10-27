@@ -368,9 +368,9 @@ pub const Code = union(enum) {
         return sp;
     }
     pub const endMain = primOf(endM);
-    pub fn end(_: PC, sp: SP, process: *Process, context: *Context, _: Extra) Result { // not embedded
-        process.setContext(context);
-        process.setSp(sp);
+    pub fn end(_: PC, sp: SP, _: *Process, context: *Context, _: Extra) Result { // not embedded
+        Process.setContext(context);
+        Process.setSp(sp);
         return sp;
     }
     pub const endCode = primOf(end);
@@ -466,10 +466,10 @@ pub const CompiledMethod = struct {
             .code = .{Code.primOf(methodFn)},
         };
     }
-    pub fn execute(self: *const Self, sp: SP, process: *Process, context: *Context) Result {
+    pub fn execute(self: *const Self, sp: SP, context: *Context) Result {
         const newExtra = Extra.forMethod(self, sp);
         const pc = PC.init(&self.code[0]).next();
-        return self.executeFn(pc, sp, process, context, newExtra);
+        return self.executeFn(pc, sp, undefined, context, newExtra);
     }
     inline fn asHeapObjectPtr(self: *const Self) HeapObjectConstPtr {
         return @ptrCast(self);
@@ -690,8 +690,8 @@ fn CompileTimeMethod(comptime counts: usize) type {
         pub fn getCodeSize(_: *Self) usize {
             return codes;
         }
-        fn execute(self: *Self, sp: SP, process: *Process, context: *Context) Result {
-            return @as(*CompiledMethod, @ptrCast(self)).execute(sp, process, context);
+        fn execute(self: *Self, sp: SP, context: *Context) Result {
+            return @as(*CompiledMethod, @ptrCast(self)).execute(sp, context);
         }
     };
 }
@@ -882,7 +882,7 @@ pub fn compileObject(comptime tup: anytype) CompileTimeObject(countNonLabels(tup
     return objType.init(tup, false);
 }
 test "compileObject" {
-    Process.thisProcess.initProcess();
+    Process.initProcess(0);
     const expectEqual = std.testing.expectEqual;
     const expect = std.testing.expect;
     const c = ClassIndex;
@@ -907,7 +907,7 @@ test "compileObject" {
         for (&o.objects, 0..) |*ob, idx|
             trace("o[{}]: 0x{x:0>16}", .{ idx, @as(u64, @bitCast(ob.*)) });
     }
-    o.setLiterals(&.{ True(), Nil(), True(), Object.from(42.0, Process.thisProcess.getSp(), Process.thisProcess.getContext()) }, &.{@enumFromInt(0xdead)});
+    o.setLiterals(&.{ True(), Nil(), True(), Object.from(42.0, Process.getSp(), Process.getContext()) }, &.{@enumFromInt(0xdead)});
     if (debugging) {
         for (&o.objects, 0..) |*ob, idx|
             trace("o[{}]=0x{x:0>8}: 0x{x:0>16}", .{ idx, @intFromPtr(ob), @as(u64, @bitCast(ob.*)) });
@@ -918,7 +918,7 @@ test "compileObject" {
     //try expect(o.objects[9].equals(o.asObject()));
     //    try expectEqual(@as(u48, @truncate(o.asObject().rawU())), @as(u48, @truncate(@intFromPtr(&o.objects[8]))));
     try expect(o.objects[2].equals(o0));
-    try expectEqual(o.objects[10].to(f64), Object.from(42.0, Process.thisProcess.getSp(), Process.thisProcess.getContext()).to(f64));
+    try expectEqual(o.objects[10].to(f64), Object.from(42.0, Process.getSp(), Process.getContext()).to(f64));
     try expect(o.objects[3].equals(Nil()));
     try expect(o.objects[5].equals(True()));
     const h1: HeapObjectConstPtr = @ptrCast(&o.objects[0]);
@@ -971,63 +971,58 @@ pub const Execution = struct {
     pub const failed: Object = @bitCast(failedObject);
     fn Executer(MethodType: type) type {
         return struct {
-            process: *Process,
             method: MethodType,
             process_initted: bool = false,
             const Self = @This();
             pub fn new(method: MethodType) Self {
                 return Self{
-                    .process = &Process.thisProcess,
                     .method = method,
                 };
             }
-            pub fn initProcess(self: *Self) *Process {
+            pub fn initProcess(self: *Self) void {
                 if (!self.process_initted) {
-                    self.process.initProcess();
+                    Process.initProcess(0);
                     self.process_initted = true;
                 }
-                return self.process;
             }
             pub fn init(self: *Self, stackObjects: ?[]const Object) void {
-                _ = self.initProcess();
+                self.initProcess();
                 if (stackObjects) |source| {
                     self.initStack(source);
                 }
             }
             fn initStack(self: *Self, source: []const Object) void {
-                const sp = self.initProcess().endOfStack().safeReserve(source.len);
-                self.process.setSp(sp);
+                self.initProcess();
+                const sp = Process.endOfStack().safeReserve(source.len);
+                Process.setSp(sp);
                 for (source, sp.slice(source.len)) |src, *stck|
                     stck.* = src;
             }
             pub fn resolve(self: *Self, objects: []const Object) !void {
                 try self.method.resolve(objects);
             }
-            pub fn stack(self: *Self) []Object {
-                return self.getProcess().getContext().stack(self.process.getSp());
+            pub fn stack(_: *Self) []Object {
+                return Process.getContext().stack(getSp());
             }
-            pub fn fullStack(self: *Self) []Object {
-                return self.getSp().getStack();
+            pub fn fullStack() []Object {
+                return getSp().getStack();
             }
-            pub fn getHeap(self: *Self) []HeapObject {
-                return self.getProcess().getHeap();
+            pub fn getHeap() []HeapObject {
+                return Process.getHeap();
             }
-            pub fn getProcess(self: *Self) *Process {
-                return self.initProcess();
+            pub fn getContext() *Context {
+                return Process.getContext();
             }
-            pub fn getContext(self: *Self) *Context {
-                return self.getProcess().getContext();
+            pub fn getSp() SP {
+                return Process.getSp();
             }
-            pub fn getSp(self: *Self) SP {
-                return self.getProcess().getSp();
-            }
-            pub inline fn object(self: *Self, value: anytype) Object {
-                return Object.from(value, self.getSp(), self.getContext());
+            pub inline fn object(_: *Self, value: anytype) Object {
+                return Object.from(value, getSp(), getContext());
             }
             pub fn execute(self: *Self, stackObjects: ?[]const Object) void {
                 self.init(stackObjects);
                 //                self.resolve(Object.empty) catch @panic("Failed to resolve");
-                _ = self.method.execute(self.getSp(), self.getProcess(), self.getContext());
+                _ = self.method.execute(getSp(), getContext());
                 //                self.getSp().traceStack("return from execution", self.getContext(), Extra.none);
             }
             pub fn matchStack(self: *Self, expected: []const Object) !void {
@@ -1049,7 +1044,7 @@ pub const Execution = struct {
                 return self.runWithValidator(validator, source, expected);
             }
             fn runWithValidator(self: *Self, validator: *const fn (*Self, []const Object) ValidateErrors!void, source: []const Object, expected: []const Object) !void {
-                self.process.initProcess();
+                Process.initProcess(0);
                 self.execute(source);
                 try validator(self, expected);
             }
@@ -1071,25 +1066,26 @@ pub const Execution = struct {
     }
 
     pub const MainExecutor = struct {
-        exe: Executer(*const CompiledMethod),
+        exe: ExecutorType,
+        const ExecutorType = Executer(*const CompiledMethod);
         pub fn new() MainExecutor {
-            return .{ .exe = Executer(*const CompiledMethod).new(undefined) };
+            return .{ .exe = ExecutorType.new(undefined) };
         }
-        pub inline fn object(self: *MainExecutor, value: anytype) Object {
-            return self.exe.object(value);
+        pub inline fn object(_: MainExecutor, value: anytype) Object {
+            return ExecutorType.object(value);
         }
         pub fn sendTo(self: *MainExecutor, selector: Object, receiver: Object) !Object {
             var exe = &self.exe;
             trace("Sending: {f} ({x}) to {f}", .{ selector, selector.testU(), receiver });
-            exe.init(Object.empty);
-            exe.getContext().setReturn(PC.exit());
-            trace("SendTo: context {*} {*} {f}", .{ exe.getContext(), exe.getContext().npc, exe.getContext().tpc });
+            _ = init(Object.empty);
+            ExecutorType.getContext().setReturn(PC.exit());
+            trace("SendTo: context {*} {*} {f}", .{ ExecutorType.getContext(), ExecutorType.getContext().npc, ExecutorType.getContext().tpc });
             const class = receiver.which_class();
             trace("selector: 0x{x:0>16}", .{@as(u64, @bitCast(selector))});
             const signature = if (selector.symbolHash()) |hsh| Signature.from(hsh, selector.numArgs(), class) else unreachable;
             exe.method = zag.dispatch.lookupMethodForClass(class, signature);
             exe.execute(&[_]Object{receiver});
-            return exe.fullStack()[0];
+            return ExecutorType.fullStack()[0];
         }
     };
 };

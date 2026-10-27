@@ -33,9 +33,9 @@ pub const threadedFns = struct {
         pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
             if (sp.top.equals(True())) {
                 const newPc = pc.targetPC();
-                return @call(tailCall, process.check(newPc.prim()), .{ newPc.next(), sp.drop(), process, context, extra });
+                return @call(tailCall, Process.check(newPc.prim()), .{ newPc.next(), sp.drop(), process, context, extra });
             }
-            return @call(tailCall, process.check(pc.prim2()), .{ pc.next2(), sp.drop(), process, context, extra });
+            return @call(tailCall, Process.check(pc.prim2()), .{ pc.next2(), sp.drop(), process, context, extra });
         }
     };
     pub const branchFalse = struct {
@@ -44,9 +44,9 @@ pub const threadedFns = struct {
             if (sp.top.equals(False())) {
                 const newPc = pc.targetPC();
                 trace("Boolean>>#inlinePrimitive: branchFalse {f} {f}", .{ pc, newPc });
-                return @call(tailCall, process.check(newPc.prim()), .{ newPc.next(), sp.drop(), process, context, extra });
+                return @call(tailCall, Process.check(newPc.prim()), .{ newPc.next(), sp.drop(), process, context, extra });
             }
-            return @call(tailCall, process.check(pc.prim2()), .{ pc.next2(), sp.drop(), process, context, extra });
+            return @call(tailCall, Process.check(pc.prim2()), .{ pc.next2(), sp.drop(), process, context, extra });
         }
     };
 };
