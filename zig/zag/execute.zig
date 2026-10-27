@@ -851,8 +851,8 @@ fn CompileTimeObject(comptime counts: usize) type {
                         header.objectFormat == .notIndexable and
                         header.age == .static)
                     {
-                        if (@intFromEnum(header.classIndex) >= @intFromEnum(ClassIndex.replace0)) {
-                            header.classIndex = classes[@intFromEnum(header.classIndex) - @intFromEnum(ClassIndex.replace0)];
+                        if (@intFromEnum(header.classIndex) >= @intFromEnum(ClassIndex.ReplacementIndices)) {
+                            header.classIndex = classes[@intFromEnum(header.classIndex) - @intFromEnum(ClassIndex.ReplacementIndices)];
                         }
                         header.hash ^= zag.utilities.ProspectorHash.hash24(@truncate(@intFromPtr(o) >> 3));
                         lastHeader = header;

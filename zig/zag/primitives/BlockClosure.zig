@@ -132,10 +132,9 @@ pub const threadedFns = struct {
             return @call(tailCall, pc.skip(2).prim(), .{ pc.skip(2).next(), newSp, newContext, newExtra });
         }
         test "pushClosure" {
-            var process: Process align(Process.alignment) = undefined;
-            process.init();
-            const sp = process.getSp();
-            const context = process.getContext();
+            Process.initProcess(0);
+            const sp = Process.getSp();
+            const context = Process.getContext();
             const exe1 = Execution.init(.{});
             const testMethod = exe1.method;
             var exe = Execution.initTest("pushClosure", .{
