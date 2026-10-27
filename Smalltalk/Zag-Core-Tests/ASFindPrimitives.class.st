@@ -41,7 +41,7 @@ ASFindPrimitives >> printEmbedded: s [
 			nextPutAll: '    pub fn @"';
 			nextPutAll: selector;
 			nextPutAll:
-				'"(pc: [*]const Code, sp: [*]Object, process: *Process, extra: Extra) Result {
+				'"(pc: [*]const Code, sp: [*]Object, extra: Extra) Result {
         sp['.
 		selector numArgs printOn: s.
 		s nextPutAll: '] = inlines.p'.
@@ -54,12 +54,12 @@ ASFindPrimitives >> printEmbedded: s [
 			n > 0 ifTrue: [ s nextPut: $, ] ].
 		s
 			nextPutAll:
-				') catch return @call(tailCall, fallback, .{ pc, sp, process, context, Sym.@"';
+				') catch return @call(tailCall, fallback, .{ pc, sp, context, Sym.@"';
 			nextPutAll: selector;
 			nextPutAll: '" });
         return @call(tailCall, pc[0].prim, .{ pc + 1, sp + '.
 		selector numArgs printOn: s.
-		s nextPutAll: ', process, context, selector });
+		s nextPutAll: ', context, selector });
     }
 ' ]
 ]
@@ -144,10 +144,10 @@ ASFindPrimitives >> printPrimitives: s [
 		assoc key printOn: s.
 		s
 			nextPutAll:
-				'(pc: [*]const Code, sp: [*]Object, process: *Process, context: ContextPtr, selector: Object) [*]Object { // ';
+				'(pc: [*]const Code, sp: [*]Object, context: ContextPtr, selector: Object) [*]Object { // ';
 			nextPutAll: assoc value selector;
 			nextPutAll: '
-        _ = .{ pc, sp, process, context, selector };
+        _ = .{ pc, sp, context, selector };
         @panic("unimplemented");
     }
 ' ]

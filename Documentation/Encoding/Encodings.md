@@ -6,8 +6,8 @@ One of the contributions of Zag is analysis of various object encodings
 
 [Zag](Zag.md) is the current encoding used by Zag Smalltalk. It has good Float performance and encodes the most common 1/4 of floating point values (that covers 97% of actual usage) as immediates, has exceptional integer performance, and can encode the broadest range of immediate values, including native pointers.
 
+[ZagCompact](ZagCompact.md) is a variant of Zag that gives `Float` 4 of the 8 tag values instead of 2.
+
 [Spur](Spur.md) is the encoding used by the OpenSmalltalkVM. It has mediocre Float performance and encodes the most common floating point values as immediates (reducing the exponent by 3 bits), has exceptional integer performance, and of the remaining classes encodes only `Character` as immediate values.
 
-Ptr
-
-TaggedInt
+`Ptr` and `TaggedInt` are implemented in `zig/zag/encoding/ptr.zig` and `zig/zag/encoding/taggedInt.zig`. Neither is documented yet.

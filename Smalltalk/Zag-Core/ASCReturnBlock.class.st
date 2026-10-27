@@ -14,6 +14,11 @@ Class {
 	#tag : 'BasicBlocks'
 }
 
+{ #category : 'accessing' }
+ASCReturnBlock >> arguments [
+	^0
+]
+
 { #category : 'data flow instructions' }
 ASCReturnBlock >> becomeJoinBlock [
 
@@ -49,6 +54,11 @@ ASCReturnBlock >> flowForTemporaries [
 ASCReturnBlock >> llvmLabel [
 
 	^ '0'
+]
+
+{ #category : 'accessing' }
+ASCReturnBlock >> locals [
+	^0
 ]
 
 { #category : 'data flow instructions' }

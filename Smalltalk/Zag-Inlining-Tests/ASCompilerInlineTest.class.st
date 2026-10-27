@@ -248,6 +248,34 @@ ASCompilerInlineTest >> testBlockEvaluationWithCallAndLocalWithoutTailCall [
 ]
 
 { #category : 'tests' }
+ASCompilerInlineTest >> testBlockEvaluationWithCallAndLocalWithoutTailCall2 [
+	"blockEvaluationWithCallAndLocalWithoutTailCall
+		""bar ^42""
+		| x |
+		x := [ |y| y:= self bar + 5. ^y ] value.
+		^ x "
+
+	self
+		assertEquivalentSending:
+		#blockEvaluationWithCallAndLocalWithoutTailCall2
+		to: ASCompileTestClass1 new
+]
+
+{ #category : 'tests' }
+ASCompilerInlineTest >> testBlockEvaluationWithCallAndLocalWithoutTailCall3 [
+	"blockEvaluationWithCallAndLocalWithoutTailCall
+		""bar ^42""
+		| x |
+		x := [ |y| y:= self bar. ^y ] value.
+		^ x "
+
+	self
+		assertEquivalentSending:
+		#blockEvaluationWithCallAndLocalWithoutTailCall3
+		to: ASCompileTestClass1 new
+]
+
+{ #category : 'tests' }
 ASCompilerInlineTest >> testBlockEvaluationWithCallNonLocal [
 	"blockEvaluationWithCall
 		""bar ^42""
@@ -362,6 +390,35 @@ blockWithAdd
 	^ [ 5 +10 ] value"
 
 	self assertEquivalentSending: #blockWithAdd to: ASCompileTestClass1 new
+]
+
+{ #category : 'tests' }
+ASCompilerInlineTest >> testCallWithLocal [
+	"callWithLocal
+
+	| y |
+	y := self simple1.
+	^ y"
+
+	self assertEquivalentSending: #callWithLocal to: ASCompileTestClass1 new.
+	interpreter inspect.
+	self assert: interpreter basicBlocks size equals: 1.
+	self assert: interpreter codeSize equals: 1
+]
+
+{ #category : 'tests' }
+ASCompilerInlineTest >> testCallWithLocalInitialized [
+	"callWithLocalInitialized
+
+	| y |
+	y:= 5.
+	y := self simple1.
+	^ y"
+
+	self assertEquivalentSending: #callWithLocalInitialized to: ASCompileTestClass1 new.
+	interpreter inspect.
+	self assert: interpreter basicBlocks size equals: 3.
+	self assert: interpreter codeSize equals: 3
 ]
 
 { #category : 'tests' }

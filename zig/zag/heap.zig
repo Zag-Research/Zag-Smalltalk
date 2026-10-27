@@ -813,8 +813,8 @@ pub const HeapObject = packed struct {
     ) !void {
         try writer.print("{{{f}, ...}}", .{self.header});
     }
-    pub fn allocator(self: *HeapObject, process: *zag.Process) *fn () void {
-        _ = .{ self, process, @panic("undefined") };
+    pub fn allocator(self: *HeapObject) *fn () void {
+        _ = .{ self, @panic("undefined") };
     }
     pub fn nowHasPointers(self: *HeapObject) void {
         self.header = self.header.nowHasPointers();
@@ -861,8 +861,11 @@ pub const HeapObject = packed struct {
     fn isUnmoving(self: HeapObjectConstPtr) bool {
         return self.header.isUnmoving();
     }
-    pub fn isForwarded(self: HeapObjectConstPtr) bool {
+    pub inline fn isForwarded(self: HeapObjectConstPtr) bool {
         return self.header.isForwarded();
+    }
+    pub inline fn ifForwarded(self: HeapObjectConstPtr) ?*HeapObject {
+        return self.header.ifForwarded();
     }
     pub inline fn isNursery(self: HeapObjectConstPtr) bool {
         return self.header.age.isNursery();

@@ -40,12 +40,12 @@ pub const @"+" = struct {
         }
         return null;
     }
-    pub fn primitive(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result { // SmallInteger>>#+
+    pub fn primitive(pc: PC, sp: SP, context: *Context, extra: Extra) Result { // SmallInteger>>#+
         if (with(sp.next.nativeF() orelse unreachable, sp.top, sp, context)) |result| {
             const newSp = sp.dropPut(result);
-            return @call(tailCall, process.check(context.npc), .{ context.tpc, newSp, process, context, Extra.fromContextData(context.contextDataPtr(sp)) });
+            return @call(tailCall, context.npc, .{ context.tpc, newSp, context, Extra.fromContextData(context.contextDataPtr(sp)) });
         }
-        return @call(tailCall, Extra.primitiveFailed, .{ pc, sp, process, context, extra });
+        return @call(tailCall, Extra.primitiveFailed, .{ pc, sp, context, extra });
     }
     test "simple add (Float)" {
         var exe = Execution.initTest("simple add", .{ tf.primitive, comptime fromPrimitive(41) });
@@ -59,15 +59,15 @@ pub const @"+" = struct {
             },
         );
     }
-    pub fn inlinePrimitive(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
+    pub fn inlinePrimitive(pc: PC, sp: SP, context: *Context, extra: Extra) Result {
         sp.traceStack("+", context, extra);
         if (sp.next.nativeF()) |self| {
             if (with(self, sp.top, sp, context)) |result| {
                 const newSp = sp.dropPut(result);
-                return @call(tailCall, process.check(pc.prim2()), .{ pc.next2(), newSp, process, context, extra });
+                return @call(tailCall, pc.prim2(), .{ pc.next2(), newSp, context, extra });
             }
         }
-        return @call(tailCall, Dispatch.fail, .{ pc, sp, process, context, extra });
+        return @call(tailCall, Dispatch.fail, .{ pc, sp, context, extra });
     }
 };
 pub const @"-" = struct {
@@ -80,22 +80,22 @@ pub const @"-" = struct {
         }
         return null;
     }
-    pub fn primitive(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result { // SmallInteger>>#-
+    pub fn primitive(pc: PC, sp: SP, context: *Context, extra: Extra) Result { // SmallInteger>>#-
         if (with(sp.next.nativeF() orelse unreachable, sp.top, sp, context)) |result| {
             const newSp = sp.dropPut(result);
-            return @call(tailCall, process.check(context.npc), .{ context.tpc, newSp, process, context, Extra.fromContextData(context.contextDataPtr(sp)) });
+            return @call(tailCall, context.npc, .{ context.tpc, newSp, context, Extra.fromContextData(context.contextDataPtr(sp)) });
         }
-        return @call(tailCall, Extra.primitiveFailed, .{ pc, sp, process, context, extra });
+        return @call(tailCall, Extra.primitiveFailed, .{ pc, sp, context, extra });
     }
-    pub fn inlinePrimitive(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
+    pub fn inlinePrimitive(pc: PC, sp: SP, context: *Context, extra: Extra) Result {
         sp.traceStack("-", context, extra);
         if (sp.next.nativeF()) |self| {
             if (with(self, sp.top, sp, context)) |result| {
                 const newSp = sp.dropPut(result);
-                return @call(tailCall, process.check(pc.prim2()), .{ pc.next2(), newSp, process, context, extra });
+                return @call(tailCall, pc.prim2(), .{ pc.next2(), newSp, context, extra });
             }
         }
-        return @call(tailCall, Dispatch.fail, .{ pc, sp, process, context, extra });
+        return @call(tailCall, Dispatch.fail, .{ pc, sp, context, extra });
     }
 };
 pub const @"<=" = struct {
@@ -108,22 +108,22 @@ pub const @"<=" = struct {
         }
         return null;
     }
-    pub fn primitive(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result { // SmallInteger>>#<=
+    pub fn primitive(pc: PC, sp: SP, context: *Context, extra: Extra) Result { // SmallInteger>>#<=
         if (with(sp.next.nativeF() orelse unreachable, sp.top, sp, context)) |result| {
             const newSp = sp.dropPut(result);
-            return @call(tailCall, process.check(context.npc), .{ context.tpc, newSp, process, context, Extra.fromContextData(context.contextDataPtr(sp)) });
+            return @call(tailCall, context.npc, .{ context.tpc, newSp, context, Extra.fromContextData(context.contextDataPtr(sp)) });
         }
-        return @call(tailCall, Extra.primitiveFailed, .{ pc, sp, process, context, extra });
+        return @call(tailCall, Extra.primitiveFailed, .{ pc, sp, context, extra });
     }
-    pub fn inlinePrimitive(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
+    pub fn inlinePrimitive(pc: PC, sp: SP, context: *Context, extra: Extra) Result {
         sp.traceStack("<=", context, extra);
         if (sp.next.nativeF()) |self| {
             if (with(self, sp.top, sp, context)) |result| {
                 const newSp = sp.dropPut(result);
-                return @call(tailCall, process.check(pc.prim2()), .{ pc.next2(), newSp, process, context, extra });
+                return @call(tailCall, pc.prim2(), .{ pc.next2(), newSp, context, extra });
             }
         }
-        return @call(tailCall, Dispatch.fail, .{ pc, sp, process, context, extra });
+        return @call(tailCall, Dispatch.fail, .{ pc, sp, context, extra });
     }
 };
 pub const @"*" = struct {
@@ -136,21 +136,21 @@ pub const @"*" = struct {
         }
         return null;
     }
-    pub fn primitive(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result { // SmallInteger>>#*
+    pub fn primitive(pc: PC, sp: SP, context: *Context, extra: Extra) Result { // SmallInteger>>#*
         if (with(sp.next.nativeF() orelse unreachable, sp.top, sp, context)) |result| {
             const newSp = sp.dropPut(result);
-            return @call(tailCall, process.check(context.npc), .{ context.tpc, newSp, process, context, Extra.fromContextData(context.contextDataPtr(sp)) });
+            return @call(tailCall, context.npc, .{ context.tpc, newSp, context, Extra.fromContextData(context.contextDataPtr(sp)) });
         }
-        return @call(tailCall, Extra.primitiveFailed, .{ pc, sp, process, context, extra });
+        return @call(tailCall, Extra.primitiveFailed, .{ pc, sp, context, extra });
     }
-    pub fn inlinePrimitive(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
+    pub fn inlinePrimitive(pc: PC, sp: SP, context: *Context, extra: Extra) Result {
         if (sp.next.nativeF()) |self| {
             if (with(self, sp.top, sp, context)) |result| {
                 const newSp = sp.dropPut(result);
-                return @call(tailCall, process.check(pc.prim2()), .{ pc.next2(), newSp, process, context, extra });
+                return @call(tailCall, pc.prim2(), .{ pc.next2(), newSp, context, extra });
             }
         }
-        return @call(tailCall, Dispatch.fail, .{ pc, sp, process, context, extra });
+        return @call(tailCall, Dispatch.fail, .{ pc, sp, context, extra });
     }
 };
 pub const threadedFns = struct {

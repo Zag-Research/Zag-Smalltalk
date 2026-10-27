@@ -44,12 +44,12 @@ The `@import`ed module looks like:
 pub const moduleName = "someModuleName";
 pub const "somePrimitiveName" = struct {
     pub const number = 60;
-    pub fn primitive(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
+    pub fn primitive(pc: PC, sp: SP, context: *Context, extra: Extra) Result {
         if (produceValidResultForThisPrimitive(sp)) |result| {
             const newSp = sp.dropPut(result);
-            return @call(tailCall, process.check(context.npc.f), .{ context.tpc, newSp, process, context, undefined });
+            return @call(tailCall, process.check(context.npc.f), .{ context.tpc, newSp, context, undefined });
         } else |_| {}
-        return @call(tailCall, Extra.primitiveFailed, .{ pc, sp, process, context, extra });
+        return @call(tailCall, Extra.primitiveFailed, .{ pc, sp, context, extra });
     }
     test "some test" {}
 };
