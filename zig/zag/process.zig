@@ -260,7 +260,7 @@ const Debugger = struct {
     var buf: [10]u8 = undefined;
     var stdin = std.fs.File.stdin().reader(&buf);
     var in = &stdin.interface; // must be separate bc @fieldParentPtr. Thanks @Freakman
-    fn step(pc: PC, sp: SP, _: *Process, context: *Context, extra: Extra) Result {
+    fn step(pc: PC, sp: SP, context: *Context, extra: Extra) Result {
         trace("step: {f}", .{pc});
         const primPC = pc.prev();
         trace(" {f}", .{primPC});
@@ -321,14 +321,14 @@ pub inline fn getContext() *Context {
 pub inline fn setContext(context: *Context) void {
     thisProcess.context = context;
 }
-pub inline fn freeStack(_: *Process, sp: SP) usize {
-    return (@intFromPtr(sp) - @intFromPtr(&thisProcess)) / 8;
+pub inline fn freeStack(sp: SP) usize {
+    return (@intFromPtr(sp) - @intFromPtr(&thisProcess.stack)) / 8;
 }
 
-pub inline fn getHeap(_: *Process) []HeapObject {
+pub inline fn getHeap() []HeapObject {
     return thisProcess.currHeap[0..((@intFromPtr(thisProcess.currHp) - @intFromPtr(thisProcess.currHeap)) / @sizeOf(Object))];
 }
-pub fn allocArray(_: *Process, slice: []const Object, sp: SP, context: *Context) HeapObjectArray {
+pub fn allocArray(slice: []const Object, sp: SP, context: *Context) HeapObjectArray {
     const len: u11 = @intCast(slice.len);
     const hop = thisProcess.allocSpace(len, sp, context);
     HeapHeader.objectInNursery(.Array, .directIndexed, len).storeAt(hop);
@@ -336,7 +336,7 @@ pub fn allocArray(_: *Process, slice: []const Object, sp: SP, context: *Context)
     @memcpy(target + 1, @as([]const HeapObject, @ptrCast(slice)));
     return target;
 }
-fn allocSpace(_: *Process, size: u11, sp: SP, context: *Context) *HeapObject {
+fn allocSpace(size: u11, sp: SP, context: *Context) *HeapObject {
     const result = thisProcess.currHp;
     const newHp = result + size + 1;
     if (@intFromPtr(newHp) <= @intFromPtr(thisProcess.currEnd)) {
@@ -623,13 +623,13 @@ pub const threadedFunctions = struct {
         }
     };
     // pub const debug = struct {
-    //     pub fn threadedFn(pc: PC, sp: SP, _: *Process, context: *Context, extra: Extra) Result {
+    //     pub fn threadedFn(pc: PC, sp: SP, context: *Context, extra: Extra) Result {
     //         const newProcess = singleStep();
     //         return @call(tailCall, pc.prim(), .{ pc.next(), sp, newProcess, context, extra });
     //     }
     // };
     // pub const enddebug = struct {
-    //     pub fn threadedFn(pc: PC, sp: SP, _: *Process, context: *Context, extra: Extra) Result {
+    //     pub fn threadedFn(pc: PC, sp: SP, context: *Context, extra: Extra) Result {
     //         const newProcess = unSingleStep();
     //         return @call(tailCall, pc.prim(), .{ pc.next(), sp, newProcess, context, extra });
     //     }
