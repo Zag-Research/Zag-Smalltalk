@@ -1,3 +1,5 @@
+//! Compile-time build options and debug flags.
+
 const std = @import("std");
 const builtin = @import("builtin");
 const Process = @import("process.zig");
