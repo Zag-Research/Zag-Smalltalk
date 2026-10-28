@@ -44,6 +44,9 @@ Ben Eater’s video series [gates to CPU](https://www.youtube.com/playlist?list=
 ## AmbientTalk
 [wikipedia](https://en.wikipedia.org/wiki/AmbientTalk) [SOFT lab](https://soft.vub.ac.be/amop/)
 
+## Alternative to Rails
+[Hanakai](https://hanakai.org/)
+
 ## Logic diagrams
 [(A AND (NOT B)) OR C](https://www.101computing.net/logic-gates/?title=%28+A+AND+%28+NOT+B+%29+%29+OR+C)
 [Circuit Verse](https://circuitverse.org/)
