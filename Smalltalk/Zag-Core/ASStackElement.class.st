@@ -75,7 +75,7 @@ ASStackElement >> do: aBlock [
 { #category : 'instance creation' }
 ASStackElement >> fromStack: anASStack [
 
-	offset := anASStack offset. "Daniel removed + 1."
+	offset := anASStack offset + 1.
 	next := anASStack
 ]
 
