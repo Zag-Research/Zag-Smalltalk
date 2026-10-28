@@ -195,20 +195,20 @@ const Dispatch = struct {
         }
         return false;
     }
-    fn fail(programCounter: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
-        _ = .{ programCounter, sp, process, context, extra };
+    fn fail(programCounter: PC, sp: SP, context: *Context, extra: Extra) Result {
+        _ = .{ programCounter, sp, context, extra };
         if (programCounter.uint() == 0)
             @panic("called fail function");
         @panic("fail with non-zero next");
     }
-    fn testDnu(programCounter: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
-        _ = .{ programCounter, sp, process, context, extra, @panic("testDnu") };
+    fn testDnu(programCounter: PC, sp: SP, context: *Context, extra: Extra) Result {
+        _ = .{ programCounter, sp, context, extra, @panic("testDnu") };
     }
-    fn testGrow(programCounter: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
-        _ = .{ programCounter, sp, process, context, extra, @panic("testGrow") };
+    fn testGrow(programCounter: PC, sp: SP, context: *Context, extra: Extra) Result {
+        _ = .{ programCounter, sp, context, extra, @panic("testGrow") };
     }
-    fn testIncrement(programCounter: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
-        _ = .{ process, context, extra };
+    fn testIncrement(programCounter: PC, sp: SP, context: *Context, extra: Extra) Result {
+        _ = .{ context, extra };
         @as(*usize, @ptrFromInt(programCounter.uint())).* += 1;
         return sp;
     }
@@ -257,31 +257,36 @@ test "add/lookup" {
 pub const threadedFunctions = struct {
     const tf = zag.threadedFn.Enum;
     pub const returnSelf = struct {
-        pub fn threadedFn(_: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
+        pub fn threadedFn(_: PC, sp: SP, context: *Context, extra: Extra) Result {
             sp.traceStack("returnSelf", context, extra);
             trace("returnSelf extra=0x{x:0>16}", .{@as(u64, @bitCast(extra))});
             if (extra.selfAddress(sp)) |address| {
                 const newSp: SP = @ptrCast(address);
                 const newExtra = Extra.fromContextData(context.contextDataPtr(sp));
                 newSp.traceStack("returnSelf after", context, newExtra);
-                return @call(tailCall, process.check(context.npc), .{ context.tpc, newSp, process, context, newExtra });
+                return @call(tailCall, context.npc, .{ context.tpc, newSp, context, newExtra });
             }
             const newSp, const callerContext = context.pop(sp);
             const newExtra = Extra.fromContextData(callerContext.contextDataPtr(sp));
             newSp.traceStack("returnSelf after pop", context, newExtra);
-            return @call(tailCall, process.branchCheck(callerContext.getNPc()), .{ callerContext.getTPc(), newSp, process, callerContext, newExtra });
+            return @call(tailCall, callerContext.getNPc(), .{ callerContext.getTPc(), newSp, callerContext, newExtra });
         }
         test {
-            if (true) return config.skipForDebugging();
             var exe = Execution.initTest("returnSelf", .{
                 tf.pushLiteral,
-                91,
+                "0=91",
                 tf.pushLiteral,
-                17,
+                "1=17",
                 tf.returnSelf,
-                2,
+                "2=2",
                 tf.pushLiteral,
-                99,
+                "3=99",
+            });
+            try exe.resolve(&[_]Object{
+                exe.object(91),
+                exe.object(17),
+                exe.object(42),
+                exe.object(99),
             });
             try exe.runTest(
                 &[_]Object{exe.object(42)},
@@ -290,40 +295,44 @@ pub const threadedFunctions = struct {
         }
     };
     pub const returnTop = struct {
-        pub fn threadedFn(_: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
+        pub fn threadedFn(_: PC, sp: SP, context: *Context, extra: Extra) Result {
             const top = sp.top;
             sp.traceStack("returnTop", context, extra);
             if (extra.selfAddress(sp)) |address| {
                 const newSp: SP = @ptrCast(address);
                 newSp.top = top;
                 newSp.traceStack("returnTop after", context, extra);
-                return @call(tailCall, process.check(context.npc), .{ context.tpc, newSp, process, context, Extra.fromContextData(context.contextDataPtr(sp)) });
+                return @call(tailCall, context.npc, .{ context.tpc, newSp, context, Extra.fromContextData(context.contextDataPtr(sp)) });
             }
             const newSp, const callerContext = context.pop(sp);
             newSp.top = top;
             newSp.traceStack("returnTop after pop", context, extra);
-            return @call(tailCall, process.branchCheck(callerContext.npc), .{ callerContext.tpc, newSp, process, callerContext, Extra.fromContextData(callerContext.contextDataPtr(sp)) });
+            return @call(tailCall, callerContext.npc, .{ callerContext.tpc, newSp, callerContext, Extra.fromContextData(callerContext.contextDataPtr(sp)) });
         }
         test {
-            if (true) return config.skipForDebugging();
             var exe = Execution.initTest("returnTopNoContext", .{
                 tf.pushLiteral,
-                91,
+                "0=91",
                 tf.pushLiteral,
                 o0,
                 tf.returnTop,
-                2,
+                "1=2",
                 tf.pushLiteral,
-                99,
+                "2=99",
+            });
+            try exe.resolve(&[_]Object{
+                exe.object(91),
+                exe.object(2),
+                exe.object(99),
             });
             try exe.runTest(
                 &[_]Object{True()},
-                &[_]Object{exe.object(42)},
+                &[_]Object{o0},
             );
         }
     };
     pub const returnTopNonLocal = struct {
-        pub fn threadedFn(_: PC, _: SP, _: *Process, _: *Context, _: Extra) Result {
+        pub fn threadedFn(_: PC, _: SP, _: *Context, _: Extra) Result {
             @panic("unreachable");
         }
     };
@@ -344,7 +353,7 @@ pub const threadedFunctions = struct {
         return method;
     }
     pub const send = struct {
-        pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
+        pub fn threadedFn(pc: PC, sp: SP, context: *Context, extra: Extra) Result {
             sp.traceStack("send", context, extra);
             const signature = pc.signature();
             const numArgs = signature.numArgs();
@@ -353,7 +362,7 @@ pub const threadedFunctions = struct {
             trace("method: {f}", .{method});
             const newPc = method.codePc();
             trace("newPc: {f}", .{newPc});
-            if (extra.installContextIfNone(sp, process, context)) |new| {
+            if (extra.installContextIfNone(sp, context)) |new| {
                 const newSp = new.sp;
                 const newContext = new.context;
                 newContext.setReturn(pc.next2());
@@ -361,40 +370,40 @@ pub const threadedFunctions = struct {
                 trace("newExtra {x} {f}", .{ @as(u64, @bitCast(newExtra)), newExtra });
                 newSp.traceStack("send new stack", newContext, newExtra);
                 trace("newPc: {f} {?}", .{ newPc, @import("threadedFn.zig").find(method.executeFn) });
-                return @call(tailCall, method.executeFn, .{ newPc.next(), newSp, process, newContext, newExtra });
+                return @call(tailCall, method.executeFn, .{ newPc.next(), newSp, newContext, newExtra });
             }
             context.setReturn(pc.next2());
             //method.dump();
-            return @call(tailCall, method.executeFn, .{ newPc.next(), sp, process, context, Extra.forMethod(method, selfAddr) });
+            return @call(tailCall, method.executeFn, .{ newPc.next(), sp, context, Extra.forMethod(method, selfAddr) });
         }
     };
     pub const send0 = struct {
-        pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
+        pub fn threadedFn(pc: PC, sp: SP, context: *Context, extra: Extra) Result {
             sp.traceStack("send0", context, extra);
             const signature = pc.signature();
             const method = getMethod(pc, signature, sp.top);
             const newPc = method.codePc();
-            if (extra.installContextIfNone(sp, process, context)) |new| {
+            if (extra.installContextIfNone(sp, context)) |new| {
                 const newSp = new.sp;
                 const newContext = new.context;
                 newContext.setReturn(pc.next2());
-                return @call(tailCall, method.executeFn, .{ newPc.next(), newSp, process, newContext, Extra.forMethod(method, newSp) });
+                return @call(tailCall, method.executeFn, .{ newPc.next(), newSp, newContext, Extra.forMethod(method, newSp) });
             }
             context.setReturn(pc.next2());
-            return @call(tailCall, method.executeFn, .{ newPc.next(), sp, process, context, Extra.forMethod(method, sp) });
+            return @call(tailCall, method.executeFn, .{ newPc.next(), sp, context, Extra.forMethod(method, sp) });
         }
     };
     pub const tailSend = struct {
-        pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
+        pub fn threadedFn(pc: PC, sp: SP, context: *Context, extra: Extra) Result {
             const signature = pc.signature();
             const method = getMethod(pc, signature, sp.at(signature.numArgs()));
             const newPc = method.codePc();
             _ = extra; // have to move parameters to self position
             if (true) @panic("unreachable");
-            // return @call(tailCall, newPc.prim(), .{ newPc.next(), sp, process, context, Extra.forMethod(method) });
+            // return @call(tailCall, newPc.prim(), .{ newPc.next(), sp, context, Extra.forMethod(method) });
             // const method = tailGetMethod(pc, sp);
             // const newPc = method.codePc();
-            return @call(tailCall, newPc.prim(), .{ newPc.next(), sp, process, context, Extra.forMethod(method) });
+            return @call(tailCall, newPc.prim(), .{ newPc.next(), sp, context, Extra.forMethod(method) });
         }
     };
 };

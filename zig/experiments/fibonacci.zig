@@ -131,35 +131,35 @@ const fibCPS = if (cpsIncluded) struct {
     const fibCPST = PC.init(&fibCPSM.code[0]);
     const method = fibCPSM.asCompiledMethodPtr();
     pub fn fib(_: PC, sp: SP, process: TFProcess, context: TFContext, signature: MethodSignature) callconv(stdCall) SP {
-        return @call(tailCall, fibCPS0, .{ fibCPST.next(), sp, process, context, signature });
+        return @call(tailCall, fibCPS0, .{ fibCPST.next(), sp, context, signature });
     }
     pub fn fibCPS0(pc: PC, sp: SP, _process: TFProcess, _context: TFContext, signature: MethodSignature) callconv(stdCall) SP {
         const process = tfAsProcess(_process);
         const context = tfAsContext(_context);
         if (i.p5N(sp.top, two)) {
             sp.top = one;
-            return @call(tailCall, context.npc, .{ context.tpc, sp, process, context, signature });
+            return @call(tailCall, context.npc, .{ context.tpc, sp, context, signature });
         }
-        const newContext = context.push(sp, process, method, 0, 2, 0);
-        const newSp = newContext.asNewSp().push(i.p2L(sp.top, 1) catch return @call(tailCall, pc.skip(10).prim(), .{ pc.skip(11), newContext.asNewSp().drop(), process, context, signature }));
+        const newContext = context.push(sp, method, 0, 2, 0);
+        const newSp = newContext.asNewSp().push(i.p2L(sp.top, 1) catch return @call(tailCall, pc.skip(10).prim(), .{ pc.skip(11), newContext.asNewSp().drop(), context, signature }));
         newContext.setReturnBoth(fibCPS1, pc.skip(13)); // after first callRecursive
-        return @call(tailCall, fibCPS0, .{ fibCPST.next(), newSp, process, newContext, signature });
+        return @call(tailCall, fibCPS0, .{ fibCPST.next(), newSp, newContext, signature });
     }
     fn fibCPS1(pc: PC, sp: SP, process: TFProcess, _context: TFContext, signature: MethodSignature) callconv(stdCall) SP {
         const context = tfAsContext(_context);
-        const newSp = sp.push(i.p2L(context.getLocal(0), 2) catch return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, signature }));
+        const newSp = sp.push(i.p2L(context.getLocal(0), 2) catch return @call(tailCall, pc.prim(), .{ pc.next(), sp, context, signature }));
         context.setReturnBoth(fibCPS2, pc.skip(3)); // after 2nd callRecursive
-        return @call(tailCall, fibCPS0, .{ fibCPST.next(), newSp, process, context, signature });
+        return @call(tailCall, fibCPS0, .{ fibCPST.next(), newSp, context, signature });
     }
     fn fibCPS2(pc: PC, sp: SP, _process: TFProcess, _context: TFContext, signature: MethodSignature) callconv(stdCall) SP {
         const process = tfAsProcess(_process);
         const context = tfAsContext(_context);
-        const sum = i.p1(sp.next, sp.top) catch return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, signature });
+        const sum = i.p1(sp.next, sp.top) catch return @call(tailCall, pc.prim(), .{ pc.next(), sp, context, signature });
         const result = context.pop(process);
         const newSp = result.sp;
         newSp.top = sum;
         const callerContext = result.ctxt;
-        return @call(tailCall, callerContext.npc, .{ callerContext.tpc, newSp, process, callerContext, signature });
+        return @call(tailCall, callerContext.npc, .{ callerContext.tpc, newSp, callerContext, signature });
     }
     fn runIt(run: usize) void {
         fibCPSM.setLiterals(&[_]Object{sym.fibonacci}, empty);
@@ -196,29 +196,29 @@ const fibCPSSend = if (cpsSendIncluded) struct {
     pub fn fib(pc: PC, sp: SP, process: TFProcess, context: TFContext, signature: MethodSignature) callconv(stdCall) SP {
         if (i.p5N(sp.top, two)) {
             sp.top = one;
-            return @call(tailCall, context.npc, .{ context.tpc, sp, process, context, signature });
+            return @call(tailCall, context.npc, .{ context.tpc, sp, context, signature });
         }
-        const newContext = context.push(sp, process, fibThreadMethod, 0, 2, 0);
+        const newContext = context.push(sp, fibThreadMethod, 0, 2, 0);
         const newSp = newContext.asNewSp();
-        newSp.top = i.p2L(sp.top, 1) catch return @call(tailCall, pc.skip(10).prim(), .{ pc.skip(11), newSp.drop(), process, context, signature });
+        newSp.top = i.p2L(sp.top, 1) catch return @call(tailCall, pc.skip(10).prim(), .{ pc.skip(11), newSp.drop(), context, signature });
         newContext.setReturnBoth(fibCPSSend1, pc.skip(13)); // after first callRecursive
         const newPc = execute.lookupAddress(signature, .SmallInteger);
-        return @call(tailCall, newPc.prim(), .{ newPc.next(), newSp, process, newContext, signature });
+        return @call(tailCall, newPc.prim(), .{ newPc.next(), newSp, newContext, signature });
     }
     fn fibCPSSend1(pc: PC, sp: SP, process: TFProcess, context: TFContext, signature: MethodSignature) callconv(stdCall) SP {
-        const newSp = sp.push(i.p2L(context.getLocal(0), 2) catch return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, signature }));
+        const newSp = sp.push(i.p2L(context.getLocal(0), 2) catch return @call(tailCall, pc.prim(), .{ pc.next(), sp, context, signature }));
         context.setReturnBoth(fibCPSSend2, pc.skip(3)); // after 2nd callRecursive
         const newSignature = signature;
         const newPc = execute.lookupAddress(newSignature, .SmallInteger);
-        return @call(tailCall, newPc.prim(), .{ newPc.next(), newSp, process, context, newSignature });
+        return @call(tailCall, newPc.prim(), .{ newPc.next(), newSp, context, newSignature });
     }
     fn fibCPSSend2(pc: PC, sp: SP, process: TFProcess, context: TFContext, signature: MethodSignature) callconv(stdCall) SP {
-        const sum = i.p1(sp.next, sp.top) catch return @call(tailCall, pc.prim(), .{ pc.next(), sp, process, context, signature });
+        const sum = i.p1(sp.next, sp.top) catch return @call(tailCall, pc.prim(), .{ pc.next(), sp, context, signature });
         const result = context.pop(process);
         const newSp = result.sp;
         newSp.top = sum;
         const callerContext = result.ctxt;
-        return @call(tailCall, callerContext.npc, .{ callerContext.tpc, newSp, process, callerContext, signature });
+        return @call(tailCall, callerContext.npc, .{ callerContext.tpc, newSp, callerContext, signature });
     }
     var fibCPSSendStart =
         compileMethod(Sym.value, 0, 2, .{

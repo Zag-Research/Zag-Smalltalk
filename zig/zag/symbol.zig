@@ -245,6 +245,10 @@ pub const SymbolTable = struct {
         try std.testing.expectEqual(symbol, other);
     }
 };
+test "symbols are correct immediate class" {
+    const expect = std.testing.expect;
+    try expect(Symbols.value.asObject().isSymbol());
+}
 pub const noStrings = &[0]heap.HeapObjectConstPtr{};
 test "symbols match initialized symbol table" {
     const expectEqual = std.testing.expectEqual;

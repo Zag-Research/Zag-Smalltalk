@@ -36,7 +36,7 @@ const Tag = enum(u3) {
     }
 };
 pub const Object = packed struct(u64) {
-    tag: Tag,
+    tag: Tag = .heap,
     hash: u45 = 0,
     extra: u11 = 0,
     class: Compact = @enumFromInt(0),
@@ -64,7 +64,7 @@ pub const Object = packed struct(u64) {
         LLVM,
         UndefinedObject,
         Float,
-        heap,
+        memoryObject,
         _,
         const heapBits = object.heapBits();
         inline fn isHeap(self: Compact) bool {
@@ -182,7 +182,7 @@ pub const Object = packed struct(u64) {
         return makeImmediate(class, (@as(u32, hash) << 5) | @as(u32, arity));
     }
     pub inline fn isSymbol(self: object.Object) bool {
-        return self.tagMatch(comptime oImm(.Symbol, 0));
+        return self.isImmediateClass(.Symbol);
     }
 
     pub inline fn extraValue(self: object.Object) object.Object {
@@ -240,7 +240,7 @@ pub const Object = packed struct(u64) {
     }
 
     pub fn fromAddress(value: anytype) Object {
-        return @bitCast(@intFromPtr(value));
+        return @bitCast(@intFromPtr(value) | @as(u64, @bitCast(Object{ .class = .memoryObject })));
     }
     pub const StaticObject = struct {
         obj: InMemory.PointedObject,
@@ -317,15 +317,15 @@ pub const Object = packed struct(u64) {
     }
     pub inline fn which_class(self: object.Object) ClassIndex {
         const u: u64 = @bitCast(self);
-        if (decode(u)) |_| {
-            @branchHint(.likely);
-            return .Float;
-        } else if (u & 7 != 0) {
+        if (u & Tag.u(.smallinteger) != 0) {
             @branchHint(.likely);
             return .SmallInteger;
+        } else if (decode(u)) |_| {
+            @branchHint(.likely);
+            return .Float;
         }
         const class = self.class;
-        if (class == .heap) {
+        if (class == .memoryObject) {
             return self.toUnchecked(*HeapObject).*.getClass();
         } else {
             if (u == 0) {
@@ -337,7 +337,7 @@ pub const Object = packed struct(u64) {
     }
 
     pub inline fn isImmediate(self: Object) bool {
-        return self.tag != .heap or self.class != .heap;
+        return self.tag != .heap or self.class != .memoryObject;
     }
 
     pub inline fn hasHeapReference(self: Object) bool {

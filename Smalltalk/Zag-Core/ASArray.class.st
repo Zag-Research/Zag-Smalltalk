@@ -30,7 +30,7 @@ ASArray >> accept: aVisitor [
 
 { #category : 'converting' }
 ASArray >> asPharoAST [
-	self error: 'ASArray seems to be missing instance variables!'.
+	^OCArrayNode statements: (self statements collect: #asPharoAST) 
 ]
 
 { #category : 'printing' }

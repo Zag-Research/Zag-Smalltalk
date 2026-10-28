@@ -30,23 +30,23 @@ const dnu = execute.controlPrimitives.dnu;
 pub const primitives = struct {};
 pub const threadedFns = struct {
     pub const branchTrue = struct {
-        pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
+        pub fn threadedFn(pc: PC, sp: SP, context: *Context, extra: Extra) Result {
             if (sp.top.equals(True())) {
                 const newPc = pc.targetPC();
-                return @call(tailCall, process.branchCheck(newPc.prim()), .{ newPc.next(), sp.drop(), process, context, extra });
+                return @call(tailCall, Process.check(newPc.prim()), .{ newPc.next(), sp.drop(), context, extra });
             }
-            return @call(tailCall, process.check(pc.prim2()), .{ pc.next2(), sp.drop(), process, context, extra });
+            return @call(tailCall, Process.check(pc.prim2()), .{ pc.next2(), sp.drop(), context, extra });
         }
     };
     pub const branchFalse = struct {
-        pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
+        pub fn threadedFn(pc: PC, sp: SP, context: *Context, extra: Extra) Result {
             sp.traceStack("branchFalse", context, extra);
             if (sp.top.equals(False())) {
                 const newPc = pc.targetPC();
                 trace("Boolean>>#inlinePrimitive: branchFalse {f} {f}", .{ pc, newPc });
-                return @call(tailCall, process.branchCheck(newPc.prim()), .{ newPc.next(), sp.drop(), process, context, extra });
+                return @call(tailCall, Process.check(newPc.prim()), .{ newPc.next(), sp.drop(), context, extra });
             }
-            return @call(tailCall, process.check(pc.prim2()), .{ pc.next2(), sp.drop(), process, context, extra });
+            return @call(tailCall, Process.check(pc.prim2()), .{ pc.next2(), sp.drop(), context, extra });
         }
     };
 };

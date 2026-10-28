@@ -70,6 +70,7 @@ ASCBasicBlock >> addFlow [
 ASCBasicBlock >> addOperation: anOperation [
 
 	operations add: anOperation.
+	"what do we do here when the program has finished?"
 	stack := anOperation resultStack: stack.
 	^ false
 ]

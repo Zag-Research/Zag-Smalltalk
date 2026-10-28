@@ -10,7 +10,7 @@ const Result = zag.execute.Result;
 const Arm64 = @import("arm64.zig").Arm64;
 const TemplateInfo = @import("template.zig").TemplateInfo;
 
-pub const ThreadedFn = *const fn (PC, SP, *Process, *Context, Extra) Result;
+pub const ThreadedFn = *const fn (PC, SP, *Context, Extra) Result;
 
 pub const JitBuffer = struct {
     const PAGE_SIZE = std.heap.page_size_min;

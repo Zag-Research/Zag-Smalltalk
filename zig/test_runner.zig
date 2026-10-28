@@ -40,12 +40,21 @@ pub fn main() !void {
     var passed_count: usize = 0;
     var skip_count: usize = 0;
     var fail_count: usize = 0;
+    var ignored_count: usize = 0;
+    var ignoring = false;
     var leaks: usize = 0;
     var buffer: [128]u8 = undefined;
-    tests: for (test_fn_list) |test_fn| {
+    for (test_fn_list) |test_fn| {
         testing.allocator_instance = .{};
         testing.log_level = .warn;
+        const stderr = std.debug.lockStderrWriter(&buffer);
+        defer std.debug.unlockStderrWriter();
         test_name = extractName(test_fn);
+        if (ignoring) {
+            stderr.print("{s}{s} untried{s}\n", .{ test_name, yellow, reset }) catch return;
+            ignored_count += 1;
+            continue;
+        }
         const start = std.time.milliTimestamp();
         const result = test_fn.func();
         const elapsed = std.time.milliTimestamp() - start;
@@ -53,8 +62,6 @@ pub fn main() !void {
         if (testing.allocator_instance.deinit() == .leak) {
             leaks += 1;
         }
-        const stderr = std.debug.lockStderrWriter(&buffer);
-        defer std.debug.unlockStderrWriter();
 
         if (result) |_| {
             passed_count += 1;
@@ -73,12 +80,14 @@ pub fn main() !void {
                 fail_count += 1;
                 stderr.print("{s}{s} failed - {s}{s}\n", .{ test_name, red, @errorName(err), reset }) catch return;
                 handleTraces(stderr);
-                if (quitOnFirstFailure) break :tests;
+                if (quitOnFirstFailure) {
+                    ignoring = true;
+                }
             },
         }
     }
 
-    std.debug.print("of {} tests, {} passed, {} skipped, {} failed, {} leaks\n", .{ test_fn_list.len, passed_count, skip_count, fail_count, leaks });
+    std.debug.print("of {} tests, {} passed, {} skipped, {} failed, {} leaks {} tests untried\n", .{ test_fn_list.len, passed_count, skip_count, fail_count, leaks, ignored_count });
     if (leaks != 0 or fail_count != 0) {
         std.process.exit(1);
     }

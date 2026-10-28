@@ -6,8 +6,9 @@ const expect = std.testing.expect;
 const rotl = std.math.rotl;
 const rotr = std.math.rotr;
 
-const What = enum { encode11, benchmark, ranges };
+const What = enum { encode11, benchmark, ranges, printEncoding };
 const do_what = What.benchmark;
+const log_data = builtin.is_test and false;
 
 pub const FastSpur = switch (builtin.target.cpu.arch) {
     .x86_64 => SpurAlt1,
@@ -654,7 +655,7 @@ test "encode accuracy - spurNZ" {
     for (0..1 << BITS) |i| {
         var f: f64 = @bitCast(i << (64 - BITS));
         if (f != 0) {
-            f =  @bitCast((i << (64 - BITS)) | 1); //because Spur uses 0b001110...0 to encode 0
+            f = @bitCast((i << (64 - BITS)) | 1); //because Spur uses 0b001110...0 to encode 0
             try checkEqual("spurNZ", f, Spur.encode(f), SpurNZ.encode(f));
         }
     }
@@ -667,10 +668,14 @@ fn expectEqualHex(actual: anytype, expected: @TypeOf(actual)) !void {
 }
 test "encode patterns" {
     inline for (.{ Spur, SpurNZ, SpurFast, Fst1(1), Fst1(2), Fst1(4), Fst2(1), Fst2(2), Fst2(4), Fst2(6), Fst2(7), Fst4, Zag4, Zag6, NaN, NuN }) |encoding| {
-        std.debug.print("for {s}\n", .{encoding.name});
+        if (log_data)
+            std.debug.print("for {s}\n", .{encoding.name});
         for (&[_]f64{ 0.5, 0, 1, 2, 5, 42, 1e6 }) |value| {
-            if (value > 0 or encoding.valid_ranges[0].low == 0)
-                std.debug.print("  0x{x:0>16}->0x{x:0>16} from {}\n", .{ @as(u64, @bitCast(value)), try encoding.encode(value), value });
+            if (value > 0 or encoding.valid_ranges[0].low == 0) {
+                const enc = try encoding.encode(value);
+                if (log_data)
+                    std.debug.print("  0x{x:0>16}->0x{x:0>16} from {}\n", .{ @as(u64, @bitCast(value)), enc, value });
+            }
         }
     }
     try expectEqualHex(try Fst1(1).encode(0.0), 0x8000000000000001);
@@ -756,7 +761,7 @@ fn validAndNot(comptime encoding: anytype, valid_v: []f64, invalid_v: []f64, dec
             invalid_n += 1;
         }
     }
-    if (builtin.is_test)
+    if (log_data)
         std.debug.print("for {s} valid_n={} invalid_n={}\n", .{ encoding.name, valid_n, invalid_n });
     for (valid_v[0 .. valid_v.len - valid_n], valid_v[valid_n..valid_v.len]) |v, *vp|
         vp.* = v;
@@ -814,6 +819,15 @@ fn benchmark(comptime encoding: anytype) void {
 // zig run -Doptimize=ReleaseFast floatSpur.zig
 pub fn main() void {
     switch (do_what) {
+        .printEncoding => {
+            inline for (.{ Spur, SpurNZ, SpurFast, Fst1(1), Fst1(2), Fst1(4), Fst2(1), Fst2(2), Fst2(4), Fst2(6), Fst2(7), Fst4, Zag4, Zag6, NaN, NuN }) |encoding| {
+                std.debug.print("for {s}\n", .{encoding.name});
+                for (&[_]f64{ 0.5, 0, 1, 2, 5, 42, 1e6 }) |value| {
+                    if (value > 0 or encoding.valid_ranges[0].low == 0)
+                        std.debug.print("  0x{x:0>16}->0x{x:0>16} from {}\n", .{ @as(u64, @bitCast(value)), try encoding.encode(value), value });
+                }
+            }
+        },
         .encode11 => {
             // doesn't catch much of interest except +/-0.0 and +/-2.0
             inline for (.{ Spur, SpurNZ, SpurFast, SpurAlt1, SpurAlt2, Fst1(1), Fst1(2), Fst1(4), Fst2(1), Fst2(2), Fst2(4), Fst2(6), Fst2(7), Fst4, Zag4, Zag6, NaN, NuN }) |encoding| {

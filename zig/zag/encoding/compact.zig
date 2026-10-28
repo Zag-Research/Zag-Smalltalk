@@ -231,7 +231,7 @@ pub const Object = packed struct(u64) {
     inline fn isInt(self: object.Object) bool {
         const u: u64 = @bitCast(self);
         switch (encoding) {
-            .compactI1, .compactA2 => return u & 1 != 0,
+            .compactI1, .compactA2 => return @bitCast(@as(u1, @truncate(u))),
             .compactI2 => return u & 2 != 0,
             .compactI4 => return u & 3 == 1, // << 62 > 0,
             // return asm ( // on AARCH64
@@ -511,11 +511,12 @@ pub const Object = packed struct(u64) {
             },
         }
         const class = self.class;
-        if (@as(u64, @bitCast(self)) == 0) {
-            @branchHint(.unlikely);
-            return .UndefinedObject;
-        } else if (class != .heap) {
+        if (class != .heap) {
             @branchHint(.likely);
+            if (@as(u64, @bitCast(self)) == 0) {
+                @branchHint(.unlikely);
+                return .UndefinedObject;
+            }
             return self.class.classIndex();
         }
         return self.toUnchecked(*HeapObject).*.getClass();

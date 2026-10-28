@@ -12,7 +12,7 @@ const Code = zag.execute.Code;
 const JitBuffer = @import("jit_buffer.zig").JitBuffer;
 const TemplateInfo = @import("template.zig").TemplateInfo;
 
-pub const ThreadedFn = *const fn (PC, SP, *Process, *Context, Extra) Result;
+pub const ThreadedFn = *const fn (PC, SP, *Context, Extra) Result;
 
 pub fn isSupportedOp(op: tf) bool {
     return switch (op) {

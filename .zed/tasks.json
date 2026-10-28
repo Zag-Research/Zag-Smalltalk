@@ -30,6 +30,12 @@
     //"hide": "on_success",
   },
   {
+    "label": "test sequential with trace",
+    "command": "zig build test -Dtrace -Dsequential -DquitOnFirstFailure --summary all -freference-trace=20",
+    "cwd": "$ZED_WORKTREE_ROOT/zig/zag",
+    //"hide": "on_success",
+  },
+  {
     "label": "test with trace",
     "command": "zig build test -Dtrace -DquitOnFirstFailure --summary all -freference-trace=20",
     "cwd": "$ZED_WORKTREE_ROOT/zig/zag",
