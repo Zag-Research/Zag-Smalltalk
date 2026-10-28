@@ -62,7 +62,7 @@ ASemanticInterpreter >> basicBlocks [
 
 { #category : 'as yet unclassified' }
 ASemanticInterpreter >> beforeTailSend: aSelector [
-self halt.
+
 	stackArray := self createStackForCall: aSelector numArgs.
 	stackPointer := 11 - aSelector numArgs - 1.
 	pc basicBlock hasContext ifFalse: [ ^ self ].
@@ -162,7 +162,6 @@ Locals do not need to be factored into the creation of a context."
 	aCompiledMethodOrBlock := pc basicBlock.
 	newStackArray := self createStackForCall.
 	"copy the current calls data into a contextData"
-	self halt.
 	context := ASIContext new
 					  method: blockToReturnTo sourceBlock;
 		           contextData: (self createContextData: blockToReturnTo sourceBlock );
@@ -202,14 +201,17 @@ ASemanticInterpreter >> createContext: locals extra: extra [
 
 { #category : 'interpreting' }
 ASemanticInterpreter >> createContextData: aMethod [
-
 	"not a big fan of this, should this test be part of the context or context data instead of a var on semantic intepreter?"
-	(aMethod notNil and: contextDataMethod == aMethod) ifTrue: [ ^ contextData ].
+
+	(aMethod notNil and: contextDataMethod == aMethod) ifTrue: [
+		^ contextData ].
 
 	contextDataMethod := aMethod.
 	contextData := Array new: aMethod arguments + aMethod locals + 1.
-	1 to: (contextData size - aMethod locals) by: 1 do: [ :idx |
-			contextData at: (contextData size - idx) put: (stackArray at: (11 - idx) ) ].
+	1 to: contextData size - aMethod locals by: 1 do: [ :idx |
+			contextData
+				at: contextData size - idx + 1
+				put: (stackArray at: 11 - idx) ].
 
 	^ contextData
 ]
@@ -290,6 +292,11 @@ ASemanticInterpreter >> initialize [
 	self reset
 ]
 
+{ #category : 'API' }
+ASemanticInterpreter >> initializeStack [
+	self shouldBeImplemented.
+]
+
 { #category : 'accessing' }
 ASemanticInterpreter >> inlineDepth: anInteger [
 
@@ -321,12 +328,16 @@ ASemanticInterpreter >> installContextIfNone: blockToReturnTo [
 
 	"we don't need to create a context if one has already been created for the overall method or block we are executing
 	how to reuse the existing context?"
+
+self createContext: blockToReturnTo
+"
 	context notNil & (context method == contextDataMethod)
-	ifTrue: [ 
-		context returnPC: (ASIProgramCounter new forBasicBlock: blockToReturnTo).
-	] ifFalse: [ 
-		self createContext: blockToReturnTo
-	]
+		ifTrue: [
+			self halt.
+				context returnPC:
+					(ASIProgramCounter new forBasicBlock: blockToReturnTo) ]
+		ifFalse: [ self createContext: blockToReturnTo ]
+"
 ]
 
 { #category : 'interpreting' }
@@ -347,7 +358,7 @@ ASemanticInterpreter >> pop [
 ASemanticInterpreter >> pop: anObject into: offset [
 
 	self installContextIfNone.
-	^ contextData at: (contextData size - offset) put: anObject
+	^ contextData at: contextData size - offset put: anObject
 ]
 
 { #category : 'primitive execution' }
@@ -488,16 +499,21 @@ ASemanticInterpreter >> return: anObject selfContext: contextOffset [
 
 { #category : 'handling' }
 ASemanticInterpreter >> return: anObject selfOffset: selfOffset [
-
 	"stackPointer := stackPointer + selfOffset + 1.
 	"
+
 	stackPointer := 10.
 	stackArray := Array new: 10.
 	stackArray at: stackPointer put: anObject.
+
+	pc := context returnPC
 	
 	"can this be done more eligantly, should a return always set the context to the sendingContext?"
-	pc := context sendingContext ifNil: [ context returnPC ]
-	ifNotNil: [ context sendingContext returnPC ]
+"
+	pc := context sendingContext
+		      ifNil: [ context returnPC ]
+		      ifNotNil: [ context sendingContext returnPC ]
+"
 ]
 
 { #category : 'as yet unclassified' }
@@ -611,7 +627,7 @@ ASemanticInterpreter >> unary: aBlock [
 { #category : 'accessing' }
 ASemanticInterpreter >> varAt: aStackElement [ 
 	contextData ifNotNil: [
-	 ^ self contextDataAt: aStackElement offset
+	 ^ self contextDataAt: (aStackElement offset -1)
 	].
-	^self stackAt: aStackElement offset.
+	^self stackAt: (aStackElement offset - 1).
 ]
