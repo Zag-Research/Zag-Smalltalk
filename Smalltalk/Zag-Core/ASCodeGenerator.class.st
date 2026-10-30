@@ -437,9 +437,9 @@ ASCodeGenerator >> popVariable: aSymbol [
 ]
 
 { #category : 'API' }
-ASCodeGenerator >> primitive: primitiveNumber [
+ASCodeGenerator >> primitive: primitiveNumber with: aSelector [
 
-	code primitive: primitiveNumber
+	code primitive: primitiveNumber with: aSelector
 ]
 
 { #category : 'API' }

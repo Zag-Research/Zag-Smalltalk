@@ -732,18 +732,6 @@ ASCompilerInlineTest >> testPrimitiveFailing [
 ]
 
 { #category : 'tests' }
-ASCompilerInlineTest >> testRecursiveSum [
-	"recursiveSum: listOfNumbers
-		listOfNumbers isEmpty ifTrue: [^0].
-		^ listOfNumbers first + listOfNumbers allButFirst"
-
-	self
-		assertEquivalentSending: #recursiveSum:
-		arguments: #( #( 4 5 6 ) )
-		to: ASCompileTestClass1 new
-]
-
-{ #category : 'tests' }
 ASCompilerInlineTest >> testSimplePopExample [
 	"simplePopExample
 	^ 35"

@@ -200,7 +200,7 @@ ASMethodNode >> zigWalkMethod: aGenerator [
 		locals: locals parameters: arguments.
 	self pragmas do: [ :pragma |
 		pragma isPrimitive ifTrue: [
-			aGenerator primitive: pragma arguments first literal ] ].
+			aGenerator primitive: (pragma arguments first literal) with: selector] ].
 	^ body
 		  zigWalkEmpty: [ aGenerator returnEmpty ]
 		  rest: [ :exp | exp zigWalkDiscard: aGenerator ]
