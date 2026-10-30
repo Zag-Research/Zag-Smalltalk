@@ -11,4 +11,4 @@ If the number of arenas exceeds some percentage of the number of processes, it m
 
 It might make sense to periodically (or programmatically) have a stop-the-world moment where the contents of a couple of arenas that have low utilization are moved into another arena, similar to what Java does.
 ### Large objects
-Objects larger than a particular size (currently 8KB) will have the indexable (i.e. array) part of the object allocated outside the arenas, in memory independently allocated from the operating system. This reduces the number of global arenas required, and more importantly reduces the fragmentation that comes with a non-compacting collector.
+Objects larger than a particular size (currently 16KB) will have the indexable (i.e. array) part of the object allocated outside the arenas, in memory independently allocated from the operating system. This reduces the number of global arenas required, and more importantly reduces the fragmentation that comes with a non-compacting collector.
