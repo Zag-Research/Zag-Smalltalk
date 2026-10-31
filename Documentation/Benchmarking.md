@@ -2,6 +2,7 @@
 - nbody [benchmark game](https://benchmarksgame-team.pages.debian.net/benchmarksgame/performance/nbody.html) [AWFY](https://github.com/smarr/are-we-fast-yet/tree/master/benchmarks/Smalltalk/NBody)
 - threadring 
 - binarytrees
+[Energy Consumption](https://dl.acm.org/doi/10.1145/3136014.3136031) uses the above but omits Smalltalk for unclear reasons.
 
 [Scheme R7RS Benchmarks](github.com/ecraven/r7rs-benchmarks) 60 Scheme benchmarks
 
@@ -18,7 +19,7 @@ Element = Object (
 length = (
     | n |
     n := 0.
-    self do: [ :e | n := n + 1. e ifLast: [ ˆn ]. ].
+    self do: [ :e | n := n + 1. e ifLast: [  ^ n ]. ].
 )
 do: [block] = (
     block value: self.

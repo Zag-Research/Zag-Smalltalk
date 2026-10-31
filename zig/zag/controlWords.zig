@@ -40,27 +40,27 @@ pub const module = struct {
     pub const moduleName = "zag";
     pub const unknown = struct {
         //pub const number = 60;
-        pub fn primitive(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
+        pub fn primitive(pc: PC, sp: SP, context: *Context, extra: Extra) Result {
             // if (inlines.@"basicAt:"(sp.next, sp.top)) |result| {
             //     const newSp = sp.dropPut(result);
-            //     return @call(tailCall, process.check(context.npc.f), .{ context.tpc, newSp, process, context, undefined });
+            //     return @call(tailCall, process.check(context.npc.f), .{ context.tpc, newSp, context, undefined });
             // } else |_| {}
-            // return @call(tailCall, Extra.primitiveFailed, .{ pc, sp, process, context, extra });
-            _ = .{ pc, sp, process, context, extra, @panic("Unknown primitive") };
+            // return @call(tailCall, Extra.primitiveFailed, .{ pc, sp, context, extra });
+            _ = .{ pc, sp, context, extra, @panic("Unknown primitive") };
         }
     };
 };
 pub const fail = struct {
-    pub fn threadedFn(pc: PC, sp: SP, _: *Process, context: *Context, extra: Extra) Result {
+    pub fn threadedFn(pc: PC, sp: SP, context: *Context, extra: Extra) Result {
         sp.traceStack("fail", context, extra);
         std.log.err("pc = {f}, sp={any} - ", .{ pc, sp });
         @panic("executing the 'fail' threadedFn");
     }
 };
 pub const branch = struct {
-    pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
+    pub fn threadedFn(pc: PC, sp: SP, context: *Context, extra: Extra) Result {
         const target = pc.targetPC();
-        return @call(tailCall, process.branchCheck(target.prim()), .{ target.next(), sp, process.checkBump(), context, extra });
+        return @call(tailCall, Process.check(target.prim()), .{ target.next(), sp, context, extra });
     }
     test "branch" {
         var exe = Execution.initTest("branch", .{
@@ -70,14 +70,13 @@ pub const branch = struct {
             o0,
             ":label",
         });
-        assert(@alignOf(@TypeOf(exe)) > 50);
         try exe.resolve(Object.empty);
         exe.execute(Object.empty);
         try exe.matchStack(Object.empty);
     }
 };
 pub const classCase = struct {
-    pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
+    pub fn threadedFn(pc: PC, sp: SP, context: *Context, extra: Extra) Result {
         sp.traceStack("classCase", context, extra);
         var newPc = pc;
         const top = sp.top;
@@ -90,15 +89,15 @@ pub const classCase = struct {
                 if (currentClass == match) {
                     newPc = newPc.targetPC();
                     trace("classCase: match {*} extra: {f}", .{ sp, extra });
-                    return @call(tailCall, process.branchCheck(newPc.prim()), .{ newPc.next(), sp.drop(), process, context, extra });
+                    return @call(tailCall, newPc.prim(), .{ newPc.next(), sp.drop(), context, extra });
                 }
                 if (currentClass == 0) {
                     trace("classCase: 0 {*} extra: {f}", .{ sp, extra });
-                    return @call(tailCall, process.check(newPc.prim()), .{ newPc.next(), sp.drop(), process, context, extra });
+                    return @call(tailCall, newPc.prim(), .{ newPc.next(), sp.drop(), context, extra });
                 }
                 if (currentClass == 0x3FFF) {
                     trace("classCase: 3fff {*} extra: {f}", .{ sp, extra });
-                    return @call(tailCall, process.check(newPc.prim()), .{ newPc.next(), sp, process, context, extra });
+                    return @call(tailCall, newPc.prim(), .{ newPc.next(), sp, context, extra });
                 }
                 classes >>= 14;
                 newPc = newPc.next();
@@ -171,10 +170,10 @@ pub const classCase = struct {
     }
 };
 pub const drop = struct {
-    pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
+    pub fn threadedFn(pc: PC, sp: SP, context: *Context, extra: Extra) Result {
         sp.traceStack("drop", context, extra);
         const newSp = sp.drop();
-        return @call(tailCall, process.check(pc.prim()), .{ pc.next(), newSp, process, context, extra });
+        return @call(tailCall, pc.prim(), .{ pc.next(), newSp, context, extra });
     }
     test "drop" {
         var exe = Execution.initTest("drop", .{tf.drop});
@@ -190,14 +189,14 @@ pub const drop = struct {
     }
 };
 pub const dup = struct {
-    pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
+    pub fn threadedFn(pc: PC, sp: SP, context: *Context, extra: Extra) Result {
         sp.traceStack("dup", context, extra);
         const value = sp.top;
         if (sp.push(value)) |newSp| {
-            return @call(tailCall, process.check(pc.prim()), .{ pc.next(), newSp, process, context, extra });
+            return @call(tailCall, pc.prim(), .{ pc.next(), newSp, context, extra });
         } else {
             const newSp, const newContext, const newExtra = sp.spillStackAndPush(value, context, extra);
-            return @call(tailCall, process.check(pc.prim()), .{ pc.next(), newSp, process, newContext, newExtra });
+            return @call(tailCall, pc.prim(), .{ pc.next(), newSp, newContext, newExtra });
         }
     }
     test "dup" {
@@ -216,14 +215,14 @@ pub const dup = struct {
     }
 };
 pub const over = struct {
-    pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
+    pub fn threadedFn(pc: PC, sp: SP, context: *Context, extra: Extra) Result {
         sp.traceStack("over", context, extra);
         const value = sp.next;
         if (sp.push(value)) |newSp| {
-            return @call(tailCall, process.check(pc.prim()), .{ pc.next(), newSp, process, context, extra });
+            return @call(tailCall, pc.prim(), .{ pc.next(), newSp, context, extra });
         } else {
             const newSp, const newContext, const newExtra = sp.spillStackAndPush(value, context, extra);
-            return @call(tailCall, process.check(pc.prim()), .{ pc.next(), newSp, process, newContext, newExtra });
+            return @call(tailCall, pc.prim(), .{ pc.next(), newSp, newContext, newExtra });
         }
     }
     test "over" {
@@ -242,25 +241,25 @@ pub const over = struct {
     }
 };
 pub const pop = struct {
-    pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
+    pub fn threadedFn(pc: PC, sp: SP, context: *Context, extra: Extra) Result {
         sp.traceStack("pop", context, extra);
         const variable = pc.variable();
         const result = sp.top;
-        if (extra.installContextIfNone(sp.drop(), process, context)) |new| {
+        if (extra.installContextIfNone(sp.drop(), context)) |new| {
             const newSp = new.sp;
             const newExtra = new.extra;
             variable.getAddress(newSp, newExtra)[0] = result;
-            return @call(tailCall, process.check(pc.prim2()), .{ pc.next2(), newSp, process, new.context, newExtra });
+            return @call(tailCall, pc.prim2(), .{ pc.next2(), newSp, new.context, newExtra });
         }
         variable.getAddress(sp, extra)[0] = result;
-        return @call(tailCall, process.check(pc.prim2()), .{ pc.next2(), sp.drop(), process, context, extra });
+        return @call(tailCall, pc.prim2(), .{ pc.next2(), sp.drop(), context, extra });
     }
 };
 pub const popAssociationValue = struct {
-    pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
+    pub fn threadedFn(pc: PC, sp: SP, context: *Context, extra: Extra) Result {
         sp.traceStack("popAssociationValue", context, extra);
         pc.object().setField(2, sp.top);
-        return @call(tailCall, process.check(pc.prim2()), .{ pc.next2(), sp.drop(), process, context, extra });
+        return @call(tailCall, pc.prim2(), .{ pc.next2(), sp.drop(), context, extra });
     }
     test "popAssociationValue" {
         var exe = Execution.initTest("popAssociationValue", .{
@@ -287,26 +286,26 @@ pub const popAssociationValue = struct {
     }
 };
 pub const push = struct {
-    pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
+    pub fn threadedFn(pc: PC, sp: SP, context: *Context, extra: Extra) Result {
         sp.traceStack("push", context, extra);
         const variable = pc.variable();
         trace("Pushing variable...{*} {f} {f} {f}", .{ sp, pc, extra, variable });
         if (variable.isLocal and extra.noContext()) {
             if (sp.push(Nil())) |newSp| {
-                return @call(tailCall, process.check(pc.prim2()), .{ pc.next2(), newSp, process, context, extra });
+                return @call(tailCall, pc.prim2(), .{ pc.next2(), newSp, context, extra });
             } else {
                 const newSp, const newContext, const newExtra = sp.spillStackAndPush(Nil(), context, extra);
-                return @call(tailCall, process.check(pc.prim2()), .{ pc.next2(), newSp, process, newContext, newExtra });
+                return @call(tailCall, pc.prim2(), .{ pc.next2(), newSp, newContext, newExtra });
             }
         }
         const address = variable.getAddress(sp, extra);
         const value = address[0];
         trace(" .... {*} {f}", .{ address, value });
         if (sp.push(value)) |newSp| {
-            return @call(tailCall, process.check(pc.prim2()), .{ pc.next2(), newSp, process, context, extra });
+            return @call(tailCall, pc.prim2(), .{ pc.next2(), newSp, context, extra });
         } else {
             const newSp, const newContext, const newExtra = sp.spillStackAndPush(value, context, extra);
-            return @call(tailCall, process.check(pc.prim2()), .{ pc.next2(), newSp, process, newContext, newExtra });
+            return @call(tailCall, pc.prim2(), .{ pc.next2(), newSp, newContext, newExtra });
         }
     }
     test {
@@ -340,14 +339,14 @@ pub const push = struct {
     }
 };
 pub const pushAssociationValue = struct {
-    pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
+    pub fn threadedFn(pc: PC, sp: SP, context: *Context, extra: Extra) Result {
         sp.traceStack("pushAssociationValue", context, extra);
         const value = pc.object().getField(2);
         if (sp.push(value)) |newSp| {
-            return @call(tailCall, process.check(pc.prim2()), .{ pc.next2(), newSp, process, context, extra });
+            return @call(tailCall, pc.prim2(), .{ pc.next2(), newSp, context, extra });
         } else {
             const newSp, const newContext, const newExtra = sp.spillStackAndPush(value, context, extra);
-            return @call(tailCall, process.check(pc.prim2()), .{ pc.next2(), newSp, process, newContext, newExtra });
+            return @call(tailCall, pc.prim2(), .{ pc.next2(), newSp, newContext, newExtra });
         }
     }
     test {
@@ -373,14 +372,14 @@ pub const pushAssociationValue = struct {
     }
 };
 pub const pushLiteral = struct {
-    pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
+    pub fn threadedFn(pc: PC, sp: SP, context: *Context, extra: Extra) Result {
         sp.traceStack("pushLiteral", context, extra);
         const value = pc.object();
         if (sp.push(value)) |newSp| {
-            return @call(tailCall, process.check(pc.prim2()), .{ pc.next2(), newSp, process, context, extra });
+            return @call(tailCall, pc.prim2(), .{ pc.next2(), newSp, context, extra });
         } else {
             const newSp, const newContext, const newExtra = sp.spillStackAndPush(value, context, extra);
-            return @call(tailCall, process.check(pc.prim2()), .{ pc.next2(), newSp, process, newContext, newExtra });
+            return @call(tailCall, pc.prim2(), .{ pc.next2(), newSp, newContext, newExtra });
         }
     }
     test "pushLiteral" {
@@ -397,27 +396,27 @@ pub const pushLiteral = struct {
     }
 };
 pub const store = struct {
-    pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
+    pub fn threadedFn(pc: PC, sp: SP, context: *Context, extra: Extra) Result {
         sp.traceStack("store", context, extra);
         const variable = pc.variable();
         const result = sp.top;
-        if (extra.installContextIfNone(sp, process, context)) |new| {
+        if (extra.installContextIfNone(sp, context)) |new| {
             const newSp = new.sp;
             const newExtra = new.extra;
             variable.getAddress(newSp, newExtra)[0] = result;
-            return @call(tailCall, process.check(pc.prim2()), .{ pc.next2(), newSp, process, new.context, newExtra });
+            return @call(tailCall, pc.prim2(), .{ pc.next2(), newSp, new.context, newExtra });
         }
         variable.getAddress(sp, extra)[0] = result;
-        return @call(tailCall, process.check(pc.prim2()), .{ pc.next2(), sp, process, context, extra });
+        return @call(tailCall, pc.prim2(), .{ pc.next2(), sp, context, extra });
     }
 };
 pub const callLabel = if (zag.config.is_test) struct {
     pub const hidden = true;
-    pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, _: Extra) Result {
+    pub fn threadedFn(pc: PC, sp: SP, context: *Context, _: Extra) Result {
         if (true) @panic("unreachable");
         const target = pc.targetPC();
         // skip the structure word
         context.setReturn(pc.next().next());
-        return @call(tailCall, process.check(target.prim()), .{ target.next(), sp, process, context, Extra.forMethod(@ptrCast(pc.asCodePtr()), sp) });
+        return @call(tailCall, target.prim(), .{ target.next(), sp, context, Extra.forMethod(@ptrCast(pc.asCodePtr()), sp) });
     }
 } else struct {};

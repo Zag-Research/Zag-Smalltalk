@@ -145,10 +145,9 @@ test "inMemory int()" {
     if (config.immediateIntegers) return error.SkipZigTest;
     const ee = std.testing.expectEqual;
     trace("inMemory int()", .{});
-    var process: Process align(Process.alignment) = undefined;
-    process.init();
-    const sp = process.getSp();
-    const context = process.getContext();
+    Process.thisProcess.initProcess();
+    const sp = Process.thisProcess.getSp();
+    const context = Process.thisProcess.getContext();
     const one_ = int(1, sp, context);
     const one: PointedObjectRef = @bitCast(one_);
     trace("one: {}", .{one});

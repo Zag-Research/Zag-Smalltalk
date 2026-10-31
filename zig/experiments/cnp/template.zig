@@ -8,7 +8,7 @@ const SP = Process.SP;
 const Result = zag.execute.Result;
 const TemplateScan = @import("template_scan.zig");
 
-pub const ThreadedFn = *const fn (PC, SP, *Process, *Context, Extra) Result;
+pub const ThreadedFn = *const fn (PC, SP, *Context, Extra) Result;
 
 pub const TemplateInfo = struct {
     start: [*]const u8,

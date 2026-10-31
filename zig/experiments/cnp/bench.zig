@@ -167,8 +167,8 @@ fn runBench(name: []const u8, comptime tup: anytype, comptime lit_pos: []const u
     inline for (0..lit_pos.len) |i| resolve[i] = lits[i].init(lit_pos[i]);
     compiled.resolve(&resolve) catch unreachable;
 
-    const ctx = process.getContext();
-    const sp = process.endOfStack();
+    const ctx = Process.thisProcess.getContext();
+    const sp = Process.thisProcess.endOfStack();
 
     var samples: [rounds]u64 = undefined;
 

@@ -65,7 +65,7 @@ ASMethodNode >> accept: aVisitor [
 { #category : 'converting' }
 ASMethodNode >> asPharoAST [
 	| pharoBody |
-	pharoBody := OCSequenceNode temporaries: (locals collect: #asPharoAST) statements: (body collect: #asPharoAST).
+	pharoBody := OCSequenceNode temporaries: (locals collect: #asPharoAST) statements: (body collect: #asPharoAST thenReject: #isNil).
 	^OCMethodNode selector: selector arguments: (arguments collect: #asPharoAST) body: pharoBody.
 ]
 

@@ -79,7 +79,7 @@ fn enumLessThan(_: void, lhs: EnumSort, rhs: EnumSort) bool {
         else => return false,
     }
 }
-pub const Fn = *const fn (PC, SP, *Process, *Context, Extra) Result;
+pub const Fn = *const fn (PC, SP, *Context, Extra) Result;
 const EnumSort = struct {
     name: [:0]const u8,
     order: usize,
@@ -132,7 +132,7 @@ const enumAndFunctions =
             }};
         }
         const arraySize = enums.len + if (addUnrecognized) 1 else 0;
-        var arrayFns: [arraySize]*const fn (PC, SP, *Process, *Context, Extra) Result = undefined;
+        var arrayFns: [arraySize]*const fn (PC, SP, *Context, Extra) Result = undefined;
         for (enums, 0..) |eb, index| {
             arrayFns[index] = eb.threadedFn;
         }
@@ -159,10 +159,10 @@ test "print threadedFns" {
 }
 
 pub fn initialize() void {}
-pub fn threadedFn(key: Enum) *const fn (PC, SP, *Process, *Context, Extra) Result {
+pub fn threadedFn(key: Enum) *const fn (PC, SP, *Context, Extra) Result {
     return functions[@intFromEnum(key)];
 }
-pub fn find(f: *const fn (PC, SP, *Process, *Context, Extra) Result) ?Enum {
+pub fn find(f: *const fn (PC, SP, *Context, Extra) Result) ?Enum {
     for (&functions, 0..) |func, index| {
         if (func == f) return @enumFromInt(index);
     }

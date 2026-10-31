@@ -37,7 +37,7 @@ prevCtxt: ?*Context,
 method: *const CompiledMethod,
 trapContextNumber: u64,
 tpc: PC, // threaded PC
-npc: *const fn (PC, SP, *Process, *Context, Extra) Result, // native PC - in Continuation Passing Style
+npc: *const fn (PC, SP, *Context, Extra) Result, // native PC - in Continuation Passing Style
 contextData: *ContextData,
 const contextSize = @sizeOf(Self) / @sizeOf(Object);
 const sizeOnStack = @sizeOf(ContextOnStack) / @sizeOf(Object) - 1; // ignore locals in size
@@ -47,7 +47,7 @@ const ContextOnStack = struct {
     method: *const CompiledMethod,
     trapContextNumber: u64,
     tpc: PC,
-    npc: *const fn (PC, SP, *Process, *Context, Extra) Result,
+    npc: *const fn (PC, SP, *Context, Extra) Result,
     contextData: *ContextData,
     contextDataHeader: HeapHeader,
     locals: Object,
@@ -153,9 +153,9 @@ pub const Extra = packed struct {
     }
     /// Install a context
     /// used by any threaded function that needs a context
-    pub fn installContextIfNone(self: Extra, sp: SP, process: *Process, context: *Context) ?ReturnNextContext {
+    pub fn installContextIfNone(self: Extra, sp: SP, context: *Context) ?ReturnNextContext {
         if (self.getMethod()) |method| {
-            const newSp, const contextOnStack = context.push(sp, process, method, self);
+            const newSp, const contextOnStack = context.push(sp, method, self);
             return .{ .context = @ptrCast(contextOnStack), .extra = fromContextData(contextOnStack.contextDataPtr()), .sp = newSp };
         }
         return null;
@@ -169,9 +169,9 @@ pub const Extra = packed struct {
     pub fn isEncoded(self: Extra) bool {
         return self.is_encoded;
     }
-    pub fn primitiveFailed(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
+    pub fn primitiveFailed(pc: PC, sp: SP, context: *Context, extra: Extra) Result {
         trace("primitiveFailed: {f} {f}", .{ extra, pc });
-        return @call(tailCall, process.check(pc.prev().prim()), .{ pc, sp, process, context, extra.encoded() });
+        return @call(tailCall, pc.prev().prim(), .{ pc, sp, context, extra.encoded() });
     }
     pub fn format(
         self: Extra,
@@ -255,7 +255,7 @@ pub inline fn pop(self: *Context, sp: SP) struct { SP, *Context } {
     std.log.err("popContext: not on stack, {*}, {*} - ", .{ self, sp });
     @panic("incomplete");
 }
-pub fn push(self: *Context, sp: SP, process: *Process, method: *const CompiledMethod, extra: Extra) struct { SP, *ContextOnStack } {
+pub fn push(self: *Context, sp: SP, method: *const CompiledMethod, extra: Extra) struct { SP, *ContextOnStack } {
     const stackStructure = method.stackStructure;
     const locals = stackStructure.locals;
     const selfOffset = stackStructure.selfOffset - 1;
@@ -283,10 +283,10 @@ pub fn push(self: *Context, sp: SP, process: *Process, method: *const CompiledMe
         return .{ newSp, ctxt };
     }
     const newSp, const newContext, const newExtra = sp.spillStack(self, extra);
-    return newContext.push(newSp, process, method, newExtra);
+    return newContext.push(newSp, method, newExtra);
 }
-pub fn moveToHeap(self: *const Context, sp: SP, process: *Process) *Context {
-    _ = .{ self, sp, process, unreachable };
+pub fn moveToHeap(self: *const Context, sp: SP) *Context {
+    _ = .{ self, sp, unreachable };
     //        HeapHeader.headerOnStack(.Context, stackStructure.selfOffset, sizeForHeader);
     //        process.header().trapContextNumber;
     //        ctxt.contextData = contextData;
@@ -315,7 +315,7 @@ pub fn pushClosure(self_: *Context, class: ClassIndex, size: u11, sp_: SP, extra
         if (context.ifOnStack(sp) == null) {
             if (sp.reserve(1)) |newSp| {
                 sp = newSp;
-                const allocator = @as(*HeapObject, @ptrCast(context)).allocator(sp.getProcess());
+                const allocator = @as(*HeapObject, @ptrCast(context)).allocator();
                 closure = undefined;
                 std.log.err("pushClosure: {*} - ", .{allocator});
                 @panic("need to allocate on heap");
@@ -364,7 +364,8 @@ pub fn stack(self: *const Self, sp: SP) []Object {
 pub inline fn getTPc(self: *const Context) PC {
     return self.tpc;
 }
-pub inline fn setReturnBoth(self: *Context, npc: *const fn (PC, SP, *Process, *Context, Extra) Result, tpc: PC) void {
+pub inline fn setReturnBoth(self: *Context, npc: *const fn (PC, SP, *Context, Extra) Result, tpc: PC) void {
+    trace("setReturnBoth({*}, {*}", .{ self, npc });
     self.npc = npc;
     self.tpc = tpc;
 }
@@ -372,10 +373,10 @@ pub inline //
 fn setReturn(self: *Context, tpc: PC) void {
     self.setReturnBoth(tpc.asThreadedFn(), tpc.next());
 }
-pub inline fn getNPc(self: *const Context) *const fn (PC, SP, *Process, *Context, Extra) Result {
+pub inline fn getNPc(self: *const Context) *const fn (PC, SP, *Context, Extra) Result {
     return self.npc;
 }
-pub inline fn setNPc(self: *Context, npc: *const fn (PC, SP, *Process, *Context, Extra) Result) void {
+pub inline fn setNPc(self: *Context, npc: *const fn (PC, SP, *Context, Extra) Result) void {
     self.npc = npc;
 }
 pub inline fn setTPc(self: *Context, tpc: PC) void {
@@ -476,12 +477,12 @@ pub const threadedFunctions = struct {
     pub const pushContext = struct {
         /// any inlinePrimitive or threadedFn that needs a context can call this to create one
         /// and then re-execute the original operation; simply:
-        /// return @call(tailCall, pushContext.threadedFn, .{ pc.prev(), sp, process, context, extra });
-        pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
-            if (extra.installContextIfNone(sp, process, context)) |new| {
-                return @call(tailCall, process.check(pc.prim()), .{ pc.next(), new.sp, process, new.context, new.extra });
+        /// return @call(tailCall, pushContext.threadedFn, .{ pc.prev(), sp, context, extra });
+        pub fn threadedFn(pc: PC, sp: SP, context: *Context, extra: Extra) Result {
+            if (extra.installContextIfNone(sp, context)) |new| {
+                return @call(tailCall, Process.check(pc.prim()), .{ pc.next(), new.sp, new.context, new.extra });
             }
-            return @call(tailCall, process.check(pc.prim()), .{ pc.next(), sp, process, context, extra });
+            return @call(tailCall, Process.check(pc.prim()), .{ pc.next(), sp, context, extra });
         }
         test "pushContext" {
             var exe = Execution.initTest("pushContext", .{
@@ -489,9 +490,8 @@ pub const threadedFunctions = struct {
                 tf.pushLiteral,
                 o0,
             });
-            exe.execute(&[_]Object{Object.from(17, exe.process.getSp(), exe.process.getContext())});
+            exe.execute(&[_]Object{Object.from(17, Process.getSp(), Process.getContext())});
             try exe.matchStack(&[_]Object{o0});
-            // try exe.matchStack(&[_]Object{Object.from(42, exe.process.getSp(), exe.process.getContext())});
         }
         // test "init context" {
         //     //    const expectEqual = std.testing.expectEqual;
@@ -516,16 +516,16 @@ pub const threadedFunctions = struct {
         // }
     };
     pub const pushThisContext = struct {
-        pub fn threadedFn(pc: PC, sp: SP, process: *Process, context: *Context, extra: Extra) Result {
+        pub fn threadedFn(pc: PC, sp: SP, context: *Context, extra: Extra) Result {
             if (extra.noContext())
-                return @call(tailCall, pushContext.threadedFn, .{ pc.prev(), sp, process, context, extra });
+                return @call(tailCall, pushContext.threadedFn, .{ pc.prev(), sp, context, extra });
             const value = Object.fromAddress(context);
             if (true) @panic("unreachable");
             if (sp.push(value)) |newSp| {
-                return @call(tailCall, process.check(pc.prim()), .{ pc.next(), newSp, process, context, extra });
+                return @call(tailCall, Process.check(pc.prim()), .{ pc.next(), newSp, context, extra });
             } else {
-                const newSp, const newContext, const newExtra = process.spillStackAndPush(value, sp, context, extra);
-                return @call(tailCall, process.check(pc.prim()), .{ pc.next(), newSp, process, newContext, newExtra });
+                const newSp, const newContext, const newExtra = Process.spillStackAndPush(value, sp, context, extra);
+                return @call(tailCall, Process.check(pc.prim()), .{ pc.next(), newSp, newContext, newExtra });
             }
         }
     };

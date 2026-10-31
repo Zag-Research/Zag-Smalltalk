@@ -35,35 +35,35 @@ pub fn benchObject(self: Object) Object {
     return i.p1(fm1, fm2) catch @panic("int add failed in benchObject");
 }
 const benchSym = sym.value;
-pub fn benchComp(pc: [*]const Code, sp: SP, process: *Process, context: ContextPtr, selector: Object) void {
+pub fn benchComp(pc: [*]const Code, sp: SP, context: ContextPtr, selector: Object) void {
     if (!benchSym.hashEquals(selector)) @panic("wrong selector");
     if (i.p5N(sp[0], Object.from(2))) {
         sp[0] = Object.from(1);
-        return @call(tailCall, context.npc, .{ context.tpc, sp, process, context, selector });
+        return @call(tailCall, context.npc, .{ context.tpc, sp, context, selector });
     }
-    const newContext = context.push(sp, process, benchThread.asCompiledMethodPtr(), 0, 2, 0);
+    const newContext = context.push(sp, benchThread.asCompiledMethodPtr(), 0, 2, 0);
     const newSp = newContext.asObjectPtr() - 1;
     const m1 = i.p2L(sp[0], 1) catch @panic("int subtract failed in benchComp");
     newSp[0] = m1;
     newContext.tpc = pc + 15; // label4 + callLocal
     newContext.npc = benchComp1;
-    return @call(tailCall, benchComp, .{ benchCompT + 1, newSp, process, newContext, benchSym });
+    return @call(tailCall, benchComp, .{ benchCompT + 1, newSp, newContext, benchSym });
 }
-fn benchComp1(pc: [*]const Code, sp: SP, process: *Process, context: ContextPtr, _: Object) void {
+fn benchComp1(pc: [*]const Code, sp: SP, context: ContextPtr, _: Object) void {
     const newSp = sp - 1;
     const m2 = i.p2L(context.getTemp(0), 2) catch @panic("int add failed in benchComp1");
     newSp[0] = m2;
     context.tpc = pc + 6; // after 2nd callLocal
     context.npc = benchComp2;
-    return @call(tailCall, benchComp, .{ benchCompT + 1, newSp, process, context, benchSym });
+    return @call(tailCall, benchComp, .{ benchCompT + 1, newSp, context, benchSym });
 }
-fn benchComp2(_: [*]const Code, sp: SP, process: *Process, context: ContextPtr, selector: Object) void {
+fn benchComp2(_: [*]const Code, sp: SP, context: ContextPtr, selector: Object) void {
     const sum = i.p1(sp[1], sp[0]) catch @panic("int add failed in benchComp2");
     context.setTemp(0, sum);
     const result = context.pop(process);
     const newSp = result.sp;
     const callerContext = result.ctxt;
-    return @call(tailCall, callerContext.npc, .{ callerContext.tpc, newSp, process, callerContext, selector });
+    return @call(tailCall, callerContext.npc, .{ callerContext.tpc, newSp, callerContext, selector });
 }
 test "benchObject" {
     var n: i32 = 1;

@@ -162,6 +162,7 @@ Locals do not need to be factored into the creation of a context."
 	aCompiledMethodOrBlock := pc basicBlock.
 	newStackArray := self createStackForCall.
 	"copy the current calls data into a contextData"
+	self halt.
 	context := ASIContext new
 					  method: blockToReturnTo sourceBlock;
 		           contextData: (self createContextData: blockToReturnTo sourceBlock );
