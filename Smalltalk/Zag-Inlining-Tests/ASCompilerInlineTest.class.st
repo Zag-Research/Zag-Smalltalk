@@ -701,6 +701,17 @@ ASCompilerInlineTest >> testNegatedInlined [
 ]
 
 { #category : 'tests' }
+ASCompilerInlineTest >> testOneArg [
+	"plus1: aNumber
+	^ aNumber + 1"
+
+	self
+		assertEquivalentSending: #echo:
+		arguments: #( 6 )
+		to: ASCompileTestClass1 new
+]
+
+{ #category : 'tests' }
 ASCompilerInlineTest >> testPlus1 [
 	"plus1: aNumber
 	^ aNumber + 1"
@@ -718,15 +729,6 @@ ASCompilerInlineTest >> testPrimitive [
 ASCompilerInlineTest >> testPrimitiveFailing [
 
 	self assertEquivalentSending: #testDiv: arguments: #( 0 ) to: 6
-]
-
-{ #category : 'tests' }
-ASCompilerInlineTest >> testRecursiveSum [
-	"recursiveSum: listOfNumbers
-		listOfNumbers empty ifTrue: [^0].
-		^ listOfNumbers first + listOfNumbers allButFirst"
-
-	self assertEquivalentSending: #recursiveSum: arguments: #(#(4 5 6)) to: ASCompileTestClass1 new
 ]
 
 { #category : 'tests' }

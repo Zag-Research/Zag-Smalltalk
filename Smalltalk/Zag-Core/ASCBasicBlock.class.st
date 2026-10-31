@@ -480,9 +480,9 @@ ASCBasicBlock >> popVariable: aSymbol [
 ]
 
 { #category : 'accessing' }
-ASCBasicBlock >> primitive: anInteger [
+ASCBasicBlock >> primitive: primitiveNumber with: aSelector [
 
-	self addOperation: (ASCPrimitive with: anInteger)
+	self addOperation: (ASCPrimitive primitive: primitiveNumber with: aSelector)
 ]
 
 { #category : 'printing' }

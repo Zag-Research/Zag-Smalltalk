@@ -283,6 +283,12 @@ ASCompileTestClass1 >> counter [
 ]
 
 { #category : 'testing - examples' }
+ASCompileTestClass1 >> echo: arg [
+
+	^ arg
+]
+
+{ #category : 'testing - examples' }
 ASCompileTestClass1 >> fib2: anInt [
 
 	anInt < 2 ifTrue: [ ^ 1 ].
@@ -428,7 +434,8 @@ ASCompileTestClass1 >> recursiveMethod [
 
 { #category : 'testing - examples' }
 ASCompileTestClass1 >> recursiveSum: listOfNumbers [
-	listOfNumbers empty ifTrue: [^0].
+
+	listOfNumbers isEmpty ifTrue: [ ^ 0 ].
 	^ listOfNumbers first + listOfNumbers allButFirst
 ]
 
