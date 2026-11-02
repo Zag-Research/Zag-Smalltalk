@@ -5,26 +5,23 @@ Class {
 	#name : 'ASPragma',
 	#superclass : 'AST',
 	#instVars : [
-		'args'
+		'args',
+		'isPrimitive'
 	],
 	#category : 'Zag-Core-AST',
 	#package : 'Zag-Core',
 	#tag : 'AST'
 }
 
-{ #category : 'as yet unclassified' }
-ASPragma class >> args: pramaArgs [
-	^ASPragma new args: pramaArgs 
+{ #category : 'instance creation' }
+ASPragma class >> selector: aSelector args: pramaArgs [
+
+	^ self new selector: aSelector args: pramaArgs
 ]
 
 { #category : 'visiting' }
 ASPragma >> accept: aVisitor [
 	^aVisitor visitPragma: self
-]
-
-{ #category : 'accessing' }
-ASPragma >> args: paramaArgs [
-	args := paramaArgs 
 ]
 
 { #category : 'accessing' }
@@ -48,5 +45,19 @@ ASPragma >> inspectZagASTOn: aStream [
 
 { #category : 'testing' }
 ASPragma >> isPrimitive [
-^ true
+
+	^ isPrimitive 
+]
+
+{ #category : 'accessing' }
+ASPragma >> selector: aSelector args: paramaArgs [
+
+	args := paramaArgs.
+	isPrimitive := (#primitive: = aSelector)
+]
+
+{ #category : 'visiting' }
+ASPragma >> visitPragma: aVisitor [
+
+	^ aVisitor visitPragma: self
 ]
