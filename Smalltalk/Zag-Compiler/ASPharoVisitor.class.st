@@ -156,7 +156,7 @@ ASPharoVisitor >> visitMethodNode: aRBMethodNode [
 { #category : 'visiting' }
 ASPharoVisitor >> visitPragmaNode: aRBPragmaNode [
 
-	^ ASPragma args:
+	^ ASPragma selector: aRBPragmaNode selector args:
 		  (aRBPragmaNode arguments collect: [ :arg | self visit: arg ]) 
 ]
 
