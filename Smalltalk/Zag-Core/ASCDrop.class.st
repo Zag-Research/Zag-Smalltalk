@@ -15,6 +15,13 @@ ASCDrop >> dotStringOn: aStream [
 	^ aStream << 'drop'
 ]
 
+{ #category : 'Zag-Core-Tests' }
+ASCDrop >> interpretFor: aSemanticInterpreter [
+
+	super interpretFor: aSemanticInterpreter.
+	aSemanticInterpreter dropContext
+]
+
 { #category : 'code generation' }
 ASCDrop >> outputTo: aCodeEmitter [
 

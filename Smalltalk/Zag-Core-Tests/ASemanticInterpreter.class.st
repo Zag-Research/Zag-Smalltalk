@@ -157,24 +157,21 @@ Reading of a local before a context is created will result in a nil.
 Locals do not need to be factored into the creation of a context."
 
 	| aCompiledMethodOrBlock newStackArray |
-
-
 	aCompiledMethodOrBlock := pc basicBlock.
 	newStackArray := self createStackForCall.
 	"copy the current calls data into a contextData"
-	self halt.
 	context := ASIContext new
-					  method: blockToReturnTo sourceBlock;
-		           contextData: (self createContextData: blockToReturnTo sourceBlock );
-		           returnPC: (ASIProgramCounter new forBasicBlock: blockToReturnTo);
+		           method: blockToReturnTo sourceBlock;
+		           contextData:
+			           (self createContextData: blockToReturnTo sourceBlock);
+		           returnPC:
+			           (ASIProgramCounter new forBasicBlock: blockToReturnTo);
 		           sendingContext: context.
 	"why nil out the stack? visual"
 	"contextPtr + 1 to: contextPtr + locals do: [ :idx |
 	stackArray at: idx put: nil ]"
 	stackArray := newStackArray.
 	stackPointer := 10 - aCompiledMethodOrBlock arguments
-
-
 ]
 
 { #category : 'interpreting' }
@@ -257,7 +254,7 @@ ASemanticInterpreter >> dropContext [
 	context sendingContext ifNotNil: [ 
 		context := context sendingContext.
 		contextData := context contextData ].
-	pc := context returnPC
+	"pc := context returnPC"
 ]
 
 { #category : 'handling' }
@@ -368,10 +365,11 @@ ASemanticInterpreter >> primitiveSuccess: anObject [
 	stackPointer := primitiveSuccessStackPointer.
 	stackArray at: stackPointer put: anObject.
 
-	context sendingContext ifNotNil: [ context := context sendingContext ].
-	pc := context returnPC.
+	"why am I doing this?
+	context sendingContext ifNotNil: [ context := context sendingContext ]."
+	pc := context returnPC
 
-	contextData := context contextData
+	"contextData := context contextData"
 ]
 
 { #category : 'accessing' }
@@ -626,9 +624,9 @@ ASemanticInterpreter >> unary: aBlock [
 ]
 
 { #category : 'accessing' }
-ASemanticInterpreter >> varAt: aStackElement [ 
+ASemanticInterpreter >> varAt: aStackElement [
+
 	contextData ifNotNil: [
-	 ^ self contextDataAt: (aStackElement offset -1)
-	].
-	^self stackAt: (aStackElement offset - 1).
+		^ self contextDataAt: aStackElement offset ].
+	^ self stackAt: aStackElement offset - 1
 ]
