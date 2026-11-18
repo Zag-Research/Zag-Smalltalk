@@ -1,3 +1,5 @@
+//! Experimental scratch file for testing JIT-compiled code blocks under lldb. Not part of the normal build.
+
 // experiment to test adding a prefix to code blocks so that we could directly access them
 // to compile for lldb
 // zig build-exe jit.zig -O Debug -fomit-frame-pointer -fno-unwind-tables && ./jit

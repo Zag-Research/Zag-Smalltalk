@@ -1,3 +1,5 @@
+//! The shared global memory arena: allocation and free lists. The mark-and-sweep collection pass itself is not yet implemented.
+
 const std = @import("std");
 const print = std.log.err;
 const math = std.math;

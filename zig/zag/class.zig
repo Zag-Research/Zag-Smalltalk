@@ -1,3 +1,5 @@
+//! The class table: assigns and looks up the ClassIndex for every class the runtime knows about.
+
 const std = @import("std");
 const builtin = @import("builtin");
 const process = @import("process.zig");

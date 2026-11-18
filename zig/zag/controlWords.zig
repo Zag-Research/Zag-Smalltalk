@@ -1,3 +1,5 @@
+//! Threaded control flow operations (branch, send, return).
+
 const std = @import("std");
 const assert = std.debug.assert;
 const expectEqual = std.testing.expectEqual;

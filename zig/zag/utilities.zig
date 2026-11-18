@@ -1,3 +1,5 @@
+//! General data structures and bit utilities.
+
 const general = @import("utilities/general.zig");
 pub const bitsToRepresent = general.bitsToRepresent;
 pub const smallerPowerOf2 = general.smallerPowerOf2;
