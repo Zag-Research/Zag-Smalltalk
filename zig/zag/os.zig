@@ -1,3 +1,5 @@
+//! Selects the OS-specific implementation module (macOS or Linux; Windows is not yet enabled).
+
 // OS specific code
 pub const page_size = target.page_size;
 pub const MemoryAllocator = target.MemoryAllocator;
