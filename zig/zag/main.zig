@@ -1,3 +1,5 @@
+//! The executable entry point: sets up and runs the VM.
+
 const std = @import("std");
 const zag = @import("zag");
 const assert = std.debug.assert;
