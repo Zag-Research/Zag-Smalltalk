@@ -1,3 +1,5 @@
+//! Defines the shape of a threaded function: how a PC/SP-taking function gets registered as a word usable in a CompiledMethod's threaded code.
+
 const std = @import("std");
 const assert = std.debug.assert;
 const expectEqual = std.testing.expectEqual;
