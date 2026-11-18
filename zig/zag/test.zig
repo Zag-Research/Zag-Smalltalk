@@ -1,3 +1,5 @@
+//! Aggregates the modules so `zig build test` can discover and run their tests.
+
 const std = @import("std");
 test {
     _ = .{
