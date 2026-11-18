@@ -1,3 +1,5 @@
+//! An alternative byte-code based execution model, kept for comparison against the AST-based threaded/CPS interpreter.
+
 const std = @import("std");
 const config = @import("config.zig");
 const tailCall = config.tailCall;
