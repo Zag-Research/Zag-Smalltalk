@@ -17,6 +17,12 @@ ASBlockNode class >> arguments: args locals: locals body: body [
 	^ (self locals: locals body: body) arguments: args
 ]
 
+{ #category : 'instance creation' }
+ASBlockNode class >> arguments: args locals: locals body: body returnType: returnType [
+
+	^ (self locals: locals body: body returnType: returnType) arguments: args
+]
+
 { #category : 'visiting' }
 ASBlockNode >> accept: aVisitor [
 	^aVisitor visitBlock: self
