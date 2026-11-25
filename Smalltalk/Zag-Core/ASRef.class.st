@@ -61,7 +61,7 @@ ASRef >> isImmediateThunk [
 
 { #category : 'accessing' }
 ASRef >> type [
-
+	"My type.  May be nil to represent no type being specified."
 	^ type
 ]
 

@@ -142,7 +142,7 @@ ASCodeBlock >> nestedScopeOf: anASClassNode [
 
 { #category : 'accessing' }
 ASCodeBlock >> returnType [
-
+	"The type of the return value.  May be nil to represent an unspecified type."
 	^ returnType
 ]
 
