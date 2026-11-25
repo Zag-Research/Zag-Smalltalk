@@ -10,7 +10,8 @@ Class {
 		'locals',
 		'arguments',
 		'scope',
-		'enclosingScope'
+		'enclosingScope',
+		'returnType'
 	],
 	#category : 'Zag-Core-AST',
 	#package : 'Zag-Core',
@@ -23,6 +24,16 @@ ASCodeBlock class >> locals: locals body: body [
 	^ self new
 		  locals: locals;
 		  body: body
+]
+
+{ #category : 'instance creation' }
+ASCodeBlock class >> locals: locals body: body returnType: returnType [
+
+	^ self new
+		  locals: locals;
+		  body: body;
+		  returnType: returnType;
+		  yourself
 ]
 
 { #category : 'comparing' }
@@ -127,6 +138,18 @@ ASCodeBlock >> locals: aCollection [
 ASCodeBlock >> nestedScopeOf: anASClassNode [ 
 
 	enclosingScope := anASClassNode
+]
+
+{ #category : 'accessing' }
+ASCodeBlock >> returnType [
+	"The type of the return value.  May be nil to represent an unspecified type."
+	^ returnType
+]
+
+{ #category : 'accessing' }
+ASCodeBlock >> returnType: aClass [
+
+	returnType := aClass
 ]
 
 { #category : 'accessing' }
